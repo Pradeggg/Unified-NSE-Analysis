@@ -1,0 +1,9 @@
+{
+  "timestamp": ["2026-01-20 12:03:09"],
+  "stock_records": [1444208],
+  "index_records": [122595],
+  "stock_date_range": ["2023-01-02", "2026-01-19"],
+  "index_date_range": ["2019-05-20", "2026-01-19"],
+  "unique_stocks": [2761],
+  "unique_indices": [134]
+}

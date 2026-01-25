@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced NSE Analysis Dashboard with Backtesting Integration</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .backtesting-badge {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            display: inline-block;
+            margin-left: 10px;
+        }
+        
+        .summary-stats {
+            background: #f8f9fa;
+            padding: 25px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-item {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-left: 4px solid #007bff;
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 5px;
+        }
+        
+        .backtesting-stats {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        
+        .backtesting-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+        }
+        
+        .backtesting-item {
+            background: rgba(255,255,255,0.2);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .backtesting-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .controls {
+            background: #e9ecef;
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .filter-group {
+            display: inline-block;
+            margin: 0 15px;
+        }
+        
+        .filter-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #495057;
+        }
+        
+        .filter-group select {
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            background: white;
+            font-size: 14px;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            padding: 20px;
+        }
+        
+        .stock-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .stock-table th {
+            background: linear-gradient(135deg, #495057, #6c757d);
+            color: white;
+            padding: 15px 10px;
+            text-align: left;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .stock-table td {
+            padding: 12px 10px;
+            border-bottom: 1px solid #dee2e6;
+            vertical-align: middle;
+        }
+        
+        .stock-table tr:hover {
+            background: #f8f9fa;
+            cursor: pointer;
+        }
+        
+        .score-excellent { color: #28a745; }
+        .score-good { color: #17a2b8; }
+        .score-average { color: #ffc107; }
+        .score-poor { color: #dc3545; }
+        
+        .confidence-high { color: #28a745; font-weight: bold; }
+        .confidence-medium { color: #ffc107; font-weight: bold; }
+        .confidence-low { color: #dc3545; font-weight: bold; }
+        
+        .signal-strong-buy { color: #28a745; font-weight: bold; }
+        .signal-buy { color: #17a2b8; font-weight: bold; }
+        .signal-hold { color: #6c757d; }
+        .signal-weak-hold { color: #ffc107; }
+        .signal-sell { color: #dc3545; font-weight: bold; }
+        
+        .footer {
+            background: #495057;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            margin-top: 30px;
+        }
+        
+        .footer p {
+            margin: 5px 0;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Enhanced NSE Analysis Dashboard <span class="backtesting-badge">🚀 Backtesting Integrated</span></h1>
+            <p>Comprehensive technical analysis with backtesting confidence scores and performance metrics</p>
+            <p>Analysis Date: January 01, 2025 | Generated: September 01, 2025 at 02:04</p>
+        </div>
+        
+        <div class="summary-stats">
+            <h3>📈 Portfolio Overview</h3>
+            <div class="stat-grid">
+                <div class="stat-item">
+                    <div class="stat-value" id="totalStocks">5</div>
+                    <div class="stat-label">Total Stocks</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="highConfidence">4</div>
+                    <div class="stat-label">High Confidence (≥70%)</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="veryHighConfidence">3</div>
+                    <div class="stat-label">Very High Confidence (≥80%)</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="avgConfidence">79.2%</div>
+                    <div class="stat-label">Average Confidence</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="avgReturn">17.6%</div>
+                    <div class="stat-label">Avg Simulated Return</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="avgWinRate">74%</div>
+                    <div class="stat-label">Avg Win Rate</div>
+                </div>
+            </div>
+            
+            <div class="backtesting-stats">
+                <h4>🎯 Backtesting Performance Summary</h4>
+                <div class="backtesting-grid">
+                    <div class="backtesting-item">
+                        <div class="backtesting-value">5</div>
+                        <div class="backtesting-label">Stocks with Backtesting Data</div>
+                    </div>
+                    <div class="backtesting-item">
+                        <div class="backtesting-value">2</div>
+                        <div class="backtesting-label">Excellent Performance</div>
+                    </div>
+                    <div class="backtesting-item">
+                        <div class="backtesting-value">2</div>
+                        <div class="backtesting-label">Good Performance</div>
+                    </div>
+                    <div class="backtesting-item">
+                        <div class="backtesting-value">0</div>
+                        <div class="backtesting-label">Average Performance</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <div class="filter-group">
+                <label for="confidenceFilter">Confidence Level:</label>
+                <select id="confidenceFilter" onchange="filterTable()">
+                    <option value="">All Levels</option>
+                    <option value="high">High (≥70%)</option>
+                    <option value="very-high">Very High (≥80%)</option>
+                    <option value="excellent">Excellent (≥90%)</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="performanceFilter">Performance Category:</label>
+                <select id="performanceFilter" onchange="filterTable()">
+                    <option value="">All Categories</option>
+                    <option value="Excellent">Excellent</option>
+                    <option value="Good">Good</option>
+                    <option value="Average">Average</option>
+                    <option value="Poor">Poor</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="signalFilter">Trading Signal:</label>
+                <select id="signalFilter" onchange="filterTable()">
+                    <option value="">All Signals</option>
+                    <option value="STRONG_BUY">Strong Buy</option>
+                    <option value="BUY">Buy</option>
+                    <option value="HOLD">Hold</option>
+                    <option value="WEAK_HOLD">Weak Hold</option>
+                    <option value="SELL">Sell</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="table-container">
+            <table class="stock-table" id="stockTable">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Symbol</th>
+                        <th>Company</th>
+                        <th>Market Cap</th>
+                        <th>Price</th>
+                        <th>1D %</th>
+                        <th>Technical Score</th>
+                        <th>Confidence Score</th>
+                        <th>Simulated Return</th>
+                        <th>Win Rate</th>
+                        <th>Performance</th>
+                        <th>Signal</th>
+                    </tr>
+                </thead>
+                <tbody id="stockTableBody">
+                    <!-- Data will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="footer">
+            <p>📊 Enhanced NSE Analysis Dashboard with Backtesting Integration</p>
+            <p>🚀 Generated by Advanced Technical Analysis System | Data Source: NSE</p>
+            <p>⚠️ This analysis is for educational purposes only. Not financial advice.</p>
+            <p>📈 Backtesting results show historical performance and should not be considered as future guarantees</p>
+        </div>
+    </div>
+    
+    <script>
+        // Stock data with backtesting information
+        const stockData = [            {
+                rank: 1,
+                symbol: 'INFY',
+                companyName: 'Infosys',
+                marketCap: 'Large Cap',
+                currentPrice: 1450.8,
+                change1D: 1.5,
+                change1W: 4.2,
+                change1M: 15.2,
+                technicalScore: 91.2,
+                rsi: 78.9,
+                relativeStrength: 1.45,
+                canSlim: 9.1,
+                minervini: 8.9,
+                fundamental: 8.9,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'STRONG_BUY',
+                confidenceScore: 96,
+                simulatedReturn: 35,
+                simulatedWinRate: 94,
+                riskAdjustedReturn: 32,
+                performanceCategory: 'Excellent',
+                hasBacktesting: true
+            },
+            {
+                rank: 2,
+                symbol: 'RELIANCE',
+                companyName: 'Reliance Industries',
+                marketCap: 'Large Cap',
+                currentPrice: 2500.5,
+                change1D: 2.5,
+                change1W: 5.2,
+                change1M: 12.5,
+                technicalScore: 85.5,
+                rsi: 65.2,
+                relativeStrength: 1.25,
+                canSlim: 8.5,
+                minervini: 7.8,
+                fundamental: 8.2,
+                trendSignal: 'BULLISH',
+                tradingSignal: 'STRONG_BUY',
+                confidenceScore: 92,
+                simulatedReturn: 28,
+                simulatedWinRate: 88,
+                riskAdjustedReturn: 25,
+                performanceCategory: 'Excellent',
+                hasBacktesting: true
+            },
+            {
+                rank: 3,
+                symbol: 'HDFCBANK',
+                companyName: 'HDFC Bank',
+                marketCap: 'Large Cap',
+                currentPrice: 1650.25,
+                change1D: 0.8,
+                change1W: 3.8,
+                change1M: 8.7,
+                technicalScore: 68.9,
+                rsi: 72.1,
+                relativeStrength: 1.15,
+                canSlim: 6.8,
+                minervini: 7.2,
+                fundamental: 7.5,
+                trendSignal: 'BULLISH',
+                tradingSignal: 'BUY',
+                confidenceScore: 85,
+                simulatedReturn: 22,
+                simulatedWinRate: 78,
+                riskAdjustedReturn: 18,
+                performanceCategory: 'Good',
+                hasBacktesting: true
+            },
+            {
+                rank: 4,
+                symbol: 'TCS',
+                companyName: 'Tata Consultancy Services',
+                marketCap: 'Large Cap',
+                currentPrice: 3800.75,
+                change1D: -1.2,
+                change1W: -2.1,
+                change1M: -5.3,
+                technicalScore: 72.3,
+                rsi: 58.7,
+                relativeStrength: 0.95,
+                canSlim: 7.2,
+                minervini: 6.5,
+                fundamental: 7.8,
+                trendSignal: 'NEUTRAL',
+                tradingSignal: 'BUY',
+                confidenceScore: 78,
+                simulatedReturn: 15,
+                simulatedWinRate: 72,
+                riskAdjustedReturn: 12,
+                performanceCategory: 'Good',
+                hasBacktesting: true
+            },
+            {
+                rank: 5,
+                symbol: 'HINDUNILVR',
+                companyName: 'Hindustan Unilever',
+                marketCap: 'Large Cap',
+                currentPrice: 2800.9,
+                change1D: -0.5,
+                change1W: -1.8,
+                change1M: -3.1,
+                technicalScore: 45.6,
+                rsi: 35.4,
+                relativeStrength: 0.75,
+                canSlim: 4.5,
+                minervini: 3.8,
+                fundamental: 6.2,
+                trendSignal: 'BEARISH',
+                tradingSignal: 'SELL',
+                confidenceScore: 45,
+                simulatedReturn: -12,
+                simulatedWinRate: 38,
+                riskAdjustedReturn: -15,
+                performanceCategory: 'Poor',
+                hasBacktesting: true
+            }];
+        
+        // Filter variables
+        let currentConfidenceFilter = "";
+        let currentPerformanceFilter = "";
+        let currentSignalFilter = "";
+        
+        // Function to get score class
+        function getScoreClass(score) {
+            if (score >= 80) return "score-excellent";
+            if (score >= 65) return "score-good";
+            if (score >= 50) return "score-average";
+            return "score-poor";
+        }
+        
+        // Function to get confidence class
+        function getConfidenceClass(confidence) {
+            if (confidence >= 80) return "confidence-high";
+            if (confidence >= 60) return "confidence-medium";
+            return "confidence-low";
+        }
+        
+        // Function to get signal class
+        function getSignalClass(signal) {
+            switch(signal) {
+                case "STRONG_BUY": return "signal-strong-buy";
+                case "BUY": return "signal-buy";
+                case "HOLD": return "signal-hold";
+                case "WEAK_HOLD": return "signal-weak-hold";
+                case "SELL": return "signal-sell";
+                default: return "";
+            }
+        }
+        
+        // Function to populate table
+        function populateTable() {
+            const tbody = document.getElementById("stockTableBody");
+            tbody.innerHTML = "";
+            
+            stockData.forEach(stock => {
+                // Apply filters
+                if (currentConfidenceFilter) {
+                    if (currentConfidenceFilter === "high" && stock.confidenceScore < 70) return;
+                    if (currentConfidenceFilter === "very-high" && stock.confidenceScore < 80) return;
+                    if (currentConfidenceFilter === "excellent" && stock.confidenceScore < 90) return;
+                }
+                
+                if (currentPerformanceFilter && stock.performanceCategory !== currentPerformanceFilter) return;
+                if (currentSignalFilter && stock.tradingSignal !== currentSignalFilter) return;
+                
+                const row = document.createElement("tr");
+                
+                row.innerHTML = `
+                    <td>${stock.rank}</td>
+                    <td><strong>${stock.symbol}</strong></td>
+                    <td>${stock.companyName}</td>
+                    <td>${stock.marketCap}</td>
+                    <td>₹${stock.currentPrice.toFixed(2)}</td>
+                    <td style="color: ${stock.change1D >= 0 ? '#28a745' : '#dc3545'}">
+                        ${stock.change1D >= 0 ? '+' : ''}${stock.change1D.toFixed(2)}%
+                    </td>
+                    <td class="score-cell ${getScoreClass(stock.technicalScore)}">${stock.technicalScore}</td>
+                    <td class="${getConfidenceClass(stock.confidenceScore)}">${stock.confidenceScore}%</td>
+                    <td style="color: ${stock.simulatedReturn >= 0 ? '#28a745' : '#dc3545'}">
+                        ${stock.simulatedReturn >= 0 ? '+' : ''}${stock.simulatedReturn}%
+                    </td>
+                    <td>${stock.simulatedWinRate}%</td>
+                    <td>${stock.performanceCategory}</td>
+                    <td class="${getSignalClass(stock.tradingSignal)}">${stock.tradingSignal.replace('_', ' ')}</td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+        
+        // Function to filter table
+        function filterTable() {
+            currentConfidenceFilter = document.getElementById("confidenceFilter").value;
+            currentPerformanceFilter = document.getElementById("performanceFilter").value;
+            currentSignalFilter = document.getElementById("signalFilter").value;
+            populateTable();
+        }
+        
+        // Initialize the dashboard
+        document.addEventListener("DOMContentLoaded", function() {
+            populateTable();
+        });
+    </script>
+</body>
+</html>

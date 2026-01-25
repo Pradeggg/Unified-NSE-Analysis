@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NSE Long-term Screeners Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Roboto", "Google Sans", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #212121;
+            font-weight: 400;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 20px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 300;
+            margin-bottom: 16px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            font-size: 1.25rem;
+            font-weight: 400;
+            opacity: 0.9;
+        }
+
+        .long-term-section, .sector-analysis-section {
+            margin: 2rem 0;
+            padding: 2rem;
+            background: #f8f9fa;
+            border-radius: 12px;
+        }
+        
+        .screeners-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        
+        .screener-card {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .screener-header h3 {
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+        
+        .screener-header p {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+        
+        .screener-list {
+            margin-top: 1rem;
+        }
+        
+        .screener-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #ecf0f1;
+        }
+        
+        .screener-item:last-child {
+            border-bottom: none;
+        }
+        
+        .stock-info {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .stock-symbol {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .stock-price {
+            font-size: 0.9rem;
+            color: #7f8c8d;
+        }
+        
+        .metric-value {
+            font-weight: 600;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        
+        .metric-value.rs {
+            background: #e8f5e8;
+            color: #27ae60;
+        }
+        
+        .metric-value.score {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        
+        .sector-performance-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+            margin-top: 1.5rem;
+        }
+        
+        .sector-chart-container, .sector-insights {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .sector-list {
+            margin-top: 1rem;
+        }
+        
+        .sector-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #ecf0f1;
+        }
+        
+        .sector-item:last-child {
+            border-bottom: none;
+        }
+        
+        .sector-name {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .sector-performance {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.9rem;
+        }
+        
+        .perf-1m, .perf-6m {
+            color: #7f8c8d;
+        }
+        
+        .perf-3m.positive {
+            color: #27ae60;
+            font-weight: 600;
+        }
+        
+        .perf-3m.negative {
+            color: #e74c3c;
+            font-weight: 600;
+        }
+        
+        .insights-section {
+            margin-bottom: 1.5rem;
+        }
+        
+        .insights-section h4 {
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+        
+        .insights-section ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .insights-section li {
+            padding: 0.25rem 0;
+            color: #34495e;
+        }
+        
+        .no-data {
+            text-align: center;
+            color: #7f8c8d;
+            font-style: italic;
+            padding: 2rem;
+        }
+        
+        .loading {
+            text-align: center;
+            color: #7f8c8d;
+            font-style: italic;
+            padding: 1rem;
+        }
+        
+        .info-text {
+            text-align: center;
+            color: #7f8c8d;
+            font-style: italic;
+            padding: 2rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 2px dashed #dee2e6;
+        }
+        
+        @media (max-width: 768px) {
+            .sector-performance-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .screeners-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 NSE Long-term Screeners</h1>
+            <p>Advanced pattern recognition and trend analysis for long-term investment opportunities</p>
+            <p>Analysis Date: September 19, 2025</p>
+        </div>
+
+                 <!-- Long-term Screeners Section -->
+                 <div class="long-term-section">
+                     <div class="section-header">
+                         <h2>🎯 Enhanced Long-term Perspective Screeners</h2>
+                         <p>Advanced pattern recognition and trend analysis for long-term investment opportunities</p>
+                     </div>
+
+                     <div class="screeners-grid">
+                         <div class="screener-card">
+                             <div class="screener-header">
+                                 <h3>💪 Strong Monthly RS</h3>
+                                 <p>Stocks with relative strength > 1.5 vs NIFTY500</p>
+                             </div>
+                             <div class="screener-content" id="strongRSContent">
+                                 <div class="loading">Loading...</div>
+                             </div>
+                         </div>
+
+                         <div class="screener-card">
+                             <div class="screener-header">
+                                 <h3>🚀 Consolidation Breakouts</h3>
+                                 <p>Stocks breaking out of 3-4 month consolidation</p>
+                             </div>
+                             <div class="screener-content" id="breakoutsContent">
+                                 <div class="loading">Loading...</div>
+                             </div>
+                         </div>
+
+                         <div class="screener-card">
+                             <div class="screener-header">
+                                 <h3>☕ Cup & Handle Patterns</h3>
+                                 <p>Classic bullish continuation patterns</p>
+                             </div>
+                             <div class="screener-content" id="cupHandleContent">
+                                 <div class="loading">Loading...</div>
+                             </div>
+                         </div>
+
+                         <div class="screener-card">
+                             <div class="screener-header">
+                                 <h3>📈 Long-term Uptrends</h3>
+                                 <p>Stocks in consistent 6-month uptrends</p>
+                             </div>
+                             <div class="screener-content" id="uptrendsContent">
+                                 <div class="loading">Loading...</div>
+                             </div>
+                         </div>
+
+                         <div class="screener-card">
+                             <div class="screener-header">
+                                 <h3>⚡ Momentum Breakouts</h3>
+                                 <p>Stocks with strong momentum + volume surge</p>
+                             </div>
+                             <div class="screener-content" id="momentumContent">
+                                 <div class="loading">Loading...</div>
+                             </div>
+                         </div>
+
+                         <div class="screener-card">
+                             <div class="screener-header">
+                                 <h3>🎯 Support Bounce</h3>
+                                 <p>Stocks bouncing from key support levels</p>
+                             </div>
+                             <div class="screener-content" id="supportContent">
+                                 <div class="loading">Loading...</div>
+                             </div>
+                         </div>
+
+                         <div class="screener-card">
+                             <div class="screener-header">
+                                 <h3>📊 Volume Accumulation</h3>
+                                 <p>Stocks showing volume accumulation patterns</p>
+                             </div>
+                             <div class="screener-content" id="volumeContent">
+                                 <div class="loading">Loading...</div>
+                             </div>
+                         </div>
+
+                         <div class="screener-card">
+                             <div class="screener-header">
+                                 <h3>💰 Earnings Momentum</h3>
+                                 <p>Stocks with accelerating price momentum</p>
+                             </div>
+                             <div class="screener-content" id="earningsContent">
+                                 <div class="loading">Loading...</div>
+                             </div>
+                         </div>
+
+                         <div class="screener-card">
+                             <div class="screener-header">
+                                 <h3>🏆 52-Week High Breakouts</h3>
+                                 <p>Stocks breaking or near 52-week highs</p>
+                             </div>
+                             <div class="screener-content" id="week52Content">
+                                 <div class="loading">Loading...</div>
+                             </div>
+                         </div>
+                     </div>
+                 </div>
+
+        <!-- Index Rotation Analysis -->
+        <div class="sector-analysis-section">
+            <div class="section-header">
+                <h2>🔄 Index Rotation Analysis</h2>
+                <p>Performance analysis across major market indices</p>
+            </div>
+            
+            <div class="sector-performance-grid">
+                <div class="sector-chart-container">
+                    <h3>📊 Index Performance (3M)</h3>
+                    <div class="sector-chart" id="indexChart">
+                        <div class="loading">Loading index data...</div>
+                    </div>
+                </div>
+                
+                <div class="sector-insights">
+                    <h3>💡 Rotation Insights</h3>
+                    <div class="insights-content" id="indexInsights">
+                        <div class="loading">Analyzing index rotation...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Long-term screeners data
+        const longTermData = {
+            strongRS: [{symbol: 'KHAICHEM', price: 128.79, rs: 168.69, score: 42.7}, {symbol: 'CUPID', price: 214.59, rs: 121.51, score: 64.7}, {symbol: 'GABRIEL', price: 1282.7, rs: 107.77, score: 68.7}, {symbol: 'ELIN', price: 224.75, rs: 98.89, score: 48.7}, {symbol: 'SUVEN', price: 224.45, rs: 95.8, score: 38}, {symbol: 'VIMTALABS', price: 825.05, rs: 93.76, score: 63.3}, {symbol: 'NETWEB', price: 3279.4, rs: 90.18, score: 65.3}, {symbol: 'YATRA', price: 152.43, rs: 88.51, score: 43.3}, {symbol: 'APOLLO', price: 343.9, rs: 85.37, score: 56.7}, {symbol: 'POCL', price: 1325.4, rs: 74.3, score: 53.3}],
+            breakouts: [],
+            cupHandle: [{symbol: 'CANBK', price: 117.76, score: 65.3}, {symbol: 'MOTILALOFS', price: 944.7, score: 53.3}, {symbol: 'TATAINVEST', price: 7333.5, score: 52.7}, {symbol: 'PNB', price: 113.3, score: 51.3}, {symbol: 'PSUBANK', price: 740.48, score: 50}, {symbol: 'MAHLIFE', price: 379.35, score: 50}, {symbol: 'ADANIPORTS', price: 1427.8, score: 44.7}, {symbol: 'SBILIFE', price: 1841.7, score: 44.7}, {symbol: 'IOC', price: 148.5, score: 43.3}, {symbol: 'DRREDDY', price: 1321.7, score: 43.3}],
+            uptrends: [{symbol: 'BHARATGEAR', price: 105.79, score: 78.7}, {symbol: 'ASTERDM', price: 650.55, score: 76}, {symbol: 'ASTRAMICRO', price: 1140.8, score: 75.3}, {symbol: 'CGCL', price: 190.66, score: 74}, {symbol: 'CARTRADE', price: 2540.6, score: 73.3}, {symbol: 'COMSYN', price: 155.34, score: 71.3}, {symbol: 'ALKEM', price: 5541.5, score: 70.7}, {symbol: 'AVL', price: 573.3, score: 70.7}, {symbol: 'SAMMAANCAP', price: 143.21, score: 70}, {symbol: 'GABRIEL', price: 1282.7, score: 68.7}],
+            momentum: [{symbol: 'BHARATGEAR', price: 105.79, score: 78.7}, {symbol: 'ANANTRAJ', price: 640.4, score: 72}, {symbol: 'DBEIL', price: 166.98, score: 70.7}, {symbol: 'GABRIEL', price: 1282.7, score: 68.7}, {symbol: 'SUNDARMHLD', price: 607.95, score: 68.7}, {symbol: 'TANLA', price: 753.7, score: 68}, {symbol: 'DCAL', price: 300.45, score: 68}, {symbol: 'CYBERTECH', price: 169.51, score: 68}, {symbol: 'AVANTEL', price: 183.77, score: 67.3}, {symbol: 'ADANIPOWER', price: 709.4, score: 66.7}],
+            support: [{symbol: 'DBEIL', price: 166.98, score: 70.7}, {symbol: 'COALINDIA', price: 394.5, score: 60}, {symbol: 'ALIVUS', price: 1047.45, score: 59.3}, {symbol: 'BAJAJFINSV', price: 2067.3, score: 58}, {symbol: 'NATCAPSUQ', price: 247.7, score: 56}, {symbol: 'ATGL', price: 651.45, score: 55.3}, {symbol: 'CHOLAFIN', price: 1590.9, score: 54.7}, {symbol: 'FLUOROCHEM', price: 3801.3, score: 54.7}, {symbol: 'REDTAPE', price: 161.12, score: 54}, {symbol: 'ATULAUTO', price: 514.1, score: 53.3}],
+            volume: [{symbol: 'BHARATGEAR', price: 105.79, score: 78.7}, {symbol: 'ASTRAMICRO', price: 1140.8, score: 75.3}, {symbol: 'AVL', price: 573.3, score: 70.7}, {symbol: 'DCAL', price: 300.45, score: 68}, {symbol: 'ADANIPOWER', price: 709.4, score: 66.7}, {symbol: 'TDPOWERSYS', price: 553.45, score: 66}, {symbol: 'AARTIPHARM', price: 930.2, score: 65.3}, {symbol: 'SAILIFE', price: 913.65, score: 64}, {symbol: 'NAVA', price: 717.3, score: 63.3}, {symbol: 'BAJEL', price: 224.57, score: 63.3}],
+            earnings: [{symbol: 'SUNDARMHLD', price: 607.95, score: 68.7}, {symbol: 'INTENTECH', price: 126.41, score: 57.3}, {symbol: 'IRMENERGY', price: 360.1, score: 48}, {symbol: 'SMSPHARMA', price: 292.14, score: 45.3}, {symbol: 'HITECH', price: 121.39, score: 40.7}],
+            week52: [{symbol: 'ADANIPOWER', price: 709.4, score: 66.7}, {symbol: 'NETWEB', price: 3279.4, score: 65.3}, {symbol: 'LAURUSLABS', price: 932.1, score: 63.3}, {symbol: 'POLYCAB', price: 7549, score: 63.3}, {symbol: 'AFFLE', price: 2145.2, score: 60}, {symbol: 'RADICO', price: 3052.5, score: 58.7}, {symbol: 'EGOLD', price: 110.3, score: 58}, {symbol: 'SBIN', price: 862.35, score: 54.7}, {symbol: 'INDIANB', price: 701.5, score: 54.7}, {symbol: 'RAMCOIND', price: 391.3, score: 54}]
+        };
+
+
+        // Index performance data
+        const indexData = [{index: 'Nifty Auto', perf1M: 6.08, perf3M: 15.86, perf6M: 28.66, rs: 18.1}, {index: 'Nifty Metal', perf1M: 7.36, perf3M: 6.47, perf6M: 18.16, rs: 7.39}, {index: 'Nifty Next 50', perf1M: 4.6, perf3M: 2.61, perf6M: 9.31, rs: 2.97}, {index: 'Nifty Pharma', perf1M: 4.17, perf3M: 2.07, perf6M: 8.68, rs: 2.37}, {index: 'Nifty 100', perf1M: 3.15, perf3M: 1.03, perf6M: 8.27, rs: 1.17}, {index: 'Nifty 200', perf1M: 3.29, perf3M: 0.98, perf6M: 9.03, rs: 1.12}, {index: 'Nifty Midcap 50', perf1M: 3.74, perf3M: 0.92, perf6M: 12.87, rs: 1.05}, {index: 'Nifty 500', perf1M: 3.4, perf3M: 0.88, perf6M: 9.73, rs: 1}, {index: 'Nifty 50', perf1M: 2.85, perf3M: 0.7, perf6M: 8.06, rs: 0.8}, {index: 'Nifty FMCG', perf1M: 0.17, perf3M: 0.65, perf6M: -0.13, rs: 0.74}, {index: 'NIFTY SMLCAP 250', perf1M: 4.59, perf3M: -0.79, perf6M: 13.8, rs: -0.9}, {index: 'Nifty Energy', perf1M: 4.66, perf3M: -0.98, perf6M: 6.84, rs: -1.11}, {index: 'NIFTY SMLCAP 100', perf1M: 5.75, perf3M: -1.38, perf6M: 13.18, rs: -1.58}, {index: 'NIFTY SMLCAP 50', perf1M: 5.88, perf3M: -1.67, perf6M: 13.02, rs: -1.91}, {index: 'Nifty Bank', perf1M: 2.7, perf3M: -2.28, perf6M: 4.41, rs: -2.61}, {index: 'Nifty IT', perf1M: 2.34, perf3M: -2.96, perf6M: 9.86, rs: -3.38}, {index: 'Nifty Realty', perf1M: 4.97, perf3M: -4.09, perf6M: 9.84, rs: -4.67}, {index: 'Nifty Media', perf1M: 0.78, perf3M: -4.98, perf6M: 2.65, rs: -5.68}];
+
+
+        document.addEventListener("DOMContentLoaded", () => {
+            populateLongTermScreeners();
+            populateIndexAnalysis();
+        });
+
+        // Long-term screeners functions
+        function populateLongTermScreeners() {
+            populateScreener("strongRSContent", longTermData.strongRS, "RS");
+            populateScreener("breakoutsContent", longTermData.breakouts, "Score");
+            populateScreener("cupHandleContent", longTermData.cupHandle, "Score");
+            populateScreener("uptrendsContent", longTermData.uptrends, "Score");
+            populateScreener("momentumContent", longTermData.momentum, "Score");
+            populateScreener("supportContent", longTermData.support, "Score");
+            populateScreener("volumeContent", longTermData.volume, "Score");
+            populateScreener("earningsContent", longTermData.earnings, "Score");
+            populateScreener("week52Content", longTermData.week52, "Score");
+        }
+        
+        function populateScreener(containerId, data, metricKey) {
+            const container = document.getElementById(containerId);
+            
+            if (!data || data.length === 0) {
+                container.innerHTML = "<div class=\"no-data\">No stocks found matching this criteria</div>";
+                return;
+            }
+            
+            let html = "<div class=\"screener-list\">";
+            data.forEach((stock, index) => {
+                const metric = metricKey === "RS" ? stock.rs : stock.score;
+                const metricLabel = metricKey === "RS" ? "RS" : "Score";
+                html += "<div class=\"screener-item\">" +
+                    "<div class=\"stock-info\">" +
+                        "<span class=\"stock-symbol\">" + stock.symbol + "</span>" +
+                        "<span class=\"stock-price\">₹" + stock.price.toFixed(2) + "</span>" +
+                    "</div>" +
+                    "<div class=\"metric-value " + metricKey.toLowerCase() + "\">" +
+                        metricLabel + ": " + metric.toFixed(2) +
+                    "</div>" +
+                "</div>";
+            });
+            html += "</div>";
+            container.innerHTML = html;
+        }
+        
+        function populateIndexAnalysis() {
+            if (!indexData || indexData.length === 0) {
+                document.getElementById("indexChart").innerHTML = "<div class=\"no-data\">No index data available</div>";
+                document.getElementById("indexInsights").innerHTML = "<div class=\"no-data\">No insights available</div>";
+                return;
+            }
+            
+            // Sort by 3M performance
+            const sortedIndices = indexData.sort((a, b) => b.perf3M - a.perf3M);
+            
+            // Create index chart
+            const chartContainer = document.getElementById("indexChart");
+            let chartHtml = "<div class=\"sector-list\">";
+            sortedIndices.forEach(index => {
+                const perfClass = index.perf3M > 0 ? "positive" : "negative";
+                chartHtml += "<div class=\"sector-item\">" +
+                    "<div class=\"sector-name\">" + index.index + "</div>" +
+                    "<div class=\"sector-performance\">" +
+                        "<span class=\"perf-1m\">1M: " + index.perf1M.toFixed(1) + "%</span>" +
+                        "<span class=\"perf-3m " + perfClass + "\">3M: " + index.perf3M.toFixed(1) + "%</span>" +
+                        "<span class=\"perf-6m\">6M: " + index.perf6M.toFixed(1) + "%</span>" +
+                    "</div>" +
+                "</div>";
+            });
+            chartHtml += "</div>";
+            chartContainer.innerHTML = chartHtml;
+            
+            // Create insights
+            const insightsContainer = document.getElementById("indexInsights");
+            const top5 = sortedIndices.slice(0, 5);
+            const bottom5 = sortedIndices.slice(-5);
+            
+            let insightsHtml = "<div class=\"insights-section\">" +
+                "<h4>🏆 Top Performing Indices (3M)</h4>" +
+                "<ul>";
+            top5.forEach((index, index_num) => {
+                insightsHtml += "<li>" + (index_num + 1) + ". " + index.index + ": " + index.perf3M.toFixed(1) + "%</li>";
+            });
+            insightsHtml += "</ul></div>" +
+                "<div class=\"insights-section\">" +
+                "<h4>📉 Underperforming Indices (3M)</h4>" +
+                "<ul>";
+            bottom5.forEach((index, index_num) => {
+                insightsHtml += "<li>" + (index_num + 1) + ". " + index.index + ": " + index.perf3M.toFixed(1) + "%</li>";
+            });
+            insightsHtml += "</ul></div>";
+            insightsContainer.innerHTML = insightsHtml;
+        }
+
+    </script>
+</body>
+</html>

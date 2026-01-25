@@ -1,0 +1,1611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced NSE Analysis Dashboard with Backtesting Integration</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .backtesting-badge {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            display: inline-block;
+            margin-top: 10px;
+        }
+        
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 30px;
+            background: #f8f9fa;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #2a5298;
+        }
+        
+        .stat-label {
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .backtesting-summary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .backtesting-summary h2 {
+            margin-bottom: 20px;
+        }
+        
+        .backtesting-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .backtesting-stat {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 8px;
+        }
+        
+        .filters {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .filter-group {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .filter-group label {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .filter-group select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: white;
+        }
+        
+        .table-container {
+            padding: 30px;
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        th {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: bold;
+        }
+        
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .score-high { color: #28a745; font-weight: bold; }
+        .score-medium { color: #ffc107; font-weight: bold; }
+        .score-low { color: #dc3545; font-weight: bold; }
+        
+        .confidence-high { color: #28a745; font-weight: bold; }
+        .confidence-medium { color: #ffc107; font-weight: bold; }
+        .confidence-low { color: #dc3545; font-weight: bold; }
+        
+        .signal-buy { color: #28a745; font-weight: bold; }
+        .signal-hold { color: #ffc107; font-weight: bold; }
+        .signal-sell { color: #dc3545; font-weight: bold; }
+        
+        .backtesting-data {
+            background: #e8f5e8;
+            border-left: 4px solid #28a745;
+            padding: 8px 12px;
+            margin: 5px 0;
+            border-radius: 4px;
+        }
+        
+        .no-backtesting {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 8px 12px;
+            margin: 5px 0;
+            border-radius: 4px;
+        }
+        
+        .footer {
+            background: #333;
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Enhanced NSE Analysis Dashboard</h1>
+            <p>Comprehensive Stock Analysis with Backtesting Integration</p>
+            <div class="backtesting-badge">Backtesting Integrated</div>
+        </div>
+        
+        <div class="summary-stats">
+            <div class="stat-card">
+                <div class="stat-number">1954</div>
+                <div class="stat-label">Total Stocks</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">368</div>
+                <div class="stat-label">High Confidence</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">54.1%</div>
+                <div class="stat-label">Avg Confidence</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">-5.1%</div>
+                <div class="stat-label">Avg Return</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">44.3%</div>
+                <div class="stat-label">Avg Win Rate</div>
+            </div>
+        </div>
+        
+        <div class="backtesting-summary">
+            <h2>Backtesting Performance Summary</h2>
+            <div class="backtesting-stats">
+                <div class="backtesting-stat">
+                    <div style="font-size: 1.5em; font-weight: bold;">1948</div>
+                    <div>Stocks with Backtesting</div>
+                </div>
+                <div class="backtesting-stat">
+                    <div style="font-size: 1.5em; font-weight: bold;">44.3%</div>
+                    <div>Average Win Rate</div>
+                </div>
+                <div class="backtesting-stat">
+                    <div style="font-size: 1.5em; font-weight: bold;">-5.1%</div>
+                    <div>Average Return</div>
+                </div>
+                <div class="backtesting-stat">
+                    <div style="font-size: 1.5em; font-weight: bold;">0.02</div>
+                    <div>Risk-Adjusted Return</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="filters">
+            <div class="filter-group">
+                <label for="confidenceFilter">Confidence Level:</label>
+                <select id="confidenceFilter" onchange="filterTable()">
+                    <option value="">All</option>
+                    <option value="high">High (≥70%)</option>
+                    <option value="medium">Medium (50-70%)</option>
+                    <option value="low">Low (<50%)</option>
+                </select>
+                
+                <label for="performanceFilter">Performance Category:</label>
+                <select id="performanceFilter" onchange="filterTable()">
+                    <option value="">All</option>
+                    <option value="Excellent">Excellent</option>
+                    <option value="Good">Good</option>
+                    <option value="Moderate">Moderate</option>
+                    <option value="Fair">Fair</option>
+                    <option value="Poor">Poor</option>
+                </select>
+                
+                <label for="signalFilter">Trading Signal:</label>
+                <select id="signalFilter" onchange="filterTable()">
+                    <option value="">All</option>
+                    <option value="STRONG_BUY">Strong Buy</option>
+                    <option value="BUY">Buy</option>
+                    <option value="HOLD">Hold</option>
+                    <option value="WEAK_HOLD">Weak Hold</option>
+                    <option value="SELL">Sell</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="table-container">
+            <table id="stockTable">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Symbol</th>
+                        <th>Company</th>
+                        <th>Market Cap</th>
+                        <th>Price</th>
+                        <th>1D %</th>
+                        <th>1W %</th>
+                        <th>1M %</th>
+                        <th>Tech Score</th>
+                        <th>RSI</th>
+                        <th>Confidence</th>
+                        <th>Return</th>
+                        <th>Win Rate</th>
+                        <th>Risk-Adj Return</th>
+                        <th>Performance</th>
+                        <th>Signal</th>
+                    </tr>
+                </thead>
+                <tbody id="stockTableBody">
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="footer">
+            <p>Generated on September 02, 2025 | Enhanced NSE Analysis with Backtesting Integration</p>
+        </div>
+    </div>
+    
+    <script>
+        const stockData = [
+            {
+                rank: 1,
+                symbol: 'COMSYN',
+                companyName: 'COMSYN',
+                marketCap: 'MICRO_CAP',
+                currentPrice: 145.4,
+                change1D: 1.42,
+                change1W: 7.84,
+                change1M: 0,
+                technicalScore: 52.7,
+                rsi: 63.5,
+                relativeStrength: 12.43,
+                canSlim: 9,
+                minervini: 8,
+                fundamental: 71.65,
+                trendSignal: 'BULLISH',
+                tradingSignal: 'HOLD',
+                confidenceScore: 98,
+                simulatedReturn: 27.9,
+                simulatedWinRate: 94.7,
+                riskAdjustedReturn: 529.4,
+                performanceCategory: 'Excellent',
+                hasBacktesting: true
+            },
+            {
+                rank: 2,
+                symbol: 'GARUDA',
+                companyName: 'GARUDA',
+                marketCap: 'MID_CAP',
+                currentPrice: 208.59,
+                change1D: -4.99,
+                change1W: 1.32,
+                change1M: 0,
+                technicalScore: 48,
+                rsi: 60.3,
+                relativeStrength: 75.57,
+                canSlim: 16,
+                minervini: 8,
+                fundamental: 0,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'WEAK_HOLD',
+                confidenceScore: 98,
+                simulatedReturn: 33.7,
+                simulatedWinRate: 82,
+                riskAdjustedReturn: 187.5,
+                performanceCategory: 'Excellent',
+                hasBacktesting: true
+            },
+            {
+                rank: 3,
+                symbol: 'LTF',
+                companyName: 'LTF',
+                marketCap: 'MID_CAP',
+                currentPrice: 221.93,
+                change1D: -0.3,
+                change1W: 0.88,
+                change1M: 0,
+                technicalScore: 42,
+                rsi: 64.1,
+                relativeStrength: 20.55,
+                canSlim: 11,
+                minervini: 12,
+                fundamental: 0,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'WEAK_HOLD',
+                confidenceScore: 98,
+                simulatedReturn: 30.5,
+                simulatedWinRate: 86.9,
+                riskAdjustedReturn: 232.5,
+                performanceCategory: 'Excellent',
+                hasBacktesting: true
+            },
+            {
+                rank: 4,
+                symbol: 'GODFRYPHLP',
+                companyName: 'GODFRYPHLP',
+                marketCap: 'LARGE_CAP',
+                currentPrice: 10060,
+                change1D: -4.83,
+                change1W: -4.41,
+                change1M: 0,
+                technicalScore: 38,
+                rsi: 50.2,
+                relativeStrength: 29.39,
+                canSlim: 13,
+                minervini: 6,
+                fundamental: 0,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'WEAK_HOLD',
+                confidenceScore: 98,
+                simulatedReturn: 15.9,
+                simulatedWinRate: 93.8,
+                riskAdjustedReturn: 257,
+                performanceCategory: 'Good',
+                hasBacktesting: true
+            },
+            {
+                rank: 5,
+                symbol: 'ASHAPURMIN',
+                companyName: 'ASHAPURMIN',
+                marketCap: 'MICRO_CAP',
+                currentPrice: 551.7,
+                change1D: 1.73,
+                change1W: 13.71,
+                change1M: 0,
+                technicalScore: 47.3,
+                rsi: 61.4,
+                relativeStrength: 37.74,
+                canSlim: 9,
+                minervini: 4,
+                fundamental: 52.76,
+                trendSignal: 'BULLISH',
+                tradingSignal: 'WEAK_HOLD',
+                confidenceScore: 96,
+                simulatedReturn: 15.5,
+                simulatedWinRate: 76.1,
+                riskAdjustedReturn: 64.6,
+                performanceCategory: 'Good',
+                hasBacktesting: true
+            },
+            {
+                rank: 6,
+                symbol: 'ADANIPOWER',
+                companyName: 'ADANIPOWER',
+                marketCap: 'MID_CAP',
+                currentPrice: 608.35,
+                change1D: 0.25,
+                change1W: 2.74,
+                change1M: 0,
+                technicalScore: 40,
+                rsi: 58.6,
+                relativeStrength: 18.51,
+                canSlim: 8,
+                minervini: 12,
+                fundamental: 10,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'WEAK_HOLD',
+                confidenceScore: 96,
+                simulatedReturn: 34.7,
+                simulatedWinRate: 79.1,
+                riskAdjustedReturn: 166.3,
+                performanceCategory: 'Excellent',
+                hasBacktesting: true
+            },
+            {
+                rank: 7,
+                symbol: 'LEMONTREE',
+                companyName: 'LEMONTREE',
+                marketCap: 'SMALL_CAP',
+                currentPrice: 165.27,
+                change1D: -2.91,
+                change1W: 0.05,
+                change1M: 0,
+                technicalScore: 38.7,
+                rsi: 60.6,
+                relativeStrength: 27.33,
+                canSlim: 12,
+                minervini: 10,
+                fundamental: 0,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'WEAK_HOLD',
+                confidenceScore: 96,
+                simulatedReturn: 29.4,
+                simulatedWinRate: 88.1,
+                riskAdjustedReturn: 247.9,
+                performanceCategory: 'Excellent',
+                hasBacktesting: true
+            },
+            {
+                rank: 8,
+                symbol: 'NAVA',
+                companyName: 'NAVA',
+                marketCap: 'SMALL_CAP',
+                currentPrice: 704,
+                change1D: -1.04,
+                change1W: 6.7,
+                change1M: 0,
+                technicalScore: 36,
+                rsi: 69,
+                relativeStrength: 28.03,
+                canSlim: 12,
+                minervini: 6,
+                fundamental: 0,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'WEAK_HOLD',
+                confidenceScore: 96,
+                simulatedReturn: 30.3,
+                simulatedWinRate: 94.9,
+                riskAdjustedReturn: 591.5,
+                performanceCategory: 'Excellent',
+                hasBacktesting: true
+            },
+            {
+                rank: 9,
+                symbol: 'RBLBANK',
+                companyName: 'RBLBANK',
+                marketCap: 'LARGE_CAP',
+                currentPrice: 269.3,
+                change1D: 1.66,
+                change1W: 5.44,
+                change1M: 0,
+                technicalScore: 33.3,
+                rsi: 60.7,
+                relativeStrength: 21.88,
+                canSlim: 7,
+                minervini: 8,
+                fundamental: 0,
+                trendSignal: 'BULLISH',
+                tradingSignal: 'SELL',
+                confidenceScore: 96,
+                simulatedReturn: 25.2,
+                simulatedWinRate: 83.2,
+                riskAdjustedReturn: 149.9,
+                performanceCategory: 'Excellent',
+                hasBacktesting: true
+            },
+            {
+                rank: 10,
+                symbol: 'WAAREEENER',
+                companyName: 'WAAREEENER',
+                marketCap: 'LARGE_CAP',
+                currentPrice: 3199.1,
+                change1D: -0.04,
+                change1W: -2.03,
+                change1M: 0,
+                technicalScore: 32.7,
+                rsi: 52.3,
+                relativeStrength: 10.81,
+                canSlim: 6,
+                minervini: 8,
+                fundamental: 0,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'SELL',
+                confidenceScore: 96,
+                simulatedReturn: 29.1,
+                simulatedWinRate: 92.7,
+                riskAdjustedReturn: 397.1,
+                performanceCategory: 'Excellent',
+                hasBacktesting: true
+            },
+            {
+                rank: 11,
+                symbol: 'DABUR',
+                companyName: 'DABUR',
+                marketCap: 'LARGE_CAP',
+                currentPrice: 544.6,
+                change1D: 4,
+                change1W: 4.25,
+                change1M: 0,
+                technicalScore: 61.3,
+                rsi: 64.3,
+                relativeStrength: 20.42,
+                canSlim: 11,
+                minervini: 18,
+                fundamental: 51.29,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'HOLD',
+                confidenceScore: 94,
+                simulatedReturn: 16,
+                simulatedWinRate: 90.1,
+                riskAdjustedReturn: 161.3,
+                performanceCategory: 'Good',
+                hasBacktesting: true
+            },
+            {
+                rank: 12,
+                symbol: 'UPL',
+                companyName: 'UPL',
+                marketCap: 'MID_CAP',
+                currentPrice: 710.65,
+                change1D: -2.38,
+                change1W: -1.72,
+                change1M: 0,
+                technicalScore: 42.7,
+                rsi: 52.4,
+                relativeStrength: 15.96,
+                canSlim: 9,
+                minervini: 12,
+                fundamental: 0,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'WEAK_HOLD',
+                confidenceScore: 94,
+                simulatedReturn: 30.4,
+                simulatedWinRate: 90.9,
+                riskAdjustedReturn: 333,
+                performanceCategory: 'Excellent',
+                hasBacktesting: true
+            },
+            {
+                rank: 13,
+                symbol: 'SILVERIETF',
+                companyName: 'SILVERIETF',
+                marketCap: 'SMALL_CAP',
+                currentPrice: 122.85,
+                change1D: -0.44,
+                change1W: 5.6,
+                change1M: 0,
+                technicalScore: 39.3,
+                rsi: 70.8,
+                relativeStrength: 18.17,
+                canSlim: 11,
+                minervini: 6,
+                fundamental: 0,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'WEAK_HOLD',
+                confidenceScore: 94,
+                simulatedReturn: 23.6,
+                simulatedWinRate: 83.1,
+                riskAdjustedReturn: 139.5,
+                performanceCategory: 'Excellent',
+                hasBacktesting: true
+            },
+            {
+                rank: 14,
+                symbol: 'NYKAA',
+                companyName: 'NYKAA',
+                marketCap: 'SMALL_CAP',
+                currentPrice: 232.52,
+                change1D: -0.52,
+                change1W: 0.38,
+                change1M: 0,
+                technicalScore: 37.3,
+                rsi: 65.6,
+                relativeStrength: 21.77,
+                canSlim: 10,
+                minervini: 10,
+                fundamental: 0,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'WEAK_HOLD',
+                confidenceScore: 94,
+                simulatedReturn: 32.9,
+                simulatedWinRate: 76.9,
+                riskAdjustedReturn: 142.4,
+                performanceCategory: 'Excellent',
+                hasBacktesting: true
+            },
+            {
+                rank: 15,
+                symbol: 'SILVERBEES',
+                companyName: 'SILVERBEES',
+                marketCap: 'LARGE_CAP',
+                currentPrice: 117.91,
+                change1D: -0.57,
+                change1W: 5.36,
+                change1M: 0,
+                technicalScore: 36.7,
+                rsi: 70.3,
+                relativeStrength: 17.91,
+                canSlim: 11,
+                minervini: 6,
+                fundamental: 0,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'WEAK_HOLD',
+                confidenceScore: 94,
+                simulatedReturn: 25.5,
+                simulatedWinRate: 84.6,
+                riskAdjustedReturn: 165.4,
+                performanceCategory: 'Excellent',
+                hasBacktesting: true
+            },
+            {
+                rank: 16,
+                symbol: 'AUTOIETF',
+                companyName: 'AUTOIETF',
+                marketCap: 'MICRO_CAP',
+                currentPrice: 26.29,
+                change1D: -0.15,
+                change1W: 1.08,
+                change1M: 0,
+                technicalScore: 36.7,
+                rsi: 67.8,
+                relativeStrength: 12.55,
+                canSlim: 7,
+                minervini: 12,
+                fundamental: 10,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'WEAK_HOLD',
+                confidenceScore: 94,
+                simulatedReturn: 24.6,
+                simulatedWinRate: 87.9,
+                riskAdjustedReturn: 204.4,
+                performanceCategory: 'Excellent',
+                hasBacktesting: true
+            },
+            {
+                rank: 17,
+                symbol: 'JSL',
+                companyName: 'JSL',
+                marketCap: 'SMALL_CAP',
+                currentPrice: 761.25,
+                change1D: 0.78,
+                change1W: -4.28,
+                change1M: 0,
+                technicalScore: 35.3,
+                rsi: 56.6,
+                relativeStrength: 17.37,
+                canSlim: 8,
+                minervini: 10,
+                fundamental: 0,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'WEAK_HOLD',
+                confidenceScore: 94,
+                simulatedReturn: 17.7,
+                simulatedWinRate: 78.8,
+                riskAdjustedReturn: 83.5,
+                performanceCategory: 'Good',
+                hasBacktesting: true
+            },
+            {
+                rank: 18,
+                symbol: 'HUBTOWN',
+                companyName: 'HUBTOWN',
+                marketCap: 'MICRO_CAP',
+                currentPrice: 338.8,
+                change1D: -2.96,
+                change1W: -4.86,
+                change1M: 0,
+                technicalScore: 31.3,
+                rsi: 53.5,
+                relativeStrength: 69.19,
+                canSlim: 9,
+                minervini: 4,
+                fundamental: 0,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'SELL',
+                confidenceScore: 94,
+                simulatedReturn: 18.8,
+                simulatedWinRate: 75.2,
+                riskAdjustedReturn: 75.8,
+                performanceCategory: 'Good',
+                hasBacktesting: true
+            },
+            {
+                rank: 19,
+                symbol: 'CREDITACC',
+                companyName: 'CREDITACC',
+                marketCap: 'MICRO_CAP',
+                currentPrice: 1391.9,
+                change1D: -0.81,
+                change1W: 2.12,
+                change1M: 0,
+                technicalScore: 51.3,
+                rsi: 62.2,
+                relativeStrength: 28.8,
+                canSlim: 12,
+                minervini: 10,
+                fundamental: 53.16,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'HOLD',
+                confidenceScore: 92,
+                simulatedReturn: 15.1,
+                simulatedWinRate: 77.8,
+                riskAdjustedReturn: 68,
+                performanceCategory: 'Good',
+                hasBacktesting: true
+            },
+            {
+                rank: 20,
+                symbol: 'TATSILV',
+                companyName: 'TATSILV',
+                marketCap: 'MICRO_CAP',
+                currentPrice: 11.95,
+                change1D: -0.83,
+                change1W: 5.57,
+                change1M: 0,
+                technicalScore: 45.3,
+                rsi: 69.6,
+                relativeStrength: 18.03,
+                canSlim: 14,
+                minervini: 6,
+                fundamental: 0,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'WEAK_HOLD',
+                confidenceScore: 92,
+                simulatedReturn: 31.7,
+                simulatedWinRate: 79.1,
+                riskAdjustedReturn: 151.4,
+                performanceCategory: 'Excellent',
+                hasBacktesting: true
+            },
+            {
+                rank: 21,
+                symbol: 'HDFCSILVER',
+                companyName: 'HDFCSILVER',
+                marketCap: 'MICRO_CAP',
+                currentPrice: 118.25,
+                change1D: -0.75,
+                change1W: 5.51,
+                change1M: 0,
+                technicalScore: 44,
+                rsi: 69.3,
+                relativeStrength: 18.04,
+                canSlim: 12,
+                minervini: 6,
+                fundamental: 0,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'WEAK_HOLD',
+                confidenceScore: 92,
+                simulatedReturn: 27.5,
+                simulatedWinRate: 78.6,
+                riskAdjustedReturn: 128.2,
+                performanceCategory: 'Excellent',
+                hasBacktesting: true
+            },
+            {
+                rank: 22,
+                symbol: 'SILVER',
+                companyName: 'SILVER',
+                marketCap: 'MICRO_CAP',
+                currentPrice: 122.93,
+                change1D: -0.07,
+                change1W: 5.54,
+                change1M: 0,
+                technicalScore: 40,
+                rsi: 71.9,
+                relativeStrength: 18.11,
+                canSlim: 12,
+                minervini: 6,
+                fundamental: 0,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'WEAK_HOLD',
+                confidenceScore: 92,
+                simulatedReturn: 29.6,
+                simulatedWinRate: 89.2,
+                riskAdjustedReturn: 274,
+                performanceCategory: 'Excellent',
+                hasBacktesting: true
+            },
+            {
+                rank: 23,
+                symbol: 'SHREDIGCEM',
+                companyName: 'SHREDIGCEM',
+                marketCap: 'MICRO_CAP',
+                currentPrice: 95.07,
+                change1D: -0.18,
+                change1W: -1.97,
+                change1M: 0,
+                technicalScore: 36.7,
+                rsi: 59.3,
+                relativeStrength: 25.01,
+                canSlim: 12,
+                minervini: 8,
+                fundamental: 0,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'WEAK_HOLD',
+                confidenceScore: 92,
+                simulatedReturn: 34.3,
+                simulatedWinRate: 87.6,
+                riskAdjustedReturn: 276.1,
+                performanceCategory: 'Excellent',
+                hasBacktesting: true
+            },
+            {
+                rank: 24,
+                symbol: 'GPIL',
+                companyName: 'GPIL',
+                marketCap: 'SMALL_CAP',
+                currentPrice: 240.36,
+                change1D: 0.46,
+                change1W: 0.8,
+                change1M: 0,
+                technicalScore: 36,
+                rsi: 72.7,
+                relativeStrength: 37.49,
+                canSlim: 12,
+                minervini: 8,
+                fundamental: 0,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'WEAK_HOLD',
+                confidenceScore: 92,
+                simulatedReturn: 16.6,
+                simulatedWinRate: 82.8,
+                riskAdjustedReturn: 96.2,
+                performanceCategory: 'Good',
+                hasBacktesting: true
+            },
+            {
+                rank: 25,
+                symbol: 'SPIC',
+                companyName: 'SPIC',
+                marketCap: 'MICRO_CAP',
+                currentPrice: 110.92,
+                change1D: -4.73,
+                change1W: 2.41,
+                change1M: 0,
+                technicalScore: 36,
+                rsi: 61.5,
+                relativeStrength: 33.59,
+                canSlim: 12,
+                minervini: 6,
+                fundamental: 0,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'WEAK_HOLD',
+                confidenceScore: 92,
+                simulatedReturn: 29.9,
+                simulatedWinRate: 84.8,
+                riskAdjustedReturn: 197.1,
+                performanceCategory: 'Excellent',
+                hasBacktesting: true
+            },
+            {
+                rank: 26,
+                symbol: 'ABCAPITAL',
+                companyName: 'ABCAPITAL',
+                marketCap: 'MID_CAP',
+                currentPrice: 274.85,
+                change1D: -1.86,
+                change1W: -2.19,
+                change1M: 0,
+                technicalScore: 35.3,
+                rsi: 49.7,
+                relativeStrength: 9.38,
+                canSlim: 5,
+                minervini: 8,
+                fundamental: 24.24,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'WEAK_HOLD',
+                confidenceScore: 92,
+                simulatedReturn: 27,
+                simulatedWinRate: 89.4,
+                riskAdjustedReturn: 254.6,
+                performanceCategory: 'Excellent',
+                hasBacktesting: true
+            },
+            {
+                rank: 27,
+                symbol: 'HDFCGOLD',
+                companyName: 'HDFCGOLD',
+                marketCap: 'MICRO_CAP',
+                currentPrice: 89.49,
+                change1D: 0.07,
+                change1W: 3.48,
+                change1M: 0,
+                technicalScore: 35.3,
+                rsi: 74.1,
+                relativeStrength: 9.17,
+                canSlim: 7,
+                minervini: 6,
+                fundamental: 0,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'WEAK_HOLD',
+                confidenceScore: 92,
+                simulatedReturn: 21.8,
+                simulatedWinRate: 89,
+                riskAdjustedReturn: 197.6,
+                performanceCategory: 'Excellent',
+                hasBacktesting: true
+            },
+            {
+                rank: 28,
+                symbol: 'RELAXO',
+                companyName: 'RELAXO',
+                marketCap: 'MICRO_CAP',
+                currentPrice: 486.6,
+                change1D: -0.63,
+                change1W: 6.97,
+                change1M: 0,
+                technicalScore: 35.3,
+                rsi: 58.2,
+                relativeStrength: 23.65,
+                canSlim: 8,
+                minervini: 10,
+                fundamental: 0,
+                trendSignal: 'BULLISH',
+                tradingSignal: 'WEAK_HOLD',
+                confidenceScore: 92,
+                simulatedReturn: 23.9,
+                simulatedWinRate: 81.4,
+                riskAdjustedReturn: 128.4,
+                performanceCategory: 'Excellent',
+                hasBacktesting: true
+            },
+            {
+                rank: 29,
+                symbol: 'GOLDIETF',
+                companyName: 'GOLDIETF',
+                marketCap: 'MICRO_CAP',
+                currentPrice: 89.59,
+                change1D: -0.16,
+                change1W: 3.46,
+                change1M: 0,
+                technicalScore: 34.7,
+                rsi: 72.3,
+                relativeStrength: 9.24,
+                canSlim: 6,
+                minervini: 6,
+                fundamental: 0,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'SELL',
+                confidenceScore: 92,
+                simulatedReturn: 27.8,
+                simulatedWinRate: 92.1,
+                riskAdjustedReturn: 350.2,
+                performanceCategory: 'Excellent',
+                hasBacktesting: true
+            },
+            {
+                rank: 30,
+                symbol: 'KALAMANDIR',
+                companyName: 'KALAMANDIR',
+                marketCap: 'MICRO_CAP',
+                currentPrice: 174.59,
+                change1D: 0.8,
+                change1W: -6.76,
+                change1M: 0,
+                technicalScore: 34,
+                rsi: 51,
+                relativeStrength: 29.48,
+                canSlim: 9,
+                minervini: 8,
+                fundamental: 0,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'SELL',
+                confidenceScore: 92,
+                simulatedReturn: 29.8,
+                simulatedWinRate: 91.6,
+                riskAdjustedReturn: 355.9,
+                performanceCategory: 'Excellent',
+                hasBacktesting: true
+            },
+            {
+                rank: 31,
+                symbol: 'GOLD1',
+                companyName: 'GOLD1',
+                marketCap: 'MICRO_CAP',
+                currentPrice: 87.47,
+                change1D: 0,
+                change1W: 3.58,
+                change1M: 0,
+                technicalScore: 32,
+                rsi: 74.2,
+                relativeStrength: 9.31,
+                canSlim: 6,
+                minervini: 6,
+                fundamental: 0,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'SELL',
+                confidenceScore: 92,
+                simulatedReturn: 24.7,
+                simulatedWinRate: 79.8,
+                riskAdjustedReturn: 122.3,
+                performanceCategory: 'Excellent',
+                hasBacktesting: true
+            },
+            {
+                rank: 32,
+                symbol: 'RTNINDIA',
+                companyName: 'RTNINDIA',
+                marketCap: 'SMALL_CAP',
+                currentPrice: 61.32,
+                change1D: -0.29,
+                change1W: 5.36,
+                change1M: 0,
+                technicalScore: 30,
+                rsi: 66.9,
+                relativeStrength: 7.5,
+                canSlim: 6,
+                minervini: 6,
+                fundamental: 0,
+                trendSignal: 'BULLISH',
+                tradingSignal: 'SELL',
+                confidenceScore: 92,
+                simulatedReturn: 31.5,
+                simulatedWinRate: 80.3,
+                riskAdjustedReturn: 160.1,
+                performanceCategory: 'Excellent',
+                hasBacktesting: true
+            },
+            {
+                rank: 33,
+                symbol: 'BAJAJCON',
+                companyName: 'BAJAJCON',
+                marketCap: 'MICRO_CAP',
+                currentPrice: 242.47,
+                change1D: 1.7,
+                change1W: 5.65,
+                change1M: 0,
+                technicalScore: 62,
+                rsi: 66.7,
+                relativeStrength: 47.04,
+                canSlim: 14,
+                minervini: 11,
+                fundamental: 61.4,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'HOLD',
+                confidenceScore: 90,
+                simulatedReturn: 19.4,
+                simulatedWinRate: 86.7,
+                riskAdjustedReturn: 146,
+                performanceCategory: 'Good',
+                hasBacktesting: true
+            },
+            {
+                rank: 34,
+                symbol: 'SBC',
+                companyName: 'SBC',
+                marketCap: 'MICRO_CAP',
+                currentPrice: 19.83,
+                change1D: 2.59,
+                change1W: 5.31,
+                change1M: 0,
+                technicalScore: 52,
+                rsi: 73.4,
+                relativeStrength: 40.07,
+                canSlim: 14,
+                minervini: 18,
+                fundamental: 0,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'HOLD',
+                confidenceScore: 90,
+                simulatedReturn: 12.1,
+                simulatedWinRate: 68.4,
+                riskAdjustedReturn: 38.1,
+                performanceCategory: 'Good',
+                hasBacktesting: true
+            },
+            {
+                rank: 35,
+                symbol: 'SYRMA',
+                companyName: 'SYRMA',
+                marketCap: 'MID_CAP',
+                currentPrice: 760.3,
+                change1D: 0.53,
+                change1W: 4.45,
+                change1M: 0,
+                technicalScore: 49.3,
+                rsi: 63.7,
+                relativeStrength: 53.84,
+                canSlim: 11,
+                minervini: 15,
+                fundamental: 0,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'WEAK_HOLD',
+                confidenceScore: 90,
+                simulatedReturn: 33.1,
+                simulatedWinRate: 80.3,
+                riskAdjustedReturn: 167.9,
+                performanceCategory: 'Excellent',
+                hasBacktesting: true
+            },
+            {
+                rank: 36,
+                symbol: 'DELHIVERY',
+                companyName: 'DELHIVERY',
+                marketCap: 'MICRO_CAP',
+                currentPrice: 472.05,
+                change1D: -0.36,
+                change1W: -1.35,
+                change1M: 0,
+                technicalScore: 46.7,
+                rsi: 62.8,
+                relativeStrength: 35.69,
+                canSlim: 10,
+                minervini: 10,
+                fundamental: 53.74,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'WEAK_HOLD',
+                confidenceScore: 90,
+                simulatedReturn: 11.1,
+                simulatedWinRate: 63.8,
+                riskAdjustedReturn: 30.7,
+                performanceCategory: 'Good',
+                hasBacktesting: true
+            },
+            {
+                rank: 37,
+                symbol: 'JAYNECOIND',
+                companyName: 'JAYNECOIND',
+                marketCap: 'MID_CAP',
+                currentPrice: 59.06,
+                change1D: 2.59,
+                change1W: 0.41,
+                change1M: 0,
+                technicalScore: 46,
+                rsi: 59.3,
+                relativeStrength: 56.31,
+                canSlim: 12,
+                minervini: 14,
+                fundamental: 0,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'WEAK_HOLD',
+                confidenceScore: 90,
+                simulatedReturn: 11.1,
+                simulatedWinRate: 61.9,
+                riskAdjustedReturn: 29.2,
+                performanceCategory: 'Good',
+                hasBacktesting: true
+            },
+            {
+                rank: 38,
+                symbol: 'CHOICEIN',
+                companyName: 'CHOICEIN',
+                marketCap: 'MICRO_CAP',
+                currentPrice: 786.3,
+                change1D: -0.76,
+                change1W: -2.05,
+                change1M: 0,
+                technicalScore: 46,
+                rsi: 54.5,
+                relativeStrength: 15.39,
+                canSlim: 7,
+                minervini: 12,
+                fundamental: 54.36,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'WEAK_HOLD',
+                confidenceScore: 90,
+                simulatedReturn: 34.2,
+                simulatedWinRate: 81.4,
+                riskAdjustedReturn: 184.4,
+                performanceCategory: 'Excellent',
+                hasBacktesting: true
+            },
+            {
+                rank: 39,
+                symbol: 'IXIGO',
+                companyName: 'IXIGO',
+                marketCap: 'MID_CAP',
+                currentPrice: 277.7,
+                change1D: -6.64,
+                change1W: -2.4,
+                change1M: 0,
+                technicalScore: 44,
+                rsi: 60.2,
+                relativeStrength: 65,
+                canSlim: 13,
+                minervini: 6,
+                fundamental: 0,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'WEAK_HOLD',
+                confidenceScore: 90,
+                simulatedReturn: 12.2,
+                simulatedWinRate: 78,
+                riskAdjustedReturn: 55.2,
+                performanceCategory: 'Good',
+                hasBacktesting: true
+            },
+            {
+                rank: 40,
+                symbol: 'JAMNAAUTO',
+                companyName: 'JAMNAAUTO',
+                marketCap: 'MID_CAP',
+                currentPrice: 107.88,
+                change1D: 1.83,
+                change1W: 7.11,
+                change1M: 0,
+                technicalScore: 42.7,
+                rsi: 69.9,
+                relativeStrength: 24.6,
+                canSlim: 13,
+                minervini: 15,
+                fundamental: 0,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'WEAK_HOLD',
+                confidenceScore: 90,
+                simulatedReturn: 14.7,
+                simulatedWinRate: 77.5,
+                riskAdjustedReturn: 65.4,
+                performanceCategory: 'Good',
+                hasBacktesting: true
+            },
+            {
+                rank: 41,
+                symbol: 'AARVI',
+                companyName: 'AARVI',
+                marketCap: 'MICRO_CAP',
+                currentPrice: 122.89,
+                change1D: -6.56,
+                change1W: 1.02,
+                change1M: 0,
+                technicalScore: 42.7,
+                rsi: 58,
+                relativeStrength: 15.7,
+                canSlim: 10,
+                minervini: 8,
+                fundamental: 42.4,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'WEAK_HOLD',
+                confidenceScore: 90,
+                simulatedReturn: 16.2,
+                simulatedWinRate: 75.1,
+                riskAdjustedReturn: 65.1,
+                performanceCategory: 'Good',
+                hasBacktesting: true
+            },
+            {
+                rank: 42,
+                symbol: 'PAYTM',
+                companyName: 'PAYTM',
+                marketCap: 'LARGE_CAP',
+                currentPrice: 1257.9,
+                change1D: 1.79,
+                change1W: 0.38,
+                change1M: 0,
+                technicalScore: 40.7,
+                rsi: 69.3,
+                relativeStrength: 48.17,
+                canSlim: 12,
+                minervini: 13,
+                fundamental: 0,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'WEAK_HOLD',
+                confidenceScore: 90,
+                simulatedReturn: 13,
+                simulatedWinRate: 79.4,
+                riskAdjustedReturn: 62.8,
+                performanceCategory: 'Good',
+                hasBacktesting: true
+            },
+            {
+                rank: 43,
+                symbol: 'OLAELEC',
+                companyName: 'OLAELEC',
+                marketCap: 'LARGE_CAP',
+                currentPrice: 61.96,
+                change1D: -0.83,
+                change1W: 21.92,
+                change1M: 0,
+                technicalScore: 40,
+                rsi: 76,
+                relativeStrength: 38.24,
+                canSlim: 16,
+                minervini: 4,
+                fundamental: 0,
+                trendSignal: 'BULLISH',
+                tradingSignal: 'WEAK_HOLD',
+                confidenceScore: 90,
+                simulatedReturn: 8.4,
+                simulatedWinRate: 72,
+                riskAdjustedReturn: 30.1,
+                performanceCategory: 'Moderate',
+                hasBacktesting: true
+            },
+            {
+                rank: 44,
+                symbol: 'KIOCL',
+                companyName: 'KIOCL',
+                marketCap: 'SMALL_CAP',
+                currentPrice: 422.4,
+                change1D: 2.08,
+                change1W: 2.65,
+                change1M: 0,
+                technicalScore: 38,
+                rsi: 64.3,
+                relativeStrength: 50.8,
+                canSlim: 12,
+                minervini: 9,
+                fundamental: 0,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'WEAK_HOLD',
+                confidenceScore: 90,
+                simulatedReturn: 9.8,
+                simulatedWinRate: 60.7,
+                riskAdjustedReturn: 24.9,
+                performanceCategory: 'Moderate',
+                hasBacktesting: true
+            },
+            {
+                rank: 45,
+                symbol: 'GOLDCASE',
+                companyName: 'GOLDCASE',
+                marketCap: 'MICRO_CAP',
+                currentPrice: 16.47,
+                change1D: -0.24,
+                change1W: 3.39,
+                change1M: 0,
+                technicalScore: 38,
+                rsi: 72.1,
+                relativeStrength: 9.15,
+                canSlim: 7,
+                minervini: 6,
+                fundamental: 0,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'WEAK_HOLD',
+                confidenceScore: 90,
+                simulatedReturn: 11.2,
+                simulatedWinRate: 65.3,
+                riskAdjustedReturn: 32.1,
+                performanceCategory: 'Good',
+                hasBacktesting: true
+            },
+            {
+                rank: 46,
+                symbol: 'JMFINANCIL',
+                companyName: 'JMFINANCIL',
+                marketCap: 'SMALL_CAP',
+                currentPrice: 183.25,
+                change1D: -0.98,
+                change1W: -1.84,
+                change1M: 0,
+                technicalScore: 36.7,
+                rsi: 57,
+                relativeStrength: 34.48,
+                canSlim: 12,
+                minervini: 8,
+                fundamental: 0,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'WEAK_HOLD',
+                confidenceScore: 90,
+                simulatedReturn: 11.3,
+                simulatedWinRate: 78.6,
+                riskAdjustedReturn: 53,
+                performanceCategory: 'Good',
+                hasBacktesting: true
+            },
+            {
+                rank: 47,
+                symbol: 'OLECTRA',
+                companyName: 'OLECTRA',
+                marketCap: 'SMALL_CAP',
+                currentPrice: 1572.3,
+                change1D: -0.68,
+                change1W: -1.28,
+                change1M: 0,
+                technicalScore: 36,
+                rsi: 62.7,
+                relativeStrength: 40.86,
+                canSlim: 10,
+                minervini: 8,
+                fundamental: 0,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'WEAK_HOLD',
+                confidenceScore: 90,
+                simulatedReturn: 12.8,
+                simulatedWinRate: 71.7,
+                riskAdjustedReturn: 45.2,
+                performanceCategory: 'Good',
+                hasBacktesting: true
+            },
+            {
+                rank: 48,
+                symbol: 'GOLDBEES',
+                companyName: 'GOLDBEES',
+                marketCap: 'MID_CAP',
+                currentPrice: 86.61,
+                change1D: 0,
+                change1W: 3.32,
+                change1M: 0,
+                technicalScore: 34.7,
+                rsi: 74.2,
+                relativeStrength: 9.11,
+                canSlim: 6,
+                minervini: 6,
+                fundamental: 0,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'SELL',
+                confidenceScore: 90,
+                simulatedReturn: 18.3,
+                simulatedWinRate: 70.4,
+                riskAdjustedReturn: 61.7,
+                performanceCategory: 'Good',
+                hasBacktesting: true
+            },
+            {
+                rank: 49,
+                symbol: 'BLACKBUCK',
+                companyName: 'BLACKBUCK',
+                marketCap: 'MID_CAP',
+                currentPrice: 611.8,
+                change1D: -3.41,
+                change1W: -4.67,
+                change1M: 0,
+                technicalScore: 48.7,
+                rsi: 62.1,
+                relativeStrength: 46.03,
+                canSlim: 12,
+                minervini: 6,
+                fundamental: 62.86,
+                trendSignal: 'STRONG_BULLISH',
+                tradingSignal: 'WEAK_HOLD',
+                confidenceScore: 88,
+                simulatedReturn: 16.9,
+                simulatedWinRate: 76.6,
+                riskAdjustedReturn: 72.3,
+                performanceCategory: 'Good',
+                hasBacktesting: true
+            },
+            {
+                rank: 50,
+                symbol: 'DATAMATICS',
+                companyName: 'DATAMATICS',
+                marketCap: 'SMALL_CAP',
+                currentPrice: 990.4,
+                change1D: -3.02,
+                change1W: -0.79,
+                change1M: 0,
+                technicalScore: 48,
+                rsi: 56.1,
+                relativeStrength: 67.31,
+                canSlim: 9,
+                minervini: 6,
+                fundamental: 55.34,
+                trendSignal: 'BULLISH',
+                tradingSignal: 'WEAK_HOLD',
+                confidenceScore: 88,
+                simulatedReturn: 18.9,
+                simulatedWinRate: 93,
+                riskAdjustedReturn: 270.8,
+                performanceCategory: 'Good',
+                hasBacktesting: true
+            }
+        ];
+        
+        function getScoreClass(score) {
+            if (score >= 70) return "score-high";
+            if (score >= 50) return "score-medium";
+            return "score-low";
+        }
+        
+        function getConfidenceClass(confidence) {
+            if (confidence >= 70) return "confidence-high";
+            if (confidence >= 50) return "confidence-medium";
+            return "confidence-low";
+        }
+        
+        function getSignalClass(signal) {
+            if (signal.includes("BUY")) return "signal-buy";
+            if (signal.includes("HOLD")) return "signal-hold";
+            return "signal-sell";
+        }
+        
+        function populateTable() {
+            const tbody = document.getElementById("stockTableBody");
+            tbody.innerHTML = "";
+            
+            stockData.forEach(stock => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${stock.rank}</td>
+                    <td><strong>${stock.symbol}</strong></td>
+                    <td>${stock.companyName}</td>
+                    <td>${stock.marketCap}</td>
+                    <td>₹${stock.currentPrice.toLocaleString()}</td>
+                    <td class="${stock.change1D >= 0 ? "score-high" : "score-low"}">${stock.change1D >= 0 ? "+" : ""}${stock.change1D}%</td>
+                    <td class="${stock.change1W >= 0 ? "score-high" : "score-low"}">${stock.change1W >= 0 ? "+" : ""}${stock.change1W}%</td>
+                    <td class="${stock.change1M >= 0 ? "score-high" : "score-low"}">${stock.change1M >= 0 ? "+" : ""}${stock.change1M}%</td>
+                    <td class="${getScoreClass(stock.technicalScore)}">${stock.technicalScore}</td>
+                    <td>${stock.rsi}</td>
+                    <td class="${getConfidenceClass(stock.confidenceScore)}">${stock.confidenceScore}%</td>
+                    <td class="${stock.simulatedReturn >= 0 ? "score-high" : "score-low"}">${stock.simulatedReturn >= 0 ? "+" : ""}${stock.simulatedReturn}%</td>
+                    <td>${stock.simulatedWinRate}%</td>
+                    <td>${stock.riskAdjustedReturn}</td>
+                    <td>${stock.performanceCategory}</td>
+                    <td class="${getSignalClass(stock.tradingSignal)}">${stock.tradingSignal}</td>
+                `;
+                
+                if (stock.hasBacktesting) {
+                    row.classList.add("backtesting-data");
+                } else {
+                    row.classList.add("no-backtesting");
+                }
+                
+                tbody.appendChild(row);
+            });
+        }
+        
+        function filterTable() {
+            const confidenceFilter = document.getElementById("confidenceFilter").value;
+            const performanceFilter = document.getElementById("performanceFilter").value;
+            const signalFilter = document.getElementById("signalFilter").value;
+            
+            const rows = document.querySelectorAll("#stockTableBody tr");
+            
+            rows.forEach(row => {
+                let show = true;
+                
+                // Confidence filter
+                if (confidenceFilter) {
+                    const confidence = parseFloat(row.children[9].textContent);
+                    if (confidenceFilter === "high" && confidence < 70) show = false;
+                    if (confidenceFilter === "medium" && (confidence < 50 || confidence >= 70)) show = false;
+                    if (confidenceFilter === "low" && confidence >= 50) show = false;
+                }
+                
+                // Performance filter
+                if (performanceFilter && row.children[13].textContent !== performanceFilter) {
+                    show = false;
+                }
+                
+                // Signal filter
+                if (signalFilter && !row.children[14].textContent.includes(signalFilter)) {
+                    show = false;
+                }
+                
+                row.style.display = show ? "" : "none";
+            });
+        }
+        
+        // Initialize table
+        populateTable();
+    </script>
+</body>
+</html>

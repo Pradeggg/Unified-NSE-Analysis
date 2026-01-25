@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nifty50 Intraday Technical Analysis Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .view-controls {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .view-toggle {
+            background: linear-gradient(135deg, #6f42c1, #6610f2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            margin: 0 10px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .view-toggle.active {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        }
+        
+        /* Table View */
+        .table-container {
+            padding: 20px;
+            overflow-x: auto;
+        }
+        
+        .stocks-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .stocks-table th {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 15px 10px;
+            text-align: left;
+            font-weight: 600;
+            cursor: pointer;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .stocks-table td {
+            padding: 12px 10px;
+            border-bottom: 1px solid #f0f0f0;
+            vertical-align: middle;
+        }
+        
+        .stocks-table tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .sentiment-bullish { color: #28a745; font-weight: bold; }
+        .sentiment-bearish { color: #dc3545; font-weight: bold; }
+        .sentiment-neutral { color: #6c757d; font-weight: bold; }
+        
+        .score-high { background: #d4edda; }
+        .score-medium { background: #fff3cd; }
+        .score-low { background: #f8d7da; }
+        
+        /* Card View */
+        .card-container {
+            display: none;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .stock-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .stock-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        
+        .stock-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .stock-symbol {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .score-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            color: white;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        
+        .score-high { background: linear-gradient(135deg, #28a745, #20c997); }
+        .score-medium { background: linear-gradient(135deg, #ffc107, #fd7e14); }
+        .score-low { background: linear-gradient(135deg, #dc3545, #e83e8c); }
+        
+        .stock-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .detail-item {
+            text-align: center;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+        
+        .detail-label {
+            font-size: 0.85em;
+            color: #6c757d;
+            margin-bottom: 2px;
+        }
+        
+        .detail-value {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .summary-stats {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            margin-top: 15px;
+        }
+        
+        .stat-item {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .stat-label {
+            color: #6c757d;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Nifty50 Intraday Technical Analysis</h1>
+            <p>Real-time technical analysis and signals for Nifty50 stocks</p>
+            <p>Generated on: August 12, 2025 at 13:38</p>
+        </div>
+        
+        <div class="summary-stats">
+            <h3>Portfolio Overview</h3>
+            <div class="stat-grid">
+                <div class="stat-item">
+                    <div class="stat-value" id="totalStocks">46</div>
+                    <div class="stat-label">Total Stocks</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="bullishCount">0</div>
+                    <div class="stat-label">Bullish</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="bearishCount">0</div>
+                    <div class="stat-label">Bearish</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="neutralCount">0</div>
+                    <div class="stat-label">Neutral</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="avgScore">0</div>
+                    <div class="stat-label">Avg Score</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="view-controls">
+            <button class="view-toggle active" onclick="showTableView()">📊 Table View</button>
+            <button class="view-toggle" onclick="showCardView()">🃏 Card View</button>
+        </div>
+        
+        <div id="tableView" class="table-container">
+            <table class="stocks-table">
+                <thead>
+                    <tr>
+                        <th onclick="sortTable(0)">Symbol ↕</th>
+                        <th onclick="sortTable(1)">Score ↕</th>
+                        <th onclick="sortTable(2)">Sentiment ↕</th>
+                        <th onclick="sortTable(3)">Price ↕</th>
+                        <th onclick="sortTable(4)">Change ↕</th>
+                        <th onclick="sortTable(5)">Change % ↕</th>
+                        <th onclick="sortTable(6)">Data Points ↕</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                </tbody>
+            </table>
+        </div>
+        
+        <div id="cardView" class="card-container">
+        </div>
+    </div>
+    
+    <script>
+        const stockData = [
+            {
+                symbol: "LT",
+                score: 84.5,
+                sentiment: "bullish",
+                price: 3673.8,
+                change: 7.5,
+                changePct: 0.2,
+                dataPoints: 35
+            },
+            {
+                symbol: "BPCL",
+                score: 79,
+                sentiment: "bullish",
+                price: 320.95,
+                change: -0.15,
+                changePct: -0.05,
+                dataPoints: 35
+            },
+            {
+                symbol: "NTPC",
+                score: 79,
+                sentiment: "bullish",
+                price: 336.5,
+                change: -0.3,
+                changePct: -0.09,
+                dataPoints: 35
+            },
+            {
+                symbol: "ONGC",
+                score: 78.5,
+                sentiment: "bullish",
+                price: 233.83,
+                change: 0.08,
+                changePct: 0.03,
+                dataPoints: 35
+            },
+            {
+                symbol: "SUNPHARMA",
+                score: 78,
+                sentiment: "bullish",
+                price: 1611.6,
+                change: 8.1,
+                changePct: 0.51,
+                dataPoints: 35
+            },
+            {
+                symbol: "GRASIM",
+                score: 76,
+                sentiment: "bullish",
+                price: 2758.9,
+                change: 5.1,
+                changePct: 0.19,
+                dataPoints: 35
+            },
+            {
+                symbol: "HCLTECH",
+                score: 73.8,
+                sentiment: "bullish",
+                price: 1488,
+                change: 0.3,
+                changePct: 0.02,
+                dataPoints: 35
+            },
+            {
+                symbol: "BAJAJ-AUTO",
+                score: 73,
+                sentiment: "bullish",
+                price: 8235,
+                change: -39,
+                changePct: -0.47,
+                dataPoints: 35
+            },
+            {
+                symbol: "BAJAJFINSV",
+                score: 73,
+                sentiment: "bullish",
+                price: 1925.6,
+                change: 3.5,
+                changePct: 0.18,
+                dataPoints: 35
+            },
+            {
+                symbol: "M&M",
+                score: 73,
+                sentiment: "bullish",
+                price: 3186.2,
+                change: -0.3,
+                changePct: -0.01,
+                dataPoints: 35
+            },
+            {
+                symbol: "RELIANCE",
+                score: 73,
+                sentiment: "bullish",
+                price: 1384.7,
+                change: -1.5,
+                changePct: -0.11,
+                dataPoints: 35
+            },
+            {
+                symbol: "POWERGRID",
+                score: 72.5,
+                sentiment: "bullish",
+                price: 285.4,
+                change: 0.45,
+                changePct: 0.16,
+                dataPoints: 35
+            },
+            {
+                symbol: "TATAMOTORS",
+                score: 72.2,
+                sentiment: "bullish",
+                price: 653.75,
+                change: 0.35,
+                changePct: 0.05,
+                dataPoints: 35
+            },
+            {
+                symbol: "APOLLOHOSP",
+                score: 72,
+                sentiment: "bullish",
+                price: 7248,
+                change: -11.5,
+                changePct: -0.16,
+                dataPoints: 35
+            },
+            {
+                symbol: "LTIM",
+                score: 72,
+                sentiment: "bullish",
+                price: 5053.5,
+                change: -11,
+                changePct: -0.22,
+                dataPoints: 35
+            },
+            {
+                symbol: "TATASTEEL",
+                score: 72,
+                sentiment: "bullish",
+                price: 158.52,
+                change: 0.03,
+                changePct: 0.02,
+                dataPoints: 35
+            },
+            {
+                symbol: "COALINDIA",
+                score: 71,
+                sentiment: "bullish",
+                price: 382.5,
+                change: -0.05,
+                changePct: -0.01,
+                dataPoints: 35
+            },
+            {
+                symbol: "ULTRACEMCO",
+                score: 69.5,
+                sentiment: "bullish",
+                price: 12395,
+                change: -2,
+                changePct: -0.02,
+                dataPoints: 35
+            },
+            {
+                symbol: "TITAN",
+                score: 67.5,
+                sentiment: "bullish",
+                price: 3467.9,
+                change: -3.8,
+                changePct: -0.11,
+                dataPoints: 35
+            },
+            {
+                symbol: "INFY",
+                score: 67,
+                sentiment: "bullish",
+                price: 1428.2,
+                change: 0.1,
+                changePct: 0.01,
+                dataPoints: 35
+            },
+            {
+                symbol: "ADANIENT",
+                score: 66.2,
+                sentiment: "bullish",
+                price: 2273,
+                change: -13.5,
+                changePct: -0.59,
+                dataPoints: 35
+            },
+            {
+                symbol: "ADANIPORTS",
+                score: 66,
+                sentiment: "bullish",
+                price: 1339.4,
+                change: -1,
+                changePct: -0.07,
+                dataPoints: 35
+            },
+            {
+                symbol: "SBILIFE",
+                score: 66,
+                sentiment: "bullish",
+                price: 1849.5,
+                change: -1,
+                changePct: -0.05,
+                dataPoints: 35
+            },
+            {
+                symbol: "HDFCLIFE",
+                score: 65.8,
+                sentiment: "bullish",
+                price: 765,
+                change: 0.7,
+                changePct: 0.09,
+                dataPoints: 35
+            },
+            {
+                symbol: "HINDUNILVR",
+                score: 65.5,
+                sentiment: "bullish",
+                price: 2510,
+                change: -10.8,
+                changePct: -0.43,
+                dataPoints: 35
+            },
+            {
+                symbol: "CIPLA",
+                score: 65.2,
+                sentiment: "bullish",
+                price: 1502.4,
+                change: -1,
+                changePct: -0.07,
+                dataPoints: 35
+            },
+            {
+                symbol: "ITC",
+                score: 65,
+                sentiment: "bullish",
+                price: 416.85,
+                change: -0.1,
+                changePct: -0.02,
+                dataPoints: 35
+            },
+            {
+                symbol: "WIPRO",
+                score: 63,
+                sentiment: "bullish",
+                price: 241.45,
+                change: -0.17,
+                changePct: -0.07,
+                dataPoints: 35
+            },
+            {
+                symbol: "MARUTI",
+                score: 62.5,
+                sentiment: "bullish",
+                price: 12597,
+                change: 13,
+                changePct: 0.1,
+                dataPoints: 35
+            },
+            {
+                symbol: "TECHM",
+                score: 60.2,
+                sentiment: "bullish",
+                price: 1481.1,
+                change: 1.9,
+                changePct: 0.13,
+                dataPoints: 35
+            },
+            {
+                symbol: "DRREDDY",
+                score: 57,
+                sentiment: "neutral",
+                price: 1219.5,
+                change: -0.5,
+                changePct: -0.04,
+                dataPoints: 35
+            },
+            {
+                symbol: "BRITANNIA",
+                score: 55.5,
+                sentiment: "neutral",
+                price: 5381.5,
+                change: 3.5,
+                changePct: 0.07,
+                dataPoints: 35
+            },
+            {
+                symbol: "TATACONSUM",
+                score: 55,
+                sentiment: "neutral",
+                price: 1055.8,
+                change: -4.3,
+                changePct: -0.41,
+                dataPoints: 35
+            },
+            {
+                symbol: "ASIANPAINT",
+                score: 54.5,
+                sentiment: "neutral",
+                price: 2489.1,
+                change: -5.1,
+                changePct: -0.2,
+                dataPoints: 35
+            },
+            {
+                symbol: "NESTLEIND",
+                score: 54.2,
+                sentiment: "neutral",
+                price: 1105,
+                change: -0.4,
+                changePct: -0.04,
+                dataPoints: 35
+            },
+            {
+                symbol: "DIVISLAB",
+                score: 53.5,
+                sentiment: "neutral",
+                price: 5992,
+                change: 0,
+                changePct: 0,
+                dataPoints: 35
+            },
+            {
+                symbol: "EICHERMOT",
+                score: 53.5,
+                sentiment: "neutral",
+                price: 5671.5,
+                change: 2,
+                changePct: 0.04,
+                dataPoints: 35
+            },
+            {
+                symbol: "TCS",
+                score: 50.8,
+                sentiment: "neutral",
+                price: 3040.8,
+                change: 0.7,
+                changePct: 0.02,
+                dataPoints: 35
+            },
+            {
+                symbol: "HINDALCO",
+                score: 38,
+                sentiment: "bearish",
+                price: 672,
+                change: -1.35,
+                changePct: -0.2,
+                dataPoints: 35
+            },
+            {
+                symbol: "JSWSTEEL",
+                score: 36.8,
+                sentiment: "bearish",
+                price: 1052.7,
+                change: -1.1,
+                changePct: -0.1,
+                dataPoints: 35
+            },
+            {
+                symbol: "HEROMOTOCO",
+                score: 34,
+                sentiment: "bearish",
+                price: 4565,
+                change: 3.9,
+                changePct: 0.09,
+                dataPoints: 35
+            },
+            {
+                symbol: "BHARTIARTL",
+                score: 30,
+                sentiment: "bearish",
+                price: 1852.3,
+                change: -7,
+                changePct: -0.38,
+                dataPoints: 35
+            },
+            {
+                symbol: "NIFTY50",
+                score: 0,
+                sentiment: "bearish",
+                price: "Index",
+                change: 0,
+                changePct: 0,
+                dataPoints: 35
+            },
+            {
+                symbol: "BANKNIFTY",
+                score: 0,
+                sentiment: "bearish",
+                price: "Index",
+                change: 0,
+                changePct: 0,
+                dataPoints: 35
+            },
+            {
+                symbol: "NIFTYIT",
+                score: 0,
+                sentiment: "bearish",
+                price: "Index",
+                change: 0,
+                changePct: 0,
+                dataPoints: 35
+            },
+            {
+                symbol: "NIFTYPHARMA",
+                score: 0,
+                sentiment: "bearish",
+                price: "Index",
+                change: 0,
+                changePct: 0,
+                dataPoints: 35
+            }
+        ];
+        
+        function updateSummaryStats() {
+            const totalStocks = stockData.length;
+            const bullishCount = stockData.filter(s => s.sentiment === "bullish").length;
+            const bearishCount = stockData.filter(s => s.sentiment === "bearish").length;
+            const neutralCount = stockData.filter(s => s.sentiment === "neutral").length;
+            const avgScore = totalStocks > 0 ? Math.round(stockData.reduce((sum, s) => sum + s.score, 0) / totalStocks) : 0;
+            
+            document.getElementById("totalStocks").textContent = totalStocks;
+            document.getElementById("bullishCount").textContent = bullishCount;
+            document.getElementById("bearishCount").textContent = bearishCount;
+            document.getElementById("neutralCount").textContent = neutralCount;
+            document.getElementById("avgScore").textContent = avgScore;
+        }
+        
+        function populateTable() {
+            const tableBody = document.getElementById("tableBody");
+            tableBody.innerHTML = "";
+            
+            stockData.forEach(stock => {
+                const row = document.createElement("tr");
+                
+                const scoreClass = stock.score >= 60 ? "score-high" : stock.score <= 40 ? "score-low" : "score-medium";
+                const sentimentClass = `sentiment-${stock.sentiment}`;
+                
+                row.innerHTML = `
+                    <td><strong>${stock.symbol}</strong></td>
+                    <td class="${scoreClass}">${stock.score}</td>
+                    <td class="${sentimentClass}">${stock.sentiment.toUpperCase()}</td>
+                    <td>${stock.price === "Index" ? "Index" : stock.price.toFixed(2)}</td>
+                    <td class="${stock.change >= 0 ? "sentiment-bullish" : "sentiment-bearish"}">${stock.change >= 0 ? "+" : ""}${stock.change.toFixed(2)}</td>
+                    <td class="${stock.changePct >= 0 ? "sentiment-bullish" : "sentiment-bearish"}">${stock.changePct >= 0 ? "+" : ""}${stock.changePct.toFixed(2)}%</td>
+                    <td>${stock.dataPoints}</td>
+                `;
+                
+                tableBody.appendChild(row);
+            });
+        }
+        
+        function populateCards() {
+            const cardContainer = document.getElementById("cardView");
+            cardContainer.innerHTML = "";
+            
+            stockData.forEach(stock => {
+                const scoreClass = stock.score >= 60 ? "score-high" : stock.score <= 40 ? "score-low" : "score-medium";
+                const sentimentClass = `sentiment-${stock.sentiment}`;
+                
+                const card = document.createElement("div");
+                card.className = "stock-card";
+                card.innerHTML = `
+                    <div class="stock-header">
+                        <div class="stock-symbol">${stock.symbol}</div>
+                        <div class="score-badge ${scoreClass}">${stock.score}</div>
+                    </div>
+                    <div class="stock-details">
+                        <div class="detail-item">
+                            <div class="detail-label">Sentiment</div>
+                            <div class="detail-value ${sentimentClass}">${stock.sentiment.toUpperCase()}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Price</div>
+                            <div class="detail-value">${stock.price === "Index" ? "Index" : stock.price.toFixed(2)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Change</div>
+                            <div class="detail-value ${stock.change >= 0 ? "sentiment-bullish" : "sentiment-bearish"}">${stock.change >= 0 ? "+" : ""}${stock.change.toFixed(2)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Change %</div>
+                            <div class="detail-value ${stock.changePct >= 0 ? "sentiment-bullish" : "sentiment-bearish"}">${stock.changePct >= 0 ? "+" : ""}${stock.changePct.toFixed(2)}%</div>
+                        </div>
+                    </div>
+                `;
+                
+                cardContainer.appendChild(card);
+            });
+        }
+        
+        function showTableView() {
+            document.getElementById("tableView").style.display = "block";
+            document.getElementById("cardView").style.display = "none";
+            document.querySelectorAll(".view-toggle").forEach(btn => btn.classList.remove("active"));
+            event.target.classList.add("active");
+        }
+        
+        function showCardView() {
+            document.getElementById("tableView").style.display = "none";
+            document.getElementById("cardView").style.display = "grid";
+            document.querySelectorAll(".view-toggle").forEach(btn => btn.classList.remove("active"));
+            event.target.classList.add("active");
+        }
+        
+        function sortTable(columnIndex) {
+            const table = document.querySelector(".stocks-table");
+            const tbody = table.querySelector("tbody");
+            const rows = Array.from(tbody.querySelectorAll("tr"));
+            
+            rows.sort((a, b) => {
+                const aValue = a.cells[columnIndex].textContent.trim();
+                const bValue = b.cells[columnIndex].textContent.trim();
+                
+                if (!isNaN(aValue) && !isNaN(bValue)) {
+                    return parseFloat(bValue) - parseFloat(aValue);
+                }
+                return aValue.localeCompare(bValue);
+            });
+            
+            rows.forEach(row => tbody.appendChild(row));
+        }
+        
+        // Initialize the dashboard
+        document.addEventListener("DOMContentLoaded", function() {
+            updateSummaryStats();
+            populateTable();
+            populateCards();
+        });
+    </script>
+</body>
+</html>

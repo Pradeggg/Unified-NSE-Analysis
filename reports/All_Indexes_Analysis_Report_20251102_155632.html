@@ -1,0 +1,2317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All NSE Indexes Analysis Report</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Roboto", "Google Sans", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #212121;
+            font-weight: 400;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 20px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 300;
+            margin-bottom: 16px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            font-size: 1.25rem;
+            font-weight: 400;
+            opacity: 0.9;
+        }
+
+        .index-section {
+            margin: 2rem 0;
+            padding: 2rem;
+            background: #f8f9fa;
+            border-radius: 12px;
+        }
+
+        .section-header {
+            margin-bottom: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .section-header h2 {
+            font-size: 2rem;
+            font-weight: 400;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+
+        .strength-badge {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 1.2rem;
+            font-weight: 500;
+        }
+
+        .section-header p {
+            color: #7f8c8d;
+            font-size: 1rem;
+        }
+
+        .screeners-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .screener-card {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .screener-header h3 {
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+            font-size: 1.2rem;
+            font-weight: 500;
+        }
+
+        .screener-header p {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+
+        .screener-list {
+            margin-top: 1rem;
+        }
+
+        .screener-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #ecf0f1;
+            transition: background-color 0.2s;
+        }
+
+        .screener-item:hover {
+            background-color: #f8f9fa;
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
+            margin-left: -0.5rem;
+            margin-right: -0.5rem;
+            border-radius: 4px;
+        }
+
+        .screener-item:last-child {
+            border-bottom: none;
+        }
+
+        .stock-info {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        .stock-symbol {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 1rem;
+        }
+
+        .stock-price {
+            font-size: 0.85rem;
+            color: #7f8c8d;
+            margin-top: 0.25rem;
+        }
+
+        .metric-value {
+            font-weight: 600;
+            padding: 0.35rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            margin-left: 0.5rem;
+        }
+
+        .metric-value.score {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .no-data {
+            text-align: center;
+            color: #7f8c8d;
+            font-style: italic;
+            padding: 2rem;
+        }
+
+        .performance-metrics {
+            margin-top: 1rem;
+        }
+
+        .perf-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid rgba(102, 126, 234, 0.2);
+        }
+
+        .perf-item:last-child {
+            border-bottom: none;
+        }
+
+        .perf-label {
+            font-size: 0.95rem;
+            color: #2c3e50;
+            font-weight: 500;
+        }
+
+        .perf-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .perf-value.positive {
+            color: #4caf50;
+        }
+
+        .perf-value.negative {
+            color: #f44336;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .summary-card {
+            background: white;
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .summary-card .number {
+            font-size: 2rem;
+            font-weight: 300;
+            color: #764ba2;
+            margin: 0.5rem 0;
+        }
+
+        .summary-card p {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 800px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.25);
+            transform: scale(0.7);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .modal-title {
+            font-size: 1.75rem;
+            font-weight: 500;
+            color: #667eea;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+            padding: 8px;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .detail-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 20px;
+            background: rgba(102, 126, 234, 0.04);
+            border-radius: 12px;
+            border-left: 4px solid #667eea;
+            margin-bottom: 16px;
+        }
+
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .detail-label {
+            font-size: 0.75rem;
+            color: rgba(0,0,0,0.6);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 500;
+        }
+
+        .detail-value {
+            font-size: 1.125rem;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+
+        .detail-value.positive { color: #4caf50; }
+        .detail-value.negative { color: #f44336; }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .metric-card {
+            background: rgba(102, 126, 234, 0.1);
+            padding: 16px;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid rgba(102, 126, 234, 0.2);
+        }
+
+        .metric-card-value {
+            font-size: 1.25rem;
+            font-weight: 500;
+            color: #667eea;
+            margin-bottom: 4px;
+        }
+
+        .metric-card-label {
+            font-size: 0.75rem;
+            color: rgba(0,0,0,0.6);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .insight-box {
+            background: rgba(76, 175, 80, 0.05);
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 4px solid #4caf50;
+            margin-top: 20px;
+        }
+
+        .insight-title {
+            font-size: 1.125rem;
+            color: #4caf50;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .insight-text {
+            color: rgba(0,0,0,0.7);
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 768px) {
+            .screeners-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .summary-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .section-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .detail-row {
+                grid-template-columns: 1fr;
+            }
+
+            .modal-content {
+                width: 95%;
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 All NSE Indexes Analysis</h1>
+            <p>Top 5 Stocks by Each Index, Ordered by Index Strength</p>
+            <p style="margin-top: 10px; font-size: 1rem; opacity: 0.8;">Analysis Date: November 02, 2025</p>
+        </div>
+
+        <div class="summary-grid">
+            <div class="summary-card">
+                <div class="number">23</div>
+                <p>Indexes Analyzed</p>
+            </div>
+            <div class="summary-card">
+                <div class="number">115</div>
+                <p>Total Stocks</p>
+            </div>
+            <div class="summary-card">
+                <div class="number">61.6</div>
+                <p>Strongest Index Score</p>
+            </div>
+        </div>
+        <div class="index-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 Nifty Bank</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                </div>
+                <div class="strength-badge">Strength: 61.6</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);">
+                    <div class="screener-header">
+                        <h3>📈 Index Performance</h3>
+                        <p>Returns over different periods</p>
+                    </div>
+                    <div class="performance-metrics">
+                        <div class="perf-item">
+                            <span class="perf-label">1M:</span>
+                            <span class="perf-value positive">4.8%</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">3M:</span>
+                            <span class="perf-value positive">3.7%</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">6M:</span>
+                            <span class="perf-value positive">6.7%</span>
+                        </div>
+                    </div>
+                  </div>
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('CANBK', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">CANBK</span>
+            <span class="stock-price">₹132.89 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">76.0</div>
+        <div class="metric-value" style="background: #5cb85c; color: white;">BUY</div>
+      </div><div class="screener-item" onclick="showStockDetails('BANKBARODA', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BANKBARODA</span>
+            <span class="stock-price">₹272.75 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">66.0</div>
+        <div class="metric-value" style="background: #5cb85c; color: white;">BUY</div>
+      </div><div class="screener-item" onclick="showStockDetails('AXISBANK', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">AXISBANK</span>
+            <span class="stock-price">₹1238.60 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">58.7</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('PNB', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">PNB</span>
+            <span class="stock-price">₹120.09 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">54.0</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('SBIN', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">SBIN</span>
+            <span class="stock-price">₹934.35 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">53.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="index-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 Nifty 50</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                </div>
+                <div class="strength-badge">Strength: 60.5</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);">
+                    <div class="screener-header">
+                        <h3>📈 Index Performance</h3>
+                        <p>Returns over different periods</p>
+                    </div>
+                    <div class="performance-metrics">
+                        <div class="perf-item">
+                            <span class="perf-label">1M:</span>
+                            <span class="perf-value positive">4.2%</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">3M:</span>
+                            <span class="perf-value positive">4.5%</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">6M:</span>
+                            <span class="perf-value positive">6.6%</span>
+                        </div>
+                    </div>
+                  </div>
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('BPCL', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BPCL</span>
+            <span class="stock-price">₹357.60 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">68.7</div>
+        <div class="metric-value" style="background: #5cb85c; color: white;">BUY</div>
+      </div><div class="screener-item" onclick="showStockDetails('BHARTIARTL', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BHARTIARTL</span>
+            <span class="stock-price">₹2066.30 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">61.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('AXISBANK', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">AXISBANK</span>
+            <span class="stock-price">₹1238.60 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">58.7</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('BAJFINANCE', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BAJFINANCE</span>
+            <span class="stock-price">₹1052.30 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">57.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('COALINDIA', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">COALINDIA</span>
+            <span class="stock-price">₹387.70 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">56.7</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="index-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 Nifty PSU Bank</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                </div>
+                <div class="strength-badge">Strength: 59.2</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);">
+                    <div class="screener-header">
+                        <h3>📈 Index Performance</h3>
+                        <p>Returns over different periods</p>
+                    </div>
+                    <div class="performance-metrics">
+                        <div class="perf-item">
+                            <span class="perf-label">1M:</span>
+                            <span class="perf-value ">N/A</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">3M:</span>
+                            <span class="perf-value ">N/A</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">6M:</span>
+                            <span class="perf-value ">N/A</span>
+                        </div>
+                    </div>
+                  </div>
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('CANBK', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">CANBK</span>
+            <span class="stock-price">₹132.89 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">76.0</div>
+        <div class="metric-value" style="background: #5cb85c; color: white;">BUY</div>
+      </div><div class="screener-item" onclick="showStockDetails('BANKBARODA', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BANKBARODA</span>
+            <span class="stock-price">₹272.75 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">66.0</div>
+        <div class="metric-value" style="background: #5cb85c; color: white;">BUY</div>
+      </div><div class="screener-item" onclick="showStockDetails('PNB', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">PNB</span>
+            <span class="stock-price">₹120.09 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">54.0</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('SBIN', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">SBIN</span>
+            <span class="stock-price">₹934.35 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">53.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('INDIANB', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">INDIANB</span>
+            <span class="stock-price">₹854.85 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">46.7</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="index-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 Nifty 200</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                </div>
+                <div class="strength-badge">Strength: 58.7</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);">
+                    <div class="screener-header">
+                        <h3>📈 Index Performance</h3>
+                        <p>Returns over different periods</p>
+                    </div>
+                    <div class="performance-metrics">
+                        <div class="perf-item">
+                            <span class="perf-label">1M:</span>
+                            <span class="perf-value positive">4.2%</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">3M:</span>
+                            <span class="perf-value positive">4.5%</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">6M:</span>
+                            <span class="perf-value positive">8.4%</span>
+                        </div>
+                    </div>
+                  </div>
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('BHARTIARTL', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BHARTIARTL</span>
+            <span class="stock-price">₹2066.30 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">61.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('ADANIGREEN', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">ADANIGREEN</span>
+            <span class="stock-price">₹1140.10 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">60.0</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('AXISBANK', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">AXISBANK</span>
+            <span class="stock-price">₹1238.60 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">58.7</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('BAJFINANCE', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BAJFINANCE</span>
+            <span class="stock-price">₹1052.30 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">57.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('BAJAJFINSV', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BAJAJFINSV</span>
+            <span class="stock-price">₹2114.60 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">56.0</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="index-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 Nifty 500</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                </div>
+                <div class="strength-badge">Strength: 58.7</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);">
+                    <div class="screener-header">
+                        <h3>📈 Index Performance</h3>
+                        <p>Returns over different periods</p>
+                    </div>
+                    <div class="performance-metrics">
+                        <div class="perf-item">
+                            <span class="perf-label">1M:</span>
+                            <span class="perf-value positive">4.0%</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">3M:</span>
+                            <span class="perf-value positive">4.0%</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">6M:</span>
+                            <span class="perf-value positive">9.2%</span>
+                        </div>
+                    </div>
+                  </div>
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('BHARTIARTL', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BHARTIARTL</span>
+            <span class="stock-price">₹2066.30 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">61.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('ADANIGREEN', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">ADANIGREEN</span>
+            <span class="stock-price">₹1140.10 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">60.0</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('AXISBANK', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">AXISBANK</span>
+            <span class="stock-price">₹1238.60 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">58.7</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('BAJFINANCE', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BAJFINANCE</span>
+            <span class="stock-price">₹1052.30 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">57.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('BAJAJFINSV', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BAJAJFINSV</span>
+            <span class="stock-price">₹2114.60 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">56.0</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="index-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 Nifty Auto</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                </div>
+                <div class="strength-badge">Strength: 57.3</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);">
+                    <div class="screener-header">
+                        <h3>📈 Index Performance</h3>
+                        <p>Returns over different periods</p>
+                    </div>
+                    <div class="performance-metrics">
+                        <div class="perf-item">
+                            <span class="perf-label">1M:</span>
+                            <span class="perf-value positive">0.2%</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">3M:</span>
+                            <span class="perf-value positive">13.4%</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">6M:</span>
+                            <span class="perf-value positive">18.3%</span>
+                        </div>
+                    </div>
+                  </div>
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('ASHOKLEY', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">ASHOKLEY</span>
+            <span class="stock-price">₹140.77 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">64.7</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('TVSMOTOR', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">TVSMOTOR</span>
+            <span class="stock-price">₹3491.70 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">58.7</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('APOLLOTYRE', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">APOLLOTYRE</span>
+            <span class="stock-price">₹503.00 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">57.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('HEROMOTOCO', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">HEROMOTOCO</span>
+            <span class="stock-price">₹5515.00 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">53.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('MARUTI', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">MARUTI</span>
+            <span class="stock-price">₹16206.00 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">52.7</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="index-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 Nifty 100</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                </div>
+                <div class="strength-badge">Strength: 56.9</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);">
+                    <div class="screener-header">
+                        <h3>📈 Index Performance</h3>
+                        <p>Returns over different periods</p>
+                    </div>
+                    <div class="performance-metrics">
+                        <div class="perf-item">
+                            <span class="perf-label">1M:</span>
+                            <span class="perf-value positive">4.0%</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">3M:</span>
+                            <span class="perf-value positive">4.5%</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">6M:</span>
+                            <span class="perf-value positive">7.5%</span>
+                        </div>
+                    </div>
+                  </div>
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('BHARTIARTL', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BHARTIARTL</span>
+            <span class="stock-price">₹2066.30 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">61.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('AXISBANK', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">AXISBANK</span>
+            <span class="stock-price">₹1238.60 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">58.7</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('BAJFINANCE', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BAJFINANCE</span>
+            <span class="stock-price">₹1052.30 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">57.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('LT', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">LT</span>
+            <span class="stock-price">₹3987.50 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">54.0</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('SBIN', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">SBIN</span>
+            <span class="stock-price">₹934.35 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">53.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="index-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 Nifty Midcap 50</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                </div>
+                <div class="strength-badge">Strength: 55.1</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);">
+                    <div class="screener-header">
+                        <h3>📈 Index Performance</h3>
+                        <p>Returns over different periods</p>
+                    </div>
+                    <div class="performance-metrics">
+                        <div class="perf-item">
+                            <span class="perf-label">1M:</span>
+                            <span class="perf-value positive">6.0%</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">3M:</span>
+                            <span class="perf-value positive">5.2%</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">6M:</span>
+                            <span class="perf-value positive">12.9%</span>
+                        </div>
+                    </div>
+                  </div>
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('ADANIGREEN', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">ADANIGREEN</span>
+            <span class="stock-price">₹1140.10 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">60.0</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('BIOCON', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BIOCON</span>
+            <span class="stock-price">₹376.60 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">56.7</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('BAJAJFINSV', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BAJAJFINSV</span>
+            <span class="stock-price">₹2114.60 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">56.0</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('DIVISLAB', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">DIVISLAB</span>
+            <span class="stock-price">₹6655.00 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">55.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('CIPLA', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">CIPLA</span>
+            <span class="stock-price">₹1540.10 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">47.3</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="index-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 NIFTY SMLCAP 250</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                </div>
+                <div class="strength-badge">Strength: 55.1</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);">
+                    <div class="screener-header">
+                        <h3>📈 Index Performance</h3>
+                        <p>Returns over different periods</p>
+                    </div>
+                    <div class="performance-metrics">
+                        <div class="perf-item">
+                            <span class="perf-label">1M:</span>
+                            <span class="perf-value positive">3.2%</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">3M:</span>
+                            <span class="perf-value positive">1.6%</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">6M:</span>
+                            <span class="perf-value positive">14.7%</span>
+                        </div>
+                    </div>
+                  </div>
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('ADANIGREEN', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">ADANIGREEN</span>
+            <span class="stock-price">₹1140.10 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">60.0</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('BIOCON', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BIOCON</span>
+            <span class="stock-price">₹376.60 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">56.7</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('DIVISLAB', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">DIVISLAB</span>
+            <span class="stock-price">₹6655.00 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">55.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('EICHERMOT', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">EICHERMOT</span>
+            <span class="stock-price">₹6889.00 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">52.0</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('ADANIENSOL', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">ADANIENSOL</span>
+            <span class="stock-price">₹965.65 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">51.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="index-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 Nifty Oil & Gas</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                </div>
+                <div class="strength-badge">Strength: 54.3</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);">
+                    <div class="screener-header">
+                        <h3>📈 Index Performance</h3>
+                        <p>Returns over different periods</p>
+                    </div>
+                    <div class="performance-metrics">
+                        <div class="perf-item">
+                            <span class="perf-label">1M:</span>
+                            <span class="perf-value ">N/A</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">3M:</span>
+                            <span class="perf-value ">N/A</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">6M:</span>
+                            <span class="perf-value ">N/A</span>
+                        </div>
+                    </div>
+                  </div>
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('BPCL', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BPCL</span>
+            <span class="stock-price">₹357.60 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">68.7</div>
+        <div class="metric-value" style="background: #5cb85c; color: white;">BUY</div>
+      </div><div class="screener-item" onclick="showStockDetails('MRPL', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">MRPL</span>
+            <span class="stock-price">₹162.58 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">57.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('IOC', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">IOC</span>
+            <span class="stock-price">₹163.51 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">55.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('OIL', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">OIL</span>
+            <span class="stock-price">₹434.75 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">50.7</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('GAIL', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">GAIL</span>
+            <span class="stock-price">₹183.09 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">39.3</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="index-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 NIFTY SMLCAP 100</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                </div>
+                <div class="strength-badge">Strength: 54.1</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);">
+                    <div class="screener-header">
+                        <h3>📈 Index Performance</h3>
+                        <p>Returns over different periods</p>
+                    </div>
+                    <div class="performance-metrics">
+                        <div class="perf-item">
+                            <span class="perf-label">1M:</span>
+                            <span class="perf-value positive">4.0%</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">3M:</span>
+                            <span class="perf-value positive">2.8%</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">6M:</span>
+                            <span class="perf-value positive">14.1%</span>
+                        </div>
+                    </div>
+                  </div>
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('ADANIGREEN', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">ADANIGREEN</span>
+            <span class="stock-price">₹1140.10 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">60.0</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('BIOCON', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BIOCON</span>
+            <span class="stock-price">₹376.60 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">56.7</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('DIVISLAB', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">DIVISLAB</span>
+            <span class="stock-price">₹6655.00 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">55.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('ADANIENSOL', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">ADANIENSOL</span>
+            <span class="stock-price">₹965.65 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">51.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('CIPLA', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">CIPLA</span>
+            <span class="stock-price">₹1540.10 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">47.3</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="index-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 NIFTY SMLCAP 50</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                </div>
+                <div class="strength-badge">Strength: 54.1</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);">
+                    <div class="screener-header">
+                        <h3>📈 Index Performance</h3>
+                        <p>Returns over different periods</p>
+                    </div>
+                    <div class="performance-metrics">
+                        <div class="perf-item">
+                            <span class="perf-label">1M:</span>
+                            <span class="perf-value positive">4.8%</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">3M:</span>
+                            <span class="perf-value positive">2.4%</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">6M:</span>
+                            <span class="perf-value positive">13.9%</span>
+                        </div>
+                    </div>
+                  </div>
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('ADANIGREEN', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">ADANIGREEN</span>
+            <span class="stock-price">₹1140.10 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">60.0</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('BIOCON', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BIOCON</span>
+            <span class="stock-price">₹376.60 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">56.7</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('DIVISLAB', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">DIVISLAB</span>
+            <span class="stock-price">₹6655.00 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">55.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('ADANIENSOL', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">ADANIENSOL</span>
+            <span class="stock-price">₹965.65 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">51.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('CIPLA', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">CIPLA</span>
+            <span class="stock-price">₹1540.10 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">47.3</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="index-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 Nifty Infrastructure</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                </div>
+                <div class="strength-badge">Strength: 52.9</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);">
+                    <div class="screener-header">
+                        <h3>📈 Index Performance</h3>
+                        <p>Returns over different periods</p>
+                    </div>
+                    <div class="performance-metrics">
+                        <div class="perf-item">
+                            <span class="perf-label">1M:</span>
+                            <span class="perf-value ">N/A</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">3M:</span>
+                            <span class="perf-value ">N/A</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">6M:</span>
+                            <span class="perf-value ">N/A</span>
+                        </div>
+                    </div>
+                  </div>
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('BHEL', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BHEL</span>
+            <span class="stock-price">₹261.29 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">69.3</div>
+        <div class="metric-value" style="background: #5cb85c; color: white;">BUY</div>
+      </div><div class="screener-item" onclick="showStockDetails('ADANIGREEN', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">ADANIGREEN</span>
+            <span class="stock-price">₹1140.10 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">60.0</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('LT', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">LT</span>
+            <span class="stock-price">₹3987.50 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">54.0</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('ADANIPORTS', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">ADANIPORTS</span>
+            <span class="stock-price">₹1457.90 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">41.3</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('ABB', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">ABB</span>
+            <span class="stock-price">₹5279.00 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">40.0</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="index-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 Nifty Next 50</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                </div>
+                <div class="strength-badge">Strength: 52.5</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);">
+                    <div class="screener-header">
+                        <h3>📈 Index Performance</h3>
+                        <p>Returns over different periods</p>
+                    </div>
+                    <div class="performance-metrics">
+                        <div class="perf-item">
+                            <span class="perf-label">1M:</span>
+                            <span class="perf-value positive">2.9%</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">3M:</span>
+                            <span class="perf-value positive">4.5%</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">6M:</span>
+                            <span class="perf-value positive">11.7%</span>
+                        </div>
+                    </div>
+                  </div>
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('ADANIGREEN', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">ADANIGREEN</span>
+            <span class="stock-price">₹1140.10 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">60.0</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('BAJAJFINSV', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BAJAJFINSV</span>
+            <span class="stock-price">₹2114.60 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">56.0</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('DIVISLAB', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">DIVISLAB</span>
+            <span class="stock-price">₹6655.00 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">55.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('VEDL', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">VEDL</span>
+            <span class="stock-price">₹506.95 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">46.0</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('TATACONSUM', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">TATACONSUM</span>
+            <span class="stock-price">₹1176.60 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">45.3</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="index-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 Nifty Energy</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                </div>
+                <div class="strength-badge">Strength: 52.3</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);">
+                    <div class="screener-header">
+                        <h3>📈 Index Performance</h3>
+                        <p>Returns over different periods</p>
+                    </div>
+                    <div class="performance-metrics">
+                        <div class="perf-item">
+                            <span class="perf-label">1M:</span>
+                            <span class="perf-value positive">3.5%</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">3M:</span>
+                            <span class="perf-value positive">3.6%</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">6M:</span>
+                            <span class="perf-value positive">8.5%</span>
+                        </div>
+                    </div>
+                  </div>
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('BPCL', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BPCL</span>
+            <span class="stock-price">₹357.60 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">68.7</div>
+        <div class="metric-value" style="background: #5cb85c; color: white;">BUY</div>
+      </div><div class="screener-item" onclick="showStockDetails('ADANIGREEN', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">ADANIGREEN</span>
+            <span class="stock-price">₹1140.10 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">60.0</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('IOC', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">IOC</span>
+            <span class="stock-price">₹163.51 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">55.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('GAIL', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">GAIL</span>
+            <span class="stock-price">₹183.09 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">39.3</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('RELIANCE', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">RELIANCE</span>
+            <span class="stock-price">₹1488.50 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">38.0</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="index-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 Nifty Metal</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                </div>
+                <div class="strength-badge">Strength: 49.9</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);">
+                    <div class="screener-header">
+                        <h3>📈 Index Performance</h3>
+                        <p>Returns over different periods</p>
+                    </div>
+                    <div class="performance-metrics">
+                        <div class="perf-item">
+                            <span class="perf-label">1M:</span>
+                            <span class="perf-value positive">6.3%</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">3M:</span>
+                            <span class="perf-value positive">15.6%</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">6M:</span>
+                            <span class="perf-value positive">27.3%</span>
+                        </div>
+                    </div>
+                  </div>
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('COALINDIA', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">COALINDIA</span>
+            <span class="stock-price">₹387.70 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">56.7</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('NATIONALUM', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">NATIONALUM</span>
+            <span class="stock-price">₹238.08 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">49.3</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('TATASTEEL', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">TATASTEEL</span>
+            <span class="stock-price">₹184.35 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">48.7</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('HINDCOPPER', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">HINDCOPPER</span>
+            <span class="stock-price">₹348.30 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">48.7</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('VEDL', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">VEDL</span>
+            <span class="stock-price">₹506.95 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">46.0</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="index-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 Nifty Realty</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                </div>
+                <div class="strength-badge">Strength: 49.5</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);">
+                    <div class="screener-header">
+                        <h3>📈 Index Performance</h3>
+                        <p>Returns over different periods</p>
+                    </div>
+                    <div class="performance-metrics">
+                        <div class="perf-item">
+                            <span class="perf-label">1M:</span>
+                            <span class="perf-value positive">8.4%</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">3M:</span>
+                            <span class="perf-value positive">4.2%</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">6M:</span>
+                            <span class="perf-value positive">12.7%</span>
+                        </div>
+                    </div>
+                  </div>
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('OBEROIRLTY', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">OBEROIRLTY</span>
+            <span class="stock-price">₹1750.30 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">53.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('BRIGADE', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BRIGADE</span>
+            <span class="stock-price">₹1038.90 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">53.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('SUNTECK', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">SUNTECK</span>
+            <span class="stock-price">₹454.40 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">52.0</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('GODREJPROP', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">GODREJPROP</span>
+            <span class="stock-price">₹2298.90 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">48.7</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('PRESTIGE', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">PRESTIGE</span>
+            <span class="stock-price">₹1755.30 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">40.0</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="index-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 Nifty Consumer Durables</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                </div>
+                <div class="strength-badge">Strength: 48.5</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);">
+                    <div class="screener-header">
+                        <h3>📈 Index Performance</h3>
+                        <p>Returns over different periods</p>
+                    </div>
+                    <div class="performance-metrics">
+                        <div class="perf-item">
+                            <span class="perf-label">1M:</span>
+                            <span class="perf-value ">N/A</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">3M:</span>
+                            <span class="perf-value ">N/A</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">6M:</span>
+                            <span class="perf-value ">N/A</span>
+                        </div>
+                    </div>
+                  </div>
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('BLUESTARCO', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BLUESTARCO</span>
+            <span class="stock-price">₹1961.80 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">68.0</div>
+        <div class="metric-value" style="background: #5cb85c; color: white;">BUY</div>
+      </div><div class="screener-item" onclick="showStockDetails('VOLTAS', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">VOLTAS</span>
+            <span class="stock-price">₹1419.80 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">53.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('TITAN', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">TITAN</span>
+            <span class="stock-price">₹3750.70 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">43.3</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('WHIRLPOOL', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">WHIRLPOOL</span>
+            <span class="stock-price">₹1420.90 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">43.3</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('TTKPRESTIG', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">TTKPRESTIG</span>
+            <span class="stock-price">₹680.65 | MICRO_CAP</span>
+        </div>
+        <div class="metric-value score">34.7</div>
+        <div class="metric-value" style="background: #dc3545; color: white;">SELL</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="index-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 Nifty Pharma</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                </div>
+                <div class="strength-badge">Strength: 47.9</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);">
+                    <div class="screener-header">
+                        <h3>📈 Index Performance</h3>
+                        <p>Returns over different periods</p>
+                    </div>
+                    <div class="performance-metrics">
+                        <div class="perf-item">
+                            <span class="perf-label">1M:</span>
+                            <span class="perf-value positive">2.6%</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">3M:</span>
+                            <span class="perf-value negative">-2.1%</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">6M:</span>
+                            <span class="perf-value positive">5.6%</span>
+                        </div>
+                    </div>
+                  </div>
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('BIOCON', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BIOCON</span>
+            <span class="stock-price">₹376.60 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">56.7</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('DIVISLAB', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">DIVISLAB</span>
+            <span class="stock-price">₹6655.00 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">55.3</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('CIPLA', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">CIPLA</span>
+            <span class="stock-price">₹1540.10 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">47.3</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('AUROPHARMA', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">AUROPHARMA</span>
+            <span class="stock-price">₹1102.50 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">41.3</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('SUNPHARMA', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">SUNPHARMA</span>
+            <span class="stock-price">₹1703.40 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">38.7</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="index-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 Nifty Private Bank</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                </div>
+                <div class="strength-badge">Strength: 46.7</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);">
+                    <div class="screener-header">
+                        <h3>📈 Index Performance</h3>
+                        <p>Returns over different periods</p>
+                    </div>
+                    <div class="performance-metrics">
+                        <div class="perf-item">
+                            <span class="perf-label">1M:</span>
+                            <span class="perf-value ">N/A</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">3M:</span>
+                            <span class="perf-value ">N/A</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">6M:</span>
+                            <span class="perf-value ">N/A</span>
+                        </div>
+                    </div>
+                  </div>
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('AXISBANK', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">AXISBANK</span>
+            <span class="stock-price">₹1238.60 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">58.7</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('RBLBANK', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">RBLBANK</span>
+            <span class="stock-price">₹324.95 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">52.7</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('FEDERALBNK', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">FEDERALBNK</span>
+            <span class="stock-price">₹234.81 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">44.0</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('BANDHANBNK', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BANDHANBNK</span>
+            <span class="stock-price">₹170.58 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">43.3</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('KOTAKBANK', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">KOTAKBANK</span>
+            <span class="stock-price">₹2137.20 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">34.7</div>
+        <div class="metric-value" style="background: #dc3545; color: white;">SELL</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="index-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 Nifty FMCG</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                </div>
+                <div class="strength-badge">Strength: 45.7</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);">
+                    <div class="screener-header">
+                        <h3>📈 Index Performance</h3>
+                        <p>Returns over different periods</p>
+                    </div>
+                    <div class="performance-metrics">
+                        <div class="perf-item">
+                            <span class="perf-label">1M:</span>
+                            <span class="perf-value positive">2.3%</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">3M:</span>
+                            <span class="perf-value positive">0.9%</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">6M:</span>
+                            <span class="perf-value positive">0.6%</span>
+                        </div>
+                    </div>
+                  </div>
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('BRITANNIA', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">BRITANNIA</span>
+            <span class="stock-price">₹5859.50 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">52.7</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('NESTLEIND', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">NESTLEIND</span>
+            <span class="stock-price">₹1279.90 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">47.3</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('RADICO', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">RADICO</span>
+            <span class="stock-price">₹3144.70 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">46.7</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('TATACONSUM', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">TATACONSUM</span>
+            <span class="stock-price">₹1176.60 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">45.3</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('VBL', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">VBL</span>
+            <span class="stock-price">₹485.25 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">36.7</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="index-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 Nifty IT</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                </div>
+                <div class="strength-badge">Strength: 41.3</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);">
+                    <div class="screener-header">
+                        <h3>📈 Index Performance</h3>
+                        <p>Returns over different periods</p>
+                    </div>
+                    <div class="performance-metrics">
+                        <div class="perf-item">
+                            <span class="perf-label">1M:</span>
+                            <span class="perf-value positive">5.9%</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">3M:</span>
+                            <span class="perf-value positive">1.7%</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">6M:</span>
+                            <span class="perf-value negative">-0.3%</span>
+                        </div>
+                    </div>
+                  </div>
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('COFORGE', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">COFORGE</span>
+            <span class="stock-price">₹1807.70 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">54.0</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('LTIM', 1)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">LTIM</span>
+            <span class="stock-price">₹5699.00 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">50.0</div>
+        <div class="metric-value" style="background: #ffc107; color: white;">HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('MPHASIS', 2)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">MPHASIS</span>
+            <span class="stock-price">₹2893.70 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">41.3</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('HCLTECH', 3)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">HCLTECH</span>
+            <span class="stock-price">₹1549.80 | MID_CAP</span>
+        </div>
+        <div class="metric-value score">36.0</div>
+        <div class="metric-value" style="background: #ff9800; color: white;">WEAK_HOLD</div>
+      </div><div class="screener-item" onclick="showStockDetails('INFY', 4)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">INFY</span>
+            <span class="stock-price">₹1493.80 | LARGE_CAP</span>
+        </div>
+        <div class="metric-value score">25.3</div>
+        <div class="metric-value" style="background: #dc3545; color: white;">SELL</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+        <div class="index-section">
+            <div class="section-header">
+                <div>
+                    <h2>📊 Nifty Media</h2>
+                    <p>Top 5 stocks by Technical Score</p>
+                </div>
+                <div class="strength-badge">Strength: 18.7</div>
+            </div>
+            <div class="screeners-grid">
+                <div class="screener-card" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);">
+                    <div class="screener-header">
+                        <h3>📈 Index Performance</h3>
+                        <p>Returns over different periods</p>
+                    </div>
+                    <div class="performance-metrics">
+                        <div class="perf-item">
+                            <span class="perf-label">1M:</span>
+                            <span class="perf-value negative">-2.8%</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">3M:</span>
+                            <span class="perf-value ">N/A</span>
+                        </div>
+                        <div class="perf-item">
+                            <span class="perf-label">6M:</span>
+                            <span class="perf-value ">N/A</span>
+                        </div>
+                    </div>
+                  </div>
+                <div class="screener-card">
+                    <div class="screener-header">
+                        <h3>💪 Top 5 Stocks</h3>
+                        <p>Ranked by Technical Score</p>
+                    </div>
+                    <div class="screener-list"><div class="screener-item" onclick="showStockDetails('ZEEL', 0)" style="cursor: pointer;">
+        <div class="stock-info">
+            <span class="stock-symbol">ZEEL</span>
+            <span class="stock-price">₹101.90 | SMALL_CAP</span>
+        </div>
+        <div class="metric-value score">18.7</div>
+        <div class="metric-value" style="background: #dc3545; color: white;">SELL</div>
+      </div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Stock Details Modal -->
+    <div class="modal-overlay" id="stockModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title" id="modalStockSymbol">Stock Details</div>
+                <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div id="modalStockDetails">
+                <!-- Stock details will be populated here -->
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // All stocks data
+        const allStocksData = [{"symbol":"CANBK","company_name":"CANARA BANK","index":"Nifty Bank","market_cap":"LARGE_CAP","current_price":132.89,"change_1d":3.2,"change_1w":5.27,"change_1m":7.42,"technical_score":76,"rsi":68.9,"relative_strength":16.89,"can_slim_score":18,"minervini_score":12,"fundamental_score":15,"enhanced_fund_score":54.62,"earnings_quality":54.05,"sales_growth":47,"financial_strength":56.76,"institutional_backing":66,"trading_value":12325784175.58,"trading_signal":"BUY","trend_signal":"STRONG_BULLISH","rank":12},{"symbol":"BANKBARODA","company_name":"BANK OF BARODA","index":"Nifty Bank","market_cap":"LARGE_CAP","current_price":272.75,"change_1d":-0.67,"change_1w":2.19,"change_1m":5.5,"technical_score":66,"rsi":62.6,"relative_strength":7.76,"can_slim_score":12,"minervini_score":6,"fundamental_score":15,"enhanced_fund_score":53.65,"earnings_quality":55.48,"sales_growth":47,"financial_strength":57.94,"institutional_backing":54.17,"trading_value":3808390742.45,"trading_signal":"BUY","trend_signal":"STRONG_BULLISH","rank":49},{"symbol":"AXISBANK","company_name":"AXIS BANK LIMITED","index":"Nifty Bank","market_cap":"LARGE_CAP","current_price":1238.6,"change_1d":-0.82,"change_1w":-1.6,"change_1m":9.46,"technical_score":58.7,"rsi":63.4,"relative_strength":11.15,"can_slim_score":11,"minervini_score":12,"fundamental_score":15,"enhanced_fund_score":52.47,"earnings_quality":51.19,"sales_growth":47,"financial_strength":54.71,"institutional_backing":62,"trading_value":4987207869.4,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":38},{"symbol":"PNB","company_name":"PUNJAB NATIONAL BANK","index":"Nifty Bank","market_cap":"MID_CAP","current_price":120.09,"change_1d":-0.83,"change_1w":1.58,"change_1m":6.43,"technical_score":54,"rsi":63.6,"relative_strength":7.58,"can_slim_score":10,"minervini_score":10,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":2791984584.03,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":75},{"symbol":"SBIN","company_name":"STATE BANK OF INDIA","index":"Nifty Bank","market_cap":"LARGE_CAP","current_price":934.35,"change_1d":-0.57,"change_1w":2.5,"change_1m":7.09,"technical_score":53.3,"rsi":74.9,"relative_strength":8.65,"can_slim_score":10,"minervini_score":12,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":12247265996.75,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":13},{"symbol":"BPCL","company_name":"BHARAT PETROLEUM CORP  LT","index":"Nifty 50","market_cap":"LARGE_CAP","current_price":357.6,"change_1d":2.73,"change_1w":7.94,"change_1m":5.28,"technical_score":68.7,"rsi":69.4,"relative_strength":5.85,"can_slim_score":12,"minervini_score":14,"fundamental_score":20,"enhanced_fund_score":62.6,"earnings_quality":70,"sales_growth":56,"financial_strength":58.64,"institutional_backing":59.17,"trading_value":5263753111.5,"trading_signal":"BUY","trend_signal":"BEARISH","rank":35},{"symbol":"BHARTIARTL","company_name":"BHARTI AIRTEL LIMITED","index":"Nifty 50","market_cap":"LARGE_CAP","current_price":2066.3,"change_1d":-1.63,"change_1w":2.91,"change_1m":10,"technical_score":61.3,"rsi":64.5,"relative_strength":5.61,"can_slim_score":11,"minervini_score":12,"fundamental_score":15,"enhanced_fund_score":52.75,"earnings_quality":50.65,"sales_growth":51,"financial_strength":54.32,"institutional_backing":59.17,"trading_value":8726723356.2,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":17},{"symbol":"AXISBANK","company_name":"AXIS BANK LIMITED","index":"Nifty 50","market_cap":"LARGE_CAP","current_price":1238.6,"change_1d":-0.82,"change_1w":-1.6,"change_1m":9.46,"technical_score":58.7,"rsi":63.4,"relative_strength":11.15,"can_slim_score":11,"minervini_score":12,"fundamental_score":15,"enhanced_fund_score":52.47,"earnings_quality":51.19,"sales_growth":47,"financial_strength":54.71,"institutional_backing":62,"trading_value":4987207869.4,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":38},{"symbol":"BAJFINANCE","company_name":"BAJAJ FINANCE LIMITED","index":"Nifty 50","market_cap":"LARGE_CAP","current_price":1052.3,"change_1d":-1,"change_1w":-3.82,"change_1m":5.35,"technical_score":57.3,"rsi":52.4,"relative_strength":17.32,"can_slim_score":13,"minervini_score":12,"fundamental_score":15,"enhanced_fund_score":51.99,"earnings_quality":50.65,"sales_growth":47,"financial_strength":55.53,"institutional_backing":59.17,"trading_value":4501479931.2,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":44},{"symbol":"COALINDIA","company_name":"COAL INDIA LTD","index":"Nifty 50","market_cap":"LARGE_CAP","current_price":387.7,"change_1d":1.49,"change_1w":-1.26,"change_1m":-0.58,"technical_score":56.7,"rsi":49.3,"relative_strength":-4.62,"can_slim_score":5,"minervini_score":10,"fundamental_score":25,"enhanced_fund_score":71.16,"earnings_quality":75.65,"sales_growth":82,"financial_strength":61.36,"institutional_backing":54.17,"trading_value":5837125826.85,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":26},{"symbol":"CANBK","company_name":"CANARA BANK","index":"Nifty PSU Bank","market_cap":"LARGE_CAP","current_price":132.89,"change_1d":3.2,"change_1w":5.27,"change_1m":7.42,"technical_score":76,"rsi":68.9,"relative_strength":16.89,"can_slim_score":18,"minervini_score":12,"fundamental_score":15,"enhanced_fund_score":54.62,"earnings_quality":54.05,"sales_growth":47,"financial_strength":56.76,"institutional_backing":66,"trading_value":12325784175.58,"trading_signal":"BUY","trend_signal":"STRONG_BULLISH","rank":12},{"symbol":"BANKBARODA","company_name":"BANK OF BARODA","index":"Nifty PSU Bank","market_cap":"LARGE_CAP","current_price":272.75,"change_1d":-0.67,"change_1w":2.19,"change_1m":5.5,"technical_score":66,"rsi":62.6,"relative_strength":7.76,"can_slim_score":12,"minervini_score":6,"fundamental_score":15,"enhanced_fund_score":53.65,"earnings_quality":55.48,"sales_growth":47,"financial_strength":57.94,"institutional_backing":54.17,"trading_value":3808390742.45,"trading_signal":"BUY","trend_signal":"STRONG_BULLISH","rank":49},{"symbol":"PNB","company_name":"PUNJAB NATIONAL BANK","index":"Nifty PSU Bank","market_cap":"MID_CAP","current_price":120.09,"change_1d":-0.83,"change_1w":1.58,"change_1m":6.43,"technical_score":54,"rsi":63.6,"relative_strength":7.58,"can_slim_score":10,"minervini_score":10,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":2791984584.03,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":75},{"symbol":"SBIN","company_name":"STATE BANK OF INDIA","index":"Nifty PSU Bank","market_cap":"LARGE_CAP","current_price":934.35,"change_1d":-0.57,"change_1w":2.5,"change_1m":7.09,"technical_score":53.3,"rsi":74.9,"relative_strength":8.65,"can_slim_score":10,"minervini_score":12,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":12247265996.75,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":13},{"symbol":"INDIANB","company_name":"INDIAN BANK","index":"Nifty PSU Bank","market_cap":"SMALL_CAP","current_price":854.85,"change_1d":0.05,"change_1w":3.47,"change_1m":13.87,"technical_score":46.7,"rsi":80.8,"relative_strength":22.42,"can_slim_score":15,"minervini_score":8,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":1139275861.35,"trading_signal":"WEAK_HOLD","trend_signal":"STRONG_BULLISH","rank":183},{"symbol":"BHARTIARTL","company_name":"BHARTI AIRTEL LIMITED","index":"Nifty 200","market_cap":"LARGE_CAP","current_price":2066.3,"change_1d":-1.63,"change_1w":2.91,"change_1m":10,"technical_score":61.3,"rsi":64.5,"relative_strength":5.61,"can_slim_score":11,"minervini_score":12,"fundamental_score":15,"enhanced_fund_score":52.75,"earnings_quality":50.65,"sales_growth":51,"financial_strength":54.32,"institutional_backing":59.17,"trading_value":8726723356.2,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":17},{"symbol":"ADANIGREEN","company_name":"ADANI GREEN ENERGY LTD","index":"Nifty 200","market_cap":"LARGE_CAP","current_price":1140.1,"change_1d":2.47,"change_1w":9.13,"change_1m":11.03,"technical_score":60,"rsi":67,"relative_strength":18.33,"can_slim_score":20,"minervini_score":4,"fundamental_score":0,"enhanced_fund_score":10,"earnings_quality":10,"sales_growth":10,"financial_strength":10,"institutional_backing":10,"trading_value":13162036511.2,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":10},{"symbol":"AXISBANK","company_name":"AXIS BANK LIMITED","index":"Nifty 200","market_cap":"LARGE_CAP","current_price":1238.6,"change_1d":-0.82,"change_1w":-1.6,"change_1m":9.46,"technical_score":58.7,"rsi":63.4,"relative_strength":11.15,"can_slim_score":11,"minervini_score":12,"fundamental_score":15,"enhanced_fund_score":52.47,"earnings_quality":51.19,"sales_growth":47,"financial_strength":54.71,"institutional_backing":62,"trading_value":4987207869.4,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":38},{"symbol":"BAJFINANCE","company_name":"BAJAJ FINANCE LIMITED","index":"Nifty 200","market_cap":"LARGE_CAP","current_price":1052.3,"change_1d":-1,"change_1w":-3.82,"change_1m":5.35,"technical_score":57.3,"rsi":52.4,"relative_strength":17.32,"can_slim_score":13,"minervini_score":12,"fundamental_score":15,"enhanced_fund_score":51.99,"earnings_quality":50.65,"sales_growth":47,"financial_strength":55.53,"institutional_backing":59.17,"trading_value":4501479931.2,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":44},{"symbol":"BAJAJFINSV","company_name":"BAJAJ FINSERV LTD.","index":"Nifty 200","market_cap":"SMALL_CAP","current_price":2114.6,"change_1d":-1.05,"change_1w":-2.85,"change_1m":5.39,"technical_score":56,"rsi":56.5,"relative_strength":5.42,"can_slim_score":9,"minervini_score":12,"fundamental_score":15,"enhanced_fund_score":52.46,"earnings_quality":50.71,"sales_growth":47,"financial_strength":54.86,"institutional_backing":63,"trading_value":1033436796.6,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":202},{"symbol":"BHARTIARTL","company_name":"BHARTI AIRTEL LIMITED","index":"Nifty 500","market_cap":"LARGE_CAP","current_price":2066.3,"change_1d":-1.63,"change_1w":2.91,"change_1m":10,"technical_score":61.3,"rsi":64.5,"relative_strength":5.61,"can_slim_score":11,"minervini_score":12,"fundamental_score":15,"enhanced_fund_score":52.75,"earnings_quality":50.65,"sales_growth":51,"financial_strength":54.32,"institutional_backing":59.17,"trading_value":8726723356.2,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":17},{"symbol":"ADANIGREEN","company_name":"ADANI GREEN ENERGY LTD","index":"Nifty 500","market_cap":"LARGE_CAP","current_price":1140.1,"change_1d":2.47,"change_1w":9.13,"change_1m":11.03,"technical_score":60,"rsi":67,"relative_strength":18.33,"can_slim_score":20,"minervini_score":4,"fundamental_score":0,"enhanced_fund_score":10,"earnings_quality":10,"sales_growth":10,"financial_strength":10,"institutional_backing":10,"trading_value":13162036511.2,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":10},{"symbol":"AXISBANK","company_name":"AXIS BANK LIMITED","index":"Nifty 500","market_cap":"LARGE_CAP","current_price":1238.6,"change_1d":-0.82,"change_1w":-1.6,"change_1m":9.46,"technical_score":58.7,"rsi":63.4,"relative_strength":11.15,"can_slim_score":11,"minervini_score":12,"fundamental_score":15,"enhanced_fund_score":52.47,"earnings_quality":51.19,"sales_growth":47,"financial_strength":54.71,"institutional_backing":62,"trading_value":4987207869.4,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":38},{"symbol":"BAJFINANCE","company_name":"BAJAJ FINANCE LIMITED","index":"Nifty 500","market_cap":"LARGE_CAP","current_price":1052.3,"change_1d":-1,"change_1w":-3.82,"change_1m":5.35,"technical_score":57.3,"rsi":52.4,"relative_strength":17.32,"can_slim_score":13,"minervini_score":12,"fundamental_score":15,"enhanced_fund_score":51.99,"earnings_quality":50.65,"sales_growth":47,"financial_strength":55.53,"institutional_backing":59.17,"trading_value":4501479931.2,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":44},{"symbol":"BAJAJFINSV","company_name":"BAJAJ FINSERV LTD.","index":"Nifty 500","market_cap":"SMALL_CAP","current_price":2114.6,"change_1d":-1.05,"change_1w":-2.85,"change_1m":5.39,"technical_score":56,"rsi":56.5,"relative_strength":5.42,"can_slim_score":9,"minervini_score":12,"fundamental_score":15,"enhanced_fund_score":52.46,"earnings_quality":50.71,"sales_growth":47,"financial_strength":54.86,"institutional_backing":63,"trading_value":1033436796.6,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":202},{"symbol":"ASHOKLEY","company_name":"ASHOK LEYLAND LTD","index":"Nifty Auto","market_cap":"MID_CAP","current_price":140.77,"change_1d":0.92,"change_1w":2.12,"change_1m":-1.33,"technical_score":64.7,"rsi":56.7,"relative_strength":12.54,"can_slim_score":9,"minervini_score":9,"fundamental_score":25,"enhanced_fund_score":71.08,"earnings_quality":74.57,"sales_growth":82,"financial_strength":59.41,"institutional_backing":59.17,"trading_value":2071275160.01,"trading_signal":"HOLD","trend_signal":"BEARISH","rank":105},{"symbol":"TVSMOTOR","company_name":"TVS MOTOR COMPANY  LTD","index":"Nifty Auto","market_cap":"LARGE_CAP","current_price":3491.7,"change_1d":-0.21,"change_1w":-2.93,"change_1m":1.54,"technical_score":58.7,"rsi":46.3,"relative_strength":10.61,"can_slim_score":12,"minervini_score":10,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":5095477368.1,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":37},{"symbol":"APOLLOTYRE","company_name":"APOLLO TYRES LTD","index":"Nifty Auto","market_cap":"MICRO_CAP","current_price":503,"change_1d":-0.5,"change_1w":-2.13,"change_1m":6.35,"technical_score":57.3,"rsi":58.1,"relative_strength":8.09,"can_slim_score":9,"minervini_score":12,"fundamental_score":15,"enhanced_fund_score":53.44,"earnings_quality":54.57,"sales_growth":51,"financial_strength":53.68,"institutional_backing":54.17,"trading_value":370421086.6,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":352},{"symbol":"HEROMOTOCO","company_name":"HERO MOTOCORP LIMITED","index":"Nifty Auto","market_cap":"MID_CAP","current_price":5515,"change_1d":-0.66,"change_1w":-1.32,"change_1m":0.78,"technical_score":53.3,"rsi":51.9,"relative_strength":10.61,"can_slim_score":9,"minervini_score":10,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":2220384759.5,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":98},{"symbol":"MARUTI","company_name":"MARUTI SUZUKI INDIA LTD.","index":"Nifty Auto","market_cap":"MID_CAP","current_price":16206,"change_1d":0.42,"change_1w":-1.14,"change_1m":1.1,"technical_score":52.7,"rsi":57.7,"relative_strength":21.24,"can_slim_score":11,"minervini_score":12,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":3731979767,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":54},{"symbol":"BHARTIARTL","company_name":"BHARTI AIRTEL LIMITED","index":"Nifty 100","market_cap":"LARGE_CAP","current_price":2066.3,"change_1d":-1.63,"change_1w":2.91,"change_1m":10,"technical_score":61.3,"rsi":64.5,"relative_strength":5.61,"can_slim_score":11,"minervini_score":12,"fundamental_score":15,"enhanced_fund_score":52.75,"earnings_quality":50.65,"sales_growth":51,"financial_strength":54.32,"institutional_backing":59.17,"trading_value":8726723356.2,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":17},{"symbol":"AXISBANK","company_name":"AXIS BANK LIMITED","index":"Nifty 100","market_cap":"LARGE_CAP","current_price":1238.6,"change_1d":-0.82,"change_1w":-1.6,"change_1m":9.46,"technical_score":58.7,"rsi":63.4,"relative_strength":11.15,"can_slim_score":11,"minervini_score":12,"fundamental_score":15,"enhanced_fund_score":52.47,"earnings_quality":51.19,"sales_growth":47,"financial_strength":54.71,"institutional_backing":62,"trading_value":4987207869.4,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":38},{"symbol":"BAJFINANCE","company_name":"BAJAJ FINANCE LIMITED","index":"Nifty 100","market_cap":"LARGE_CAP","current_price":1052.3,"change_1d":-1,"change_1w":-3.82,"change_1m":5.35,"technical_score":57.3,"rsi":52.4,"relative_strength":17.32,"can_slim_score":13,"minervini_score":12,"fundamental_score":15,"enhanced_fund_score":51.99,"earnings_quality":50.65,"sales_growth":47,"financial_strength":55.53,"institutional_backing":59.17,"trading_value":4501479931.2,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":44},{"symbol":"LT","company_name":"LARSEN & TOUBRO LTD.","index":"Nifty 100","market_cap":"LARGE_CAP","current_price":3987.5,"change_1d":0.74,"change_1w":1.76,"change_1m":8.98,"technical_score":54,"rsi":75.8,"relative_strength":2.92,"can_slim_score":10,"minervini_score":15,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":19929380105.2,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":4},{"symbol":"SBIN","company_name":"STATE BANK OF INDIA","index":"Nifty 100","market_cap":"LARGE_CAP","current_price":934.35,"change_1d":-0.57,"change_1w":2.5,"change_1m":7.09,"technical_score":53.3,"rsi":74.9,"relative_strength":8.65,"can_slim_score":10,"minervini_score":12,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":12247265996.75,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":13},{"symbol":"ADANIGREEN","company_name":"ADANI GREEN ENERGY LTD","index":"Nifty Midcap 50","market_cap":"LARGE_CAP","current_price":1140.1,"change_1d":2.47,"change_1w":9.13,"change_1m":11.03,"technical_score":60,"rsi":67,"relative_strength":18.33,"can_slim_score":20,"minervini_score":4,"fundamental_score":0,"enhanced_fund_score":10,"earnings_quality":10,"sales_growth":10,"financial_strength":10,"institutional_backing":10,"trading_value":13162036511.2,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":10},{"symbol":"BIOCON","company_name":"BIOCON LIMITED.","index":"Nifty Midcap 50","market_cap":"MID_CAP","current_price":376.6,"change_1d":0.78,"change_1w":3.95,"change_1m":10.44,"technical_score":56.7,"rsi":65.9,"relative_strength":-0.5,"can_slim_score":10,"minervini_score":13,"fundamental_score":15,"enhanced_fund_score":58.99,"earnings_quality":60.43,"sales_growth":56,"financial_strength":56.82,"institutional_backing":63,"trading_value":2652812608.2,"trading_signal":"HOLD","trend_signal":"BEARISH","rank":79},{"symbol":"BAJAJFINSV","company_name":"BAJAJ FINSERV LTD.","index":"Nifty Midcap 50","market_cap":"SMALL_CAP","current_price":2114.6,"change_1d":-1.05,"change_1w":-2.85,"change_1m":5.39,"technical_score":56,"rsi":56.5,"relative_strength":5.42,"can_slim_score":9,"minervini_score":12,"fundamental_score":15,"enhanced_fund_score":52.46,"earnings_quality":50.71,"sales_growth":47,"financial_strength":54.86,"institutional_backing":63,"trading_value":1033436796.6,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":202},{"symbol":"DIVISLAB","company_name":"DIVI S LABORATORIES LTD","index":"Nifty Midcap 50","market_cap":"MID_CAP","current_price":6655,"change_1d":2.2,"change_1w":1.36,"change_1m":16.97,"technical_score":55.3,"rsi":65.8,"relative_strength":4.05,"can_slim_score":8,"minervini_score":18,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":3561215307,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":57},{"symbol":"CIPLA","company_name":"CIPLA LTD","index":"Nifty Midcap 50","market_cap":"LARGE_CAP","current_price":1540.1,"change_1d":-2.59,"change_1w":-6.38,"change_1m":2.45,"technical_score":47.3,"rsi":44.9,"relative_strength":-6.38,"can_slim_score":6,"minervini_score":10,"fundamental_score":15,"enhanced_fund_score":51.15,"earnings_quality":50.65,"sales_growth":47,"financial_strength":55.68,"institutional_backing":53.33,"trading_value":6280513706.4,"trading_signal":"WEAK_HOLD","trend_signal":"STRONG_BULLISH","rank":25},{"symbol":"ADANIGREEN","company_name":"ADANI GREEN ENERGY LTD","index":"NIFTY SMLCAP 250","market_cap":"LARGE_CAP","current_price":1140.1,"change_1d":2.47,"change_1w":9.13,"change_1m":11.03,"technical_score":60,"rsi":67,"relative_strength":18.33,"can_slim_score":20,"minervini_score":4,"fundamental_score":0,"enhanced_fund_score":10,"earnings_quality":10,"sales_growth":10,"financial_strength":10,"institutional_backing":10,"trading_value":13162036511.2,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":10},{"symbol":"BIOCON","company_name":"BIOCON LIMITED.","index":"NIFTY SMLCAP 250","market_cap":"MID_CAP","current_price":376.6,"change_1d":0.78,"change_1w":3.95,"change_1m":10.44,"technical_score":56.7,"rsi":65.9,"relative_strength":-0.5,"can_slim_score":10,"minervini_score":13,"fundamental_score":15,"enhanced_fund_score":58.99,"earnings_quality":60.43,"sales_growth":56,"financial_strength":56.82,"institutional_backing":63,"trading_value":2652812608.2,"trading_signal":"HOLD","trend_signal":"BEARISH","rank":79},{"symbol":"DIVISLAB","company_name":"DIVI S LABORATORIES LTD","index":"NIFTY SMLCAP 250","market_cap":"MID_CAP","current_price":6655,"change_1d":2.2,"change_1w":1.36,"change_1m":16.97,"technical_score":55.3,"rsi":65.8,"relative_strength":4.05,"can_slim_score":8,"minervini_score":18,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":3561215307,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":57},{"symbol":"EICHERMOT","company_name":"EICHER MOTORS LTD","index":"NIFTY SMLCAP 250","market_cap":"MID_CAP","current_price":6889,"change_1d":-0.91,"change_1w":0.07,"change_1m":-1.66,"technical_score":52,"rsi":51.5,"relative_strength":15.52,"can_slim_score":11,"minervini_score":6,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":2845529984.5,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":73},{"symbol":"ADANIENSOL","company_name":"ADANI ENERGY SOLUTION LTD","index":"NIFTY SMLCAP 250","market_cap":"SMALL_CAP","current_price":965.65,"change_1d":-0.2,"change_1w":1.39,"change_1m":10.71,"technical_score":51.3,"rsi":63.9,"relative_strength":17.77,"can_slim_score":15,"minervini_score":8,"fundamental_score":0,"enhanced_fund_score":10,"earnings_quality":10,"sales_growth":10,"financial_strength":10,"institutional_backing":10,"trading_value":931550452.25,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":215},{"symbol":"BPCL","company_name":"BHARAT PETROLEUM CORP  LT","index":"Nifty Oil & Gas","market_cap":"LARGE_CAP","current_price":357.6,"change_1d":2.73,"change_1w":7.94,"change_1m":5.28,"technical_score":68.7,"rsi":69.4,"relative_strength":5.85,"can_slim_score":12,"minervini_score":14,"fundamental_score":20,"enhanced_fund_score":62.6,"earnings_quality":70,"sales_growth":56,"financial_strength":58.64,"institutional_backing":59.17,"trading_value":5263753111.5,"trading_signal":"BUY","trend_signal":"BEARISH","rank":35},{"symbol":"MRPL","company_name":"MRPL","index":"Nifty Oil & Gas","market_cap":"LARGE_CAP","current_price":162.58,"change_1d":1.98,"change_1w":11.36,"change_1m":22.43,"technical_score":57.3,"rsi":73.5,"relative_strength":25.31,"can_slim_score":20,"minervini_score":4,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":4722976200.13,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":40},{"symbol":"IOC","company_name":"INDIAN OIL CORP LTD","index":"Nifty Oil & Gas","market_cap":"LARGE_CAP","current_price":163.51,"change_1d":0.26,"change_1w":8.92,"change_1m":9.16,"technical_score":55.3,"rsi":72.9,"relative_strength":9.76,"can_slim_score":14,"minervini_score":6,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":5497193384.79,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":30},{"symbol":"OIL","company_name":"OIL INDIA LTD","index":"Nifty Oil & Gas","market_cap":"MID_CAP","current_price":434.75,"change_1d":3.39,"change_1w":4.16,"change_1m":5.06,"technical_score":50.7,"rsi":63.7,"relative_strength":1.78,"can_slim_score":10,"minervini_score":14,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":2602372001.6,"trading_signal":"HOLD","trend_signal":"BEARISH","rank":84},{"symbol":"GAIL","company_name":"GAIL (INDIA) LTD","index":"Nifty Oil & Gas","market_cap":"MID_CAP","current_price":183.09,"change_1d":-0.84,"change_1w":1.67,"change_1m":3.86,"technical_score":39.3,"rsi":58.2,"relative_strength":0.58,"can_slim_score":4,"minervini_score":8,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":1997394676.15,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":114},{"symbol":"ADANIGREEN","company_name":"ADANI GREEN ENERGY LTD","index":"NIFTY SMLCAP 100","market_cap":"LARGE_CAP","current_price":1140.1,"change_1d":2.47,"change_1w":9.13,"change_1m":11.03,"technical_score":60,"rsi":67,"relative_strength":18.33,"can_slim_score":20,"minervini_score":4,"fundamental_score":0,"enhanced_fund_score":10,"earnings_quality":10,"sales_growth":10,"financial_strength":10,"institutional_backing":10,"trading_value":13162036511.2,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":10},{"symbol":"BIOCON","company_name":"BIOCON LIMITED.","index":"NIFTY SMLCAP 100","market_cap":"MID_CAP","current_price":376.6,"change_1d":0.78,"change_1w":3.95,"change_1m":10.44,"technical_score":56.7,"rsi":65.9,"relative_strength":-0.5,"can_slim_score":10,"minervini_score":13,"fundamental_score":15,"enhanced_fund_score":58.99,"earnings_quality":60.43,"sales_growth":56,"financial_strength":56.82,"institutional_backing":63,"trading_value":2652812608.2,"trading_signal":"HOLD","trend_signal":"BEARISH","rank":79},{"symbol":"DIVISLAB","company_name":"DIVI S LABORATORIES LTD","index":"NIFTY SMLCAP 100","market_cap":"MID_CAP","current_price":6655,"change_1d":2.2,"change_1w":1.36,"change_1m":16.97,"technical_score":55.3,"rsi":65.8,"relative_strength":4.05,"can_slim_score":8,"minervini_score":18,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":3561215307,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":57},{"symbol":"ADANIENSOL","company_name":"ADANI ENERGY SOLUTION LTD","index":"NIFTY SMLCAP 100","market_cap":"SMALL_CAP","current_price":965.65,"change_1d":-0.2,"change_1w":1.39,"change_1m":10.71,"technical_score":51.3,"rsi":63.9,"relative_strength":17.77,"can_slim_score":15,"minervini_score":8,"fundamental_score":0,"enhanced_fund_score":10,"earnings_quality":10,"sales_growth":10,"financial_strength":10,"institutional_backing":10,"trading_value":931550452.25,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":215},{"symbol":"CIPLA","company_name":"CIPLA LTD","index":"NIFTY SMLCAP 100","market_cap":"LARGE_CAP","current_price":1540.1,"change_1d":-2.59,"change_1w":-6.38,"change_1m":2.45,"technical_score":47.3,"rsi":44.9,"relative_strength":-6.38,"can_slim_score":6,"minervini_score":10,"fundamental_score":15,"enhanced_fund_score":51.15,"earnings_quality":50.65,"sales_growth":47,"financial_strength":55.68,"institutional_backing":53.33,"trading_value":6280513706.4,"trading_signal":"WEAK_HOLD","trend_signal":"STRONG_BULLISH","rank":25},{"symbol":"ADANIGREEN","company_name":"ADANI GREEN ENERGY LTD","index":"NIFTY SMLCAP 50","market_cap":"LARGE_CAP","current_price":1140.1,"change_1d":2.47,"change_1w":9.13,"change_1m":11.03,"technical_score":60,"rsi":67,"relative_strength":18.33,"can_slim_score":20,"minervini_score":4,"fundamental_score":0,"enhanced_fund_score":10,"earnings_quality":10,"sales_growth":10,"financial_strength":10,"institutional_backing":10,"trading_value":13162036511.2,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":10},{"symbol":"BIOCON","company_name":"BIOCON LIMITED.","index":"NIFTY SMLCAP 50","market_cap":"MID_CAP","current_price":376.6,"change_1d":0.78,"change_1w":3.95,"change_1m":10.44,"technical_score":56.7,"rsi":65.9,"relative_strength":-0.5,"can_slim_score":10,"minervini_score":13,"fundamental_score":15,"enhanced_fund_score":58.99,"earnings_quality":60.43,"sales_growth":56,"financial_strength":56.82,"institutional_backing":63,"trading_value":2652812608.2,"trading_signal":"HOLD","trend_signal":"BEARISH","rank":79},{"symbol":"DIVISLAB","company_name":"DIVI S LABORATORIES LTD","index":"NIFTY SMLCAP 50","market_cap":"MID_CAP","current_price":6655,"change_1d":2.2,"change_1w":1.36,"change_1m":16.97,"technical_score":55.3,"rsi":65.8,"relative_strength":4.05,"can_slim_score":8,"minervini_score":18,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":3561215307,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":57},{"symbol":"ADANIENSOL","company_name":"ADANI ENERGY SOLUTION LTD","index":"NIFTY SMLCAP 50","market_cap":"SMALL_CAP","current_price":965.65,"change_1d":-0.2,"change_1w":1.39,"change_1m":10.71,"technical_score":51.3,"rsi":63.9,"relative_strength":17.77,"can_slim_score":15,"minervini_score":8,"fundamental_score":0,"enhanced_fund_score":10,"earnings_quality":10,"sales_growth":10,"financial_strength":10,"institutional_backing":10,"trading_value":931550452.25,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":215},{"symbol":"CIPLA","company_name":"CIPLA LTD","index":"NIFTY SMLCAP 50","market_cap":"LARGE_CAP","current_price":1540.1,"change_1d":-2.59,"change_1w":-6.38,"change_1m":2.45,"technical_score":47.3,"rsi":44.9,"relative_strength":-6.38,"can_slim_score":6,"minervini_score":10,"fundamental_score":15,"enhanced_fund_score":51.15,"earnings_quality":50.65,"sales_growth":47,"financial_strength":55.68,"institutional_backing":53.33,"trading_value":6280513706.4,"trading_signal":"WEAK_HOLD","trend_signal":"STRONG_BULLISH","rank":25},{"symbol":"BHEL","company_name":"BHEL","index":"Nifty Infrastructure","market_cap":"LARGE_CAP","current_price":261.29,"change_1d":6.48,"change_1w":11.52,"change_1m":9.58,"technical_score":69.3,"rsi":74.8,"relative_strength":11.62,"can_slim_score":16,"minervini_score":14,"fundamental_score":15,"enhanced_fund_score":53.94,"earnings_quality":54.13,"sales_growth":47,"financial_strength":55.45,"institutional_backing":63,"trading_value":19239744609.28,"trading_signal":"BUY","trend_signal":"BEARISH","rank":5},{"symbol":"ADANIGREEN","company_name":"ADANI GREEN ENERGY LTD","index":"Nifty Infrastructure","market_cap":"LARGE_CAP","current_price":1140.1,"change_1d":2.47,"change_1w":9.13,"change_1m":11.03,"technical_score":60,"rsi":67,"relative_strength":18.33,"can_slim_score":20,"minervini_score":4,"fundamental_score":0,"enhanced_fund_score":10,"earnings_quality":10,"sales_growth":10,"financial_strength":10,"institutional_backing":10,"trading_value":13162036511.2,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":10},{"symbol":"LT","company_name":"LARSEN & TOUBRO LTD.","index":"Nifty Infrastructure","market_cap":"LARGE_CAP","current_price":3987.5,"change_1d":0.74,"change_1w":1.76,"change_1m":8.98,"technical_score":54,"rsi":75.8,"relative_strength":2.92,"can_slim_score":10,"minervini_score":15,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":19929380105.2,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":4},{"symbol":"ADANIPORTS","company_name":"ADANI PORT & SEZ LTD","index":"Nifty Infrastructure","market_cap":"MID_CAP","current_price":1457.9,"change_1d":0.21,"change_1w":0.33,"change_1m":3.88,"technical_score":41.3,"rsi":58.2,"relative_strength":5.44,"can_slim_score":7,"minervini_score":10,"fundamental_score":0,"enhanced_fund_score":10,"earnings_quality":10,"sales_growth":10,"financial_strength":10,"institutional_backing":10,"trading_value":2012009162.8,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":113},{"symbol":"ABB","company_name":"ABB INDIA LIMITED","index":"Nifty Infrastructure","market_cap":"SMALL_CAP","current_price":5279,"change_1d":-0.19,"change_1w":1.88,"change_1m":1.85,"technical_score":40,"rsi":55.8,"relative_strength":-1.26,"can_slim_score":1,"minervini_score":10,"fundamental_score":20,"enhanced_fund_score":61.29,"earnings_quality":55.43,"sales_growth":73,"financial_strength":59.32,"institutional_backing":60,"trading_value":639346888.5,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":260},{"symbol":"ADANIGREEN","company_name":"ADANI GREEN ENERGY LTD","index":"Nifty Next 50","market_cap":"LARGE_CAP","current_price":1140.1,"change_1d":2.47,"change_1w":9.13,"change_1m":11.03,"technical_score":60,"rsi":67,"relative_strength":18.33,"can_slim_score":20,"minervini_score":4,"fundamental_score":0,"enhanced_fund_score":10,"earnings_quality":10,"sales_growth":10,"financial_strength":10,"institutional_backing":10,"trading_value":13162036511.2,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":10},{"symbol":"BAJAJFINSV","company_name":"BAJAJ FINSERV LTD.","index":"Nifty Next 50","market_cap":"SMALL_CAP","current_price":2114.6,"change_1d":-1.05,"change_1w":-2.85,"change_1m":5.39,"technical_score":56,"rsi":56.5,"relative_strength":5.42,"can_slim_score":9,"minervini_score":12,"fundamental_score":15,"enhanced_fund_score":52.46,"earnings_quality":50.71,"sales_growth":47,"financial_strength":54.86,"institutional_backing":63,"trading_value":1033436796.6,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":202},{"symbol":"DIVISLAB","company_name":"DIVI S LABORATORIES LTD","index":"Nifty Next 50","market_cap":"MID_CAP","current_price":6655,"change_1d":2.2,"change_1w":1.36,"change_1m":16.97,"technical_score":55.3,"rsi":65.8,"relative_strength":4.05,"can_slim_score":8,"minervini_score":18,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":3561215307,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":57},{"symbol":"VEDL","company_name":"VEDANTA LIMITED","index":"Nifty Next 50","market_cap":"LARGE_CAP","current_price":506.95,"change_1d":-1.79,"change_1w":4.9,"change_1m":8.83,"technical_score":46,"rsi":68.4,"relative_strength":10.51,"can_slim_score":11,"minervini_score":4,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":3776450532.35,"trading_signal":"WEAK_HOLD","trend_signal":"STRONG_BULLISH","rank":50},{"symbol":"TATACONSUM","company_name":"TATA CONSUMER PRODUCT LTD","index":"Nifty Next 50","market_cap":"SMALL_CAP","current_price":1176.6,"change_1d":-0.04,"change_1w":1.34,"change_1m":4.19,"technical_score":45.3,"rsi":64.5,"relative_strength":6.37,"can_slim_score":7,"minervini_score":12,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":1056772395.7,"trading_signal":"WEAK_HOLD","trend_signal":"STRONG_BULLISH","rank":198},{"symbol":"BPCL","company_name":"BHARAT PETROLEUM CORP  LT","index":"Nifty Energy","market_cap":"LARGE_CAP","current_price":357.6,"change_1d":2.73,"change_1w":7.94,"change_1m":5.28,"technical_score":68.7,"rsi":69.4,"relative_strength":5.85,"can_slim_score":12,"minervini_score":14,"fundamental_score":20,"enhanced_fund_score":62.6,"earnings_quality":70,"sales_growth":56,"financial_strength":58.64,"institutional_backing":59.17,"trading_value":5263753111.5,"trading_signal":"BUY","trend_signal":"BEARISH","rank":35},{"symbol":"ADANIGREEN","company_name":"ADANI GREEN ENERGY LTD","index":"Nifty Energy","market_cap":"LARGE_CAP","current_price":1140.1,"change_1d":2.47,"change_1w":9.13,"change_1m":11.03,"technical_score":60,"rsi":67,"relative_strength":18.33,"can_slim_score":20,"minervini_score":4,"fundamental_score":0,"enhanced_fund_score":10,"earnings_quality":10,"sales_growth":10,"financial_strength":10,"institutional_backing":10,"trading_value":13162036511.2,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":10},{"symbol":"IOC","company_name":"INDIAN OIL CORP LTD","index":"Nifty Energy","market_cap":"LARGE_CAP","current_price":163.51,"change_1d":0.26,"change_1w":8.92,"change_1m":9.16,"technical_score":55.3,"rsi":72.9,"relative_strength":9.76,"can_slim_score":14,"minervini_score":6,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":5497193384.79,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":30},{"symbol":"GAIL","company_name":"GAIL (INDIA) LTD","index":"Nifty Energy","market_cap":"MID_CAP","current_price":183.09,"change_1d":-0.84,"change_1w":1.67,"change_1m":3.86,"technical_score":39.3,"rsi":58.2,"relative_strength":0.58,"can_slim_score":4,"minervini_score":8,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":1997394676.15,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":114},{"symbol":"RELIANCE","company_name":"RELIANCE INDUSTRIES LTD","index":"Nifty Energy","market_cap":"LARGE_CAP","current_price":1488.5,"change_1d":-1.04,"change_1w":2.77,"change_1m":9.13,"technical_score":38,"rsi":68.6,"relative_strength":2.62,"can_slim_score":5,"minervini_score":12,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":13905920959.9,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":9},{"symbol":"COALINDIA","company_name":"COAL INDIA LTD","index":"Nifty Metal","market_cap":"LARGE_CAP","current_price":387.7,"change_1d":1.49,"change_1w":-1.26,"change_1m":-0.58,"technical_score":56.7,"rsi":49.3,"relative_strength":-4.62,"can_slim_score":5,"minervini_score":10,"fundamental_score":25,"enhanced_fund_score":71.16,"earnings_quality":75.65,"sales_growth":82,"financial_strength":61.36,"institutional_backing":54.17,"trading_value":5837125826.85,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":26},{"symbol":"NATIONALUM","company_name":"NATIONAL ALUMINIUM CO LTD","index":"Nifty Metal","market_cap":"MID_CAP","current_price":238.08,"change_1d":-0.01,"change_1w":4.29,"change_1m":11.32,"technical_score":49.3,"rsi":72,"relative_strength":20.31,"can_slim_score":15,"minervini_score":8,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":1779365677.75,"trading_signal":"WEAK_HOLD","trend_signal":"STRONG_BULLISH","rank":127},{"symbol":"TATASTEEL","company_name":"TATA STEEL LIMITED","index":"Nifty Metal","market_cap":"LARGE_CAP","current_price":184.35,"change_1d":-0.45,"change_1w":5.85,"change_1m":9.23,"technical_score":48.7,"rsi":71,"relative_strength":10.05,"can_slim_score":11,"minervini_score":6,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":4452835993.47,"trading_signal":"WEAK_HOLD","trend_signal":"STRONG_BULLISH","rank":45},{"symbol":"HINDCOPPER","company_name":"HINDUSTAN COPPER LTD","index":"Nifty Metal","market_cap":"SMALL_CAP","current_price":348.3,"change_1d":-0.91,"change_1w":5.34,"change_1m":5.72,"technical_score":48.7,"rsi":61.2,"relative_strength":38.77,"can_slim_score":13,"minervini_score":6,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":1199322765.5,"trading_signal":"WEAK_HOLD","trend_signal":"STRONG_BULLISH","rank":177},{"symbol":"VEDL","company_name":"VEDANTA LIMITED","index":"Nifty Metal","market_cap":"LARGE_CAP","current_price":506.95,"change_1d":-1.79,"change_1w":4.9,"change_1m":8.83,"technical_score":46,"rsi":68.4,"relative_strength":10.51,"can_slim_score":11,"minervini_score":4,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":3776450532.35,"trading_signal":"WEAK_HOLD","trend_signal":"STRONG_BULLISH","rank":50},{"symbol":"OBEROIRLTY","company_name":"OBEROI REALTY LIMITED","index":"Nifty Realty","market_cap":"MID_CAP","current_price":1750.3,"change_1d":2.15,"change_1w":4.56,"change_1m":10.63,"technical_score":53.3,"rsi":65,"relative_strength":2.56,"can_slim_score":10,"minervini_score":20,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":1875837389.9,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":119},{"symbol":"BRIGADE","company_name":"BRIGADE ENTER. LTD","index":"Nifty Realty","market_cap":"MICRO_CAP","current_price":1038.9,"change_1d":0.43,"change_1w":4.12,"change_1m":15.94,"technical_score":53.3,"rsi":68.2,"relative_strength":2.49,"can_slim_score":7,"minervini_score":13,"fundamental_score":15,"enhanced_fund_score":56.82,"earnings_quality":55.43,"sales_growth":51,"financial_strength":60,"institutional_backing":66,"trading_value":356669152.85,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":360},{"symbol":"SUNTECK","company_name":"SUNTECK REALTY LIMITED","index":"Nifty Realty","market_cap":"MICRO_CAP","current_price":454.4,"change_1d":2.19,"change_1w":5,"change_1m":9.45,"technical_score":52,"rsi":61.2,"relative_strength":14.84,"can_slim_score":12,"minervini_score":6,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":185977791.65,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":483},{"symbol":"GODREJPROP","company_name":"GODREJ PROPERTIES LTD","index":"Nifty Realty","market_cap":"SMALL_CAP","current_price":2298.9,"change_1d":-0.54,"change_1w":0.88,"change_1m":16.77,"technical_score":48.7,"rsi":66.9,"relative_strength":12.25,"can_slim_score":13,"minervini_score":10,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":1089226815.6,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":193},{"symbol":"PRESTIGE","company_name":"PRESTIGE ESTATE LTD","index":"Nifty Realty","market_cap":"SMALL_CAP","current_price":1755.3,"change_1d":0.13,"change_1w":1.05,"change_1m":16.24,"technical_score":40,"rsi":66.6,"relative_strength":2.72,"can_slim_score":7,"minervini_score":13,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":666231834.2,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":255},{"symbol":"BLUESTARCO","company_name":"BLUE STAR LIMITED","index":"Nifty Consumer Durables","market_cap":"MICRO_CAP","current_price":1961.8,"change_1d":-0.17,"change_1w":-0.53,"change_1m":4.3,"technical_score":68,"rsi":54.4,"relative_strength":6.7,"can_slim_score":7,"minervini_score":12,"fundamental_score":25,"enhanced_fund_score":72.84,"earnings_quality":74.35,"sales_growth":86,"financial_strength":58.5,"institutional_backing":66,"trading_value":500683689.7,"trading_signal":"BUY","trend_signal":"STRONG_BULLISH","rank":301},{"symbol":"VOLTAS","company_name":"VOLTAS LTD","index":"Nifty Consumer Durables","market_cap":"SMALL_CAP","current_price":1419.8,"change_1d":0.07,"change_1w":-0.8,"change_1m":4.9,"technical_score":53.3,"rsi":53.6,"relative_strength":6.22,"can_slim_score":7,"minervini_score":15,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":1331452657.8,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":163},{"symbol":"TITAN","company_name":"TITAN COMPANY LIMITED","index":"Nifty Consumer Durables","market_cap":"MID_CAP","current_price":3750.7,"change_1d":0.06,"change_1w":-0.57,"change_1m":11.4,"technical_score":43.3,"rsi":65.8,"relative_strength":3.15,"can_slim_score":7,"minervini_score":12,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":2039303251.4,"trading_signal":"WEAK_HOLD","trend_signal":"STRONG_BULLISH","rank":109},{"symbol":"WHIRLPOOL","company_name":"WHIRLPOOL OF INDIA LTD","index":"Nifty Consumer Durables","market_cap":"SMALL_CAP","current_price":1420.9,"change_1d":0.69,"change_1w":1.54,"change_1m":19.28,"technical_score":43.3,"rsi":66.4,"relative_strength":9.43,"can_slim_score":11,"minervini_score":10,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":650287586.5,"trading_signal":"WEAK_HOLD","trend_signal":"BEARISH","rank":258},{"symbol":"TTKPRESTIG","company_name":"TTK PRESTIGE LTD","index":"Nifty Consumer Durables","market_cap":"MICRO_CAP","current_price":680.65,"change_1d":-2.28,"change_1w":6.05,"change_1m":7.16,"technical_score":34.7,"rsi":58.7,"relative_strength":2.14,"can_slim_score":5,"minervini_score":6,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":84627040.3,"trading_signal":"SELL","trend_signal":"BULLISH","rank":655},{"symbol":"BIOCON","company_name":"BIOCON LIMITED.","index":"Nifty Pharma","market_cap":"MID_CAP","current_price":376.6,"change_1d":0.78,"change_1w":3.95,"change_1m":10.44,"technical_score":56.7,"rsi":65.9,"relative_strength":-0.5,"can_slim_score":10,"minervini_score":13,"fundamental_score":15,"enhanced_fund_score":58.99,"earnings_quality":60.43,"sales_growth":56,"financial_strength":56.82,"institutional_backing":63,"trading_value":2652812608.2,"trading_signal":"HOLD","trend_signal":"BEARISH","rank":79},{"symbol":"DIVISLAB","company_name":"DIVI S LABORATORIES LTD","index":"Nifty Pharma","market_cap":"MID_CAP","current_price":6655,"change_1d":2.2,"change_1w":1.36,"change_1m":16.97,"technical_score":55.3,"rsi":65.8,"relative_strength":4.05,"can_slim_score":8,"minervini_score":18,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":3561215307,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":57},{"symbol":"CIPLA","company_name":"CIPLA LTD","index":"Nifty Pharma","market_cap":"LARGE_CAP","current_price":1540.1,"change_1d":-2.59,"change_1w":-6.38,"change_1m":2.45,"technical_score":47.3,"rsi":44.9,"relative_strength":-6.38,"can_slim_score":6,"minervini_score":10,"fundamental_score":15,"enhanced_fund_score":51.15,"earnings_quality":50.65,"sales_growth":47,"financial_strength":55.68,"institutional_backing":53.33,"trading_value":6280513706.4,"trading_signal":"WEAK_HOLD","trend_signal":"STRONG_BULLISH","rank":25},{"symbol":"AUROPHARMA","company_name":"AUROBINDO PHARMA LTD","index":"Nifty Pharma","market_cap":"SMALL_CAP","current_price":1102.5,"change_1d":-0.83,"change_1w":0.31,"change_1m":1.72,"technical_score":41.3,"rsi":51.5,"relative_strength":-2.78,"can_slim_score":1,"minervini_score":12,"fundamental_score":20,"enhanced_fund_score":67.41,"earnings_quality":70.43,"sales_growth":70,"financial_strength":59.18,"institutional_backing":66,"trading_value":980744025.9,"trading_signal":"WEAK_HOLD","trend_signal":"BEARISH","rank":210},{"symbol":"SUNPHARMA","company_name":"SUN PHARMACEUTICAL IND L","index":"Nifty Pharma","market_cap":"MID_CAP","current_price":1703.4,"change_1d":-0.73,"change_1w":0.8,"change_1m":6.84,"technical_score":38.7,"rsi":62.1,"relative_strength":-1.16,"can_slim_score":4,"minervini_score":12,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":3371300594.2,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":61},{"symbol":"AXISBANK","company_name":"AXIS BANK LIMITED","index":"Nifty Private Bank","market_cap":"LARGE_CAP","current_price":1238.6,"change_1d":-0.82,"change_1w":-1.6,"change_1m":9.46,"technical_score":58.7,"rsi":63.4,"relative_strength":11.15,"can_slim_score":11,"minervini_score":12,"fundamental_score":15,"enhanced_fund_score":52.47,"earnings_quality":51.19,"sales_growth":47,"financial_strength":54.71,"institutional_backing":62,"trading_value":4987207869.4,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":38},{"symbol":"RBLBANK","company_name":"RBL BANK LIMITED","index":"Nifty Private Bank","market_cap":"MID_CAP","current_price":324.95,"change_1d":0.42,"change_1w":2.22,"change_1m":17.2,"technical_score":52.7,"rsi":71.2,"relative_strength":23,"can_slim_score":15,"minervini_score":13,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":2050786719.8,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":106},{"symbol":"FEDERALBNK","company_name":"FEDERAL BANK LTD","index":"Nifty Private Bank","market_cap":"MID_CAP","current_price":234.81,"change_1d":-0.04,"change_1w":3.05,"change_1m":21.71,"technical_score":44,"rsi":80.4,"relative_strength":14.65,"can_slim_score":13,"minervini_score":10,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":2810975067.66,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":74},{"symbol":"BANDHANBNK","company_name":"BANDHAN BANK LIMITED","index":"Nifty Private Bank","market_cap":"SMALL_CAP","current_price":170.58,"change_1d":-0.96,"change_1w":-0.43,"change_1m":5.16,"technical_score":43.3,"rsi":55.1,"relative_strength":-2.09,"can_slim_score":3,"minervini_score":8,"fundamental_score":20,"enhanced_fund_score":65.58,"earnings_quality":70.71,"sales_growth":70,"financial_strength":56.47,"institutional_backing":56.67,"trading_value":1246901722.75,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":173},{"symbol":"KOTAKBANK","company_name":"KOTAK MAHINDRA BANK LTD","index":"Nifty Private Bank","market_cap":"LARGE_CAP","current_price":2137.2,"change_1d":-0.62,"change_1w":-3.97,"change_1m":7.25,"technical_score":34.7,"rsi":51.9,"relative_strength":2.48,"can_slim_score":5,"minervini_score":10,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":5312945511,"trading_signal":"SELL","trend_signal":"BULLISH","rank":34},{"symbol":"BRITANNIA","company_name":"BRITANNIA INDUSTRIES LTD","index":"Nifty FMCG","market_cap":"MID_CAP","current_price":5859.5,"change_1d":0.12,"change_1w":-3.44,"change_1m":-2.19,"technical_score":52.7,"rsi":42.8,"relative_strength":3.97,"can_slim_score":3,"minervini_score":11,"fundamental_score":15,"enhanced_fund_score":52.36,"earnings_quality":51.96,"sales_growth":47,"financial_strength":54.77,"institutional_backing":59.17,"trading_value":1505344927,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":147},{"symbol":"NESTLEIND","company_name":"NESTLE INDIA LIMITED","index":"Nifty FMCG","market_cap":"SMALL_CAP","current_price":1279.9,"change_1d":0.54,"change_1w":0.56,"change_1m":11.02,"technical_score":47.3,"rsi":57.1,"relative_strength":11.65,"can_slim_score":13,"minervini_score":12,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":930677950.3,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":217},{"symbol":"RADICO","company_name":"RADICO KHAITAN LTD","index":"Nifty FMCG","market_cap":"SMALL_CAP","current_price":3144.7,"change_1d":-0.61,"change_1w":-4.22,"change_1m":8.89,"technical_score":46.7,"rsi":57.6,"relative_strength":6.32,"can_slim_score":10,"minervini_score":12,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":1110831514.3,"trading_signal":"WEAK_HOLD","trend_signal":"STRONG_BULLISH","rank":187},{"symbol":"TATACONSUM","company_name":"TATA CONSUMER PRODUCT LTD","index":"Nifty FMCG","market_cap":"SMALL_CAP","current_price":1176.6,"change_1d":-0.04,"change_1w":1.34,"change_1m":4.19,"technical_score":45.3,"rsi":64.5,"relative_strength":6.37,"can_slim_score":7,"minervini_score":12,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":1056772395.7,"trading_signal":"WEAK_HOLD","trend_signal":"STRONG_BULLISH","rank":198},{"symbol":"VBL","company_name":"VARUN BEVERAGES LIMITED","index":"Nifty FMCG","market_cap":"LARGE_CAP","current_price":485.25,"change_1d":-2.06,"change_1w":4.23,"change_1m":9.36,"technical_score":36.7,"rsi":61.5,"relative_strength":-10.09,"can_slim_score":8,"minervini_score":10,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":7803014963,"trading_signal":"WEAK_HOLD","trend_signal":"BEARISH","rank":20},{"symbol":"COFORGE","company_name":"COFORGE LIMITED","index":"Nifty IT","market_cap":"MID_CAP","current_price":1807.7,"change_1d":0.57,"change_1w":3.02,"change_1m":13.62,"technical_score":54,"rsi":59.9,"relative_strength":6.43,"can_slim_score":11,"minervini_score":10,"fundamental_score":15,"enhanced_fund_score":54.71,"earnings_quality":51.3,"sales_growth":53,"financial_strength":58.18,"institutional_backing":62,"trading_value":2226984899,"trading_signal":"HOLD","trend_signal":"BULLISH","rank":97},{"symbol":"LTIM","company_name":"LTIMINDTREE LIMITED","index":"Nifty IT","market_cap":"SMALL_CAP","current_price":5699,"change_1d":0.44,"change_1w":1.46,"change_1m":10.5,"technical_score":50,"rsi":66,"relative_strength":6.39,"can_slim_score":11,"minervini_score":15,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":1235018953.5,"trading_signal":"HOLD","trend_signal":"STRONG_BULLISH","rank":174},{"symbol":"MPHASIS","company_name":"MPHASIS LIMITED","index":"Nifty IT","market_cap":"SMALL_CAP","current_price":2893.7,"change_1d":0.66,"change_1w":3.38,"change_1m":9,"technical_score":41.3,"rsi":58.2,"relative_strength":2.33,"can_slim_score":5,"minervini_score":6,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":938177738.8,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":214},{"symbol":"HCLTECH","company_name":"HCL TECHNOLOGIES LTD","index":"Nifty IT","market_cap":"MID_CAP","current_price":1549.8,"change_1d":-0.48,"change_1w":1.7,"change_1m":11.89,"technical_score":36,"rsi":64.5,"relative_strength":-1.79,"can_slim_score":5,"minervini_score":12,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":3379123069.4,"trading_signal":"WEAK_HOLD","trend_signal":"BULLISH","rank":60},{"symbol":"INFY","company_name":"INFOSYS LIMITED","index":"Nifty IT","market_cap":"LARGE_CAP","current_price":1493.8,"change_1d":-1.1,"change_1w":-2.27,"change_1m":3.61,"technical_score":25.3,"rsi":50.5,"relative_strength":-0.33,"can_slim_score":1,"minervini_score":8,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":8384810481.6,"trading_signal":"SELL","trend_signal":"BEARISH","rank":18},{"symbol":"ZEEL","company_name":"ZEE ENTERTAINMENT ENT LTD","index":"Nifty Media","market_cap":"SMALL_CAP","current_price":101.9,"change_1d":-1.86,"change_1w":-3.62,"change_1m":-9.32,"technical_score":18.7,"rsi":30.4,"relative_strength":-17.84,"can_slim_score":1,"minervini_score":10,"fundamental_score":0,"enhanced_fund_score":0,"earnings_quality":0,"sales_growth":0,"financial_strength":0,"institutional_backing":0,"trading_value":896617091.61,"trading_signal":"SELL","trend_signal":"STRONG_BEARISH","rank":222}];
+        
+        // Function to find stock by symbol
+        function findStockBySymbol(symbol) {
+            return allStocksData.find(s => s.symbol === symbol);
+        }
+        
+        // Function to show stock details
+        function showStockDetails(symbol, index) {
+            const stock = findStockBySymbol(symbol);
+            if (!stock) return;
+            
+            const modal = document.getElementById("stockModal");
+            const modalSymbol = document.getElementById("modalStockSymbol");
+            const modalDetails = document.getElementById("modalStockDetails");
+            
+            modalSymbol.textContent = `${stock.symbol} - ${stock.company_name}`;
+            
+            // Determine performance category
+            let performanceCategory = "Moderate";
+            let performanceColor = "#ffc107";
+            if (stock.technical_score >= 70) {
+                performanceCategory = "Excellent";
+                performanceColor = "#4caf50";
+            } else if (stock.technical_score >= 50) {
+                performanceCategory = "Good";
+                performanceColor = "#8bc34a";
+            } else if (stock.technical_score < 30) {
+                performanceCategory = "Poor";
+                performanceColor = "#f44336";
+            }
+            
+            // Determine signal color
+            let signalColor = "#6c757d";
+            switch(stock.trading_signal) {
+                case "STRONG_BUY": signalColor = "#28a745"; break;
+                case "BUY": signalColor = "#5cb85c"; break;
+                case "HOLD": signalColor = "#ffc107"; break;
+                case "WEAK_HOLD": signalColor = "#ff9800"; break;
+                case "SELL": signalColor = "#dc3545"; break;
+            }
+            
+            // Determine trend color
+            let trendColor = "#6c757d";
+            switch(stock.trend_signal) {
+                case "STRONG_BULLISH": trendColor = "#4caf50"; break;
+                case "BULLISH": trendColor = "#8bc34a"; break;
+                case "NEUTRAL": trendColor = "#ffc107"; break;
+                case "BEARISH": trendColor = "#ff9800"; break;
+                case "STRONG_BEARISH": trendColor = "#f44336"; break;
+            }
+            
+            const detailsHTML = `
+                <div class="detail-row">
+                    <div class="detail-item">
+                        <div class="detail-label">Index</div>
+                        <div class="detail-value">${stock.index}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Market Cap</div>
+                        <div class="detail-value">${stock.market_cap.replace("_", " ")}</div>
+                    </div>
+                </div>
+                
+                <div class="detail-row">
+                    <div class="detail-item">
+                        <div class="detail-label">Current Price</div>
+                        <div class="detail-value">₹${stock.current_price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Rank</div>
+                        <div class="detail-value">#${stock.rank || "N/A"}</div>
+                    </div>
+                </div>
+                
+                <div class="detail-row">
+                    <div class="detail-item">
+                        <div class="detail-label">1 Day Change</div>
+                        <div class="detail-value ${stock.change_1d >= 0 ? "positive" : "negative"}">${stock.change_1d >= 0 ? "+" : ""}${stock.change_1d.toFixed(2)}%</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">1 Week Change</div>
+                        <div class="detail-value ${stock.change_1w >= 0 ? "positive" : "negative"}">${stock.change_1w >= 0 ? "+" : ""}${stock.change_1w.toFixed(2)}%</div>
+                    </div>
+                </div>
+                
+                <div class="detail-row">
+                    <div class="detail-item">
+                        <div class="detail-label">1 Month Change</div>
+                        <div class="detail-value ${stock.change_1m >= 0 ? "positive" : "negative"}">${stock.change_1m >= 0 ? "+" : ""}${stock.change_1m.toFixed(2)}%</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">RSI</div>
+                        <div class="detail-value">${stock.rsi.toFixed(1)}</div>
+                    </div>
+                </div>
+                
+                <div class="detail-row">
+                    <div class="detail-item">
+                        <div class="detail-label">Technical Score</div>
+                        <div class="detail-value">${stock.technical_score.toFixed(1)}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Relative Strength</div>
+                        <div class="detail-value ${stock.relative_strength >= 0 ? "positive" : "negative"}">${stock.relative_strength >= 0 ? "+" : ""}${stock.relative_strength.toFixed(2)}%</div>
+                    </div>
+                </div>
+                
+                <div class="detail-row">
+                    <div class="detail-item">
+                        <div class="detail-label">CAN SLIM Score</div>
+                        <div class="detail-value">${stock.can_slim_score}/20</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Minervini Score</div>
+                        <div class="detail-value">${stock.minervini_score}/20</div>
+                    </div>
+                </div>
+                
+                <div class="detail-row">
+                    <div class="detail-item">
+                        <div class="detail-label">Fundamental Score</div>
+                        <div class="detail-value">${stock.fundamental_score.toFixed(1)}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Enhanced Fund Score</div>
+                        <div class="detail-value">${stock.enhanced_fund_score.toFixed(1)}</div>
+                    </div>
+                </div>
+                
+                <div class="detail-row">
+                    <div class="detail-item">
+                        <div class="detail-label">Trading Signal</div>
+                        <div class="detail-value" style="background: ${signalColor}; color: white; padding: 8px 16px; border-radius: 8px; display: inline-block;">${stock.trading_signal.replace("_", " ")}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Trend Signal</div>
+                        <div class="detail-value" style="background: ${trendColor}; color: white; padding: 8px 16px; border-radius: 8px; display: inline-block;">${stock.trend_signal.replace("_", " ")}</div>
+                    </div>
+                </div>
+                
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-card-value">${stock.earnings_quality.toFixed(1)}</div>
+                        <div class="metric-card-label">Earnings Quality</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-card-value ${stock.sales_growth >= 0 ? "positive" : "negative"}">${stock.sales_growth >= 0 ? "+" : ""}${stock.sales_growth.toFixed(1)}%</div>
+                        <div class="metric-card-label">Sales Growth</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-card-value">${stock.financial_strength.toFixed(1)}</div>
+                        <div class="metric-card-label">Financial Strength</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-card-value">${stock.institutional_backing.toFixed(1)}</div>
+                        <div class="metric-card-label">Institutional Backing</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-card-value">₹${(stock.trading_value / 1000000).toFixed(2)}M</div>
+                        <div class="metric-card-label">Trading Value</div>
+                    </div>
+                    <div class="metric-card" style="background: ${performanceColor === "#4caf50" ? "rgba(76, 175, 80, 0.1)" : performanceColor === "#8bc34a" ? "rgba(139, 195, 74, 0.1)" : performanceColor === "#ffc107" ? "rgba(255, 193, 7, 0.1)" : "rgba(244, 67, 54, 0.1)"}; border-color: ${performanceColor};">
+                        <div class="metric-card-value" style="color: ${performanceColor};">${performanceCategory}</div>
+                        <div class="metric-card-label">Performance</div>
+                    </div>
+                </div>
+                
+                <div class="insight-box">
+                    <div class="insight-title">💡 Investment Insight</div>
+                    <div class="insight-text">
+                        ${stock.technical_score >= 70 ? 
+                            `This stock shows strong technical strength (${stock.technical_score.toFixed(1)}/100) with ${stock.trading_signal.replace("_", " ")} signal. The CAN SLIM score of ${stock.can_slim_score}/20 and Minervini score of ${stock.minervini_score}/20 indicate ${stock.can_slim_score >= 12 && stock.minervini_score >= 12 ? "strong" : "moderate"} fundamental alignment. Consider for ${stock.market_cap === "LARGE_CAP" ? "core" : "growth"} portfolio allocation.` :
+                            stock.technical_score >= 50 ?
+                            `This stock shows moderate technical strength (${stock.technical_score.toFixed(1)}/100) with ${stock.trading_signal.replace("_", " ")} signal. Monitor for improvement or consider smaller position sizes.` :
+                            `This stock shows weak technical strength (${stock.technical_score.toFixed(1)}/100) with ${stock.trading_signal.replace("_", " ")} signal. High risk - consider avoiding or very small position sizes.`
+                        }
+                    </div>
+                </div>
+            `;
+            
+            modalDetails.innerHTML = detailsHTML;
+            modal.classList.add("active");
+            
+            modal.addEventListener("click", function(e) {
+                if (e.target === modal) {
+                    closeModal();
+                }
+            });
+            
+            document.addEventListener("keydown", function(e) {
+                if (e.key === "Escape" && modal.classList.contains("active")) {
+                    closeModal();
+                }
+            });
+        }
+        
+        function closeModal() {
+            const modal = document.getElementById("stockModal");
+            modal.classList.remove("active");
+        }
+    </script>
+</body>
+</html>

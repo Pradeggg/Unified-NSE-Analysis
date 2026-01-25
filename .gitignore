@@ -1,0 +1,44 @@
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+*.env
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# R cache
+.Rhistory
+.RData
+.Ruserdata
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.log
+*.bak
+
+# Large files that exceed GitHub's 100MB limit
+# These files are too large for GitHub without Git LFS
+data/nse_sec_full_data.csv
+organized/core_scripts/organized/backtesting_results/real_backtesting_signals_20250901_030457.csv

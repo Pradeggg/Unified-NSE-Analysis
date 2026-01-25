@@ -1,0 +1,34 @@
+# Python Dependencies for NSE Universe Analysis
+# Install with: pip install -r requirements.txt
+
+# Core data processing
+pandas>=1.5.0
+numpy>=1.21.0
+
+# Technical analysis (choose one or both)
+# Option 1: TA-Lib (recommended, but requires C library installation)
+# TA-Lib: https://ta-lib.org/install.html
+# After installing TA-Lib C library, install Python wrapper:
+# pip install TA-Lib
+
+# Option 2: pandas_ta (pure Python, easier to install)
+pandas-ta>=0.3.14b
+
+# Database
+# sqlite3 is included in Python standard library
+
+# Date/time handling
+# datetime is included in Python standard library
+
+# Optional: For better performance
+# numba>=0.56.0  # For faster numerical computations
+
+
+
+
+
+
+
+
+
+

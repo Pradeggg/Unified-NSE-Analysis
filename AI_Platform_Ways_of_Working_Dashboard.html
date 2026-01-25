@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Platform Ways of Working - Interactive Dashboard</title>
+    
+    <!-- Material Design Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Material Design CSS -->
+    <link href="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css" rel="stylesheet">
+    
+    <!-- Mermaid for diagrams -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    
+    <!-- Chart.js for additional visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        :root {
+            --mdc-theme-primary: #1976d2;
+            --mdc-theme-secondary: #03dac6;
+            --mdc-theme-surface: #ffffff;
+            --mdc-theme-background: #fafafa;
+            --mdc-theme-on-primary: #ffffff;
+            --mdc-theme-on-secondary: #000000;
+            --mdc-theme-on-surface: #000000;
+            --mdc-theme-on-background: #000000;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--mdc-theme-background);
+        }
+
+        .app-bar {
+            background-color: var(--mdc-theme-primary);
+            color: var(--mdc-theme-on-primary);
+            padding: 16px 24px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .app-bar h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 500;
+        }
+
+        .main-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .card {
+            background-color: var(--mdc-theme-surface);
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 24px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 16px 24px;
+            background-color: #f5f5f5;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .card-header h2 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 500;
+            color: var(--mdc-theme-on-surface);
+        }
+
+        .card-content {
+            padding: 24px;
+        }
+
+        .mermaid {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .tab-container {
+            display: flex;
+            border-bottom: 1px solid #e0e0e0;
+            margin-bottom: 24px;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .tab:hover {
+            background-color: #f5f5f5;
+        }
+
+        .tab.active {
+            border-bottom-color: var(--mdc-theme-primary);
+            color: var(--mdc-theme-primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+            margin: 24px 0;
+        }
+
+        .metric-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 32px;
+            font-weight: 700;
+            margin: 8px 0;
+        }
+
+        .metric-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .interaction-matrix {
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+
+        .matrix-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        .matrix-table th,
+        .matrix-table td {
+            padding: 12px;
+            text-align: center;
+            border: 1px solid #e0e0e0;
+        }
+
+        .matrix-table th {
+            background-color: #f5f5f5;
+            font-weight: 500;
+        }
+
+        .interaction-high {
+            background-color: #4caf50;
+            color: white;
+            font-weight: 500;
+        }
+
+        .interaction-low {
+            background-color: #ff9800;
+            color: white;
+            font-weight: 500;
+        }
+
+        .interaction-none {
+            background-color: #f5f5f5;
+            color: #666;
+        }
+
+        .timeline {
+            position: relative;
+            padding: 20px 0;
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-left: 40px;
+            margin-bottom: 20px;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 12px;
+            height: 12px;
+            background-color: var(--mdc-theme-primary);
+            border-radius: 50%;
+        }
+
+        .timeline-item::after {
+            content: '';
+            position: absolute;
+            left: 5px;
+            top: 12px;
+            width: 2px;
+            height: calc(100% + 8px);
+            background-color: #e0e0e0;
+        }
+
+        .timeline-item:last-child::after {
+            display: none;
+        }
+
+        .escalation-level {
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--mdc-theme-primary);
+            padding: 16px;
+            margin: 12px 0;
+            border-radius: 0 4px 4px 0;
+        }
+
+        .escalation-level h4 {
+            margin: 0 0 8px 0;
+            color: var(--mdc-theme-primary);
+        }
+
+        .tool-chip {
+            display: inline-block;
+            background-color: #e3f2fd;
+            color: var(--mdc-theme-primary);
+            padding: 4px 12px;
+            border-radius: 16px;
+            font-size: 12px;
+            margin: 2px;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-active {
+            background-color: #4caf50;
+        }
+
+        .status-pending {
+            background-color: #ff9800;
+        }
+
+        .status-inactive {
+            background-color: #f44336;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                padding: 16px;
+            }
+            
+            .tab-container {
+                flex-direction: column;
+            }
+            
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-bar">
+        <h1>
+            <i class="material-icons" style="vertical-align: middle; margin-right: 8px;">account_tree</i>
+            AI Platform Ways of Working - Interactive Dashboard
+        </h1>
+    </div>
+
+    <div class="main-content">
+        <!-- Navigation Tabs -->
+        <div class="tab-container">
+            <div class="tab active" onclick="showTab('overview')">
+                <i class="material-icons" style="vertical-align: middle; margin-right: 8px;">dashboard</i>
+                Overview
+            </div>
+            <div class="tab" onclick="showTab('interactions')">
+                <i class="material-icons" style="vertical-align: middle; margin-right: 8px;">swap_horiz</i>
+                Interactions
+            </div>
+            <div class="tab" onclick="showTab('processes')">
+                <i class="material-icons" style="vertical-align: middle; margin-right: 8px;">timeline</i>
+                Processes
+            </div>
+            <div class="tab" onclick="showTab('governance')">
+                <i class="material-icons" style="vertical-align: middle; margin-right: 8px;">gavel</i>
+                Governance
+            </div>
+            <div class="tab" onclick="showTab('tools')">
+                <i class="material-icons" style="vertical-align: middle; margin-right: 8px;">build</i>
+                Tools & Metrics
+            </div>
+        </div>
+
+        <!-- Overview Tab -->
+        <div id="overview" class="tab-content active">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Organizational Structure Overview</h2>
+                </div>
+                <div class="card-content">
+                    <div class="mermaid">
+                        graph TB
+                            subgraph "DELOITTE ENVIRONMENT"
+                                UCA["Use Case Team A<br/>• Build AI Agents<br/>• POC Development"]
+                                UCB["Use Case Team B<br/>• Build AI Agents<br/>• POC Development"]
+                                UCC["Use Case Team C<br/>• Build AI Agents<br/>• POC Development"]
+                                PT["Platform Team<br/>• Technical Enablement<br/>• Common Capabilities<br/>• Reusability & Standardization"]
+                            end
+                            
+                            subgraph "CLIENT PLATFORM TEAM"
+                                CPT["Client Platform Team<br/>• Production Strategy<br/>• Platform Capabilities<br/>• Environment Strategy"]
+                            end
+                            
+                            UCA --> PT
+                            UCB --> PT
+                            UCC --> PT
+                            PT --> CPT
+                            
+                            style UCA fill:#e3f2fd
+                            style UCB fill:#e3f2fd
+                            style UCC fill:#e3f2fd
+                            style PT fill:#fff3e0
+                            style CPT fill:#f3e5f5
+                    </div>
+                </div>
+            </div>
+
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value">3</div>
+                    <div class="metric-label">Use Case Teams</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">2</div>
+                    <div class="metric-label">Work Streams</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">60%</div>
+                    <div class="metric-label">Platform Team Capacity (Deloitte)</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">40%</div>
+                    <div class="metric-label">Platform Team Capacity (Client)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Interactions Tab -->
+        <div id="interactions" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Team Interaction Matrix</h2>
+                </div>
+                <div class="card-content">
+                    <div class="interaction-matrix">
+                        <table class="matrix-table">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>Use Case A</th>
+                                    <th>Use Case B</th>
+                                    <th>Use Case C</th>
+                                    <th>Platform Team</th>
+                                    <th>Client Platform</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Use Case A</strong></td>
+                                    <td>-</td>
+                                    <td><span class="interaction-low">Low</span></td>
+                                    <td><span class="interaction-low">Low</span></td>
+                                    <td><span class="interaction-high">High</span></td>
+                                    <td><span class="interaction-none">None</span></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Use Case B</strong></td>
+                                    <td><span class="interaction-low">Low</span></td>
+                                    <td>-</td>
+                                    <td><span class="interaction-low">Low</span></td>
+                                    <td><span class="interaction-high">High</span></td>
+                                    <td><span class="interaction-none">None</span></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Use Case C</strong></td>
+                                    <td><span class="interaction-low">Low</span></td>
+                                    <td><span class="interaction-low">Low</span></td>
+                                    <td>-</td>
+                                    <td><span class="interaction-high">High</span></td>
+                                    <td><span class="interaction-none">None</span></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Platform Team</strong></td>
+                                    <td><span class="interaction-high">High</span></td>
+                                    <td><span class="interaction-high">High</span></td>
+                                    <td><span class="interaction-high">High</span></td>
+                                    <td>-</td>
+                                    <td><span class="interaction-high">High</span></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Client Platform</strong></td>
+                                    <td><span class="interaction-none">None</span></td>
+                                    <td><span class="interaction-none">None</span></td>
+                                    <td><span class="interaction-none">None</span></td>
+                                    <td><span class="interaction-high">High</span></td>
+                                    <td>-</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>Interaction Flow Diagrams</h2>
+                </div>
+                <div class="card-content">
+                    <div class="mermaid">
+                        graph LR
+                            subgraph "Deloitte Environment"
+                                UCA1["Use Case A"]
+                                UCB1["Use Case B"]
+                                UCC1["Use Case C"]
+                                PT1["Platform Team<br/>Common Capabilities<br/>& Support"]
+                                SYNC["Synergies &<br/>Reusability Planning"]
+                            end
+                            
+                            UCA1 --> PT1
+                            UCB1 --> PT1
+                            UCC1 --> PT1
+                            PT1 --> SYNC
+                            
+                            style PT1 fill:#fff3e0
+                            style SYNC fill:#e8f5e8
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Processes Tab -->
+        <div id="processes" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Process Flow Timeline</h2>
+                </div>
+                <div class="card-content">
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <h4>Daily Operations</h4>
+                            <p><span class="status-indicator status-active"></span>Use Case Teams: Stand-up meetings</p>
+                            <p><span class="status-indicator status-active"></span>Platform Team: Support request triage</p>
+                        </div>
+                        <div class="timeline-item">
+                            <h4>Weekly Cadence</h4>
+                            <p><span class="status-indicator status-active"></span>Use Case Teams: Sprint planning and retrospectives</p>
+                            <p><span class="status-indicator status-active"></span>Platform Team: Support prioritization</p>
+                            <p><span class="status-indicator status-active"></span>Cross-team: Weekly sync for common capabilities</p>
+                        </div>
+                        <div class="timeline-item">
+                            <h4>Bi-weekly Reviews</h4>
+                            <p><span class="status-indicator status-pending"></span>Platform Team: Technical debt review</p>
+                            <p><span class="status-indicator status-pending"></span>Use Case Teams: Demo sessions</p>
+                        </div>
+                        <div class="timeline-item">
+                            <h4>Monthly Governance</h4>
+                            <p><span class="status-indicator status-pending"></span>Program Review: Progress and blockers</p>
+                            <p><span class="status-indicator status-pending"></span>Technical Architecture Review</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>Resource Allocation Process</h2>
+                </div>
+                <div class="card-content">
+                    <div class="mermaid">
+                        pie title Platform Team Resource Allocation
+                            "Technical Support" : 40
+                            "Reusability & Standardization" : 15
+                            "Innovation & R&D" : 5
+                            "Strategic Planning" : 20
+                            "Collaboration & Alignment" : 15
+                            "Governance & Compliance" : 5
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Governance Tab -->
+        <div id="governance" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Decision-Making Framework</h2>
+                </div>
+                <div class="card-content">
+                    <div class="mermaid">
+                        graph TD
+                            A[Decision Required] --> B{Decision Type}
+                            B -->|Technical| C[Use Case Team Lead<br/>+ Platform Team Consultation]
+                            B -->|Architecture| D[Platform Team Lead<br/>+ Use Case Team Input]
+                            B -->|Resource| E[Program Manager<br/>+ Team Leads Input]
+                            B -->|Strategic| F[Program Manager<br/>+ Stakeholder Input]
+                            
+                            C --> G[Implementation]
+                            D --> G
+                            E --> G
+                            F --> G
+                            
+                            style A fill:#e3f2fd
+                            style G fill:#e8f5e8
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>Escalation Process</h2>
+                </div>
+                <div class="card-content">
+                    <div class="escalation-level">
+                        <h4>Level 1: Team Level Resolution (24 hours)</h4>
+                        <p>Direct team-to-team discussion, immediate supervisor involvement, documentation of issue and attempted resolution</p>
+                    </div>
+                    <div class="escalation-level">
+                        <h4>Level 2: Program Manager Involvement (48 hours)</h4>
+                        <p>Program Manager facilitates resolution, resource reallocation if needed, process improvement identification</p>
+                    </div>
+                    <div class="escalation-level">
+                        <h4>Level 3: Client Platform Team Involvement (72 hours)</h4>
+                        <p>Strategic alignment review, resource and priority adjustments, governance framework updates</p>
+                    </div>
+                    <div class="escalation-level">
+                        <h4>Level 4: Executive Sponsor Involvement (1 week)</h4>
+                        <p>Strategic direction review, resource allocation decisions, program scope and timeline adjustments</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tools & Metrics Tab -->
+        <div id="tools" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Tool Stack</h2>
+                </div>
+                <div class="card-content">
+                    <h4>Communication Tools</h4>
+                    <div>
+                        <span class="tool-chip">Microsoft Teams/Slack</span>
+                        <span class="tool-chip">Email</span>
+                        <span class="tool-chip">Video Conferencing</span>
+                    </div>
+                    
+                    <h4>Collaboration Tools</h4>
+                    <div>
+                        <span class="tool-chip">Confluence</span>
+                        <span class="tool-chip">SharePoint</span>
+                        <span class="tool-chip">Jira/Azure DevOps</span>
+                    </div>
+                    
+                    <h4>Development Tools</h4>
+                    <div>
+                        <span class="tool-chip">GitHub/GitLab</span>
+                        <span class="tool-chip">CI/CD Pipelines</span>
+                        <span class="tool-chip">Monitoring Tools</span>
+                    </div>
+                    
+                    <h4>Governance Tools</h4>
+                    <div>
+                        <span class="tool-chip">Power BI/Tableau</span>
+                        <span class="tool-chip">SharePoint Lists</span>
+                        <span class="tool-chip">Calendar Systems</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>Performance Metrics</h2>
+                </div>
+                <div class="card-content">
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <div class="metric-value">&lt; 4h</div>
+                            <div class="metric-label">Support Response Time</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">&lt; 2d</div>
+                            <div class="metric-label">Resolution Time</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">4.5/5</div>
+                            <div class="metric-label">Satisfaction Score</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">90%</div>
+                            <div class="metric-label">Knowledge Transfer</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>Quality Metrics Dashboard</h2>
+                </div>
+                <div class="card-content">
+                    <canvas id="metricsChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Mermaid
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            themeVariables: {
+                primaryColor: '#1976d2',
+                primaryTextColor: '#000000',
+                primaryBorderColor: '#1976d2',
+                lineColor: '#666666',
+                secondaryColor: '#f0f0f0',
+                tertiaryColor: '#ffffff'
+            }
+        });
+
+        // Tab functionality
+        function showTab(tabName) {
+            // Hide all tab contents
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(content => {
+                content.classList.remove('active');
+            });
+
+            // Remove active class from all tabs
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Show selected tab content
+            document.getElementById(tabName).classList.add('active');
+
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+        }
+
+        // Initialize metrics chart
+        document.addEventListener('DOMContentLoaded', function() {
+            const ctx = document.getElementById('metricsChart');
+            if (ctx) {
+                new Chart(ctx, {
+                    type: 'radar',
+                    data: {
+                        labels: ['Response Time', 'Resolution Time', 'Satisfaction', 'Knowledge Transfer', 'Alignment', 'Reusability'],
+                        datasets: [{
+                            label: 'Current Performance',
+                            data: [85, 80, 90, 88, 85, 75],
+                            backgroundColor: 'rgba(25, 118, 210, 0.2)',
+                            borderColor: 'rgba(25, 118, 210, 1)',
+                            borderWidth: 2
+                        }, {
+                            label: 'Target Performance',
+                            data: [90, 85, 95, 90, 90, 85],
+                            backgroundColor: 'rgba(76, 175, 80, 0.2)',
+                            borderColor: 'rgba(76, 175, 80, 1)',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            r: {
+                                beginAtZero: true,
+                                max: 100
+                            }
+                        }
+                    }
+                });
+            }
+        });
+
+        // Add smooth scrolling for better UX
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        // Add loading animation for charts
+        function showLoading(elementId) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.innerHTML = '<div style="text-align: center; padding: 20px;"><i class="material-icons" style="animation: spin 1s linear infinite;">refresh</i><br>Loading...</div>';
+            }
+        }
+
+        // Add CSS for loading animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
+
