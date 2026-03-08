@@ -8,6 +8,8 @@ suppressMessages({
   library(lubridate)
   library(RSQLite)
   library(DBI)
+  library(httr)
+  library(jsonlite)
 })
 
 # Set working directory with error handling
@@ -29,6 +31,23 @@ output_dir <- '/Users/pgorai/Library/CloudStorage/OneDrive-Deloitte(O365D)/Docum
 if (!dir.exists(output_dir)) {
   dir.create(output_dir, recursive = TRUE)
   cat("Created reports directory:", output_dir, "\n")
+}
+
+# Optional: load .env from project root (for OLLAMA_* and other vars)
+project_root <- dirname(output_dir)
+env_file <- file.path(project_root, ".env")
+if (file.exists(env_file)) {
+  env_lines <- readLines(env_file, warn = FALSE)
+  for (line in env_lines) {
+    line <- trimws(line)
+    if (nchar(line) == 0 || substr(line, 1, 1) == "#") next
+    idx <- regexpr("=", line, fixed = TRUE)
+    if (idx > 0) {
+      key <- trimws(substr(line, 1, idx - 1))
+      val <- trimws(substr(line, idx + 1, nchar(line)))
+      if (nchar(key) > 0) Sys.setenv(setNames(val, key))
+    }
+  }
 }
 
 print("Starting ENHANCED NSE Universe Analysis...")
@@ -1112,11 +1131,208 @@ generate_markdown_report <- function(results, index_results, latest_date, timest
   cat("Markdown report saved to:", markdown_filename, "\n")
 }
 
+# -----------------------------------------------------------------------------
+# Ollama integration for AI-generated market narrative
+# Set OLLAMA_NARRATIVE_ENABLED=1 and OLLAMA_MODEL=granite4 (optional) to use.
+# -----------------------------------------------------------------------------
+ollama_narrative_enabled <- function() {
+  env_val <- Sys.getenv("OLLAMA_NARRATIVE_ENABLED", "")
+  opt_val <- getOption("OLLAMA_NARRATIVE_ENABLED", NULL)
+  if (!is.null(opt_val) && is.logical(opt_val)) return(opt_val)
+  if (nchar(env_val) > 0) return(tolower(env_val) %in% c("1", "true", "yes"))
+  FALSE
+}
+
+ollama_model <- function() {
+  getOption("OLLAMA_MODEL", Sys.getenv("OLLAMA_MODEL", "granite4"))
+}
+
+ollama_base_url <- function() {
+  getOption("OLLAMA_BASE_URL", Sys.getenv("OLLAMA_BASE_URL", "http://localhost:11434"))
+}
+
+# Build a concise data summary for the LLM prompt
+build_narrative_context <- function(total_stocks, strong_buy_count, buy_count, sell_count,
+                                    bullish_pct, bearish_pct, results, index_results, latest_date) {
+  avg_score <- round(mean(results$TECHNICAL_SCORE, na.rm = TRUE), 1)
+  hold_count <- sum(results$TRADING_SIGNAL == "HOLD")
+  weak_hold_count <- sum(results$TRADING_SIGNAL == "WEAK_HOLD")
+  lines <- c(
+    paste0("Analysis date: ", latest_date),
+    "",
+    "Market breadth:",
+    paste0("- Total stocks analyzed: ", total_stocks),
+    paste0("- Strong Buy: ", strong_buy_count, ", Buy: ", buy_count, " (bullish ", bullish_pct, "%)"),
+    paste0("- Sell: ", sell_count, " (bearish ", bearish_pct, "%)"),
+    paste0("- Hold: ", hold_count, ", Weak Hold: ", weak_hold_count),
+    paste0("- Average technical score (0-100): ", avg_score),
+    ""
+  )
+  if (!is.null(index_results) && nrow(index_results) > 0) {
+    lines <- c(lines, "Indices (by technical score, top 10):", "")
+    idx <- index_results %>% arrange(desc(TECHNICAL_SCORE)) %>% head(10)
+    for (i in seq_len(nrow(idx))) {
+      r <- idx[i, ]
+      mom <- if (!is.na(r$MOMENTUM_50D)) paste0(round(r$MOMENTUM_50D * 100, 1), "%") else "N/A"
+      lines <- c(lines, paste0("  ", r$INDEX_NAME, ": score ", round(r$TECHNICAL_SCORE, 0),
+                              ", RSI ", round(r$RSI, 1), ", 50D momentum ", mom,
+                              ", trend ", r$TREND_SIGNAL, ", signal ", r$TRADING_SIGNAL))
+    }
+    lines <- c(lines, "")
+  }
+  top5 <- results %>% arrange(desc(TECHNICAL_SCORE)) %>% head(5)
+  if (nrow(top5) > 0) {
+    lines <- c(lines, "Top 5 stocks by technical score:", "")
+    for (i in seq_len(nrow(top5))) {
+      s <- top5[i, ]
+      lines <- c(lines, paste0("  ", s$SYMBOL, ": score ", round(s$TECHNICAL_SCORE, 1),
+                              ", RSI ", round(s$RSI, 1), ", signal ", s$TRADING_SIGNAL))
+    }
+  }
+  paste(lines, collapse = "\n")
+}
+
+# Call local Ollama API to generate narrative text (plain paragraphs, no HTML).
+# Returns NULL on failure so caller can fall back to rule-based narrative.
+get_ollama_narrative <- function(context_text, model = "granite4", base_url = "http://localhost:11434") {
+  system_prompt <- "You are a concise equity market analyst. Write a short market narrative (2-4 short paragraphs) for an NSE dashboard. Use only the data provided. Do not use HTML or markdown; output plain text. End with a single line: Overall sentiment: BULLISH or NEUTRAL-BULLISH or NEUTRAL or NEUTRAL-BEARISH or BEARISH."
+  user_prompt <- paste0("Based on this data, write the market narrative.\n\n", context_text)
+  url <- paste0(sub("/$", "", base_url), "/api/generate")
+  body <- list(
+    model = model,
+    prompt = user_prompt,
+    stream = FALSE,
+    system = system_prompt,
+    options = list(temperature = 0.3, num_predict = 600)
+  )
+  tryCatch({
+    resp <- httr::POST(url, body = body, encode = "json", httr::timeout(60))
+    if (!httr::status_code(resp) %in% c(200L)) {
+      warning("Ollama returned status ", httr::status_code(resp))
+      return(NULL)
+    }
+    out <- jsonlite::fromJSON(httr::content(resp, "text", encoding = "UTF-8"))
+    if (is.null(out$response) || nchar(trimws(out$response)) == 0) return(NULL)
+    trimws(out$response)
+  }, error = function(e) {
+    message("Ollama narrative request failed: ", conditionMessage(e))
+    NULL
+  })
+}
+
+# Convert raw LLM narrative text to dashboard HTML (paragraphs + sentiment badge).
+# narrative_text should end with "Overall sentiment: BULLISH" (or similar).
+narrative_text_to_html <- function(narrative_text, sentiment_label, sentiment_class) {
+  lines <- strsplit(narrative_text, "\n")[[1]]
+  paragraphs <- character(0)
+  for (line in lines) {
+    line <- trimws(line)
+    if (line == "" || grepl("^Overall sentiment:", line, ignore.case = TRUE)) next
+    paragraphs <- c(paragraphs, line)
+  }
+  if (length(paragraphs) == 0) return(NULL)
+  # Escape HTML and wrap in <p>
+  escape_html <- function(x) gsub("&", "&amp;", gsub("<", "&lt;", gsub(">", "&gt;", x)))
+  para_html <- paste0("<p>", vapply(paragraphs, escape_html, character(1)), "</p>", collapse = "\n")
+  paste0(
+    '<div class="narrative-section">',
+    '<h2>📋 Market narrative</h2>',
+    para_html,
+    '<p><span class="sentiment-badge ', sentiment_class, '">Overall sentiment: ', sentiment_label, '</span></p>',
+    '</div>'
+  )
+}
+
+# Function to build market narrative HTML for dashboard
+# Uses local Ollama model (e.g. granite4) when OLLAMA_NARRATIVE_ENABLED=1, else rule-based.
+build_dashboard_narrative <- function(total_stocks, strong_buy_count, buy_count, sell_count, bullish_pct, bearish_pct, results, index_results, latest_date = NULL) {
+  avg_score <- round(mean(results$TECHNICAL_SCORE, na.rm = TRUE), 1)
+  if (is.null(latest_date)) latest_date <- Sys.Date()
+  # Sentiment badge (used for both Ollama and rule-based)
+  if (bullish_pct >= 30) {
+    sentiment_label <- "BULLISH"
+    sentiment_class <- "sentiment-bullish"
+  } else if (bullish_pct >= 10) {
+    sentiment_label <- "NEUTRAL-BULLISH"
+    sentiment_class <- "sentiment-neutral"
+  } else if (bearish_pct >= 60) {
+    sentiment_label <- "BEARISH"
+    sentiment_class <- "sentiment-bearish"
+  } else {
+    sentiment_label <- "NEUTRAL-BEARISH"
+    sentiment_class <- "sentiment-neutral"
+  }
+
+  # Try Ollama first if enabled
+  if (ollama_narrative_enabled()) {
+    model <- ollama_model()
+    base_url <- ollama_base_url()
+    context_text <- build_narrative_context(total_stocks, strong_buy_count, buy_count, sell_count,
+                                             bullish_pct, bearish_pct, results, index_results, latest_date)
+    cat("Requesting market narrative from Ollama (model: ", model, ")...\n", sep = "")
+    llm_text <- get_ollama_narrative(context_text, model = model, base_url = base_url)
+    if (!is.null(llm_text) && nchar(trimws(llm_text)) > 0) {
+      html <- narrative_text_to_html(llm_text, sentiment_label, sentiment_class)
+      if (!is.null(html)) {
+        cat("Using Ollama-generated narrative.\n")
+        return(html)
+      }
+    }
+    cat("Falling back to rule-based narrative.\n")
+  }
+
+  # Rule-based narrative (original logic)
+  weak_indices_text <- ""
+  strong_indices_text <- ""
+  if (!is.null(index_results) && nrow(index_results) > 0) {
+    idx_sell <- index_results %>% filter(TRADING_SIGNAL == "SELL" | TREND_SIGNAL == "STRONG_BEARISH")
+    idx_strong <- index_results %>% arrange(desc(TECHNICAL_SCORE)) %>% filter(TRADING_SIGNAL %in% c("STRONG_BUY", "BUY")) %>% head(2)
+    if (nrow(idx_sell) > 0) {
+      weak_indices_text <- paste0(
+        " <strong>Broad indices</strong> (e.g. Nifty 50, Nifty 500) show <strong>STRONG_BEARISH</strong> trend with <strong>SELL</strong> signals in many cases; ",
+        "weaker sectors include those with negative 50-day momentum and low RSI. "
+      )
+    }
+    if (nrow(idx_strong) > 0) {
+      strong_names <- paste(idx_strong$INDEX_NAME, collapse = " and ")
+      strong_scores <- paste(round(idx_strong$TECHNICAL_SCORE, 0), collapse = " and ")
+      strong_indices_text <- paste0(
+        " <strong>Pockets of strength:</strong> ", strong_names, " (technical scores ", strong_scores, ") show STRONG_BULLISH trends with STRONG_BUY/BUY signals. "
+      )
+    }
+  }
+  mid_para <- paste0(weak_indices_text, strong_indices_text)
+  if (nchar(mid_para) > 0) mid_para <- paste0(mid_para, " ")
+  paste0(
+    '<div class="narrative-section">',
+    '<h2>📋 Market narrative</h2>',
+    '<p>',
+    'As of this analysis date, <strong>breadth is ', ifelse(bearish_pct >= 50, "bearish", "mixed"), ':</strong> ',
+    'only ', bullish_pct, '% of filtered names show Buy or Strong Buy signals (', strong_buy_count + buy_count, ' stocks) ',
+    'versus ', bearish_pct, '% on Sell (', sell_count, ' stocks). ',
+    'Average technical score across the universe is ', avg_score, '.',
+    '</p>',
+    '<p>',
+    mid_para,
+    'Stock-level opportunities are concentrated in a small set of names with strong relative strength.',
+    '</p>',
+    '<p><span class="sentiment-badge ', sentiment_class, '">Overall sentiment: ', sentiment_label, '</span></p>',
+    '</div>'
+  )
+}
+
 # Function to generate HTML dashboard
 generate_html_dashboard <- function(results, index_results, latest_date, timestamp, output_dir) {
   # Get all stocks for the dashboard (sorted by technical score)
   top_50_stocks <- results[order(-results$TECHNICAL_SCORE), ]
-  
+  # Breadth stats for narrative
+  total_stocks <- nrow(results)
+  strong_buy_count <- sum(results$TRADING_SIGNAL == "STRONG_BUY")
+  buy_count <- sum(results$TRADING_SIGNAL == "BUY")
+  sell_count <- sum(results$TRADING_SIGNAL == "SELL")
+  bullish_pct <- if (total_stocks > 0) round(100 * (strong_buy_count + buy_count) / total_stocks, 1) else 0
+  bearish_pct <- if (total_stocks > 0) round(100 * sell_count / total_stocks, 1) else 0
+
   # Enhanced dashboard with charting functionality
   cat("Generating enhanced dashboard with charting functionality...\n")
   
@@ -1280,6 +1496,53 @@ generate_html_dashboard <- function(results, index_results, latest_date, timesta
             color: #1976d2;
             text-align: center;
             letter-spacing: 0.2px;
+        }
+
+        .narrative-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 24px 32px;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+            margin-bottom: 28px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-left: 4px solid #e53935;
+        }
+        .narrative-section h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1976d2;
+            margin-bottom: 12px;
+            letter-spacing: 0.2px;
+        }
+        .narrative-section p {
+            font-size: 0.95rem;
+            color: #424242;
+            line-height: 1.7;
+            margin-bottom: 10px;
+        }
+        .narrative-section p:last-child {
+            margin-bottom: 0;
+        }
+        .narrative-section .sentiment-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+        .narrative-section .sentiment-bearish {
+            background: #ffebee;
+            color: #c62828;
+        }
+        .narrative-section .sentiment-bullish {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        .narrative-section .sentiment-neutral {
+            background: #fff8e1;
+            color: #f57f17;
         }
 
         .index-analysis-container {
@@ -1994,6 +2257,9 @@ generate_html_dashboard <- function(results, index_results, latest_date, timesta
             <p>Comprehensive Technical Analysis with CAN SLIM & Minervini Indicators</p>
             <div class="date-display">📅 Data as of: ', format(latest_date, "%B %d, %Y"), '</div>
         </div>
+
+        <!-- Market Narrative -->
+        ', build_dashboard_narrative(total_stocks, strong_buy_count, buy_count, sell_count, bullish_pct, bearish_pct, results, index_results, latest_date), '
 
         <!-- Index Analysis Section -->
         <div class="index-analysis-container">

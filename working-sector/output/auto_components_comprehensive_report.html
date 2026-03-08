@@ -1,0 +1,3412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Auto Components (India) – Comprehensive Report</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --md-primary: #00897B;
+  --md-primary-dark: #00695C;
+  --md-primary-light: #4DB6AC;
+  --md-primary-bg: #B2DFDB;
+  --md-surface: #FFFFFF;
+  --md-bg: #E0F2F1;
+  --md-text: #004D40;
+  --md-text-secondary: #00796B;
+  --md-divider: rgba(0, 137, 123, 0.2);
+  --md-elevation-1: 0 1px 3px rgba(0, 105, 92, 0.12), 0 1px 2px rgba(0, 105, 92, 0.24);
+  --md-elevation-2: 0 3px 6px rgba(0, 105, 92, 0.15), 0 2px 4px rgba(0, 105, 92, 0.12);
+  --md-elevation-3: 0 10px 20px rgba(0, 105, 92, 0.15), 0 3px 6px rgba(0, 105, 92, 0.1);
+  --md-radius: 8px;
+  --md-radius-sm: 4px;
+}
+* { box-sizing: border-box; }
+body {
+  font-family: 'Roboto', system-ui, sans-serif;
+  margin: 0;
+  padding: 0;
+  background: var(--md-bg);
+  color: var(--md-text);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+.app-bar {
+  background: linear-gradient(135deg, var(--md-primary-dark) 0%, var(--md-primary) 100%);
+  color: #fff;
+  padding: 16px 24px;
+  box-shadow: var(--md-elevation-2);
+}
+.app-bar h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+.app-bar .meta {
+  margin: 4px 0 0 0;
+  font-size: 0.875rem;
+  opacity: 0.9;
+  font-weight: 300;
+}
+.main-content { padding: 24px; max-width: 1400px; margin: 0 auto; }
+.tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 0;
+  background: var(--md-surface);
+  border-radius: var(--md-radius) var(--md-radius) 0 0;
+  box-shadow: var(--md-elevation-1);
+  overflow: hidden;
+  flex-wrap: wrap;
+}
+.tab-btn {
+  padding: 14px 20px;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--md-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  position: relative;
+  transition: color 0.2s, background 0.2s;
+}
+.tab-btn:hover { background: var(--md-bg); color: var(--md-primary-dark); }
+.tab-btn.active {
+  color: var(--md-primary);
+  background: rgba(0, 137, 123, 0.08);
+}
+.tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--md-primary);
+}
+.tab-panel {
+  display: none;
+  background: var(--md-surface);
+  padding: 24px;
+  border-radius: 0 0 var(--md-radius) var(--md-radius);
+  box-shadow: var(--md-elevation-1);
+  overflow-x: auto;
+  border: 1px solid var(--md-divider);
+  border-top: none;
+  min-height: 320px;
+}
+.tab-panel.active { display: block; }
+.card-section {
+  background: var(--md-surface);
+  border-radius: var(--md-radius);
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: var(--md-elevation-1);
+  border: 1px solid var(--md-divider);
+}
+.overview-cards { display: flex; flex-direction: column; gap: 20px; }
+.card-section pre {
+  font-family: 'Roboto', sans-serif;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  margin: 0;
+  padding: 16px;
+  background: var(--md-bg);
+  border-radius: var(--md-radius-sm);
+  border-left: 4px solid var(--md-primary-light);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--md-text);
+}
+.card-title {
+  margin: 0 0 12px 0;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--md-primary-dark);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--md-divider);
+}
+.md-rendered { font-size: 0.9rem; line-height: 1.6; }
+.md-rendered h1 { font-size: 1.1rem; margin: 0 0 0.5rem 0; color: var(--md-primary-dark); font-weight: 500; }
+.md-rendered h2 { font-size: 1rem; margin: 1rem 0 0.4rem 0; color: var(--md-primary-dark); font-weight: 500; }
+.md-rendered h3 { font-size: 0.95rem; margin: 0.75rem 0 0.35rem 0; color: var(--md-primary-dark); font-weight: 500; }
+.md-rendered p { margin: 0 0 0.6rem 0; }
+.md-rendered ul, .md-rendered ol { margin: 0.4rem 0 0.75rem 0; padding-left: 1.5rem; }
+.md-rendered li { margin: 0.2rem 0; }
+.md-rendered hr { border: none; border-top: 1px solid var(--md-divider); margin: 1rem 0; }
+.md-rendered strong { font-weight: 500; color: var(--md-text); }
+.md-rendered table { width: 100%; margin: 0.5rem 0; font-size: 0.8rem; border-collapse: collapse; }
+.md-rendered th, .md-rendered td { border: 1px solid var(--md-divider); padding: 6px 8px; text-align: left; }
+.md-rendered th { background: var(--md-primary-light); color: var(--md-text); font-weight: 500; }
+.md-rendered a { color: var(--md-primary); text-decoration: none; }
+.md-rendered a:hover { text-decoration: underline; }
+.md-rendered.md-fallback { white-space: pre-wrap; font-family: inherit; }
+.prose { padding: 0 4px; }
+.prose h3 {
+  margin: 24px 0 12px 0;
+  font-size: 1.125rem;
+  font-weight: 500;
+  color: var(--md-primary-dark);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--md-divider);
+}
+.prose h3:first-child { margin-top: 0; }
+.prose pre {
+  font-family: 'Roboto', sans-serif;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  margin: 0 0 16px 0;
+  padding: 16px;
+  background: var(--md-bg);
+  border-radius: var(--md-radius-sm);
+  border-left: 4px solid var(--md-primary-light);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--md-text);
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.8125rem;
+  border-radius: var(--md-radius);
+  overflow: hidden;
+  box-shadow: var(--md-elevation-1);
+}
+th, td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--md-divider);
+}
+th {
+  background: var(--md-primary);
+  color: #fff;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  font-weight: 500;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  transition: background 0.2s;
+}
+th:hover { background: var(--md-primary-dark); }
+.sortable th { cursor: pointer; user-select: none; position: relative; padding-right: 24px; }
+.sortable th::after { content: ' ⇅'; opacity: 0.4; font-size: 0.85em; }
+.sortable th.sort-asc::after { content: ' ▲'; opacity: 1; }
+.sortable th.sort-desc::after { content: ' ▼'; opacity: 1; }
+tbody tr {
+  transition: background 0.15s;
+}
+tbody tr:nth-child(even) { background: rgba(0, 137, 123, 0.04); }
+tbody tr:hover { background: rgba(0, 137, 123, 0.08); }
+.sortable { border-collapse: collapse; width: 100%; border-radius: var(--md-radius); overflow: hidden; box-shadow: var(--md-elevation-1); }
+.sortable td, .sortable th { border-bottom: 1px solid var(--md-divider); }
+.sortable tbody tr:last-child td { border-bottom: none; }
+.cell-best { background: rgba(0, 150, 136, 0.18) !important; font-weight: 600; color: var(--md-primary-dark); }
+.table-scroll { overflow-x: auto; margin: 0 -4px; border-radius: var(--md-radius); }
+#table-narratives td { max-width: 420px; word-wrap: break-word; }
+.narrative-card {
+  background: var(--md-surface);
+  border: 1px solid var(--md-divider);
+  border-radius: var(--md-radius);
+  padding: 20px;
+  margin-bottom: 24px;
+  box-shadow: var(--md-elevation-1);
+}
+.narrative-title {
+  margin: 0 0 8px 0;
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--md-primary-dark);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--md-divider);
+}
+.narrative-recommendation {
+  margin: 0 0 12px 0;
+  padding: 8px 12px;
+  background: var(--md-bg);
+  border-left: 4px solid var(--md-primary);
+  font-size: 0.95rem;
+}
+.narrative-rec-rationale {
+  color: var(--md-text-secondary);
+  font-style: italic;
+}
+.narrative-fund-label { margin: 12px 0 6px 0; font-size: 0.875rem; color: var(--md-text-secondary); }
+.fund-table-mini {
+  width: auto;
+  min-width: 320px;
+  margin-bottom: 12px;
+  font-size: 0.8125rem;
+}
+.fund-table-mini th { padding: 8px 12px; }
+.fund-table-mini td { padding: 8px 12px; }
+.narrative-para {
+  margin: 0 0 12px 0;
+  line-height: 1.6;
+  color: var(--md-text);
+}
+.narrative-para:last-of-type { margin-bottom: 0; }
+.guide-content { max-width: 720px; }
+.guide-section {
+  margin-bottom: 24px;
+}
+.guide-section h3 {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--md-primary-dark);
+  margin: 0 0 10px 0;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--md-divider);
+}
+.guide-section p {
+  margin: 0 0 12px 0;
+  line-height: 1.6;
+}
+.guide-table {
+  width: 100%;
+  margin-top: 8px;
+  margin-bottom: 16px;
+  font-size: 0.875rem;
+}
+.guide-table th { background: var(--md-primary-light); color: var(--md-text); }
+@media (max-width: 600px) {
+  .app-bar { padding: 12px 16px; }
+  .main-content { padding: 16px; }
+  .tab-btn { padding: 12px 14px; font-size: 0.75rem; }
+  .tab-panel { padding: 16px; }
+}
+</style>
+</head>
+<body>
+<header class="app-bar">
+  <h1>Auto Components (India) – Comprehensive Sector Report</h1>
+  <p class="meta">Report date: 2026-03-09 &nbsp;·&nbsp; Data as of: 2026-03-06</p>
+</header>
+<main class="main-content">
+  <div class="tabs" role="tablist"><button class="tab-btn" data-tab="overview">Overview</button><button class="tab-btn" data-tab="guide">How to read</button><button class="tab-btn" data-tab="universe">Universe</button><button class="tab-btn" data-tab="shortlist">Shortlist</button><button class="tab-btn" data-tab="backtest">Backtest</button><button class="tab-btn" data-tab="narratives">Stock narratives</button></div>
+<div id="panel-overview" class="tab-panel" role="tabpanel"><div class='overview-cards'><div class='card-section'><h3 class='card-title'>Sector definition &amp; market size</h3><div id='overview-narrative' class='md-rendered'></div></div><div class='card-section'><h3 class='card-title'>Research question &amp; hypothesis</h3><div id='overview-hypothesis' class='md-rendered'></div></div><div class='card-section'><h3 class='card-title'>Literature &amp; sources</h3><div id='overview-literature' class='md-rendered'></div></div></div><script type='application/json' id='overview-md'>{"narrative": "# Sector Narrative: Auto Components (India)\n\n**Sources:** ACMA FY25; [Sharescart Auto Ancillary](https://www.sharescart.com/industry/auto-ancillary/); working-sector *auto-components.md* (strategic outlook 2025–2026).\n\n---\n\n## Definition and market size\n\nThe automotive components sector in India is defined by the Automotive Component Manufacturers Association of India (ACMA) as parts and systems supplied to vehicle manufacturers (OEMs), **excluding** OEMs (Maruti, Tata Motors, M&M, Bajaj Auto, Hero, Eicher, Ashok Leyland, TVS Motor, etc.). The industry turnover was **₹6.73 lakh crore (USD 80.2 billion)** in FY2024–25, with 9.6% YoY growth and ~14% CAGR over five years. Segments: OEM supply (₹5.70 L Cr), aftermarket (₹99,948 Cr), exports (USD 22.9 B).\n\nThe **listed** Auto Ancillary space is broader than turnover alone. As of **6 Mar 2026**, [Sharescart](https://www.sharescart.com/industry/auto-ancillary/) lists **113 listed Auto Ancillary companies** in India with an aggregate **market capitalization of ₹7,53,276 crore**, sorted by market cap (top names include Samvardhana Motherson, Bosch, UNO Minda, Tube Investments, Endurance, Sona BLW, ZF CV, Craftsman, Gabriel, Motherson Sumi Wiring, Shriram Pistons, Minda, JBM Auto, Lumax Auto Technologies, Banco, Varroc, ASK Automotive, Pricol, and others). Our **analysis universe** uses **47 NSE-listed** component names (ex-OEM) for the pipeline and screens; the full listed set is 113.\n\n---\n\n## Strategic outlook (2025–2026)\n\n**Performance:** The sector is in a robust upcycle. H1 FY26 (Apr–Sep 2025) growth was **6.8%** (₹3.56 L Cr / $40 B). CRISIL projects **7–9% revenue growth in FY26** on 2W and PV demand. Motherson reported FY25 consolidated revenue ~₹1,13,663 Cr (15% growth); Sona Comstar 24% YoY in Q2 FY26; Bosch leads in advanced automotive tech and premiumization.\n\n**Policy:** Budget 2026–27 emphasised supply-chain over demand subsidies. **Auto PLI** allocation **₹5,939 Cr** (up sharply); **PM E-Drive** ₹1,500 Cr (FY27) for e-trucks and charging; customs exemption on EV cell capital goods and critical minerals; FAME III folded into PM E-Drive.\n\n**EV & tech:** EV supply-chain localization **30–40%** (target: halve battery imports by 2027). EV component share of OEM shipments **~4.6%** (early 2026); non-traditional parts (batteries, semiconductors) **40–50%** of EV value. **ADAS** penetration in new PVs **8.41%** (2025), projected **62%** by 2035; ADAS mandated for CVs from Apr 2026. Sunroof and thermal-management segments are high-growth.\n\n**Clusters:** Tamil Nadu (Thoothukudi, Hosur/Krishnagiri), Maharashtra (Pune–Chakan–Talegaon, 750+ firms), Gujarat (Sanand, Tata AutoComp, Suzuki), Haryana/NCR (Manesar, Rohtak) are the main hubs.\n\n**Challenges:** ~10% cost disability vs China (logistics); exports **$22.9 B** (8% growth) but import surge in some electronics; shift to “pull” supply chains for efficiency.\n\n---\n\n## Why this sector for research\n\nThe auto components segment is large, under-researched rel…", "hypothesis": "# Hypothesis Memo: Auto Components (India)\n\n**Date:** 2026-03-08  \n**Status:** In progress\n\n---\n\n## 1. Research question (one sentence)\n\nWe are studying NSE-listed auto component suppliers (parts/systems to vehicle OEMs) to identify quality names with positive relative strength in a large, under-researched industry; success is a shortlist backed by a cited sector definition, validated market size, and an optional backtest.\n\n---\n\n## 2. Definition\n\n- **Industry term:** “Auto Components” = parts and systems supplied to vehicle manufacturers (OEMs). Excludes OEMs (passenger vehicles, 2W, CVs). Aligned with ACMA (Automotive Component Manufacturers Association of India).\n- **Universe rule:** NSE-listed; **exclude OEMs** (MARUTI, TATAMOTORS, M&M, BAJAJ-AUTO, HEROMOTOCO, EICHERMOT, ASHOKLEY, TVSMOTOR); **include ancillaries** (tyres, batteries, forgings, electrical, engine/transmission parts — e.g. BHARATFORG, MOTHERSON, BOSCHLTD, APOLLOTYRE, MRF, EXIDEIND, UNOMINDA, TIINDIA, SONACOMS, TMPV).\n- **Source:** ACMA definition and industry reports (see literature_notes_auto_components.md).\n- **Sub-segments:** Tyres (APOLLOTYRE, MRF), Batteries (EXIDEIND), Forgings (BHARATFORG), Electrical/Electronics (BOSCHLTD, UNOMINDA, MOTHERSON, TIINDIA, SONACOMS, TMPV), Other.\n\n---\n\n## 3. Hypotheses\n\n### H1 (Sector)\n\n- **H1:** The auto components segment (listed ancillaries, ex-OEM) has delivered comparable or better capital efficiency than the broad market, as evidenced by median ROCE and revenue growth vs Nifty 50 over the last 5 years.\n- **How we test it:** Compare sector median ROCE and 3Y revenue growth (from our data) with Nifty 50; optionally cite ACMA growth figures (e.g. 14% CAGR).\n\n### H2 (Stock selection)\n\n- **H2:** Listed auto component suppliers with ROCE > 15% and relative strength vs Nifty 500 > 0 (over 6M) have outperformed Nifty 500 over rolling 3Y windows (before transaction costs).\n- **How we test it:** Backtest: each month (or quarter), apply screen; compute forward 1Y/3Y return of equal-weight portfolio of passing stocks vs Nifty 500; report hit rate, average excess return, max drawdown.\n\n---\n\n## 4. Scope and limits\n\n- **In scope:** NSE-listed auto component companies (ancillaries only), using NSE price data, Screener fundamentals, and Nifty Auto / Nifty 500 for relative strength.\n- **Out of scope:** Unlisted companies; BSE-only names; global comparables; OEMs.\n- **Known limits:** Listed only (survivorship bias); single fundamental source (Screener); point-in-time; backtest period limited by data availability.\n\n---\n\n## 5. Screen criteria (operational)\n\n- **Quality:** ROCE > 15%; fundamental score (earnings + sales + financial + institutional) > 70.\n- **Momentum / RS:** Relative strength vs Nifty 500 (or Nifty Auto) > 0 over 6M.\n- **Composite (optional):** 0.4 × fundamental score + 0.4 × technical score + 0.2 × RS percentile rank (0–100).\n- **Shortlist:** Top 15 by composite, subject to minimum liquidity (e.g. in NSE universe with sufficient history).\n\n---\n\n## 6. Revision log\n\n| Date       | Change                                      |\n|------------|---------------------------------------------|\n| 2026-03-08 | Initial draft; definition aligned with ACMA |", "literature": "# Literature Notes: Auto Components (India)\n\n**Purpose:** Capture industry/sector report findings to validate definition, market size, and narrative. Cite in final sector note.\n\n---\n\n## Source 1\n\n- **Title / Report name:** Indian Auto Component Sector – FY25 turnover and growth (industry coverage).\n- **Publisher / Author:** ACMA (Automotive Component Manufacturers Association of India); reported via Motorindia, Modern Manufacturing India.\n- **Date / Year:** FY2024–25 (FY25).\n- **URL or file:**  \n  - https://www.motorindiaonline.in/indian-auto-component-sector-nearly-doubles-in-5-years-hits-₹6-73-lakh-crore-turnover-in-fy25/  \n  - https://www.mmindia.co.in/article/2935/acma-auto-components-sector-grows-14-percent-cagr-to-reach-us-80-2-billion-in-fy25\n- **Definition of sector:** Auto components = parts and systems supplied to vehicle manufacturers (OEMs). ACMA represents component manufacturers; SIAM represents vehicle manufacturers. OEM supply, aftermarket, and exports are distinct segments.\n- **Market size:** ₹6.73 lakh crore (USD 80.2 billion) in FY25; ~9.6% YoY growth. Industry nearly doubled in 5 years; 14% CAGR.\n- **Number of players / companies:** ACMA has 1,054+ members; industry reports refer to “organized” and “unorganized” segments. “830+ organized companies” (from initial note) is in line with a broad organized-sector count.\n- **Key segments:** OEM sales (₹5.70 L Cr, 10% YoY), Aftermarket (₹99,948 Cr, 6%), Exports (USD 22.9 B). Segments: engine parts, transmission, electrical, tyres, forgings, etc.\n- **Key drivers:** Domestic OEM demand, EV transition, PLI schemes, export growth, raw material and supply chain.\n- **How our universe aligns or deviates:** We use only **listed** component suppliers (ex-OEM); ACMA covers all components including unlisted. Definition (components vs OEM) aligned.\n\n---\n\n## Source 2\n\n- **Title / Report name:** ACMA – About Auto Component; OEM vs Aftermarket vs Export.\n- **Publisher / Author:** ACMA; Brickwork Ratings / industry summaries.\n- **Date / Year:** FY 2023–24 / 2024.\n- **URL or file:**  \n  - https://www.acma.in/about-us.php/auto-component.php  \n  - Industry reports (e.g. Brickwork Ratings – Indian Auto Component Manufacturing Industry).\n- **Definition:** Components supplied to OEMs (domestic), aftermarket (replacement), and exports. OEM supply ~USD 62.4 B FY24; aftermarket ~USD 11.3–11.45 B; exports ~USD 21.2 B. Total industry ~USD 74.1 B FY24.\n- **Market size / players:** FY24 ~₹6.2–6.5 L Cr equivalent; 400+ major players (80% share); unorganized for rest.\n- **Notes:** Confirms OEM vs component split. Our “₹6.2 Lakh Cr” from the initial handwritten note is consistent with FY24-type figures; FY25 at ₹6.73 L Cr is updated.\n\n---\n\n---\n\n## Source 3 (Listed universe)\n\n- **Title / Source:** List of Top Auto Ancillary listed companies in India; sector view.\n- **Publisher / URL:** [Sharescart – Auto Ancillary](https://www.sharescart.com/industry/auto-ancillary/).\n- **Date / Year:** 2026 (data as on 06 Mar 2026).\n- **Definition:** Auto Ancillary = listed companies in the auto component/ancillary industry (ex-OEM).\n- **Market size (listed):** **113 listed companies**; aggregate **market cap ₹7,53,276 crore**. List sorted by market cap with CMP, 52W H/L, PE, PB, ROCE, ROE, PAT TTM, Div Yield.\n- **How our universe aligns:** Our analysis uses **47 NSE-listed** component names (ex-OEM); the full listed Auto Ancillary space per Sharescart is 113. Top names overlap (Motherson, Bosch, UNO Minda, Tube Investments, Endurance, Sona BLW, ZF CV, Craftsman, Gabriel, etc.).\n\n---\n\n## Source 4 (Strategic outlook)\n\n- **Title / Source:** India's Auto-Component Industry: 2026 Strategic Outlook; working-sector *auto-components.md*.\n- **Content:** FY25/26 turnover and H1 FY26 growth (6.8%); Budget 2026 & PLI (₹5,939 Cr Auto PLI, PM E-Drive); EV localization (30–40%, Bharat Cell, magnet-free motors); ADAS (8.41% penetration, 62% by 2035); regional clusters (TN, Maharashtra, Gujarat, NCR); ICE vs EV category mix; strategic challenges (cost disability, trade, push vs pull supply chain). Links: DPIIT, Invest India, SIAM, PIB, FAME, PLI Auto, ACMA, IBEF, and others.\n- **How our universe aligns:** Narrative and sector view in reports use this for Overview; hypothesis and screens remain on our 47-name universe.\n\n---\n\n## Cross-check: Our numbers vs sources\n\n| Metric              | Our assumption (pre-research) | Source 1 (FY25) | Source 2 (FY24) | Final (for report)     |\n|---------------------|--------------------------------|-----------------|-----------------|------------------------|\n| Market size (₹ Cr)  | 6.2 L Cr                       | 6.73 L Cr       | ~6.2–6.5 L Cr   | **₹6.73 L Cr (FY25)**; cite ACMA/FY25 |\n| No. of companies    | 830+ organized                 | 1,054+ ACMA members | 400+ major (80% share) | **1,054+ ACMA members**; “organized” 400–800+ depending on definition |\n| Definition (OEM in/out) | Component-only             | Components only (OEM separate) | Components only | **Exc…"}</script></div><div id="panel-guide" class="tab-panel" role="tabpanel">
+<div class="guide-content">
+  <section class="guide-section">
+    <h3>How to use this report</h3>
+    <p>This report has six tabs: <strong>Overview</strong> (sector definition, hypothesis, literature), <strong>How to read</strong> (this guide), <strong>Universe</strong> (all stocks with metrics), <strong>Shortlist</strong> (top names by composite score), <strong>Backtest</strong> (historical momentum screen results), and <strong>Stock narratives</strong> (per-stock commentary with fundamental breakdown). Use the tabs to switch views.</p>
+    <p><strong>Tables:</strong> In Universe, Shortlist, and Backtest, click any column header to sort by that column; click again to toggle ascending (▲) / descending (▼). <strong>Green-highlighted cells</strong> mark the top 25% of values in that column (e.g. highest composite score, best 6M return, highest excess return in backtest).</p>
+  </section>
+
+  <section class="guide-section">
+    <h3>Price and return metrics</h3>
+    <table class="guide-table">
+      <thead><tr><th>Metric</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><strong>CURRENT_PRICE</strong></td><td>Latest closing price (Rs).</td></tr>
+        <tr><td><strong>RET_1M / RET_3M / RET_6M</strong></td><td>Total return over 1, 3, and 6 months (e.g. 10% = 0.10).</td></tr>
+        <tr><td><strong>RS_VS_NIFTY_500_6M</strong></td><td>Stock return minus Nifty 500 return over 6 months. Positive = outperformed the index.</td></tr>
+        <tr><td><strong>RS_VS_NIFTY_AUTO_6M</strong></td><td>Same vs Nifty Auto index.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="guide-section">
+    <h3>Technical metrics</h3>
+    <table class="guide-table">
+      <thead><tr><th>Metric</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><strong>RSI</strong></td><td>Relative Strength Index (0–100). &lt;30 often oversold, &gt;70 overbought.</td></tr>
+        <tr><td><strong>TECHNICAL_SCORE</strong></td><td>Composite technical score (e.g. 0–100) from price and momentum; higher = stronger short-term technical picture.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="guide-section">
+    <h3>Fundamental scores</h3>
+    <p>All fundamental scores are on a 0–100 scale (higher = better). They come from the Screener/organized pipeline.</p>
+    <table class="guide-table">
+      <thead><tr><th>Score</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><strong>FUND_SCORE</strong></td><td>Overall fundamental score (earnings quality, sales growth, financial strength, institutional backing combined).</td></tr>
+        <tr><td><strong>Earnings quality</strong></td><td>Quality and sustainability of earnings (margins, consistency, cash flow).</td></tr>
+        <tr><td><strong>Sales growth</strong></td><td>Revenue growth trajectory.</td></tr>
+        <tr><td><strong>Financial strength</strong></td><td>Balance sheet health, leverage, liquidity.</td></tr>
+        <tr><td><strong>Institutional backing</strong></td><td>Degree of institutional (DII/FII) ownership and trend.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="guide-section">
+    <h3>Composite and screen</h3>
+    <table class="guide-table">
+      <thead><tr><th>Term</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><strong>COMPOSITE_SCORE</strong></td><td>Weighted combination: 0.4 × fundamental + 0.4 × technical + 0.2 × relative strength rank (0–100). Used to rank and shortlist stocks.</td></tr>
+        <tr><td><strong>PASS_FUND</strong></td><td>True if fundamental score &gt;= 70 (quality screen).</td></tr>
+        <tr><td><strong>PASS_RS</strong></td><td>True if 6M relative strength vs Nifty 500 &gt; 0 (momentum screen).</td></tr>
+        <tr><td><strong>PASS_SCREEN</strong></td><td>True if both PASS_FUND and PASS_RS.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="guide-section">
+    <h3>Backtest</h3>
+    <p><strong>REBAL_DATE</strong>: Date when the portfolio was formed. <strong>N_STOCKS</strong>: Number of stocks passing the screen. <strong>PORTFOLIO_RET_1Y</strong>: Equal-weight return of those stocks over the next year. <strong>BENCH_RET_1Y</strong>: Nifty 500 return over the same period. <strong>EXCESS_RET</strong>: Portfolio return minus benchmark. The backtest uses a momentum-only screen (RS &gt; 0); fundamental filters are not applied historically due to data limits.</p>
+  </section>
+
+  <section class="guide-section">
+    <h3>Stock narratives</h3>
+    <p>Each stock has a short narrative that synthesizes <strong>key metrics</strong> (price, returns, RSI, technical and fundamental scores) and <strong>key financial ratios/fundamentals</strong>: P&amp;L (Sales, Net Profit, EPS, YoY), <strong>Quarterly</strong> (last 4Q sales and profit), <strong>Balance sheet</strong> (Equity, Debt, Cash, Debt/Equity), and <strong>Ratios</strong> (ROCE, ROE, EPS, PE, PB, OPM, NPM, Interest Coverage, Div Yield when available). The <strong>fundamental score (0–100)</strong> is the main financial-quality metric. Run <code>fetch_screener_fundamental_details.R</code> to populate these from Screener.in.</p>
+    <p><strong>Recommendation:</strong> The LLM (Ollama) provides a view-based recommendation (Buy / Accumulate / Hold / Reduce / Avoid) with a one-line rationale derived from the metrics. This is for research context only, not investment advice.</p>
+  </section>
+</div>
+</div><div id="panel-universe" class="tab-panel" role="tabpanel"><div class="table-scroll"><table id="table-universe" class="sortable"><thead><tr>
+<th data-col="SYMBOL">SYMBOL</th>
+<th data-col="SUBSECTOR">SUBSECTOR</th>
+<th data-col="CURRENT_PRICE">CURRENT_PRICE</th>
+<th data-col="RET_1M">RET_1M</th>
+<th data-col="RET_3M">RET_3M</th>
+<th data-col="RET_6M">RET_6M</th>
+<th data-col="RS_VS_NIFTY_AUTO_6M">RS_VS_NIFTY_AUTO_6M</th>
+<th data-col="RS_VS_NIFTY_500_6M">RS_VS_NIFTY_500_6M</th>
+<th data-col="RSI">RSI</th>
+<th data-col="TECHNICAL_SCORE">TECHNICAL_SCORE</th>
+<th data-col="FUND_SCORE">FUND_SCORE</th>
+<th data-col="AS_OF_DATE">AS_OF_DATE</th>
+<th data-col="FUND_NORM">FUND_NORM</th>
+<th data-col="TECH_NORM">TECH_NORM</th>
+<th data-col="RS_RANK">RS_RANK</th>
+<th data-col="COMPOSITE_SCORE">COMPOSITE_SCORE</th>
+<th data-col="PASS_FUND">PASS_FUND</th>
+<th data-col="PASS_RS">PASS_RS</th>
+<th data-col="PASS_SCREEN">PASS_SCREEN</th>
+</tr></thead><tbody>
+<tr>
+<td class="">BHARATFORG</td>
+<td class="">Forgings</td>
+<td class="">1923.90</td>
+<td class="">20.9%</td>
+<td class="">37.8%</td>
+<td class="cell-best">66.9%</td>
+<td class="">53.5%</td>
+<td class="cell-best">67.3%</td>
+<td class="">74.70</td>
+<td class="cell-best">70.00</td>
+<td class="cell-best">54.83</td>
+<td class="">2026-03-06</td>
+<td class="">54.83</td>
+<td class="">70.00</td>
+<td class="">97.87</td>
+<td class="cell-best">69.51</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">UNOMINDA</td>
+<td class="">Electrical</td>
+<td class="">1121.30</td>
+<td class="">-6.9%</td>
+<td class="">-13.2%</td>
+<td class="">4.9%</td>
+<td class="">-8.6%</td>
+<td class="">5.2%</td>
+<td class="">25.05</td>
+<td class="">20.00</td>
+<td class="">49.36</td>
+<td class="">2026-03-06</td>
+<td class="">49.36</td>
+<td class="">20.00</td>
+<td class="">51.06</td>
+<td class="">37.96</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">BOSCHLTD</td>
+<td class="">Electrical</td>
+<td class="">33335.00</td>
+<td class="">-9.2%</td>
+<td class="">-10.0%</td>
+<td class="">-13.7%</td>
+<td class="">-27.2%</td>
+<td class="">-13.3%</td>
+<td class="">32.36</td>
+<td class="">30.00</td>
+<td class="cell-best">53.48</td>
+<td class="">2026-03-06</td>
+<td class="">53.48</td>
+<td class="">30.00</td>
+<td class="">19.15</td>
+<td class="">37.22</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">EXIDEIND</td>
+<td class="">Battery</td>
+<td class="">315.95</td>
+<td class="">-7.5%</td>
+<td class="">-17.2%</td>
+<td class="">-16.1%</td>
+<td class="">-29.6%</td>
+<td class="">-15.7%</td>
+<td class="">32.67</td>
+<td class="">30.00</td>
+<td class="">51.12</td>
+<td class="">2026-03-06</td>
+<td class="">51.12</td>
+<td class="">30.00</td>
+<td class="">14.89</td>
+<td class="">35.43</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">MOTHERSON</td>
+<td class="">Electrical</td>
+<td class="">122.77</td>
+<td class="">0.1%</td>
+<td class="">12.7%</td>
+<td class="cell-best">36.0%</td>
+<td class="">22.5%</td>
+<td class="cell-best">36.4%</td>
+<td class="">36.94</td>
+<td class="cell-best">50.00</td>
+<td class="">51.57</td>
+<td class="">2026-03-06</td>
+<td class="">51.57</td>
+<td class="">50.00</td>
+<td class="">82.98</td>
+<td class="cell-best">57.22</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">TIINDIA</td>
+<td class="">Other</td>
+<td class="">2722.90</td>
+<td class="">3.2%</td>
+<td class="">-10.2%</td>
+<td class="">-9.9%</td>
+<td class="">-23.4%</td>
+<td class="">-9.5%</td>
+<td class="">67.22</td>
+<td class="cell-best">80.00</td>
+<td class="">48.73</td>
+<td class="">2026-03-06</td>
+<td class="">48.73</td>
+<td class="">80.00</td>
+<td class="">29.79</td>
+<td class="cell-best">57.45</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">SONACOMS</td>
+<td class="">Electrical</td>
+<td class="">514.95</td>
+<td class="">-3.4%</td>
+<td class="">5.4%</td>
+<td class="">17.0%</td>
+<td class="">3.5%</td>
+<td class="">17.4%</td>
+<td class="">43.58</td>
+<td class="cell-best">60.00</td>
+<td class="">49.66</td>
+<td class="">2026-03-06</td>
+<td class="">49.66</td>
+<td class="">60.00</td>
+<td class="">70.21</td>
+<td class="cell-best">57.91</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">APOLLOTYRE</td>
+<td class="">Tyres</td>
+<td class="">439.75</td>
+<td class="">-14.2%</td>
+<td class="">-15.9%</td>
+<td class="">-1.5%</td>
+<td class="">-15.0%</td>
+<td class="">-1.2%</td>
+<td class="">23.87</td>
+<td class="">20.00</td>
+<td class="cell-best">53.44</td>
+<td class="">2026-03-06</td>
+<td class="">53.44</td>
+<td class="">20.00</td>
+<td class="">40.43</td>
+<td class="">37.46</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">MRF</td>
+<td class="">Tyres</td>
+<td class="">138780.00</td>
+<td class="">0.8%</td>
+<td class="">-10.6%</td>
+<td class="">-1.2%</td>
+<td class="">-14.7%</td>
+<td class="">-0.9%</td>
+<td class="">32.46</td>
+<td class="">30.00</td>
+<td class="">49.41</td>
+<td class="">2026-03-06</td>
+<td class="">49.41</td>
+<td class="">30.00</td>
+<td class="">42.55</td>
+<td class="">40.27</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">AMARAJABAT</td>
+<td class="">Battery</td>
+<td class="">604.15</td>
+<td class="">-5.1%</td>
+<td class="">-3.8%</td>
+<td class="">-0.4%</td>
+<td class="">-13.9%</td>
+<td class="">-0.0%</td>
+<td class="">27.61</td>
+<td class="">20.00</td>
+<td class="">10.00</td>
+<td class="">2026-03-06</td>
+<td class="">10.00</td>
+<td class="">20.00</td>
+<td class="">46.81</td>
+<td class="">21.36</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">ASKAUTOLTD</td>
+<td class="">Other</td>
+<td class="">391.85</td>
+<td class="">-14.7%</td>
+<td class="">-18.3%</td>
+<td class="">-16.9%</td>
+<td class="">-30.4%</td>
+<td class="">-16.5%</td>
+<td class="">24.08</td>
+<td class="">20.00</td>
+<td class="cell-best">71.28</td>
+<td class="">2026-03-06</td>
+<td class="">71.28</td>
+<td class="">20.00</td>
+<td class="">12.77</td>
+<td class="">39.07</td>
+<td class="">True</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">AUTOAXLES</td>
+<td class="">Axles</td>
+<td class="">1987.00</td>
+<td class="">-5.8%</td>
+<td class="">20.2%</td>
+<td class="cell-best">21.5%</td>
+<td class="">8.0%</td>
+<td class="cell-best">21.9%</td>
+<td class="">45.63</td>
+<td class="cell-best">60.00</td>
+<td class="cell-best">58.77</td>
+<td class="">2026-03-06</td>
+<td class="">58.77</td>
+<td class="">60.00</td>
+<td class="">78.72</td>
+<td class="cell-best">63.25</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">BANCOINDIA</td>
+<td class="">Other</td>
+<td class="">581.90</td>
+<td class="">-9.7%</td>
+<td class="">-25.2%</td>
+<td class="">7.8%</td>
+<td class="">-5.7%</td>
+<td class="">8.1%</td>
+<td class="">20.59</td>
+<td class="">20.00</td>
+<td class="cell-best">54.64</td>
+<td class="">2026-03-06</td>
+<td class="">54.64</td>
+<td class="">20.00</td>
+<td class="">55.32</td>
+<td class="">40.92</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">BHARATGEAR</td>
+<td class="">Gears</td>
+<td class="">101.15</td>
+<td class="">-12.7%</td>
+<td class="">12.8%</td>
+<td class="">14.0%</td>
+<td class="">0.5%</td>
+<td class="">14.4%</td>
+<td class="">36.43</td>
+<td class="">30.00</td>
+<td class="">51.91</td>
+<td class="">2026-03-06</td>
+<td class="">51.91</td>
+<td class="">30.00</td>
+<td class="">65.96</td>
+<td class="">45.96</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">BHARATSE</td>
+<td class="">Seating</td>
+<td class="">176.48</td>
+<td class="">11.6%</td>
+<td class="">-1.7%</td>
+<td class="cell-best">61.9%</td>
+<td class="">48.4%</td>
+<td class="cell-best">62.3%</td>
+<td class="">55.20</td>
+<td class="cell-best">60.00</td>
+<td class="">52.61</td>
+<td class="">2026-03-06</td>
+<td class="">52.61</td>
+<td class="">60.00</td>
+<td class="">93.62</td>
+<td class="cell-best">63.77</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">CRAFTSMAN</td>
+<td class="">Castings</td>
+<td class="">7458.00</td>
+<td class="">-5.0%</td>
+<td class="">11.2%</td>
+<td class="">8.4%</td>
+<td class="">-5.1%</td>
+<td class="">8.8%</td>
+<td class="">41.22</td>
+<td class="">40.00</td>
+<td class="cell-best">54.65</td>
+<td class="">2026-03-06</td>
+<td class="">54.65</td>
+<td class="">40.00</td>
+<td class="">57.45</td>
+<td class="">49.35</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">DIVGIITTS</td>
+<td class="">Transmission</td>
+<td class="">721.05</td>
+<td class="">15.3%</td>
+<td class="">12.1%</td>
+<td class="">11.0%</td>
+<td class="">-2.5%</td>
+<td class="">11.4%</td>
+<td class="">46.48</td>
+<td class="cell-best">80.00</td>
+<td class="">49.92</td>
+<td class="">2026-03-06</td>
+<td class="">49.92</td>
+<td class="">80.00</td>
+<td class="">63.83</td>
+<td class="cell-best">64.73</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">ENDURANCE</td>
+<td class="">Engine/Parts</td>
+<td class="">2451.80</td>
+<td class="">0.2%</td>
+<td class="">-6.2%</td>
+<td class="">-2.3%</td>
+<td class="">-15.8%</td>
+<td class="">-1.9%</td>
+<td class="">47.42</td>
+<td class="">40.00</td>
+<td class="">51.27</td>
+<td class="">2026-03-06</td>
+<td class="">51.27</td>
+<td class="">40.00</td>
+<td class="">38.30</td>
+<td class="">44.17</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">FIEMIND</td>
+<td class="">Lighting</td>
+<td class="">2094.70</td>
+<td class="">-10.0%</td>
+<td class="">-9.5%</td>
+<td class="">15.8%</td>
+<td class="">2.3%</td>
+<td class="">16.2%</td>
+<td class="">26.99</td>
+<td class="">20.00</td>
+<td class="">49.06</td>
+<td class="">2026-03-06</td>
+<td class="">49.06</td>
+<td class="">20.00</td>
+<td class="">68.09</td>
+<td class="">41.24</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">GABRIEL</td>
+<td class="">Suspension</td>
+<td class="">916.25</td>
+<td class="">-5.4%</td>
+<td class="">-6.7%</td>
+<td class="">-14.0%</td>
+<td class="">-27.5%</td>
+<td class="">-13.6%</td>
+<td class="">35.77</td>
+<td class="">30.00</td>
+<td class="">48.43</td>
+<td class="">2026-03-06</td>
+<td class="">48.43</td>
+<td class="">30.00</td>
+<td class="">17.02</td>
+<td class="">34.78</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">GNA</td>
+<td class="">Axles</td>
+<td class="">426.25</td>
+<td class="">2.5%</td>
+<td class="">36.3%</td>
+<td class="cell-best">40.5%</td>
+<td class="">27.0%</td>
+<td class="cell-best">40.9%</td>
+<td class="">47.02</td>
+<td class="cell-best">60.00</td>
+<td class="cell-best">54.47</td>
+<td class="">2026-03-06</td>
+<td class="">54.47</td>
+<td class="">60.00</td>
+<td class="">85.11</td>
+<td class="cell-best">62.81</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">HARSHA</td>
+<td class="">Forgings</td>
+<td class="">362.05</td>
+<td class="">-8.9%</td>
+<td class="">-8.2%</td>
+<td class="">-11.6%</td>
+<td class="">-25.1%</td>
+<td class="">-11.2%</td>
+<td class="">34.80</td>
+<td class="">30.00</td>
+<td class="">49.70</td>
+<td class="">2026-03-06</td>
+<td class="">49.70</td>
+<td class="">30.00</td>
+<td class="">25.53</td>
+<td class="">36.99</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">JAMNAAUTO</td>
+<td class="">Suspension</td>
+<td class="">132.57</td>
+<td class="">1.8%</td>
+<td class="">21.0%</td>
+<td class="cell-best">45.7%</td>
+<td class="">32.2%</td>
+<td class="cell-best">46.1%</td>
+<td class="">47.26</td>
+<td class="cell-best">60.00</td>
+<td class="">48.30</td>
+<td class="">2026-03-06</td>
+<td class="">48.30</td>
+<td class="">60.00</td>
+<td class="">87.23</td>
+<td class="cell-best">60.77</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">JBMA</td>
+<td class="">Other</td>
+<td class="">521.90</td>
+<td class="">-12.7%</td>
+<td class="">-17.3%</td>
+<td class="">-13.2%</td>
+<td class="">-26.7%</td>
+<td class="">-12.8%</td>
+<td class="">22.34</td>
+<td class="">20.00</td>
+<td class="cell-best">56.91</td>
+<td class="">2026-03-06</td>
+<td class="">56.91</td>
+<td class="">20.00</td>
+<td class="">21.28</td>
+<td class="">35.02</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">JTEKTINDIA</td>
+<td class="">Steering/Bearings</td>
+<td class="">131.86</td>
+<td class="">-9.0%</td>
+<td class="">-16.7%</td>
+<td class="">5.4%</td>
+<td class="">-8.1%</td>
+<td class="">5.7%</td>
+<td class="">42.57</td>
+<td class="">40.00</td>
+<td class="">51.54</td>
+<td class="">2026-03-06</td>
+<td class="">51.54</td>
+<td class="">40.00</td>
+<td class="">53.19</td>
+<td class="">47.25</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">LUMAXIND</td>
+<td class="">Lighting</td>
+<td class="">5576.50</td>
+<td class="">5.4%</td>
+<td class="">9.1%</td>
+<td class="cell-best">66.8%</td>
+<td class="">53.3%</td>
+<td class="cell-best">67.2%</td>
+<td class="">33.84</td>
+<td class="cell-best">50.00</td>
+<td class="cell-best">57.69</td>
+<td class="">2026-03-06</td>
+<td class="">57.69</td>
+<td class="">50.00</td>
+<td class="">95.74</td>
+<td class="cell-best">62.22</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">LUMAXTECH</td>
+<td class="">Lighting</td>
+<td class="">1531.90</td>
+<td class="">0.3%</td>
+<td class="">12.1%</td>
+<td class="cell-best">49.7%</td>
+<td class="">36.2%</td>
+<td class="cell-best">50.0%</td>
+<td class="">42.36</td>
+<td class="">40.00</td>
+<td class="cell-best">54.51</td>
+<td class="">2026-03-06</td>
+<td class="">54.51</td>
+<td class="">40.00</td>
+<td class="">91.49</td>
+<td class="">56.10</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">MINDACORP</td>
+<td class="">Electrical</td>
+<td class="">520.95</td>
+<td class="">-10.5%</td>
+<td class="">-12.5%</td>
+<td class="">10.5%</td>
+<td class="">-3.0%</td>
+<td class="">10.9%</td>
+<td class="">16.60</td>
+<td class="">20.00</td>
+<td class="">49.42</td>
+<td class="">2026-03-06</td>
+<td class="">49.42</td>
+<td class="">20.00</td>
+<td class="">61.70</td>
+<td class="">40.11</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">MENONBE</td>
+<td class="">Bearings</td>
+<td class="">117.49</td>
+<td class="">-2.3%</td>
+<td class="">1.7%</td>
+<td class="">-11.7%</td>
+<td class="">-25.2%</td>
+<td class="">-11.3%</td>
+<td class="">48.87</td>
+<td class="">40.00</td>
+<td class="">52.38</td>
+<td class="">2026-03-06</td>
+<td class="">52.38</td>
+<td class="">40.00</td>
+<td class="">23.40</td>
+<td class="">41.63</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">MSUMI</td>
+<td class="">Electrical</td>
+<td class="">41.27</td>
+<td class="">-9.0%</td>
+<td class="">-14.8%</td>
+<td class="">9.0%</td>
+<td class="">-4.5%</td>
+<td class="">9.4%</td>
+<td class="">37.97</td>
+<td class="">30.00</td>
+<td class="">48.99</td>
+<td class="">2026-03-06</td>
+<td class="">48.99</td>
+<td class="">30.00</td>
+<td class="">59.57</td>
+<td class="">43.51</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">NDRAUTO</td>
+<td class="">Other</td>
+<td class="">717.00</td>
+<td class="">-2.1%</td>
+<td class="">-16.5%</td>
+<td class="">-25.4%</td>
+<td class="">-38.9%</td>
+<td class="">-25.0%</td>
+<td class="">45.51</td>
+<td class="">40.00</td>
+<td class="">47.86</td>
+<td class="">2026-03-06</td>
+<td class="">47.86</td>
+<td class="">40.00</td>
+<td class="">425.5%</td>
+<td class="">36.00</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">PRICOLLTD</td>
+<td class="">Electrical</td>
+<td class="">565.80</td>
+<td class="">-2.5%</td>
+<td class="">-10.4%</td>
+<td class="cell-best">31.7%</td>
+<td class="">18.2%</td>
+<td class="cell-best">32.0%</td>
+<td class="">27.46</td>
+<td class="">20.00</td>
+<td class="">49.98</td>
+<td class="">2026-03-06</td>
+<td class="">49.98</td>
+<td class="">20.00</td>
+<td class="">80.85</td>
+<td class="">44.16</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">RANEENGINE</td>
+<td class="">Engine/Parts</td>
+<td class="">317.75</td>
+<td class="">17.9%</td>
+<td class="">-15.6%</td>
+<td class="">-24.0%</td>
+<td class="">-37.5%</td>
+<td class="">-23.6%</td>
+<td class="">63.32</td>
+<td class="cell-best">80.00</td>
+<td class="">50.88</td>
+<td class="">2026-03-06</td>
+<td class="">50.88</td>
+<td class="">80.00</td>
+<td class="">638.3%</td>
+<td class="">53.63</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">RICOAUTO</td>
+<td class="">Castings</td>
+<td class="">113.30</td>
+<td class="">-13.4%</td>
+<td class="">0.6%</td>
+<td class="cell-best">49.5%</td>
+<td class="">36.0%</td>
+<td class="cell-best">49.8%</td>
+<td class="">39.09</td>
+<td class="">30.00</td>
+<td class="">49.07</td>
+<td class="">2026-03-06</td>
+<td class="">49.07</td>
+<td class="">30.00</td>
+<td class="">89.36</td>
+<td class="">49.50</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">SANDHAR</td>
+<td class="">Other</td>
+<td class="">498.10</td>
+<td class="">-9.4%</td>
+<td class="">-9.9%</td>
+<td class="">19.4%</td>
+<td class="">5.9%</td>
+<td class="">19.8%</td>
+<td class="">36.04</td>
+<td class="">30.00</td>
+<td class="">47.80</td>
+<td class="">2026-03-06</td>
+<td class="">47.80</td>
+<td class="">30.00</td>
+<td class="">72.34</td>
+<td class="">45.59</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">SANSERA</td>
+<td class="">Forgings</td>
+<td class="">2197.70</td>
+<td class="">15.7%</td>
+<td class="">42.1%</td>
+<td class="cell-best">72.4%</td>
+<td class="">58.9%</td>
+<td class="cell-best">72.8%</td>
+<td class="">46.04</td>
+<td class="cell-best">60.00</td>
+<td class="">48.59</td>
+<td class="">2026-03-06</td>
+<td class="">48.59</td>
+<td class="">60.00</td>
+<td class="">100.00</td>
+<td class="cell-best">63.44</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">SHARDAMOTR</td>
+<td class="">Transmission</td>
+<td class="">830.85</td>
+<td class="">-9.6%</td>
+<td class="">-15.3%</td>
+<td class="">-20.2%</td>
+<td class="">-33.7%</td>
+<td class="">-19.8%</td>
+<td class="">29.83</td>
+<td class="">20.00</td>
+<td class="">49.87</td>
+<td class="">2026-03-06</td>
+<td class="">49.87</td>
+<td class="">20.00</td>
+<td class="">10.64</td>
+<td class="">30.08</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">SHRIPISTON</td>
+<td class="">Engine/Parts</td>
+<td class="">2928.70</td>
+<td class="">-5.8%</td>
+<td class="">7.4%</td>
+<td class="">20.4%</td>
+<td class="">6.9%</td>
+<td class="">20.8%</td>
+<td class="">39.47</td>
+<td class="">30.00</td>
+<td class="">48.69</td>
+<td class="">2026-03-06</td>
+<td class="">48.69</td>
+<td class="">30.00</td>
+<td class="">74.47</td>
+<td class="">46.37</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">SSWL</td>
+<td class="">Wheels</td>
+<td class="">195.74</td>
+<td class="">-9.9%</td>
+<td class="">-4.8%</td>
+<td class="">-8.8%</td>
+<td class="">-22.3%</td>
+<td class="">-8.4%</td>
+<td class="">22.20</td>
+<td class="">20.00</td>
+<td class="">45.44</td>
+<td class="">2026-03-06</td>
+<td class="">45.44</td>
+<td class="">20.00</td>
+<td class="">31.91</td>
+<td class="">32.56</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">SUNDRMFAST</td>
+<td class="">Fasteners</td>
+<td class="">848.40</td>
+<td class="">-10.7%</td>
+<td class="">-13.8%</td>
+<td class="">-10.0%</td>
+<td class="">-23.5%</td>
+<td class="">-9.6%</td>
+<td class="">26.14</td>
+<td class="">20.00</td>
+<td class="">48.05</td>
+<td class="">2026-03-06</td>
+<td class="">48.05</td>
+<td class="">20.00</td>
+<td class="">27.66</td>
+<td class="">32.75</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">SUNDRMBRAK</td>
+<td class="">Brakes</td>
+<td class="">594.75</td>
+<td class="">1.2%</td>
+<td class="">-21.1%</td>
+<td class="">-23.9%</td>
+<td class="">-37.4%</td>
+<td class="">-23.6%</td>
+<td class="">40.33</td>
+<td class="">40.00</td>
+<td class="">47.66</td>
+<td class="">2026-03-06</td>
+<td class="">47.66</td>
+<td class="">40.00</td>
+<td class="">851.1%</td>
+<td class="">36.77</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">SUPRAJIT</td>
+<td class="">Cables</td>
+<td class="">425.35</td>
+<td class="">-10.2%</td>
+<td class="">-9.5%</td>
+<td class="">-3.5%</td>
+<td class="">-17.0%</td>
+<td class="">-3.1%</td>
+<td class="">45.54</td>
+<td class="">40.00</td>
+<td class="">51.48</td>
+<td class="">2026-03-06</td>
+<td class="">51.48</td>
+<td class="">40.00</td>
+<td class="">36.17</td>
+<td class="">43.83</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">TALBROAUTO</td>
+<td class="">Gaskets</td>
+<td class="">240.95</td>
+<td class="">-9.9%</td>
+<td class="">-14.5%</td>
+<td class="">-6.2%</td>
+<td class="">-19.7%</td>
+<td class="">-5.8%</td>
+<td class="">19.36</td>
+<td class="">20.00</td>
+<td class="">47.20</td>
+<td class="">2026-03-06</td>
+<td class="">47.20</td>
+<td class="">20.00</td>
+<td class="">34.04</td>
+<td class="">33.69</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">UCAL</td>
+<td class="">Fuel Systems</td>
+<td class="">100.25</td>
+<td class="">-11.3%</td>
+<td class="">-19.3%</td>
+<td class="">-29.9%</td>
+<td class="">-43.4%</td>
+<td class="">-29.5%</td>
+<td class="">19.28</td>
+<td class="">20.00</td>
+<td class="cell-best">59.60</td>
+<td class="">2026-03-06</td>
+<td class="">59.60</td>
+<td class="">20.00</td>
+<td class="">212.8%</td>
+<td class="">32.27</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">VARROC</td>
+<td class="">Lighting</td>
+<td class="">514.65</td>
+<td class="">-16.2%</td>
+<td class="">-19.3%</td>
+<td class="">-1.0%</td>
+<td class="">-14.5%</td>
+<td class="">-0.6%</td>
+<td class="">28.32</td>
+<td class="">20.00</td>
+<td class="">49.61</td>
+<td class="">2026-03-06</td>
+<td class="">49.61</td>
+<td class="">20.00</td>
+<td class="">44.68</td>
+<td class="">36.78</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">WHEELS</td>
+<td class="">Wheels</td>
+<td class="">880.25</td>
+<td class="">2.7%</td>
+<td class="">-1.4%</td>
+<td class="cell-best">20.7%</td>
+<td class="">7.2%</td>
+<td class="cell-best">21.1%</td>
+<td class="">53.80</td>
+<td class="cell-best">60.00</td>
+<td class="">46.83</td>
+<td class="">2026-03-06</td>
+<td class="">46.83</td>
+<td class="">60.00</td>
+<td class="">76.60</td>
+<td class="cell-best">58.05</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">ZFCVINDIA</td>
+<td class="">Brakes/Transmission</td>
+<td class="">14376.00</td>
+<td class="">-6.2%</td>
+<td class="">13.8%</td>
+<td class="">4.5%</td>
+<td class="">-9.0%</td>
+<td class="">4.8%</td>
+<td class="">26.40</td>
+<td class="">20.00</td>
+<td class="">50.29</td>
+<td class="">2026-03-06</td>
+<td class="">50.29</td>
+<td class="">20.00</td>
+<td class="">48.94</td>
+<td class="">37.90</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+</tbody></table></div></div><div id="panel-shortlist" class="tab-panel" role="tabpanel"><div class="table-scroll"><table id="table-shortlist" class="sortable"><thead><tr>
+<th data-col="SYMBOL">SYMBOL</th>
+<th data-col="SUBSECTOR">SUBSECTOR</th>
+<th data-col="CURRENT_PRICE">CURRENT_PRICE</th>
+<th data-col="RET_1M">RET_1M</th>
+<th data-col="RET_3M">RET_3M</th>
+<th data-col="RET_6M">RET_6M</th>
+<th data-col="RS_VS_NIFTY_AUTO_6M">RS_VS_NIFTY_AUTO_6M</th>
+<th data-col="RS_VS_NIFTY_500_6M">RS_VS_NIFTY_500_6M</th>
+<th data-col="RSI">RSI</th>
+<th data-col="TECHNICAL_SCORE">TECHNICAL_SCORE</th>
+<th data-col="FUND_SCORE">FUND_SCORE</th>
+<th data-col="AS_OF_DATE">AS_OF_DATE</th>
+<th data-col="FUND_NORM">FUND_NORM</th>
+<th data-col="TECH_NORM">TECH_NORM</th>
+<th data-col="RS_RANK">RS_RANK</th>
+<th data-col="COMPOSITE_SCORE">COMPOSITE_SCORE</th>
+<th data-col="PASS_FUND">PASS_FUND</th>
+<th data-col="PASS_RS">PASS_RS</th>
+<th data-col="PASS_SCREEN">PASS_SCREEN</th>
+</tr></thead><tbody>
+<tr>
+<td class="">BHARATFORG</td>
+<td class="">Forgings</td>
+<td class="">1923.90</td>
+<td class="">20.9%</td>
+<td class="">37.8%</td>
+<td class="cell-best">66.9%</td>
+<td class="">53.5%</td>
+<td class="cell-best">67.3%</td>
+<td class="">74.70</td>
+<td class="cell-best">70.00</td>
+<td class="cell-best">54.83</td>
+<td class="">2026-03-06</td>
+<td class="">54.83</td>
+<td class="">70.00</td>
+<td class="">97.87</td>
+<td class="cell-best">69.51</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">DIVGIITTS</td>
+<td class="">Transmission</td>
+<td class="">721.05</td>
+<td class="">15.3%</td>
+<td class="">12.1%</td>
+<td class="">11.0%</td>
+<td class="">-2.5%</td>
+<td class="">11.4%</td>
+<td class="">46.48</td>
+<td class="cell-best">80.00</td>
+<td class="">49.92</td>
+<td class="">2026-03-06</td>
+<td class="">49.92</td>
+<td class="">80.00</td>
+<td class="">63.83</td>
+<td class="cell-best">64.73</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">BHARATSE</td>
+<td class="">Seating</td>
+<td class="">176.48</td>
+<td class="">11.6%</td>
+<td class="">-1.7%</td>
+<td class="cell-best">61.9%</td>
+<td class="">48.4%</td>
+<td class="cell-best">62.3%</td>
+<td class="">55.20</td>
+<td class="">60.00</td>
+<td class="">52.61</td>
+<td class="">2026-03-06</td>
+<td class="">52.61</td>
+<td class="">60.00</td>
+<td class="">93.62</td>
+<td class="cell-best">63.77</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">SANSERA</td>
+<td class="">Forgings</td>
+<td class="">2197.70</td>
+<td class="">15.7%</td>
+<td class="">42.1%</td>
+<td class="cell-best">72.4%</td>
+<td class="">58.9%</td>
+<td class="cell-best">72.8%</td>
+<td class="">46.04</td>
+<td class="">60.00</td>
+<td class="">48.59</td>
+<td class="">2026-03-06</td>
+<td class="">48.59</td>
+<td class="">60.00</td>
+<td class="">100.00</td>
+<td class="cell-best">63.44</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">AUTOAXLES</td>
+<td class="">Axles</td>
+<td class="">1987.00</td>
+<td class="">-5.8%</td>
+<td class="">20.2%</td>
+<td class="">21.5%</td>
+<td class="">8.0%</td>
+<td class="">21.9%</td>
+<td class="">45.63</td>
+<td class="">60.00</td>
+<td class="cell-best">58.77</td>
+<td class="">2026-03-06</td>
+<td class="">58.77</td>
+<td class="">60.00</td>
+<td class="">78.72</td>
+<td class="">63.25</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">GNA</td>
+<td class="">Axles</td>
+<td class="">426.25</td>
+<td class="">2.5%</td>
+<td class="">36.3%</td>
+<td class="">40.5%</td>
+<td class="">27.0%</td>
+<td class="">40.9%</td>
+<td class="">47.02</td>
+<td class="">60.00</td>
+<td class="">54.47</td>
+<td class="">2026-03-06</td>
+<td class="">54.47</td>
+<td class="">60.00</td>
+<td class="">85.11</td>
+<td class="">62.81</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">LUMAXIND</td>
+<td class="">Lighting</td>
+<td class="">5576.50</td>
+<td class="">5.4%</td>
+<td class="">9.1%</td>
+<td class="cell-best">66.8%</td>
+<td class="">53.3%</td>
+<td class="cell-best">67.2%</td>
+<td class="">33.84</td>
+<td class="">50.00</td>
+<td class="cell-best">57.69</td>
+<td class="">2026-03-06</td>
+<td class="">57.69</td>
+<td class="">50.00</td>
+<td class="">95.74</td>
+<td class="">62.22</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">JAMNAAUTO</td>
+<td class="">Suspension</td>
+<td class="">132.57</td>
+<td class="">1.8%</td>
+<td class="">21.0%</td>
+<td class="">45.7%</td>
+<td class="">32.2%</td>
+<td class="">46.1%</td>
+<td class="">47.26</td>
+<td class="">60.00</td>
+<td class="">48.30</td>
+<td class="">2026-03-06</td>
+<td class="">48.30</td>
+<td class="">60.00</td>
+<td class="">87.23</td>
+<td class="">60.77</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">WHEELS</td>
+<td class="">Wheels</td>
+<td class="">880.25</td>
+<td class="">2.7%</td>
+<td class="">-1.4%</td>
+<td class="">20.7%</td>
+<td class="">7.2%</td>
+<td class="">21.1%</td>
+<td class="">53.80</td>
+<td class="">60.00</td>
+<td class="">46.83</td>
+<td class="">2026-03-06</td>
+<td class="">46.83</td>
+<td class="">60.00</td>
+<td class="">76.60</td>
+<td class="">58.05</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">SONACOMS</td>
+<td class="">Electrical</td>
+<td class="">514.95</td>
+<td class="">-3.4%</td>
+<td class="">5.4%</td>
+<td class="">17.0%</td>
+<td class="">3.5%</td>
+<td class="">17.4%</td>
+<td class="">43.58</td>
+<td class="">60.00</td>
+<td class="">49.66</td>
+<td class="">2026-03-06</td>
+<td class="">49.66</td>
+<td class="">60.00</td>
+<td class="">70.21</td>
+<td class="">57.91</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">TIINDIA</td>
+<td class="">Other</td>
+<td class="">2722.90</td>
+<td class="">3.2%</td>
+<td class="">-10.2%</td>
+<td class="">-9.9%</td>
+<td class="">-23.4%</td>
+<td class="">-9.5%</td>
+<td class="">67.22</td>
+<td class="cell-best">80.00</td>
+<td class="">48.73</td>
+<td class="">2026-03-06</td>
+<td class="">48.73</td>
+<td class="">80.00</td>
+<td class="">29.79</td>
+<td class="">57.45</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">MOTHERSON</td>
+<td class="">Electrical</td>
+<td class="">122.77</td>
+<td class="">0.1%</td>
+<td class="">12.7%</td>
+<td class="">36.0%</td>
+<td class="">22.5%</td>
+<td class="">36.4%</td>
+<td class="">36.94</td>
+<td class="">50.00</td>
+<td class="">51.57</td>
+<td class="">2026-03-06</td>
+<td class="">51.57</td>
+<td class="">50.00</td>
+<td class="">82.98</td>
+<td class="">57.22</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">LUMAXTECH</td>
+<td class="">Lighting</td>
+<td class="">1531.90</td>
+<td class="">0.3%</td>
+<td class="">12.1%</td>
+<td class="">49.7%</td>
+<td class="">36.2%</td>
+<td class="">50.0%</td>
+<td class="">42.36</td>
+<td class="">40.00</td>
+<td class="cell-best">54.51</td>
+<td class="">2026-03-06</td>
+<td class="">54.51</td>
+<td class="">40.00</td>
+<td class="">91.49</td>
+<td class="">56.10</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">RANEENGINE</td>
+<td class="">Engine/Parts</td>
+<td class="">317.75</td>
+<td class="">17.9%</td>
+<td class="">-15.6%</td>
+<td class="">-24.0%</td>
+<td class="">-37.5%</td>
+<td class="">-23.6%</td>
+<td class="">63.32</td>
+<td class="cell-best">80.00</td>
+<td class="">50.88</td>
+<td class="">2026-03-06</td>
+<td class="">50.88</td>
+<td class="">80.00</td>
+<td class="">638.3%</td>
+<td class="">53.63</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">RICOAUTO</td>
+<td class="">Castings</td>
+<td class="">113.30</td>
+<td class="">-13.4%</td>
+<td class="">0.6%</td>
+<td class="">49.5%</td>
+<td class="">36.0%</td>
+<td class="">49.8%</td>
+<td class="">39.09</td>
+<td class="">30.00</td>
+<td class="">49.07</td>
+<td class="">2026-03-06</td>
+<td class="">49.07</td>
+<td class="">30.00</td>
+<td class="">89.36</td>
+<td class="">49.50</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+</tbody></table></div></div><div id="panel-backtest" class="tab-panel" role="tabpanel"><div class="table-scroll"><table id="table-backtest" class="sortable"><thead><tr>
+<th data-col="REBAL_DATE">REBAL_DATE</th>
+<th data-col="N_STOCKS">N_STOCKS</th>
+<th data-col="PORTFOLIO_RET_1Y">PORTFOLIO_RET_1Y</th>
+<th data-col="BENCH_RET_1Y">BENCH_RET_1Y</th>
+<th data-col="EXCESS_RET">EXCESS_RET</th>
+</tr></thead><tbody>
+<tr>
+<td class="">2023-01-02</td>
+<td class="">0</td>
+<td class="">nan%</td>
+<td class="">nan%</td>
+<td class="">nan%</td>
+</tr>
+<tr>
+<td class="">2023-02-01</td>
+<td class="">0</td>
+<td class="">nan%</td>
+<td class="">nan%</td>
+<td class="">nan%</td>
+</tr>
+<tr>
+<td class="">2023-03-02</td>
+<td class="">0</td>
+<td class="">nan%</td>
+<td class="">nan%</td>
+<td class="">nan%</td>
+</tr>
+<tr>
+<td class="">2023-04-05</td>
+<td class="">0</td>
+<td class="">nan%</td>
+<td class="">nan%</td>
+<td class="">nan%</td>
+</tr>
+<tr>
+<td class="">2023-05-09</td>
+<td class="">0</td>
+<td class="">nan%</td>
+<td class="">nan%</td>
+<td class="">nan%</td>
+</tr>
+<tr>
+<td class="">2023-06-07</td>
+<td class="">0</td>
+<td class="">nan%</td>
+<td class="">nan%</td>
+<td class="">nan%</td>
+</tr>
+<tr>
+<td class="">2023-07-07</td>
+<td class="">38</td>
+<td class="cell-best">45.95%</td>
+<td class="">39.52%</td>
+<td class="cell-best">6.43%</td>
+</tr>
+<tr>
+<td class="">2023-08-07</td>
+<td class="">39</td>
+<td class="cell-best">36.06%</td>
+<td class="">33.96%</td>
+<td class="">2.1%</td>
+</tr>
+<tr>
+<td class="">2023-09-06</td>
+<td class="">38</td>
+<td class="cell-best">30.82%</td>
+<td class="">37.51%</td>
+<td class="">-6.69%</td>
+</tr>
+<tr>
+<td class="">2023-10-09</td>
+<td class="">39</td>
+<td class="cell-best">30.85%</td>
+<td class="">37.12%</td>
+<td class="">-6.28%</td>
+</tr>
+<tr>
+<td class="">2023-11-08</td>
+<td class="">34</td>
+<td class="">26.28%</td>
+<td class="">29.69%</td>
+<td class="">-3.41%</td>
+</tr>
+<tr>
+<td class="">2023-12-08</td>
+<td class="">32</td>
+<td class="">22.88%</td>
+<td class="">24.45%</td>
+<td class="">-1.57%</td>
+</tr>
+<tr>
+<td class="">2024-01-09</td>
+<td class="">31</td>
+<td class="">6.0%</td>
+<td class="">10.06%</td>
+<td class="">-4.06%</td>
+</tr>
+<tr>
+<td class="">2024-02-08</td>
+<td class="">31</td>
+<td class="">-5.02%</td>
+<td class="">4.95%</td>
+<td class="">-9.98%</td>
+</tr>
+<tr>
+<td class="">2024-03-07</td>
+<td class="">29</td>
+<td class="">-5.11%</td>
+<td class="">-0.56%</td>
+<td class="">-4.55%</td>
+</tr>
+<tr>
+<td class="">2024-04-10</td>
+<td class="">30</td>
+<td class="">-8.34%</td>
+<td class="">4.51%</td>
+<td class="">-12.85%</td>
+</tr>
+<tr>
+<td class="">2024-05-14</td>
+<td class="">32</td>
+<td class="">-1.25%</td>
+<td class="">8.89%</td>
+<td class="">-10.14%</td>
+</tr>
+<tr>
+<td class="">2024-06-12</td>
+<td class="">35</td>
+<td class="">-5.68%</td>
+<td class="">3.85%</td>
+<td class="">-9.53%</td>
+</tr>
+<tr>
+<td class="">2024-07-12</td>
+<td class="">36</td>
+<td class="">-4.69%</td>
+<td class="">0.9%</td>
+<td class="">-5.6%</td>
+</tr>
+<tr>
+<td class="">2024-08-13</td>
+<td class="">29</td>
+<td class="">-0.5%</td>
+<td class="">1.14%</td>
+<td class="">-1.64%</td>
+</tr>
+<tr>
+<td class="">2024-09-12</td>
+<td class="">38</td>
+<td class="">-1.88%</td>
+<td class="">-2.02%</td>
+<td class="">0.14%</td>
+</tr>
+<tr>
+<td class="">2024-10-14</td>
+<td class="">35</td>
+<td class="">2.25%</td>
+<td class="">0.1%</td>
+<td class="cell-best">2.15%</td>
+</tr>
+<tr>
+<td class="">2024-11-12</td>
+<td class="">30</td>
+<td class="">13.64%</td>
+<td class="">8.56%</td>
+<td class="cell-best">5.08%</td>
+</tr>
+<tr>
+<td class="">2024-12-13</td>
+<td class="">21</td>
+<td class="">13.35%</td>
+<td class="">2.84%</td>
+<td class="cell-best">10.5%</td>
+</tr>
+<tr>
+<td class="">2025-01-14</td>
+<td class="">11</td>
+<td class="cell-best">27.25%</td>
+<td class="">9.89%</td>
+<td class="cell-best">17.35%</td>
+</tr>
+</tbody></table></div></div><div id="panel-narratives" class="tab-panel" role="tabpanel"><div class="narrative-card">
+<h3 class="narrative-title">BHARATFORG – Bharat Forge</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+ <span class="narrative-rec-rationale">— Justification: The stock shows strong momentum with impressive returns over the past 6 months, but the fundamental score is below the threshold of 70, indicating underlying concerns that may not be fully reflected in current price performance.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>55.2</td>
+<td>56.8</td>
+<td>54.2</td>
+<td>53.0</td>
+</tr></tbody></table>
+<p class="narrative-para">Key Metrics:
+- Price: Rs 1923.90
+- Returns: 1M 20.9%, 3M 37.8%, 6M 66.9%
+- Relative Strength vs Nifty 500 (6M): 67.3%
+- RSI: 74.7
+- Technical Score: 70.0</p>
+<p class="narrative-para">Key Financial Ratios / Fundamentals:
+- Fundamental Score: 54.8
+- Earnings Quality: 55.2
+- Sales Growth: 53.0
+- Financial Strength: 56.8
+- Institutional Backing: 54.2</p>
+<p class="narrative-para">Recommendation: Hold</p>
+<p class="narrative-para">Justification: The stock shows strong momentum with impressive returns over the past 6 months, but the fundamental score is below the threshold of 70, indicating underlying concerns that may not be fully reflected in current price performance.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">UNOMINDA – UNO Minda</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+ <span class="narrative-rec-rationale">— While the stock shows modest growth in earnings and sales with decent profitability margins, the technical indicators are weak, and the fundamental score indicates room for improvement.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>53.0</td>
+<td>57.6</td>
+<td>55.0</td>
+<td>33.5</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 18850 Cr (YoY +12.4%); NetProfit: 1222 Cr (YoY +19.7%); EPS: 19.76</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 4528, 4489, 4814, 5018 Cr; Net Profit last 4Q: 289, 309, 323, 300 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 2852 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 19%</p>
+<p class="narrative-para">KEY METRICS: The stock is trading at Rs 1121.30 with modest returns over the past year, including a -6.9% return in one month and a -13.2% return in three months. Relative strength against the Nifty 500 stands at 5.2%, indicating decent performance relative to the broader market. The RSI of 25.1 suggests that the stock is neither overbought nor oversold, but rather in neutral territory. With a technical score of 20 out of 100 and a fundamental score of 49.4 also below 50, both metrics indicate lukewarm performance from a valuation standpoint.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS: The financial health is assessed with earnings quality at 53 points, which reflects relatively strong profitability. Sales growth stands at 33.5 points, indicating modest expansion in revenue, but the sales YoY increased by 12.4%, and net profit saw a notable jump of 19.7%. The balance sheet features substantial debt of Rs 2852 crore, which should be weighed carefully. Financial strength is scored at 57.6, reflecting a moderate risk profile. Institutional backing scores 55 points, suggesting some degree of confidence from major investors.</p>
+<p class="narrative-para">RECOMMENDATION: Hold. While the stock shows modest growth in earnings and sales with decent profitability margins, the technical indicators are weak, and the fundamental score indicates room for improvement. The balance sheet&#x27;s high debt level also warrants caution. Given these factors, a hold strategy is recommended to monitor any positive developments without immediate action.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">BOSCHLTD – Bosch</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>52.0</td>
+<td>57.5</td>
+<td>63.0</td>
+<td>47.0</td>
+</tr></tbody></table>
+<p class="narrative-para">KEY METRICS:
+- Price: Rs 33335.00
+- Returns: 1M -9.2%, 3M -10.0%, 6M -13.7%
+- Relative Strength vs Nifty 500 (6M): -13.3%
+- RSI: 32.4
+- Technical Score: 30.0
+- Fundamental Score: <strong>53.5</strong></p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS:
+- Earnings Quality: 52.0
+- Sales Growth: 47.0
+- Financial Strength: 57.5
+- Institutional Backing: 63.0</p>
+<p class="narrative-para">RECOMMENDATION: Hold</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">EXIDEIND – Exide Industries</h3>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>52.0</td>
+<td>55.2</td>
+<td>55.0</td>
+<td>44.2</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 17596 Cr (YoY +2.1%); NetProfit: 831 Cr (YoY +3.9%); EPS: 9.71</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 4335, 4695, 4365, 4201 Cr; Net Profit last 4Q: 188, 275, 174, 195 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 1645 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 10%</p>
+<p class="narrative-para"><strong>Key Metrics:</strong> The stock is trading at Rs 315.95 with negative returns of -7.5% in the last month and -17.2% over three months, slightly better than its six-month return of -16.1%. It underperformed the Nifty 500 by 15.7% over the same period. The Relative Strength Index (RSI) stands at 32.7, indicating a weak momentum. The technical score is low at 30 out of 100. The fundamental score is 51.1 out of 100, reflecting moderate financial quality.</p>
+<p class="narrative-para"><strong>Key Financial Ratios / Fundamentals:</strong> 
+- Earnings Quality: 52.0
+- Sales Growth: 44.2
+- Financial Strength: 55.2
+- Institutional Backing: 55.0</p>
+<p class="narrative-para">The company shows solid earnings quality but with average sales growth and slightly stronger financial strength and institutional backing scores. The P&amp;L indicates a healthy trend in profit margins, with YoY increases in both sales (2.1%) and profits (3.9%). The balance sheet reflects moderate debt levels at Rs 1645 Cr. Financial ratios such as ROCE of 10% suggest efficient use of capital.</p>
+<p class="narrative-para"><strong>Recommendation:</strong> Reduce</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">MOTHERSON – Samvardhana Motherson</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Accumulate
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>50.2</td>
+<td>52.4</td>
+<td>55.0</td>
+<td>51.0</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 121111 Cr (YoY +6.6%); NetProfit: 3639 Cr (YoY -12.2%); EPS: 3.23</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 29317, 30212, 30173, 31409 Cr; Net Profit last 4Q: 1115, 606, 846, 1072 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 19777 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 5%</p>
+<p class="narrative-para">KEY METRICS:
+The stock of Samvardhana Motherson (MOTHERSON) has shown strong returns over the past 1 month, 3 months, and 6 months periods, with 1-month return at 0.1%, 3-month return at 12.7%, and 6-month return at 36%. The relative strength of MOTHERSON against the Nifty 500 in the 6-month period is 36.4%. The technical score stands at 50, indicating a balanced performance. The fundamental score is 51.6 out of 100, which suggests moderate financial quality.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS:
+The earnings quality score is 50.2, reflecting mixed profitability. Sales growth has an average score of 51.0, suggesting steady but not explosive sales performance. Financial strength is rated at 52.4, indicating a solid balance sheet with manageable debt levels. Institutional backing scores 55.0, showing moderate confidence from institutional investors. The P&amp;L shows significant revenue growth YoY by 6.6%, while net profit experienced a dip of 12.2%. Quarterly sales have been consistent, ranging between 29.3 Cr to 31.4 Cr, and net profits varied between 1115 Cr to 1072 Cr. With debt standing at Rs 19.77 Cr, the financial strength score is moderate. The ROCE stands at 5%, indicating efficient use of capital in operations.</p>
+<p class="narrative-para">RECOMMENDATION: Accumulate</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">TIINDIA – Tube Investments</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>48.5</td>
+<td>54.6</td>
+<td>55.0</td>
+<td>40.7</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 21783 Cr (YoY +11.9%); NetProfit: 1042 Cr (YoY -1.1%); EPS: 30.9</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 5150, 5309, 5523, 5801 Cr; Net Profit last 4Q: 158, 303, 302, 279 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 705 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 32%</p>
+<p class="narrative-para">KEY METRICS:
+The stock of Tube Investments (TIINDIA) is currently trading at Rs 2722.90 with mixed returns over the past year and six months, including a negative return of -9.9% over six months. The relative strength against the Nifty 500 in this period was -9.5%, indicating underperformance. Its RSI stands at 67.2, suggesting neither overbought nor oversold conditions but leaning towards neutral territory. The technical score is robust at 80/100, reflecting strong overall market sentiment and momentum.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS:
+The fundamental score for Tube Investments is a modest 48.7 out of 100, indicating average financial quality with potential room for improvement across several key areas such as earnings quality (score: 48.5), sales growth (40.7), financial strength (54.6), and institutional backing (55.0). The company has reported a slight year-over-year increase in sales to Rs 21,783 crore but saw a minor dip in net profit at Rs 1042 crore. Quarterly performance shows steady sales progression from Rs 5150 Cr to Rs 5801 Cr, with mixed fluctuations in profits. On the balance sheet side, the debt stands at Rs 705 crore. Financially, the ROCE is robust at 32%, reflecting strong profitability relative to its capital employed.</p>
+<p class="narrative-para">RECOMMENDATION:
+Hold</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">SONACOMS – Sona BLW Precision Forgings</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+ <span class="narrative-rec-rationale">— Justification: The stock exhibits strong technical momentum and reasonable relative strength but lags in financial fundamentals, particularly earnings quality and sales growth.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>52.0</td>
+<td>57.0</td>
+<td>55.0</td>
+<td>36.9</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 4057 Cr (YoY +14.4%); NetProfit: 606 Cr (YoY +1%); EPS: 9.86</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 865, 854, 1138, 1200 Cr; Net Profit last 4Q: 164, 122, 170, 150 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 211 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 18%</p>
+<p class="narrative-para">KEY METRICS:
+The stock of Sona BLW Precision Forgings (SONACOMS) is currently trading at Rs 514.95, with a strong 6-month return of 17.0%. The relative strength against the Nifty 500 over the same period stands at 17.4%, indicating solid performance. With an RSI of 43.6 and a technical score of 60 out of 100, the stock shows moderate momentum without significant bullish or bearish sentiment.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS:
+The fundamental score for SONACOMS is 49.7 out of 100, reflecting mixed financial health. The earnings quality score stands at 52.0, suggesting decent profit margins but room for improvement in revenue stability. Sales growth is modest with a score of 36.9, indicating limited expansion potential despite YoY sales increasing by 14.4%. Financial strength is rated at 57.0, with manageable debt levels and solid profitability ratios like ROCE at 18%. Institutional backing scores 55.0, hinting at moderate support from major investors.</p>
+<p class="narrative-para">RECOMMENDATION:
+Recommendation: Hold
+Justification: The stock exhibits strong technical momentum and reasonable relative strength but lags in financial fundamentals, particularly earnings quality and sales growth. A cautious hold is advised pending further qualitative analysis to gauge long-term prospects.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">APOLLOTYRE – Apollo Tyres</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+ <span class="narrative-rec-rationale">— Justification: While the technical indicators and fundamental scores suggest cautious optimism, the weak returns over recent periods and below-average financial quality metrics warrant a hold strategy until further improvements are made.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>54.6</td>
+<td>53.7</td>
+<td>54.2</td>
+<td>51.0</td>
+</tr></tbody></table>
+<p class="narrative-para">KEY METRICS:
+The stock is trading at Rs 439.75 with modest returns over the past 1 month (-14.2%), 3 months (-15.9%) and 6 months (-1.5%). Relative to Nifty 500, it has underperformed by -1.2% over the same period. The RSI of 23.9 indicates oversold conditions, while a technical score of 20 suggests limited momentum.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS:
+The fundamental score stands at 53.4, indicating moderate financial quality. Earnings quality scores are strong at 54.6, reflecting solid profitability. Sales growth is modest with a score of 51.0. Financial strength and institutional backing both score around 53.7, suggesting decent balance sheet health and investor confidence.</p>
+<p class="narrative-para">RECOMMENDATION: Hold</p>
+<p class="narrative-para">Justification: While the technical indicators and fundamental scores suggest cautious optimism, the weak returns over recent periods and below-average financial quality metrics warrant a hold strategy until further improvements are made.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">MRF – MRF</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>46.7</td>
+<td>57.3</td>
+<td>55.0</td>
+<td>44.2</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 30180 Cr (YoY +7.2%); NetProfit: 2230 Cr (YoY +19.3%); EPS: 5258.19</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 7075, 7676, 7379, 8050 Cr; Net Profit last 4Q: 512, 500, 526, 692 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 3631 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 14%</p>
+<p class="narrative-para">KEY METRICS:
+Price: Rs 138780.00; 1M return: 0.8%; 3M return: -10.6%; 6M return: -1.2%; Relative strength vs Nifty 500 (6M): -0.9%; RSI: 32.5; Technical score: 30.0; Fundamental score: 49.4.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS:
+Earnings quality: 46.7; Sales growth: 44.2; Financial strength: 57.3; Institutional backing: 55.0; P&amp;L: Sales YoY +7.2%; NetProfit YoY +19.3%; EPS: 5258.19; Quarterly sales last 4Q grew from 7075 Cr to 8050 Cr; Balance sheet shows debt at Rs 3631 Cr.</p>
+<p class="narrative-para">RECOMMENDATION:
+Hold</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">AMARAJABAT – Amara Raja Energy &amp; Mobility</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Avoid
+ <span class="narrative-rec-rationale">— The low fundamental score, despite negative technical indicators, suggests significant underlying financial issues, outweighing any positive momentum from the RSI.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>10.0</td>
+<td>10.0</td>
+<td>10.0</td>
+<td>10.0</td>
+</tr></tbody></table>
+<p class="narrative-para">KEY METRICS:
+The stock is currently trading at Rs 604.15, with negative returns of -5.1% over the past month and -3.8% over the past three months, but a positive return of -0.4% over the past six months. Its relative strength against the Nifty 500 (6M) index is flat (-0.0%). The RSI stands at 27.6, indicating oversold conditions, while the technical score is low at 20.0.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS:
+The fundamental score is a mere 10.0 out of 100, reflecting weak financial health and growth prospects across earnings quality (10), sales growth (10), financial strength (10), and institutional backing (10). There&#x27;s no provided P&amp;L or quarterly progression data, balance sheet details, or key ratios like ROCE, ROE, EPS, PE, PB, OPM, NPM.</p>
+<p class="narrative-para">RECOMMENDATION:
+Avoid. The low fundamental score, despite negative technical indicators, suggests significant underlying financial issues, outweighing any positive momentum from the RSI.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">ASKAUTOLTD – Ask Automotive</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+ <span class="narrative-rec-rationale">— The strong fundamental score and earnings quality justify holding the stock despite negative short-term returns, but caution is advised due to weaker financial strength metrics.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>74.6</td>
+<td>59.8</td>
+<td>60.0</td>
+<td>82.0</td>
+</tr></tbody></table>
+<p class="narrative-para">KEY METRICS: The stock is trading at Rs 391.85 with negative returns of -14.7% over the past month, -18.3% over three months, and -16.9% over six months. It has a relative strength of -16.5% versus the Nifty 500 in the six-month period. The RSI is at 24.1, indicating it may be trading near the lower end of its recent range. Technical score stands at 20 out of 100, suggesting limited short-term momentum support.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS: The fundamental score stands out at 71.3, reflecting solid financial health and growth prospects despite negative returns. Earnings quality scores 74.6, indicating strong profitability and reliability of earnings. Sales growth is robust with a score of 82.0, showing significant expansion in revenue streams. Financial strength, however, lags behind with a score of 59.8, suggesting potential concerns over debt levels or liquidity. Institutional backing receives a solid score of 60.0, reflecting confidence from major investors.</p>
+<p class="narrative-para">RECOMMENDATION: Hold. The strong fundamental score and earnings quality justify holding the stock despite negative short-term returns, but caution is advised due to weaker financial strength metrics.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">AUTOAXLES – Automotive Axles</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+ <span class="narrative-rec-rationale">— The stock exhibits strong sales growth but a balanced financial profile with moderate institutional support suggests cautious holding pending further analysis or strategic moves.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>53.9</td>
+<td>57.5</td>
+<td>63.0</td>
+<td>65.0</td>
+</tr></tbody></table>
+<p class="narrative-para">KEY METRICS: The stock of Automotive Axles (AUTOAXLES) is currently trading at Rs 1987, with a strong performance over the past six months yielding a return of 21.5%. Its relative strength against the Nifty 500 over this period stands at 21.9%, indicating robust market positioning. Technical indicators show an RSI of 45.6, suggesting neither extreme bullish nor bearish conditions. The technical score is 60, reflecting decent momentum without overheating.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS: AUTOAXLES has a fundamental score of 58.8, indicating mixed financial health with room for improvement. Earnings quality scores 53.9, hinting at potential concerns in profitability sustainability. Sales growth is robust at 65%, driven by strong market demand. Financial strength, however, is rated lower at 57.5, suggesting caution regarding liquidity and debt levels. Institutional backing stands at 63, reflecting moderate influence from major investors.</p>
+<p class="narrative-para">RECOMMENDATION: Hold. The stock exhibits strong sales growth but a balanced financial profile with moderate institutional support suggests cautious holding pending further analysis or strategic moves.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">BANCOINDIA – Banco Products (India)</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>53.7</td>
+<td>59.3</td>
+<td>57.0</td>
+<td>51.0</td>
+</tr></tbody></table>
+<p class="narrative-para">KEY METRICS:
+The stock has shown mixed returns over the past month, quarter, and six months, with a positive six-month return of 7.8%. Relative to the Nifty 500, it performed 8.1% better than its benchmark in the last six months. The RSI of 20.6 indicates oversold conditions, while the technical score is low at 20.0. The fundamental score stands out at 54.6, suggesting decent financial health.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS:
+The earnings quality (53.7), sales growth (51.0), and institutional backing (57.0) scores are relatively strong, reflecting solid underlying business fundamentals. Financial strength is also rated well at 59.3. While the P&amp;L figures and specific ratios like ROCE and PE are not provided, the composite of these sub-scores suggests a moderate level of financial health with room for growth.</p>
+<p class="narrative-para">RECOMMENDATION: Hold</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">BHARATGEAR – Bharat Gears</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+ <span class="narrative-rec-rationale">— The fundamental score of 51.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>52.0</td>
+<td>56.4</td>
+<td>54.0</td>
+<td>47.0</td>
+</tr></tbody></table>
+<p class="narrative-para">KEY METRICS:
+The stock has shown strong returns over the past month, quarter, and half-year period (1M -12.7%, 3M 12.8%, 6M 14.0%). Its relative strength against the Nifty 500 is at 14.4%. The RSI stands at 36.4, indicating a neutral position. The technical score is 30 out of 100.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS:
+The fundamental score is 51.9, with earnings quality (52), sales growth (47), financial strength (56.4), and institutional backing (54) all contributing to this score. Financially, the company shows moderate indicators with a balanced approach to debt and equity, though specific P&amp;L figures and ratios are not provided.</p>
+<p class="narrative-para">RECOMMENDATION: Hold
+The fundamental score of 51.9 suggests average financial health with room for improvement, while the technical score and relative strength indicate mixed signals. Given the moderate fundamental performance and neutral RSI, a cautious hold is recommended until further analysis or positive catalysts emerge.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">BHARATSE – Bharat Seats</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+ <span class="narrative-rec-rationale">— Justification: The moderate fundamental score and mixed technical indicators suggest a cautious approach; the stock holds steady value but may not be ideal for aggressive buying or selling in the short term.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>50.2</td>
+<td>56.1</td>
+<td>57.0</td>
+<td>51.0</td>
+</tr></tbody></table>
+<p class="narrative-para">KEY METRICS:
+The stock of Bharat Seats (BHARATSE) has shown strong short-term returns, with a 6-month return of 61.9%. However, the 3-month return was negative at -1.7%, indicating some volatility in the recent period. The relative strength against the Nifty 500 over the past 6 months is at 62.3%, suggesting it has performed slightly better than the broader market index.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS:
+The fundamental score of Bharat Seats stands at 52.6, reflecting average financial health and growth prospects in the seating sub-sector. The earnings quality score is 50.2, indicating moderate profitability sustainability. Sales growth has a score of 51.0, suggesting steady progress but room for improvement. Financial strength is scored at 56.1, pointing to manageable debt levels but potential areas for enhancement. Institutional backing, crucial for long-term stability, is rated at 57.0.</p>
+<p class="narrative-para">RECOMMENDATION: Hold</p>
+<p class="narrative-para">Justification: The moderate fundamental score and mixed technical indicators suggest a cautious approach; the stock holds steady value but may not be ideal for aggressive buying or selling in the short term.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">CRAFTSMAN – Craftsman Automation</h3>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>50.2</td>
+<td>57.0</td>
+<td>66.0</td>
+<td>53.0</td>
+</tr></tbody></table>
+<p class="narrative-para"><strong>Key Metrics:</strong> Craftsman Automation trades at Rs 7458, boasting a robust 3-month return of 11.2% and an impressive 6-month return of 8.4%. Its relative strength against the Nifty 500 over six months stands at 8.8%, indicating strong market performance. The stock&#x27;s RSI of 41.2 suggests it is neither significantly oversold nor overbought, hinting at a balanced momentum. With a technical score of 40 out of 100, the stock aligns well with its moderate volatility and positive short-term trends.</p>
+<p class="narrative-para"><strong>Key Financial Ratios / Fundamentals:</strong> The fundamental score stands at an encouraging 54.6, reflecting solid underlying value. Earnings quality scores 50.2, signaling stable profit margins, while sales growth leads at 53.0, demonstrating strong market traction. Financial strength is rated at 57.0, indicating a healthy balance sheet with manageable debt levels. Institutional backing scores 66.0, highlighting confidence from major players in the sector.</p>
+<p class="narrative-para"><strong>Recommendation:</strong> Accumulate</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">DIVGIITTS – Divgi Torqtransfer Systems</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>50.7</td>
+<td>54.2</td>
+<td>55.0</td>
+<td>42.1</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 303 Cr (YoY +38.4%); NetProfit: 37 Cr (YoY +54.2%); EPS: 12.04</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 58, 72, 83, 91 Cr; Net Profit last 4Q: 5, 9, 11, 12 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 1 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 6%</p>
+<p class="narrative-para">KEY METRICS:
+The stock is currently priced at Rs 721.05, with strong returns over the past month (15.3%), three months (12.1%), and six months (11.0%). It has a relative strength of 11.4% versus the Nifty 500 in the last six months. The RSI stands at 46.5, indicating a neutral position, while the technical score is strong at 80 out of 100.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS:
+The fundamental score is modestly scored at 49.9/100 across several key areas: Earnings quality (50.7), Sales growth (42.1), Financial strength (54.2), and Institutional backing (55.0). The P&amp;L shows robust sales growing from 58 Cr to 91 Cr over the last four quarters, a YoY increase of 38.4%. Net profit also rose significantly by 54.2% YoY. The balance sheet reflects low debt at Rs 1 Cr and decent ratios including ROCE of 6%.</p>
+<p class="narrative-para">RECOMMENDATION:
+Hold</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">ENDURANCE – Endurance Technologies</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Accumulate
+ <span class="narrative-rec-rationale">— Justification: Despite mixed technical indicators and a modest returns profile in recent periods, the strong fundamental score coupled with positive earnings quality and sales growth suggests that accumulating this stock could be advantageous as it positions for future upside driven by its robust financial metrics.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>49.6</td>
+<td>56.6</td>
+<td>55.0</td>
+<td>47.5</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 13473 Cr (YoY +16.5%); NetProfit: 920 Cr (YoY +10%); EPS: 65.44</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 2963, 3319, 3583, 3608 Cr; Net Profit last 4Q: 245, 226, 227, 222 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 1229 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 22%</p>
+<p class="narrative-para">KEY METRICS:
+The stock of Endurance Technologies (ENDURANCE) is currently trading at Rs 2451.80 with modest returns over the past year, including a -6.2% return in the last three months and a -2.3% return over six months. The relative strength against the Nifty 500 index shows a slight decline of -1.9%. With an RSI of 47.4 indicating neither overbought nor oversold conditions, and a technical score of 40 out of 100, there&#x27;s moderate support from technical indicators.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS:
+The fundamental score stands at 51.3, reflecting solid financial health with sub-scores of earnings quality (49.6), sales growth (47.5), financial strength (56.6), and institutional backing (55.0). The company has demonstrated strong sales performance, with a YoY increase in revenue to Rs 13,473 crore from the previous year. Net profit also grew modestly to Rs 920 crore YoY. On the balance sheet side, debt stands at Rs 1,229 crore, and the ROCE is robust at 22%. The EPS of 65.44 indicates solid earnings quality.</p>
+<p class="narrative-para">RECOMMENDATION:
+Recommendation: Accumulate.
+Justification: Despite mixed technical indicators and a modest returns profile in recent periods, the strong fundamental score coupled with positive earnings quality and sales growth suggests that accumulating this stock could be advantageous as it positions for future upside driven by its robust financial metrics.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">FIEMIND – Fiem Industries</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+ <span class="narrative-rec-rationale">— While the stock has strong earnings quality and institutional backing, the modest technical score and lower-than-desired fundamental score suggest a cautious approach until further momentum builds.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>51.3</td>
+<td>56.3</td>
+<td>55.0</td>
+<td>36.1</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 2704 Cr (YoY +11.6%); NetProfit: 243 Cr (YoY +18.5%); EPS: 92.48</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 639, 659, 715, 690 Cr; Net Profit last 4Q: 59, 58, 64, 63 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 62 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 28%</p>
+<p class="narrative-para">KEY METRICS: The stock has shown a strong 6-month return of 15.8%, outperforming the Nifty 500 by 16.2%. With an RSI of 27.0, it suggests potential for upward momentum. However, the technical score stands at 20.0, indicating modest buying interest.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS: The fundamental score is 49.1, reflecting decent overall financial quality. Earnings quality (51.3) and institutional backing (55.0) are strong, while sales growth (36.1) and financial strength (56.3) show moderate performance. Sales have grown YoY by 11.6%, with net profit increasing by 18.5%. The balance sheet shows manageable debt at Rs 62 Cr.</p>
+<p class="narrative-para">RECOMMENDATION: Hold. While the stock has strong earnings quality and institutional backing, the modest technical score and lower-than-desired fundamental score suggest a cautious approach until further momentum builds.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">GABRIEL – Gabriel India</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+ <span class="narrative-rec-rationale">— Justification: The stock has shown negative returns over the past month and six months, with weak relative strength to Nifty 500.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>49.6</td>
+<td>55.7</td>
+<td>55.0</td>
+<td>36.9</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 4530 Cr (YoY +11.5%); NetProfit: 250 Cr (YoY +2%); EPS: 17.41</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 1073, 1098, 1180, 1179 Cr; Net Profit last 4Q: 64, 62, 69, 55 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 104 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 26%</p>
+<p class="narrative-para">KEY METRICS:
+- Price: Rs 916.25
+- Returns: -5.4% (1M), -6.7% (3M), -14.0% (6M)
+- Relative strength vs Nifty 500 (6M): -13.6%
+- RSI: 35.8
+- Technical score: 30.0
+<strong>Fundamental score:</strong> 48.4</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS:
+- Earnings quality: 49.6
+- Sales growth: 36.9
+- Financial strength: 55.7
+- Institutional backing: 55.0
+- P&amp;L: Sales YoY +11.5%, Net Profit YoY +2%
+- Quarterly progression: Sales increased from Rs 1073 Cr to Rs 1180 Cr, Net Profit fluctuated between Rs 54-69 Cr
+- Balance sheet: Debt at Rs 104 Cr
+- Ratios: ROCE of 26%</p>
+<p class="narrative-para">RECOMMENDATION:
+Hold</p>
+<p class="narrative-para">Justification: The stock has shown negative returns over the past month and six months, with weak relative strength to Nifty 500. However, the fundamental score of 48.4 indicates decent financial health, supported by positive earnings quality and sales growth. The balance sheet is strong with manageable debt levels. The technical score of 30 suggests caution on the upside potential. Given the mixed signals from both fundamentals and momentum, a Hold strategy is recommended to monitor for potential upside recovery while waiting for stronger market validation.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">GNA – GNA Axles</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+ <span class="narrative-rec-rationale">— - The balance between strong technical momentum and moderate fundamental support suggests holding could be prudent until further data points improve or stabilize.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>58.6</td>
+<td>58.5</td>
+<td>55.0</td>
+<td>44.4</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 1445 Cr (YoY -6.2%); NetProfit: 112 Cr (YoY +4.7%); EPS: 26</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 378, 344, 348, 375 Cr; Net Profit last 4Q: 25, 23, 31, 32 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 203 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 14%</p>
+<p class="narrative-para">KEY METRICS: The stock of GNA Axles (GNA) is currently trading at Rs 426.25, with impressive returns over the past year, including 2.5%, 36.3%, and 40.5% in one month, three months, and six months respectively. Relative strength against the Nifty 500 benchmark stands at a solid 40.9%. The technical score stands at 60, indicating moderate momentum.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS: Fundamental analysis reveals an average fundamental score of 54.5 out of 100 across various financial health and quality indicators. Specifically, earnings quality is rated at 58.6, sales growth shows a healthy 44.4%, while the company&#x27;s financial strength scores 58.5, suggesting solid backing by institutions with a 55.0 rating.</p>
+<p class="narrative-para">RECOMMENDATION: <strong>Hold</strong> - The balance between strong technical momentum and moderate fundamental support suggests holding could be prudent until further data points improve or stabilize.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">HARSHA – Harsha Engineers International</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+ <span class="narrative-rec-rationale">— Justification: Despite the strong fundamental score of 49.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>51.3</td>
+<td>55.5</td>
+<td>55.0</td>
+<td>39.3</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 1526 Cr (YoY +8.4%); NetProfit: 106 Cr (YoY +19.1%); EPS: 11.6</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 373, 365, 378, 409 Cr; Net Profit last 4Q: -2, 38, 36, 34 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 317 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 13%</p>
+<p class="narrative-para">KEY METRICS:
+The stock is trading at Rs 362.05 with negative returns of -8.9%, -8.2%, and -11.6% over the past month, three months, and six months respectively against a relative strength vs Nifty 500 of -11.2%. The RSI stands at 34.8 indicating potential oversold conditions. The technical score is 30 out of 100, while the fundamental score is notably higher at 49.7.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS:
+The earnings quality sub-score is 51.3, suggesting solid profitability with a moderate RSI of 34.8. Sales growth has scored 39.3, indicating steady revenue expansion despite recent losses in the last four quarters. Financial strength stands at 55.5, reflecting manageable debt levels and healthy equity on the balance sheet with significant sales (1526 Cr YoY +8.4%) and profit (106 Cr YoY +19.1%). The EPS is 11.6, reinforcing profitability per share.</p>
+<p class="narrative-para">RECOMMENDATION: Hold</p>
+<p class="narrative-para">Justification: Despite the strong fundamental score of 49.7 indicating decent overall quality, the negative returns and technical indicators suggest caution. The company&#x27;s earnings quality and sales growth scores are solid but offset by recent profit declines in the last four quarters. Given the balance sheet strength and positive long-term trends in sales and profits, a Hold strategy is recommended to monitor recovery momentum before any aggressive action.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">JAMNAAUTO – Jamna Auto Industries</h3>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>49.6</td>
+<td>56.6</td>
+<td>55.0</td>
+<td>35.6</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 2410 Cr (YoY +6.2%); NetProfit: 194 Cr (YoY +7.8%); EPS: 4.87</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 638, 573, 531, 668 Cr; Net Profit last 4Q: 50, 46, 40, 58 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 12 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 22%</p>
+<p class="narrative-para"><strong>KEY METRICS:</strong> The stock has shown impressive returns of 1M 1.8%, 3M 21.0%, and 6M 45.7%, with a relative strength vs Nifty 500 (6M) of 46.1%. It scored 60 on technicals, but the fundamental score was 48.3.</p>
+<p class="narrative-para"><strong>KEY FINANCIAL RATIOS / FUNDAMENTALS:</strong> The earnings quality is at 49.6, sales growth is modest at 35.6, financial strength scores 56.6, and institutional backing stands at 55.0. Sales grew YoY by 6.2%, net profit by 7.8%, with EPS of 4.87. Quarterly performance shows consistent growth in sales (638-668 Cr) and profits (50-58 Cr). The balance sheet has manageable debt of Rs 12 Cr, with strong ratios like ROCE of 22%.</p>
+<p class="narrative-para"><strong>RECOMMENDATION:</strong> Accumulate. The high returns and solid technical score suggest momentum, while the fundamental score indicates potential for growth if institutional support strengthens.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">JBMA – JBM Auto</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+ <span class="narrative-rec-rationale">— Justification: Despite solid earnings quality and moderate institutional interest reflected in the fundamental score of 56.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>66.1</td>
+<td>54.0</td>
+<td>55.0</td>
+<td>45.7</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 5882 Cr (YoY +7.5%); NetProfit: 226 Cr (YoY +5.1%); EPS: 8.93</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 1646, 1254, 1368, 1614 Cr; Net Profit last 4Q: 72, 39, 55, 60 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 3181 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 14%</p>
+<p class="narrative-para">KEY METRICS:
+The stock JBMA (JBM Auto) is currently trading at Rs 521.90 with a 6-month return of -13.2%. The relative strength against the Nifty 500 over this period is -12.8%, and the RSI stands at 22.3, indicating potential oversold conditions. The technical score is low at 20 out of 100, suggesting weak momentum on the chart. Notably, the fundamental score is 56.9, which is below the threshold for a pass (FUND &gt;=70).</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS:
+The earnings quality sub-score stands at 66.1, reflecting solid profitability and execution within the business model. Sales growth has been modest with a score of 45.7, suggesting steady but not explosive expansion in revenue. Financial strength is rated at 54.0, indicating reasonable leverage and equity levels, though there might be room for improvement in terms of debt management. Institutional backing scores 55.0, hinting at moderate investor confidence without significant hedge fund involvement.</p>
+<p class="narrative-para">The P&amp;L shows robust sales growth YoY (+7.5%) and profit growth (+5.1%), with EPS currently at Rs 8.93. The quarterly progression in sales has been positive across the last four quarters, albeit with fluctuations. On the balance sheet side, debt stands at Rs 3,181 crore, which needs to be monitored against cash flow dynamics.</p>
+<p class="narrative-para">RECOMMENDATION:
+Recommendation: Hold. Justification: Despite solid earnings quality and moderate institutional interest reflected in the fundamental score of 56.9, weak technical indicators (low RSI and below-pass score) coupled with negative market returns suggest caution. The company&#x27;s fundamentals are holding up well, but the current momentum is insufficient to justify a stronger buy or accumulation stance.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">JTEKTINDIA – JTEKT India</h3>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>50.2</td>
+<td>57.3</td>
+<td>55.0</td>
+<td>47.0</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 2063 Cr (YoY +0.9%); NetProfit: 90 Cr (YoY +3.4%); EPS: 3.13</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 471, 530, 478, 584 Cr; Net Profit last 4Q: 15, 26, 19, 30 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 69 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 11%</p>
+<p class="narrative-para"><strong>KEY METRICS:</strong> The stock is currently priced at Rs 131.86 with modest returns over the past month, quarter, and six months (-9%, -16.7%, +5.4%). Relative strength against Nifty 500 (6M) stands at 5.7%. An RSI of 42.6 suggests a neutral position. The technical score is 40 out of 100, indicating average performance in price movement indicators.</p>
+<p class="narrative-para"><strong>KEY FINANCIAL RATIOS / FUNDAMENTALS:</strong> With a fundamental score of 51.5 (out of 100), the company shows decent financial health and growth prospects. Earnings quality, sales growth, financial strength, and institutional backing each scored 50.2, 47.0, 57.3, and 55.0 respectively. The profit and EPS figures have shown positive year-over-year growth at 3.4% and 0.9%. Quarterly revenue has been steadily increasing from 471 Cr to 584 Cr, with net profits rising from 15 Cr to 30 Cr. The balance sheet reflects a debt of Rs 69 Cr, contributing positively to financial strength (57.3). Profitability ratios like ROCE at 11% indicate efficient capital use.</p>
+<p class="narrative-para"><strong>RECOMMENDATION:</strong> Hold. The fundamental score is below the ideal threshold for aggressive investing, and while there&#x27;s moderate sales growth, technical indicators are neutral. Given the mixed signals in both fundamentals and momentum, a cautious hold strategy is advisable.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">LUMAXIND – Lumax Industries</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Buy
+ <span class="narrative-rec-rationale">— - The strong technical momentum combined with a decent fundamental score suggests that Lumax Industries offers a compelling investment opportunity in the Lighting sector.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>63.9</td>
+<td>52.7</td>
+<td>55.0</td>
+<td>53.3</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 3907 Cr (YoY +14.9%); NetProfit: 162 Cr (YoY +15.7%); EPS: 173.69</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 923, 923, 1009, 1053 Cr; Net Profit last 4Q: 44, 36, 36, 47 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 989 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 13%</p>
+<p class="narrative-para">KEY METRICS: Lumax Industries (LUMAXIND) is trading at Rs 5576.50 with impressive returns of 5.4% in the last month, 9.1% in the last three months, and an exceptional 66.8% over six months. The stock has a relative strength of 67.2% versus the Nifty 500 (6M) and is currently supported by strong technical indicators with an RSI of 33.8 and a neutral technical score of 50.0.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS: The fundamental score stands out at 57.7, indicating solid financial health. The earnings quality score is 63.9, reflecting robust profitability. Sales growth is strong with a score of 53.3, driven by YoY sales increasing from Rs 923 Cr to Rs 1053 Cr in the last four quarters. Financial strength is rated at 52.7, supported by healthy debt levels at Rs 989 Cr and solid cash reserves not explicitly mentioned but implied by earnings quality. Institutional backing is scored at 55.0, suggesting moderate confidence from institutional investors.</p>
+<p class="narrative-para">RECOMMENDATION: Buy - The strong technical momentum combined with a decent fundamental score suggests that Lumax Industries offers a compelling investment opportunity in the Lighting sector.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">LUMAXTECH – Lumax Auto Technologies</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+ <span class="narrative-rec-rationale">— Justification: While the stock shows strong growth in sales and profitability over the past year, its technical score is low, indicating weak momentum from a market perspective.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>63.8</td>
+<td>54.6</td>
+<td>55.0</td>
+<td>39.2</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 4586 Cr (YoY +26.1%); NetProfit: 319 Cr (YoY +39.3%); EPS: 36.56</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 1133, 1026, 1156, 1271 Cr; Net Profit last 4Q: 80, 54, 78, 108 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 1111 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 11%</p>
+<p class="narrative-para">KEY METRICS:
+The stock is currently trading at Rs 1531.90 with strong returns over the past 1 month (0.3%), 3 months (12.1%), and 6 months (49.7%). Its relative strength against the Nifty 500 over the last 6 months stands at 50.0%. The Relative Strength Index (RSI) is at 42.4, indicating a modest momentum. The technical score, based on various indicators, is 40.0, suggesting moderate confidence from a technical perspective. Fundamentally, Lumax Auto Technologies scores 54.5 out of 100, reflecting solid financial health.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS:
+The earnings quality score stands at 63.8, indicating robust profitability and reliability of earnings. Sales growth is relatively modest with a score of 39.2. Financial strength, as measured by the institutional backing and debt metrics, scores 54.6 and 55.0 respectively, suggesting solid but not exceptional financial stability. The P&amp;L shows impressive sales at Rs 4586 Cr YoY +26.1% and net profit of Rs 319 Cr YoY +39.3%, with EPS of 36.56. Quarterly sales have been trending upward from Rs 1133 Cr to Rs 1271 Cr, while profits surged from Rs 80 Cr to Rs 108 Cr. The balance sheet indicates a debt level of Rs 1111 Cr, which is manageable but warrants careful monitoring.</p>
+<p class="narrative-para">RECOMMENDATION: Hold</p>
+<p class="narrative-para">Justification: While the stock shows strong growth in sales and profitability over the past year, its technical score is low, indicating weak momentum from a market perspective. Additionally, although the fundamental score is solid, it falls short of being exceptional (FUND &lt; 70), suggesting that investors should maintain their current positions but avoid any significant buying or selling pressure.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">MINDACORP – Minda Corporation</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>50.2</td>
+<td>54.5</td>
+<td>55.0</td>
+<td>40.7</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 5803 Cr (YoY +14.8%); NetProfit: 286 Cr (YoY +12.2%); EPS: 12.03</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 1321, 1386, 1535, 1560 Cr; Net Profit last 4Q: 52, 65, 85, 84 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 1536 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 12%</p>
+<p class="narrative-para">KEY METRICS:
+The stock of Minda Corporation (MINDACORP) is currently priced at Rs 520.95, with a modest return of -10.5% over the past month and -12.5% over the last three months. However, it has shown a positive return of 10.5% over the six-month period. Relative to Nifty 500, its performance is slightly above average (10.9%). The stock&#x27;s RSI value stands at 16.6, indicating oversold conditions, while the technical score is 20 out of 100. Its fundamental score stands at an impressive 49.4.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS:
+Minda Corporation demonstrates mixed financial health with a composite fundamental score of 49.4. The earnings quality sub-score is rated at 50.2, suggesting stable earnings growth. Sales growth has improved with a score of 40.7, reflecting solid revenue progression. Financial strength is assessed at 54.5, hinting at robust balance sheet fundamentals. Institutional backing garners a respectable score of 55.0. The company&#x27;s P&amp;L shows strong sales (Rs 5803 Cr YoY +14.8%) and profitable operations with net profit rising to Rs 286 Cr YoY +12.2%. With earnings per share (EPS) at Rs 12.03, the quarterly progression in sales and profits is positive. The balance sheet features a significant debt load of Rs 1536 Cr but also includes healthy cash reserves contributing positively to its financial strength.</p>
+<p class="narrative-para">RECOMMENDATION:
+Hold</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">MENONBE – Menon Bearings</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+ <span class="narrative-rec-rationale">— Although the fundamental score suggests a decent investment quality, the negative long-term returns and technical indicators suggest caution.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>55.4</td>
+<td>58.9</td>
+<td>55.0</td>
+<td>40.7</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 270 Cr (YoY +11.1%); NetProfit: 31 Cr (YoY +24%); EPS: 5.54</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 64, 67, 63, 77 Cr; Net Profit last 4Q: 7, 8, 7, 9 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 53 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 17%</p>
+<p class="narrative-para">KEY METRICS:
+The stock is trading at Rs 117.49 with mixed short-term returns (-2.3% in 1M, 1.7% in 3M) and a significant negative return over the last 6 months (-11.7%). Its relative strength versus Nifty 500 is -11.3%, and the RSI of 48.9 suggests a neutral momentum. The technical score stands at 40 out of 100, while the fundamental score is solid at 52.4.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS:
+The earnings quality is robust with a sub-score of 55.4, indicating strong profitability. Sales growth has been impressive YoY by 11.1%, reflected in a sales growth score of 40.7. Financial strength shows up at 58.9, with moderate debt levels (Rs 53 Cr) and solid financial ratios like ROCE at 17%. Institutional backing is also favorable at 55.0. The P&amp;L demonstrates consistent profit growth from Rs 31 Cr to Rs 9 Cr over four quarters.</p>
+<p class="narrative-para">RECOMMENDATION: Hold. Although the fundamental score suggests a decent investment quality, the negative long-term returns and technical indicators suggest caution. The company&#x27;s strong earnings quality and institutional backing are positive signs, but the recent decline and technical scores warrant holding rather than immediate action.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">MSUMI – Motherson Sumi Wiring</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Accumulate
+ <span class="narrative-rec-rationale">— Justification: Despite the negative short-term returns and moderate RSI indicating caution, the strong fundamental score (49) combined with solid earnings quality and institutional backing suggests underlying strength that justifies accumulation for long-term investors.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>49.6</td>
+<td>53.7</td>
+<td>55.0</td>
+<td>40.7</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 10652 Cr (YoY +14.3%); NetProfit: 623 Cr (YoY +2.8%); EPS: 0.95</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 2510, 2494, 2762, 2887 Cr; Net Profit last 4Q: 165, 143, 165, 149 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 253 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 43%</p>
+<p class="narrative-para">Key Metrics:
+The stock has shown mixed returns over the past year, with -9.0% in one month, -14.8% in three months, and a positive 9.0% return over six months. Its relative strength against Nifty 500 is at 9.4%, indicating moderate outperformance. The RSI of 38.0 suggests the stock is neither overbought nor oversold but has room for upside momentum.</p>
+<p class="narrative-para">Key Financial Ratios / Fundamentals:
+The fundamental score stands at 49.0, reflecting a moderately strong financial quality. Earnings quality scores are solid at 49.6, while sales growth is modest with a score of 40.7. Financial strength is rated 53.7, and institutional backing is decent at 55.0. The P&amp;L shows robust YoY sales growth of +14.3% to Rs 10.52 Cr, though profit margins remain steady with a slight YoY increase in net profit.</p>
+<p class="narrative-para">Recommendation: Accumulate.
+Justification: Despite the negative short-term returns and moderate RSI indicating caution, the strong fundamental score (49) combined with solid earnings quality and institutional backing suggests underlying strength that justifies accumulation for long-term investors. The positive six-month return of 9.0% also supports this stance.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">NDRAUTO – NDR Auto Components</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+ <span class="narrative-rec-rationale">— Justification: Despite modest momentum and some downside in returns, the company's fundamentals are sound with good earnings quality and solid financial health backed by strong institutional support.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>49.6</td>
+<td>52.8</td>
+<td>55.0</td>
+<td>36.9</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 786 Cr (YoY +10.2%); NetProfit: 60 Cr (YoY +13.2%); EPS: 25.22</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 192, 185, 200, 208 Cr; Net Profit last 4Q: 16, 14, 15, 15 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 52 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 25%</p>
+<p class="narrative-para">KEY METRICS:
+The stock is trading at Rs 717.00 with disappointing returns over the past 1M, 3M, and 6M periods (-2.1%, -16.5%, and -25.4% respectively). Relative strength against Nifty 500 shows a significant decline of -25.0% in the 6-month period. The RSI stands at 45.5, indicating potential oversold conditions. Technical score is 40.0 out of 100, while the fundamental score is an average 47.9.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS:
+The earnings quality score is robust at 49.6, suggesting strong profitability. Sales growth is moderate with a score of 36.9 and YoY growth in sales stands at 10.2% while net profit grew by 13.2%. The financial strength score is solid at 52.8, reflected positively on the balance sheet showing manageable debt (Rs 52 Cr) with a healthy debt/equity ratio. Institutional backing also scores well at 55.0.</p>
+<p class="narrative-para">RECOMMENDATION: Hold</p>
+<p class="narrative-para">Justification: Despite modest momentum and some downside in returns, the company&#x27;s fundamentals are sound with good earnings quality and solid financial health backed by strong institutional support. However, the weak technical indicators and negative relative strength against broader market indices suggest caution before a stronger buy signal emerges.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">PRICOLLTD – Pricol</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+ <span class="narrative-rec-rationale">— The fundamental score is moderate, indicating mixed financial health, while technical indicators are weak, suggesting cautious entry or holding until further clarity on market sentiment.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>51.3</td>
+<td>58.4</td>
+<td>55.0</td>
+<td>38.1</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 3711 Cr (YoY +37.9%); NetProfit: 213 Cr (YoY +27.5%); EPS: 17.44</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 769, 895, 1007, 1039 Cr; Net Profit last 4Q: 35, 50, 64, 64 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 169 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 22%</p>
+<p class="narrative-para">KEY METRICS: The stock is trading at Rs 565.80 with strong returns over the past year, including a 31.7% gain over six months (RS_6M). It shows decent relative strength against Nifty 500 at 32.0% but weak technical indicators like RSI of 27.5 and low technical score of 20.0. The fundamental score stands at 50.0, indicating moderate financial quality.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS: Earnings quality (51.3), sales growth (38.1) suggest solid performance in earnings and revenue generation. Financial strength (58.4) and institutional backing (55.0) scores indicate a stable balance sheet with manageable debt levels, reflected by the debt of Rs 169 Cr and strong profitability ratios like ROCE at 22%. The P&amp;L shows significant growth in sales and profits year-over-year.</p>
+<p class="narrative-para">RECOMMENDATION: Hold. The fundamental score is moderate, indicating mixed financial health, while technical indicators are weak, suggesting cautious entry or holding until further clarity on market sentiment.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">RANEENGINE – Rane Engine Valve</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+ <span class="narrative-rec-rationale">— Justification: The stock presents mixed momentum with short-term losses and a below-average fundamental score.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>52.0</td>
+<td>58.2</td>
+<td>55.0</td>
+<td>40.8</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 566 Cr (YoY -0.2%); NetProfit: 4 Cr (YoY -63.6%); EPS: 5.55</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 150, 137, 147, 131 Cr; Net Profit last 4Q: 5, 2, 6, -9 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 143 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 13%</p>
+<p class="narrative-para">KEY METRICS:
+The stock is trading at Rs 317.75 with mixed short-term returns of 17.9% (1M), -15.6% (3M), and -24.0% (6M). Relative strength vs Nifty 500 over the past 6 months stands at -23.6%. The RSI is at 63.3, indicating a neutral position. Technical score is 80, suggesting moderate bullish momentum.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS:
+The fundamental score of 50.9 indicates average financial quality. Earnings quality (52) and institutional backing (55) are slightly below average, while sales growth (40.8) and financial strength (58.2) show room for improvement. The P&amp;L shows a YoY decline in net profit (-63.6%) but stable sales at Rs 566 Cr. Quarterly sales fluctuate, with recent quarters showing declines. Balance sheet is bolstered by low debt (Rs 143 Cr), though equity remains undisclosed.</p>
+<p class="narrative-para">RECOMMENDATION: Hold</p>
+<p class="narrative-para">Justification: The stock presents mixed momentum with short-term losses and a below-average fundamental score. While technicals remain decent, the declining earnings quality and institutional backing, along with negative profit trends, suggest cautious holding until fundamentals improve or market sentiment shifts positively.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">RICOAUTO – Rico Auto Industries</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>50.2</td>
+<td>54.5</td>
+<td>55.0</td>
+<td>39.3</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 2346 Cr (YoY +6.1%); NetProfit: 53 Cr (YoY +152.4%); EPS: 3.83</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 545, 543, 627, 629 Cr; Net Profit last 4Q: 7, 17, 18, 11 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 692 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 6%</p>
+<p class="narrative-para">KEY METRICS:
+- Price: Rs 113.30
+- Returns: 1M -13.4%, 3M 0.6%, 6M 49.5%
+- Relative strength vs Nifty 500 (6M): 49.8%
+- RSI: 39.1
+- Technical score (0-100): 30.0
+- Fundamental score (0-100): 49.1</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS:
+- Earnings quality: 50.2
+- Sales growth: 39.3
+- Financial strength: 54.5
+- Institutional backing: 55.0
+- P&amp;L: Sales (Rs 2346 Cr, YoY +6.1%), NetProfit (Rs 53 Cr, YoY +152.4%)
+- Quarterly sales: Rs 545 Cr, Rs 543 Cr, Rs 627 Cr, Rs 629 Cr; Net Profit: Rs 7 Cr, Rs 17 Cr, Rs 18 Cr, Rs 11 Cr
+- Balance sheet: Debt (Rs 692 Cr)
+- Ratios: ROCE (6%)</p>
+<p class="narrative-para">RECOMMENDATION:
+Hold</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">SANDHAR – Sandhar Technologies</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Accumulate
+ <span class="narrative-rec-rationale">— Justification: The stock's solid fundamental score of 47.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>48.5</td>
+<td>57.0</td>
+<td>55.0</td>
+<td>35.0</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 4559 Cr (YoY +17.4%); NetProfit: 177 Cr (YoY +24.6%); EPS: 29.48</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 1014, 1090, 1270, 1185 Cr; Net Profit last 4Q: 43, 28, 73, 33 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 955 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 15%</p>
+<p class="narrative-para">KEY METRICS:
+The stock is trading at Rs 498.10 with modest returns over the past month and three months (-9.4% and -9.9%, respectively), but a significant gain of 19.4% over six months, indicating recent momentum recovery. Its relative strength compared to the Nifty 500 over six months stands at 19.8%. The RSI is at 36.0, suggesting neither extreme bullish nor bearish conditions.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS:
+The fundamental score is 47.8 out of 100, indicating a solid but not exceptional financial profile for Sandhar Technologies. Earnings quality scores 48.5, reflecting stable profit margins and earnings reliability. Sales growth stands at 35.0, showing steady expansion in revenue with YoY sales increasing by 17.4% and profits by 24.6%. Financial strength is rated at 57.0, suggesting a balanced capital structure. Institutional backing also scores 55.0, indicating moderate involvement from institutional investors.</p>
+<p class="narrative-para">RECOMMENDATION:
+Recommendation: Accumulate.
+Justification: The stock&#x27;s solid fundamental score of 47.8 combined with positive sales growth and earnings quality metrics suggests it has strong underlying fundamentals to support its recent momentum recovery over six months.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">SANSERA – Sansera Engineering</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+ <span class="narrative-rec-rationale">— Justification: Although the stock has demonstrated strong performance in terms of returns and technical indicators, its fundamental score is below average, indicating potential risks that could outweigh gains.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>49.6</td>
+<td>53.5</td>
+<td>55.0</td>
+<td>39.3</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 3281 Cr (YoY +8.8%); NetProfit: 263 Cr (YoY +21.2%); EPS: 42.21</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 782, 766, 825, 908 Cr; Net Profit last 4Q: 59, 63, 71, 69 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 439 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 13%</p>
+<p class="narrative-para">KEY METRICS:
+The stock of Sansera Engineering (SANSERA) is currently trading at Rs 2197.70 with impressive returns over the past year, including a 72.4% return over six months. Its relative strength against the Nifty 500 stands at 72.8%, indicating strong market performance compared to peers. The RSI of 46.0 suggests neither overbought nor oversold conditions. With a technical score of 60 and a fundamental score of 48.6, the stock shows moderate technical strength but weaker financial fundamentals.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS:
+The fundamental score is 48.6, which indicates below-average financial health and growth potential. The earnings quality score is 49.6, suggesting stable profit margins with limited upside potential. Sales growth has a score of 39.3, reflecting moderate progress in expanding revenue. Financial strength is rated at 53.5, indicating solid balance sheet but some concerns regarding leverage and solvency. Institutional backing scores 55.0, hinting at modest support from large investors. The P&amp;L shows robust sales growth of +8.8% YoY and net profit increases by +21.2%, with EPS at Rs 42.21. Quarterly sales have shown a steady upward trend, while profits have fluctuated slightly but remain positive.</p>
+<p class="narrative-para">RECOMMENDATION:
+Recommendation: Hold</p>
+<p class="narrative-para">Justification: Although the stock has demonstrated strong performance in terms of returns and technical indicators, its fundamental score is below average, indicating potential risks that could outweigh gains. The moderate earnings quality and sales growth scores further support holding the position cautiously until more favorable fundamentals emerge.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">SHARDAMOTR – Sharda Motor Industries</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+ <span class="narrative-rec-rationale">— The stock's weak technical performance and below-average fundamental score suggest caution despite solid earnings quality and sales growth.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>52.6</td>
+<td>56.8</td>
+<td>55.0</td>
+<td>36.9</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 3175 Cr (YoY +11.9%); NetProfit: 340 Cr (YoY +7.9%); EPS: 59.21</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 750, 756, 787, 882 Cr; Net Profit last 4Q: 84, 100, 75, 81 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 50 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 35%</p>
+<p class="narrative-para">KEY METRICS: The stock is currently priced at Rs 830.85, with negative returns of -9.6%, -15.3%, and -20.2% over the past month, quarter, and half-year respectively against the Nifty 500 benchmark. Relative strength stands at -19.8%. Technical indicators show a modest RSI of 29.8, while the technical score is low at 20.0.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS: The fundamental score is 49.9, indicating moderate financial quality. Earnings quality is strong at 52.6, reflecting robust profit margins and earnings stability. Sales growth has been solid at 36.9, with YoY sales increasing by 11.9%. Financial strength is rated at 56.8, supported by manageable debt levels (Rs 50 Cr) and a healthy ROCE of 35%. Institutional backing scores 55.0, suggesting decent investor confidence.</p>
+<p class="narrative-para">RECOMMENDATION: Hold. The stock&#x27;s weak technical performance and below-average fundamental score suggest caution despite solid earnings quality and sales growth.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">SHRIPISTON – Shriram Pistons &amp; Rings</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Accumulate
+ <span class="narrative-rec-rationale">— Justification: The combination of strong sales growth and earnings quality, along with decent financial strength and institutional support, suggests accumulating this stock for long-term gains despite the modest technical score.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>50.2</td>
+<td>55.7</td>
+<td>55.0</td>
+<td>36.9</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 3991 Cr (YoY +12.4%); NetProfit: 554 Cr (YoY +7.4%); EPS: 123.29</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 988, 963, 1016, 1023 Cr; Net Profit last 4Q: 152, 135, 142, 126 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 537 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 27%</p>
+<p class="narrative-para">KEY METRICS:
+The stock is currently priced at Rs 2928.70 with impressive returns of -5.8% in the last month, 7.4% over the past three months, and an astounding 20.4% over six months. Its relative strength against the Nifty 500 over six months stands at 20.8%, indicating a strong performance compared to broader market movements. The RSI of 39.5 suggests a neutral momentum, while the technical score is modest at 30 out of 100.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS:
+The fundamental score stands at a solid 48.7, reflecting moderate financial health and growth prospects in the sub-sector of Engine/Parts. The earnings quality is rated at 50.2, indicating stable income generation from operations. Sales growth has been noteworthy with a score of 36.9, driven by a YoY increase in sales to Rs 3991 Cr (+12.4%). Financial strength is assessed at 55.7, supported by manageable debt levels amounting to Rs 537 Cr and positive profitability ratios such as ROCE of 27%. Institutional backing also receives a solid rating of 55.0, suggesting strong confidence from institutional investors.</p>
+<p class="narrative-para">RECOMMENDATION:
+Recommendation: Accumulate.
+Justification: The combination of strong sales growth and earnings quality, along with decent financial strength and institutional support, suggests accumulating this stock for long-term gains despite the modest technical score.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">SSWL – Steel Strips Wheels</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Accumulate
+ <span class="narrative-rec-rationale">— The company demonstrates strong earnings quality and institutional support, which are reflected in its moderate fundamental score.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>48.5</td>
+<td>52.1</td>
+<td>55.0</td>
+<td>29.6</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 4942 Cr (YoY +11.6%); NetProfit: 190 Cr (YoY -2.6%); EPS: 12.11</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 1234, 1187, 1201, 1321 Cr; Net Profit last 4Q: 61, 47, 36, 47 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 903 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 17%</p>
+<p class="narrative-para">KEY METRICS:
+The stock SSWL is currently trading at Rs 195.74 with a disappointing performance over the past year, showing returns of -8.8%. Its relative strength against the Nifty 500 (6M) is -8.4%, and an RSI of 22.2 indicates oversold conditions. The technical score stands at 20.0 out of 100, while the fundamental score is a moderate 45.4.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS:
+The earnings quality score is strong at 48.5, reflecting robust profitability and earnings integrity. Sales growth is modest with a score of 29.6, indicating steady but not explosive expansion in revenue. Financial strength is scored at 52.1, suggesting solid liquidity and manageable debt levels. Institutional backing garners a respectable score of 55.0, hinting at some level of confidence from major investors.</p>
+<p class="narrative-para">Based on the comprehensive analysis across financial health, growth metrics, and technical indicators, Recommendation: Accumulate. The company demonstrates strong earnings quality and institutional support, which are reflected in its moderate fundamental score. Despite modest sales growth and a negative technical profile, the positive P&amp;L trend and solid balance sheet provide sufficient justification to accumulate this stock for long-term gains.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">SUNDRMFAST – Sundram Fasteners</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+ <span class="narrative-rec-rationale">— ; The moderate fundamental score combined with weak technical indicators suggests caution despite decent earnings quality and growth fundamentals.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>51.3</td>
+<td>55.0</td>
+<td>55.0</td>
+<td>33.1</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 6126 Cr (YoY +2.9%); NetProfit: 556 Cr (YoY +2.6%); EPS: 26.37</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 1531, 1533, 1521, 1541 Cr; Net Profit last 4Q: 124, 148, 153, 131 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 741 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 17%</p>
+<p class="narrative-para">KEY METRICS: The stock is trading at Rs 848.40 with a negative 6-month return of -10.0%. It has underperformed the Nifty 500 by 9.6% over the same period. Relative Strength Index (RSI) stands at 26.1, indicating potential weakness. Technical score is low at 20.0 points.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS: The fundamental score of 48.0 suggests moderate financial health with earnings quality at 51.3 and sales growth at 33.1. Financial strength scores 55.0, reflecting solid balance sheet metrics including a debt level of Rs 741 Cr. Profitability ratios like ROCE at 17% are robust, but EPS stands at 26.37 which is modest.</p>
+<p class="narrative-para">RECOMMENDATION: Hold; The moderate fundamental score combined with weak technical indicators suggests caution despite decent earnings quality and growth fundamentals.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">SUNDRMBRAK – Sundaram Brake Linings</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+ <span class="narrative-rec-rationale">— Justification: The company's fundamental score is below the threshold for a strong recommendation, indicating underlying financial quality concerns.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>50.2</td>
+<td>55.2</td>
+<td>55.0</td>
+<td>33.1</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 351 Cr (YoY -0.3%); NetProfit: -4 Cr (YoY -180%); EPS: -9.08</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 97, 92, 78, 84 Cr; Net Profit last 4Q: 1, -1, -3, -1 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 39 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 8%</p>
+<p class="narrative-para">KEY METRICS:
+- Price: Rs 594.75
+- Returns: 1M return of 1.2%, 3M return of -21.1%, and 6M return of -23.9%
+- Relative strength vs Nifty 500 (6M): -23.6%
+- RSI: 40.3
+- Technical score: 40 out of 100
+- Fundamental score: 47.7 out of 100</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS:
+- Earnings quality: 50.2
+- Sales growth: 33.1
+- Financial strength: 55.2
+- Institutional backing: 55.0
+- P&amp;L: Sales at Rs 351 Cr (YoY -0.3%), Net Profit at Rs -4 Cr (YoY -180%)
+- Quarterly sales: Rs 97 Cr, Rs 92 Cr, Rs 78 Cr, and Rs 84 Cr; Quarterly net profit: Rs 1 Cr, Rs -1 Cr, Rs -3 Cr, and Rs -1 Cr
+- Balance sheet: Debt of Rs 39 Cr
+- Ratios: ROCE at 8%</p>
+<p class="narrative-para">RECOMMENDATION:
+Hold</p>
+<p class="narrative-para">Justification: The company&#x27;s fundamental score is below the threshold for a strong recommendation, indicating underlying financial quality concerns. Despite recent price gains, returns over the past year have been negative, and the technical score reflects moderate momentum. Given the deteriorating earnings and sales performance, holding the stock may be prudent until further improvement in fundamentals is demonstrated.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">SUPRAJIT – Suprajit Engineering</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+ <span class="narrative-rec-rationale">— Justification: While Suprajit Engineering demonstrates strong sales growth and profitability improvements, the mixed technical scores and moderate fundamental assessment suggest caution against aggressive buying or selling pressure at this time.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>50.2</td>
+<td>58.4</td>
+<td>55.0</td>
+<td>45.8</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 3660 Cr (YoY +11.7%); NetProfit: 139 Cr (YoY +40.4%); EPS: 10.12</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 877, 863, 941, 979 Cr; Net Profit last 4Q: 27, 48, 51, 13 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 927 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 20%</p>
+<p class="narrative-para">KEY METRICS:
+The stock of Suprajit Engineering (SUPRAJIT) is currently priced at Rs 425.35, with a modest return over the past 6 months of -3.5%. The company&#x27;s relative strength against the Nifty 500 over the same period was -3.1%. With an RSI of 45.5 indicating neither overbought nor oversold conditions, and a technical score of 40 out of 100, suggesting moderate momentum support. The fundamental score stands at 51.5, highlighting mixed financial health indicators.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS:
+The fundamental components of Suprajit Engineering are moderately scored across earnings quality (50.2), sales growth (45.8), financial strength (58.4), and institutional backing (55.0). The company reported robust quarterly progress with sales increasing from 877 Cr to 979 Cr over the last four quarters, accompanied by a corresponding rise in net profit from 13 Cr to 51 Cr. On the balance sheet side, debt stands at Rs 927 Cr, which is relatively high but manageable given its earnings quality and growth trajectory. The financial ratios indicate solid operational efficiency with an ROCE of 20%, suggesting effective use of capital.</p>
+<p class="narrative-para">RECOMMENDATION:
+Recommendation: Hold.
+Justification: While Suprajit Engineering demonstrates strong sales growth and profitability improvements, the mixed technical scores and moderate fundamental assessment suggest caution against aggressive buying or selling pressure at this time. The company&#x27;s financial health appears stable with adequate backing from institutions, but investors should monitor for potential short-term corrections before making larger allocations.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">TALBROAUTO – Talbros Auto Components</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+ <span class="narrative-rec-rationale">— The fundamental score is below the threshold for a strong recommendation, suggesting cautious optimism due to moderate financial health and lack of significant technical strength.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>50.2</td>
+<td>56.1</td>
+<td>55.0</td>
+<td>30.6</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 839 Cr (YoY +1.5%); NetProfit: 99 Cr (YoY +5.3%); EPS: 16.06</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 206, 207, 213, 214 Cr; Net Profit last 4Q: 27, 22, 23, 27 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 86 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 18%</p>
+<p class="narrative-para">KEY METRICS:
+The stock is trading at Rs 240.95 with negative returns of -9.9% in the past month and -14.5% in the past three months, indicating bearish momentum. Relative strength against the Nifty 500 shows a decline of -5.8%. The RSI of 19.4 suggests oversold conditions. Technical score is low at 20 out of 100.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS:
+The fundamental score stands at 47.2, indicating mixed financial health. Earnings quality is robust with a score of 50.2. Sales growth is modest with a score of 30.6, reflecting stable demand but slow expansion. Financial strength has a moderate score of 56.1, while institutional backing scores slightly lower at 55.0. The company&#x27;s P&amp;L shows sales increasing YoY by 1.5% and profits growing by 5.3%. Quarterly sales have been steady, with net profit fluctuating but showing resilience. The balance sheet indicates manageable debt of Rs 86 Cr.</p>
+<p class="narrative-para">RECOMMENDATION: Hold. The fundamental score is below the threshold for a strong recommendation, suggesting cautious optimism due to moderate financial health and lack of significant technical strength.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">UCAL – Ucal Limited</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+ <span class="narrative-rec-rationale">— The company's fundamental score of 59.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>70.0</td>
+<td>57.4</td>
+<td>55.0</td>
+<td>47.5</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 803 Cr (YoY +0.1%); NetProfit: -41 Cr (YoY -156.2%); EPS: -18.43</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 199, 195, 211, 199 Cr; Net Profit last 4Q: -21, -6, -4, -10 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 301 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 7%</p>
+<p class="narrative-para">KEY METRICS: The stock is trading at Rs 100.25 with negative returns over the past 1M (11.3%), 3M (-19.3%) and 6M (-29.9%). It has underperformed the Nifty 500 by -29.5% in the same period, indicating poor relative strength. The Relative Strength Index (RSI) stands at 19.3, suggesting an oversold condition but also potential weakness. Technical analysis scores low at 20.0, pointing towards a bearish outlook.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS: With a fundamental score of 59.6 out of 100, the company shows mixed financial health. Earnings quality is strong at 70, reflecting reliable income generation. Sales growth is moderate at 47.5, indicating steady expansion despite losses in profitability. Financial strength scores 57.4, suggesting decent balance sheet resilience but room for improvement. Institutional backing is rated at 55, hinting at limited external investment confidence.</p>
+<p class="narrative-para">RECOMMENDATION: Hold. The company&#x27;s fundamental score of 59.6 suggests cautious optimism, balanced by recent financial challenges and underwhelming technical indicators despite its relative strength in sales growth.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">VARROC – Varroc Engineering</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+ <span class="narrative-rec-rationale">— | Weak technical indicators and fundamental score below 70 suggest holding until further momentum or fundamentals improve.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>50.2</td>
+<td>53.7</td>
+<td>55.0</td>
+<td>42.1</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 8622 Cr (YoY +5.7%); NetProfit: 182 Cr (YoY +160%); EPS: 11.55</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 2099, 2028, 2207, 2288 Cr; Net Profit last 4Q: 23, 107, 63, -11 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 915 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 20%</p>
+<p class="narrative-para">KEY METRICS:
+The stock is trading at Rs 514.65 with negative returns of -16.2% in the past month and -19.3% over the last three months. Its relative strength against the Nifty 500 (6M) stands at -0.6%, indicating a weak performance compared to the broader market index. The RSI of 28.3 suggests the stock is potentially oversold, while its technical score is low at 20 out of 100.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS:
+The fundamental score for Varroc Engineering stands at 49.6/100, reflecting moderate financial quality. Earnings quality scores are solid at 50.2, signaling reliable earnings. Sales growth has been robust with a score of 42.1 and YoY sales grew by 5.7%, while net profit saw significant year-over-year growth from 182 Cr to 2208 Cr (YoY +160%). Financial strength is rated at 53.7, indicating manageable debt levels (Debt: Rs 915 Cr), and a solid balance sheet with strong equity position. Institutional backing also scores moderately well at 55.0.</p>
+<p class="narrative-para">RECOMMENDATION:
+Hold | Weak technical indicators and fundamental score below 70 suggest holding until further momentum or fundamentals improve.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">WHEELS – Wheels India</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+ <span class="narrative-rec-rationale">— ; Given the mixed signals between strong technicals and moderate fundamentals, holding this stock allows for monitoring potential upside driven by sales growth without immediately reacting to weaker fundamental indicators.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>50.2</td>
+<td>54.3</td>
+<td>55.0</td>
+<td>30.5</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 5178 Cr (YoY +9.1%); NetProfit: 138 Cr (YoY +23.2%); EPS: 55.32</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 1277, 1266, 1264, 1371 Cr; Net Profit last 4Q: 39, 31, 32, 37 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 736 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 16%</p>
+<p class="narrative-para">KEY METRICS: WHEELS India (WHEELS) trades at Rs 880.25 with strong short-term returns of 2.7% in one month and a solid 20.7% return over six months, positioning it well above the Nifty 500 relative strength of 21.1%. The stock&#x27;s RSI of 53.8 suggests neither extreme bullish nor bearish conditions, indicating balanced momentum. With a technical score of 60 and a fundamental score of 46.8 (highlighting moderate financial health), WHEELS scores 58.1 overall but fails the screen for passing with both strong fundamentals and positive recent performance.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS: The earnings quality score is 50.2, reflecting solid profitability without significant manipulation or earnings volatility. Sales growth remains modest at 30.5 due to stable market penetration in the wheels sector. Financial strength scores of 54.3 indicate adequate liquidity and manageable debt levels, while institutional backing (55.0) suggests some level of confidence from larger investors. The company reported sales of Rs 5178 Cr YoY +9.1%, net profits at Rs 138 Cr YoY +23.2%, with EPS standing at 55.32. Quarterly sales have been consistent, ranging from Rs 1277 to Rs 1371 Cr, while net profits fluctuated slightly but remained positive. The balance sheet shows debt at Rs 736 Cr, contributing to a ROCE of 16%.</p>
+<p class="narrative-para">RECOMMENDATION: Hold; Given the mixed signals between strong technicals and moderate fundamentals, holding this stock allows for monitoring potential upside driven by sales growth without immediately reacting to weaker fundamental indicators.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">ZFCVINDIA – ZF Commercial Vehicle Control Systems</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+ <span class="narrative-rec-rationale">— Justification: The stock shows mixed performance with decent sales and profit growth but a relatively low fundamental score.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>54.5</td>
+<td>59.8</td>
+<td>55.0</td>
+<td>33.1</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 3976 Cr (YoY +3.8%); NetProfit: 498 Cr (YoY +8%); EPS: 262.32</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 1012, 976, 913, 1075 Cr; Net Profit last 4Q: 127, 122, 108, 140 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 62 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 20%</p>
+<p class="narrative-para">KEY METRICS:
+- Price: Rs 14,376.00
+- Returns: 1M -6.2%, 3M 13.8%, 6M 4.5%
+- Relative strength vs Nifty 500 (6M): 4.8%
+- RSI: 26.4
+- Technical score: 20.0
+- Fundamental score: <strong>50.3</strong></p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS:
+- Earnings quality: 54.5
+- Sales growth: 33.1
+- Financial strength: 59.8
+- Institutional backing: 55.0
+- P&amp;L: Sales (Rs 3,976 Cr) YoY +3.8%; Net Profit (Rs 498 Cr) YoY +8%; EPS: Rs 262.32
+- Quarterly progression: Sales last 4Q: Rs 1,012, 976, 913, 1075 Cr; Net Profit last 4Q: Rs 127, 122, 108, 140 Cr
+- Balance sheet: Debt: Rs 62 Cr
+- Ratios: ROCE: 20%</p>
+<p class="narrative-para">RECOMMENDATION:
+Hold</p>
+<p class="narrative-para">Justification: The stock shows mixed performance with decent sales and profit growth but a relatively low fundamental score. While the technicals are weak (low technical score), earnings quality is solid, indicating reliable income generation potential despite modest momentum indicators.</p>
+</div></div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+(function() {
+  var renderOverviewMd = function() {
+    var el = document.getElementById('overview-md');
+    if (!el) return;
+    try {
+      var data = JSON.parse(el.textContent);
+      var ids = ['narrative', 'hypothesis', 'literature'];
+      ids.forEach(function(key) {
+        var div = document.getElementById('overview-' + key);
+        if (!div) return;
+        var md = data[key] || '';
+        if (typeof marked !== 'undefined' && marked.parse) div.innerHTML = marked.parse(md);
+        else { div.textContent = md; div.classList.add('md-fallback'); }
+      });
+    } catch (e) {}
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', renderOverviewMd);
+  else renderOverviewMd();
+
+  var panels = document.querySelectorAll('.tab-panel');
+  var buttons = document.querySelectorAll('.tab-btn');
+  function show(id) {
+    panels.forEach(function(p) { p.classList.remove('active'); });
+    buttons.forEach(function(b) { b.classList.remove('active'); });
+    var p = document.getElementById('panel-' + id);
+    var b = document.querySelector('[data-tab="' + id + '"]');
+    if (p) p.classList.add('active');
+    if (b) b.classList.add('active');
+  }
+  buttons.forEach(function(b) {
+    b.addEventListener('click', function() { show(b.getAttribute('data-tab')); });
+  });
+  if (buttons.length) show(buttons[0].getAttribute('data-tab'));
+
+  function parseCellNum(txt) {
+    if (!txt) return NaN;
+    var s = txt.replace(/%|,/g, '').trim();
+    var n = parseFloat(s);
+    return isNaN(n) ? NaN : n;
+  }
+  function sortTable(tableId) {
+    var table = document.getElementById(tableId);
+    if (!table) return;
+    var headers = table.querySelectorAll('thead th');
+    var body = table.querySelector('tbody');
+    var sortState = { colIndex: -1, asc: true };
+    headers.forEach(function(th, colIndex) {
+      th.addEventListener('click', function() {
+        var rows = Array.from(body.querySelectorAll('tr'));
+        if (!rows.length) return;
+        var asc = (sortState.colIndex === colIndex) ? !sortState.asc : true;
+        sortState.colIndex = colIndex;
+        sortState.asc = asc;
+        headers.forEach(function(h, i) {
+          h.classList.remove('sort-asc', 'sort-desc');
+          if (i === colIndex) h.classList.add(asc ? 'sort-asc' : 'sort-desc');
+        });
+        var cellVal = function(row, ci) {
+          var c = row.cells[ci];
+          return c ? c.textContent.trim() : '';
+        };
+        var isNum = false;
+        for (var r = 0; r < rows.length; r++) {
+          var n = parseCellNum(cellVal(rows[r], colIndex));
+          if (!isNaN(n)) { isNum = true; break; }
+        }
+        rows.sort(function(a, b) {
+          var va = cellVal(a, colIndex);
+          var vb = cellVal(b, colIndex);
+          if (isNum) {
+            var na = parseCellNum(va);
+            var nb = parseCellNum(vb);
+            if (isNaN(na)) na = -Infinity;
+            if (isNaN(nb)) nb = -Infinity;
+            return asc ? na - nb : nb - na;
+          }
+          return asc ? va.localeCompare(vb, undefined, { numeric: true }) : vb.localeCompare(va, undefined, { numeric: true });
+        });
+        rows.forEach(function(r) { body.appendChild(r); });
+      });
+    });
+  }
+  ['table-universe','table-shortlist','table-backtest'].forEach(sortTable);
+})();
+</script>
+</body>
+</html>

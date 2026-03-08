@@ -23,6 +23,15 @@ pandas-ta>=0.3.14b
 # Optional: For better performance
 # numba>=0.56.0  # For faster numerical computations
 
+# Reports: Excel export (working-sector comprehensive report)
+openpyxl>=3.1.0
+
+# Agent (Ollama Granite4 + tool calling) - optional for pipeline-only use
+ollama>=0.4.0
+
+# Web search (working-sector): DuckDuckGo by default; optional google/bing
+duckduckgo-search>=7.0.0
+
 
 
 

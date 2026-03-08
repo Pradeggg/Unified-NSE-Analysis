@@ -2067,55 +2067,55 @@ generate_html_dashboard <- function(timeframe_data, price_action_data, relative_
                 return;
             }
             
-            let html = '<div class=\\"table-container\\">';
-            html += '<table class=\\"data-table\\">';
-            html += '<thead><tr>';
+            let html = \'<div class="table-container">\';
+            html += \'<table class="data-table">\';
+            html += \'<thead><tr>\';
             
             // Create table headers based on data structure
             if (data.length > 0) {
                 const headers = Object.keys(data[0]);
                 headers.forEach(header => {
-                    html += '<th>' + header.replace(/_/g, ' ').toUpperCase() + '</th>';
+                    html += \'<th>\' + header.replace(/_/g, \' \').toUpperCase() + \'</th>\';
                 });
             }
             
-            html += '</tr></thead><tbody>';
+            html += \'</tr></thead><tbody>\';
             
             // Add data rows
             data.forEach(row => {
-                html += '<tr>';
+                html += \'<tr>\';
                 Object.values(row).forEach(value => {
                     const cellClass = getCellClass(value, Object.keys(row)[Object.values(row).indexOf(value)]);
-                    html += '<td class=\\"' + cellClass + '\\">' + formatCellValue(value) + '</td>';
+                    html += \'<td class="\' + cellClass + \'">\' + formatCellValue(value) + \'</td>\';
                 });
-                html += '</tr>';
+                html += \'</tr>\';
             });
             
-            html += '</tbody></table>';
-            html += '</div>';
+            html += \'</tbody></table>\';
+            html += \'</div>\';
             
             container.innerHTML = html;
         }
         
         function getCellClass(value, columnName) {
-            if (columnName.includes('rsi') || columnName.includes('RSI')) {
-                if (value > 70) return 'overbought';
-                if (value < 30) return 'oversold';
-                return 'normal';
+            if (columnName.includes(\'rsi\') || columnName.includes(\'RSI\')) {
+                if (value > 70) return \'overbought\';
+                if (value < 30) return \'oversold\';
+                return \'normal\';
             }
-            if (columnName.includes('change') || columnName.includes('momentum')) {
-                return value >= 0 ? 'positive' : 'negative';
+            if (columnName.includes(\'change\') || columnName.includes(\'momentum\')) {
+                return value >= 0 ? \'positive\' : \'negative\';
             }
-            if (columnName.includes('relative_strength') || columnName.includes('technical_score')) {
-                if (value > 20) return 'strong';
-                if (value > 10) return 'medium';
-                return 'weak';
+            if (columnName.includes(\'relative_strength\') || columnName.includes(\'technical_score\')) {
+                if (value > 20) return \'strong\';
+                if (value > 10) return \'medium\';
+                return \'weak\';
             }
-            return '';
+            return \'\';
         }
         
         function formatCellValue(value) {
-            if (typeof value === 'number') {
+            if (typeof value === \'number\') {
                 if (value % 1 !== 0) {
                     return value.toFixed(2);
                 }
@@ -2127,49 +2127,49 @@ generate_html_dashboard <- function(timeframe_data, price_action_data, relative_
         // Enhanced Export Functions
         function exportTableToCSV(tableType) {
             let data = [];
-            let filename = '';
+            let filename = \'\';
             
             switch(tableType) {
-                case 'dailyBullishTable':
+                case \'dailyBullishTable\':
                     data = tabularData.dailyBullish;
-                    filename = 'NSE_Daily_Bullish_Patterns.csv';
+                    filename = \'NSE_Daily_Bullish_Patterns.csv\';
                     break;
-                case 'weeklyBullishTable':
+                case \'weeklyBullishTable\':
                     data = tabularData.weeklyBullish;
-                    filename = 'NSE_Weekly_Bullish_Patterns.csv';
+                    filename = \'NSE_Weekly_Bullish_Patterns.csv\';
                     break;
-                case 'rsLeadersTable':
+                case \'rsLeadersTable\':
                     data = tabularData.rsLeaders;
-                    filename = 'NSE_Relative_Strength_Leaders.csv';
+                    filename = \'NSE_Relative_Strength_Leaders.csv\';
                     break;
-                case 'topTechnicalTable':
+                case \'topTechnicalTable\':
                     data = tabularData.topTechnical;
-                    filename = 'NSE_Top_Technical_Scores.csv';
+                    filename = \'NSE_Top_Technical_Scores.csv\';
                     break;
-                case 'marketCapTable':
+                case \'marketCapTable\':
                     data = tabularData.marketCapAnalysis;
-                    filename = 'NSE_Market_Cap_Analysis.csv';
+                    filename = \'NSE_Market_Cap_Analysis.csv\';
                     break;
-                case 'riskManagementTable':
+                case \'riskManagementTable\':
                     data = tabularData.riskManagement;
-                    filename = 'NSE_Risk_Management.csv';
+                    filename = \'NSE_Risk_Management.csv\';
                     break;
             }
             
             if (!data || data.length === 0) {
-                alert('No data available for export');
+                alert(\'No data available for export\');
                 return;
             }
             
-            let csvContent = '';
+            let csvContent = \'\';
             if (data.length > 0) {
                 const headers = Object.keys(data[0]);
-                csvContent = headers.join(',') + '\\n';
+                csvContent = headers.join(\',\') + \'\\n\';
                 data.forEach(row => {
                     const values = Object.values(row).map(value => 
-                        typeof value === 'string' && value.includes(',') ? '"' + value + '"' : value
+                        typeof value === \'string\' && value.includes(\',\') ? \'"\' + value + \'"\' : value
                     );
-                    csvContent += values.join(',') + '\\n';
+                    csvContent += values.join(\',\') + \'\\n\';
                 });
             }
             
@@ -2177,9 +2177,9 @@ generate_html_dashboard <- function(timeframe_data, price_action_data, relative_
         }
         
         function exportTableToExcel(tableType) {
-            // For Excel export, we'll create a more structured CSV that Excel can open
+            // For Excel export, we\'ll create a more structured CSV that Excel can open
             exportTableToCSV(tableType);
-            alert('CSV file downloaded. You can open it in Excel for better formatting.');
+            alert(\'CSV file downloaded. You can open it in Excel for better formatting.\');
         }
 
         // Multi-Timeframe Analysis Functions

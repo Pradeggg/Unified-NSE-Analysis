@@ -1,0 +1,11 @@
+You are a research analyst. Using ONLY the following facts, write exactly two short paragraphs for a sector research note.
+
+FACTS:
+- India's auto component industry is defined by ACMA (Automotive Component Manufacturers Association of India) as parts and systems supplied to vehicle manufacturers (OEMs). It excludes vehicle makers (OEMs) like Maruti, Tata Motors, M&M, Bajaj Auto, Hero, Eicher, Ashok Leyland, TVS Motor.
+- FY2024-25 turnover: Rs 6.73 lakh crore (USD 80.2 billion), 9.6% YoY growth. Industry nearly doubled in 5 years with 14% CAGR.
+- Segments: OEM supply (Rs 5.70 L Cr), aftermarket (Rs 99,948 Cr), exports (USD 22.9 B). Key product segments: engine, transmission, electrical, tyres, forgings.
+- ACMA has 1,054+ members; organized sector has hundreds of players. Our analysis uses only NSE-listed component suppliers (ancillaries), excluding OEMs.
+- Drivers: domestic OEM demand, EV transition, PLI schemes, export growth.
+
+TASK:
+Write two paragraphs: (1) Definition and market size—cite ACMA and FY25 numbers. (2) Why this segment matters for equity research—large size, under-researched "unsexy" angle, and focus on listed ancillaries. Use clear, professional language. No bullet points in the output; use prose only.
