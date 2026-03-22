@@ -43,9 +43,10 @@ def run_agent_loop(model: str = "granite4:latest", sector_name: str | None = Non
 You can run pipeline phases via tools. Phases must be run in order when running individually: Phase 2 before 3, 3 before 5; Phase 4 can run after 2/3.
 When the user asks to run everything or run the full pipeline, use run_full_pipeline.
 When the user asks to build narratives after the pipeline, use run_narratives.
-For market size, sector outlook, or industry reports from the web, use web_search (single query) or web_search_iterative (multi-round with follow-up queries).
+For research that must use the LATEST data and be clearly sourced and dated for the user: use run_sector_research. It runs multi-step web search (emphasising latest data), then LLM synthesis that cites sources and retrieval dates, and writes research_sources.md so the report and user understand data/research source and when it is from.
+For one-off web lookups use web_search; for multi-round search without synthesis use web_search_iterative (both emphasise latest data where possible).
 When the user asks what phases do or what outputs exist, use get_phase_help or list_outputs as appropriate.
-Always confirm what you did and summarize results in a short, clear way."""
+Always confirm what you did and remind the user that sources and dates are in the report (sector note and research_sources.md) so they can verify recency and provenance."""
 
     messages = [{"role": "system", "content": system_prompt}]
     tools = TOOL_FUNCTIONS
@@ -107,6 +108,60 @@ Always confirm what you did and summarize results in a short, clear way."""
                         result = f"Error: {e!s}"
                 messages.append({"role": "tool", "tool_name": name, "content": str(result)})
                 print(f"  [Tool] {name} -> {result[:200]}{'...' if len(str(result)) > 200 else ''}")
+
+
+def run_agent_single_prompt(
+    user_prompt: str,
+    model: str = "granite4:latest",
+    sector_name: str | None = None,
+) -> str:
+    """
+    Run the agent with a single user prompt; keep processing tool calls until the model
+    replies without calling tools, then return the final reply. Use for scripted research
+    (e.g. 'Run sector research then full pipeline and narratives').
+    """
+    try:
+        from ollama import chat
+    except ImportError:
+        return "Install the Ollama Python client: pip install ollama"
+    sector_ctx = f" Current sector: {sector_name}." if sector_name else ""
+    system_prompt = f"""You are an assistant for NSE sector research.{sector_ctx}
+You can run pipeline phases via tools. Phases must be run in order when running individually: Phase 2 before 3, 3 before 5; Phase 4 can run after 2/3.
+When the user asks to run everything or run the full pipeline, use run_full_pipeline.
+When the user asks to build narratives after the pipeline, use run_narratives.
+For research that must use the LATEST data and be clearly sourced and dated for the user: use run_sector_research. It runs multi-step web search (emphasising latest data), then LLM synthesis that cites sources and retrieval dates, and writes research_sources.md so the report and user understand data/research source and when it is from.
+For one-off web lookups use web_search; for multi-round search without synthesis use web_search_iterative (both emphasise latest data where possible).
+When the user asks what phases do or what outputs exist, use get_phase_help or list_outputs as appropriate.
+Always confirm what you did and remind the user that sources and dates are in the report (sector note and research_sources.md) so they can verify recency and provenance."""
+    messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}]
+    tools = TOOL_FUNCTIONS
+    max_rounds = 20  # prevent infinite tool loops
+    for _ in range(max_rounds):
+        response = chat(model=model, messages=messages, tools=tools, think=False)
+        msg = response.message
+        messages.append(msg)
+        if not getattr(msg, "tool_calls", None):
+            return (getattr(msg, "content", None) or "").strip()
+        for tc in msg.tool_calls:
+            name = tc.function.name
+            args = getattr(tc.function, "arguments", None) or {}
+            if isinstance(args, str):
+                try:
+                    import json
+                    args = json.loads(args) if args.strip() else {}
+                except Exception:
+                    args = {}
+            fn = get_tool_by_name(name)
+            if fn is None:
+                result = f"Unknown tool: {name}"
+            else:
+                try:
+                    result = fn(**args)
+                except Exception as e:
+                    result = f"Error: {e!s}"
+            messages.append({"role": "tool", "tool_name": name, "content": str(result)})
+            print(f"  [Tool] {name} -> {str(result)[:200]}{'...' if len(str(result)) > 200 else ''}")
+    return "(Agent stopped after max rounds.)"
 
 
 if __name__ == "__main__":

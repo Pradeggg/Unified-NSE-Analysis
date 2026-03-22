@@ -1,0 +1,404 @@
+{
+  "portfolio_volatility_annual_pct": 5.15,
+  "var_95_1d_pct": 0.56,
+  "cvar_95_1d_pct": 0.85,
+  "sharpe_ratio": -0.5,
+  "beta_nifty": null,
+  "max_drawdown_pct": -6.65,
+  "concentration_herfindahl": 0.0045,
+  "risk_free_rate_annual": 0.065,
+  "holdings_source": "holdings.csv",
+  "n_constituents": 223,
+  "per_stock": [
+    {
+      "symbol": "AVL",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 42.77
+    },
+    {
+      "symbol": "ADOR",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 33.53
+    },
+    {
+      "symbol": "AFFLE",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 34.34
+    },
+    {
+      "symbol": "ALIVUS",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 37.4
+    },
+    {
+      "symbol": "ANANDRATHI",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 48.86
+    },
+    {
+      "symbol": "ANANTRAJ",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 52.96
+    },
+    {
+      "symbol": "ANGELONE",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 80.16
+    },
+    {
+      "symbol": "APLAPOLLO",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 29.84
+    },
+    {
+      "symbol": "APOLLOHOSP",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 21.65
+    },
+    {
+      "symbol": "APOLLO",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 63.06
+    },
+    {
+      "symbol": "APOLLOTYRE",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 28.17
+    },
+    {
+      "symbol": "ARTEMISMED",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 41.56
+    },
+    {
+      "symbol": "ARVINDFASN",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 37.2
+    },
+    {
+      "symbol": "ASHOKLEY",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 47.79
+    },
+    {
+      "symbol": "ASTRAMICRO",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 43.99
+    },
+    {
+      "symbol": "ATHERENERG",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 50.38
+    },
+    {
+      "symbol": "DMART",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 28.05
+    },
+    {
+      "symbol": "AXISBANK",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 23.18
+    },
+    {
+      "symbol": "BAJAJ-AUTO",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 25.46
+    },
+    {
+      "symbol": "BAJFINANCE",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 69.03
+    },
+    {
+      "symbol": "BAJAJFINSV",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 23.75
+    },
+    {
+      "symbol": "BAJAJHLDNG",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 32.45
+    },
+    {
+      "symbol": "BANKBARODA",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 31.44
+    },
+    {
+      "symbol": "BEML",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 63.11
+    },
+    {
+      "symbol": "BFUTILITIE",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 58.0
+    },
+    {
+      "symbol": "BDL",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 57.25
+    },
+    {
+      "symbol": "BEL",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 34.55
+    },
+    {
+      "symbol": "BHARATFORG",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 33.65
+    },
+    {
+      "symbol": "BHARATGEAR",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 44.72
+    },
+    {
+      "symbol": "BHEL",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 41.51
+    },
+    {
+      "symbol": "BPCL",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 46.94
+    },
+    {
+      "symbol": "BHARTIARTL",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 21.45
+    },
+    {
+      "symbol": "BLACKBUCK",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 55.6
+    },
+    {
+      "symbol": "BLUESTARCO",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 36.62
+    },
+    {
+      "symbol": "BLUSPRING",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 47.29
+    },
+    {
+      "symbol": "BOSCHLTD",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 25.47
+    },
+    {
+      "symbol": "BSE",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 71.75
+    },
+    {
+      "symbol": "CANBK",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 64.73
+    },
+    {
+      "symbol": "CDSL",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 52.45
+    },
+    {
+      "symbol": "CESC",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 37.24
+    },
+    {
+      "symbol": "CHOICEIN",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 46.33
+    },
+    {
+      "symbol": "CHOLAHLDNG",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 38.27
+    },
+    {
+      "symbol": "CIEINDIA",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 27.42
+    },
+    {
+      "symbol": "CUB",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 33.26
+    },
+    {
+      "symbol": "COCHINSHIP",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 60.08
+    },
+    {
+      "symbol": "COFORGE",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 67.02
+    },
+    {
+      "symbol": "COMSYN",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 54.77
+    },
+    {
+      "symbol": "CONCOR",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 35.24
+    },
+    {
+      "symbol": "COROMANDEL",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 30.84
+    },
+    {
+      "symbol": "CROMPTON",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 29.42
+    },
+    {
+      "symbol": "CUMMINSIND",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 32.36
+    },
+    {
+      "symbol": "CUPID",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 86.61
+    },
+    {
+      "symbol": "DALBHARAT",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 25.74
+    },
+    {
+      "symbol": "DATAPATTNS",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 54.71
+    },
+    {
+      "symbol": "DEEPINDS",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 49.25
+    },
+    {
+      "symbol": "DELHIVERY",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 33.83
+    },
+    {
+      "symbol": "DBOL",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 56.13
+    },
+    {
+      "symbol": "DIGITIDE",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 48.2
+    },
+    {
+      "symbol": "DIXON",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 40.36
+    },
+    {
+      "symbol": "DLF",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 32.08
+    },
+    {
+      "symbol": "LALPATHLAB",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 43.72
+    },
+    {
+      "symbol": "EICHERMOT",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 24.08
+    },
+    {
+      "symbol": "ENDURANCE",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 33.09
+    },
+    {
+      "symbol": "ETERNAL",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 35.21
+    },
+    {
+      "symbol": "EXIDEIND",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 33.21
+    },
+    {
+      "symbol": "FORTIS",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 30.73
+    },
+    {
+      "symbol": "NYKAA",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 31.13
+    },
+    {
+      "symbol": "GABRIEL",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 50.69
+    },
+    {
+      "symbol": "GRSE",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 61.35
+    },
+    {
+      "symbol": "GLAXO",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 37.36
+    },
+    {
+      "symbol": "GLENMARK",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 30.8
+    },
+    {
+      "symbol": "GODREJAGRO",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 33.89
+    },
+    {
+      "symbol": "GODREJIND",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 38.16
+    },
+    {
+      "symbol": "GOKULAGRO",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 63.0
+    },
+    {
+      "symbol": "GRAVITA",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 52.38
+    },
+    {
+      "symbol": "GAEL",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 52.9
+    },
+    {
+      "symbol": "GMDCLTD",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 51.57
+    },
+    {
+      "symbol": "HGINFRA",
+      "weight_pct": 0.4464285714285714,
+      "volatility_annual_pct": 43.35
+    }
+  ]
+}

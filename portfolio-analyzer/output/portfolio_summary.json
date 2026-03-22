@@ -1,0 +1,16 @@
+{
+  "account_id": "8500589913",
+  "account_name": "PRADEEP   GORAI",
+  "report_type": "Equity PL",
+  "closed_trades_count": 895,
+  "unique_symbols_traded": 220,
+  "total_realized_pnl": -69253.9,
+  "pnl_by_tenure": {
+    "LTCG": -8925.81,
+    "STCG": -60324.15,
+    "intraday": -3.94
+  },
+  "data_as_of": "2026-02-25",
+  "holdings_count": 224,
+  "holdings_source": "CAS PDF"
+}

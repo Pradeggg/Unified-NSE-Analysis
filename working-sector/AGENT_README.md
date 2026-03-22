@@ -64,7 +64,12 @@ python working-sector/agent.py
 1. **Agent loop:** The script reads your message (e.g. “Run the full pipeline”) and sends it to Ollama with a list of **tools** (pipeline phases and helpers).
 2. **Tool calling:** If the model decides to call a tool (e.g. `run_full_pipeline`), the agent runs the corresponding Python function and appends the **text result** back into the conversation.
 3. **Multi-turn tools:** The model can call several tools in sequence (e.g. Phase 2, then Phase 3) until it has enough information, then it replies in natural language.
-4. **Output:** All phase outputs (CSVs, sector note, dashboard) are written to `working-sector/output/` as in the normal pipeline.
+4. **Output:** All phase outputs (CSVs, sector note, dashboard) are written to `working-sector/output/<sector>/` (or legacy `output/` for auto_components).
+5. **Sector docs from research:** When you run `run_sector_research` (or the default run-all flow), the pipeline generates **Sector narrative**, **Research question & hypothesis**, and **Literature & sources** from web search results + LLM. These are written as `sector_narrative_<sector>.md`, `hypothesis_<sector>.md`, and `literature_notes_<sector>.md` in `working-sector/` and used by Phase 5 and the comprehensive report.
+
+6. **Targeted research sites (India):** Sector research runs multi-step general search plus **site-restricted searches** on a curated list of Indian stock market, research and government websites (e.g. Moneycontrol, Economic Times, Business Standard, NSE, BSE, CRISIL, IBEF, RBI, SEBI, PIB). Results are merged and deduped; `research_sources.md` lists the sites used and shows a "Source site" column where applicable.
+
+7. **Multiple search engines:** Sector research runs the same queries on **DuckDuckGo**, **Google**, **Yahoo**, **Brave** (and optionally **SearXNG**). Free options: DuckDuckGo and Google (no key); Brave free tier 500/mo (`BRAVE_API_KEY`); Yahoo via SerpAPI (`SERPAPI_API_KEY`); SearXNG with `SEARXNG_BASE_URL` (self-hosted or public instance, no key). Results are merged and deduplicated; the report can show a "Source engine" column.
 
 ## Available tools (exposed to the model)
 
@@ -75,7 +80,11 @@ python working-sector/agent.py
 | `run_phase4` | Backtest: monthly rebalance, momentum screen, forward 1Y vs Nifty 500. Writes `phase4_backtest_results.csv`. |
 | `run_phase5` | Generate sector note (Markdown) and HTML dashboard. Writes `sector_note.md`, `dashboard.html`. |
 | `run_full_pipeline` | Run Phase 2 → 3 → 4 → 5 in order (recommended for “run everything”). |
-| `run_narratives` | Generate per-stock narratives (Ollama) from Phase 3 table; writes `stock_narratives.md` and `.json`. |
+| `run_fetch_fundamental_scores` | Fetch **earnings quality, sales growth, financial strength, institutional backing** from Screener for universe symbols missing from `fundamental_scores_database.csv`; merge into DB. Run **before** full pipeline so the report shows the fundamental strength table (like Auto Components). Requires R. |
+| `run_fetch_fundamental_details` | Fetch P&L, quarterly, balance sheet, ratios from Screener (R script); writes `fundamental_details.csv` in sector output. Run before `run_narratives` so the comprehensive report shows financial ratios per stock. Requires R. |
+| `run_narratives` | Generate per-stock narratives (Ollama) from Phase 3 table, fundamental scores DB, and `fundamental_details.csv`; writes `stock_narratives.md` and `.json`. |
+| `run_comprehensive_report` | Build comprehensive report (MD, HTML, XLSX) from pipeline outputs and sector docs; use after Phase 5 and narratives. |
+| `run_sector_research` | Multi-step web search (latest data) + LLM synthesis; writes `research_sources.md` and **generates** `sector_narrative_<sector>.md`, `hypothesis_<sector>.md`, `literature_notes_<sector>.md` from research + LLM. |
 | `web_search` | Single web search (duckduckgo/google/bing) for market size, news, reports. |
 | `web_search_iterative` | Multi-round search with Ollama-suggested follow-up queries; use for deeper sector research. |
 | `list_outputs` | List current sector output files with sizes/row counts. |

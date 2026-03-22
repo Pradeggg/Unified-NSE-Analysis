@@ -37,21 +37,17 @@ This will:
 
 **Requirements:** R installed with packages `dplyr`, `rvest`, and `readr`; `Rscript` on PATH. Rate limiting (~0.8 s per symbol) is applied to avoid overloading Screener.
 
-### Optional: P&L, quarterly, balance sheet, and financial ratios (for richer narratives)
+### P&L, quarterly, balance sheet, and financial ratios (integrated in pipeline)
 
-To add **P&L** (Sales, Net Profit, EPS, YoY), **quarterly results**, **balance sheet** (Equity, Debt, Cash, Debt/Equity), and **financial ratios** (ROCE, ROE, EPS, PE, PB, OPM, NPM, Interest Coverage, Div Yield) to stock narratives, run the R script that fetches these from Screener.in and writes `output/fundamental_details.csv`:
+The **CLI run-all** (`python working-sector/agent_cli.py --sector "Sector Name" --run-all`) automatically runs the fundamental-details fetch **before** narratives, so the comprehensive report includes fundamental strength and financial ratios per stock. The R script is sector-aware: set `NSE_SECTOR` (or use `--sector`) and it writes `output/<sector>/fundamental_details.csv`.
 
-```bash
-Rscript working-sector/fetch_screener_fundamental_details.R
-```
-
-If no argument is given, it uses `output/symbols_to_fetch.txt` if present, else **`auto_components_universe.csv`** (SYMBOL column). Then re-run the narrative generator so it picks up the new CSV:
+To run the fetch manually for the current sector:
 
 ```bash
-python3 working-sector/generate_stock_narratives.py
+NSE_SECTOR=plastics_and_packaging Rscript working-sector/fetch_screener_fundamental_details.R
 ```
 
-Narratives will then include P&L, quarterly progression, balance sheet, and ratios (ROCE, ROE, EPS, PE, PB, etc.). The comprehensive report (MD/HTML/XLSX) will show these when available.
+Or use the pipeline tool `run_fetch_fundamental_details` (e.g. via the agent). If R is not installed, use `--no-fundamental-details` with run-all; narratives and the report will still run but without P&L/ratios in each stock card.
 
 ---
 

@@ -265,6 +265,11 @@ def main():
             for col in ["EARNINGS_QUALITY", "SALES_GROWTH", "FINANCIAL_STRENGTH", "INSTITUTIONAL_BACKING"]:
                 if col in fund_row.index and pd.notna(fund_row.get(col)):
                     entry[f"fund_{col.lower()}"] = float(fund_row[col])
+        if not any(k.startswith("fund_") for k in entry) and pd.notna(row.get("FUND_SCORE")):
+            try:
+                entry["fund_overall"] = float(row["FUND_SCORE"])
+            except (TypeError, ValueError):
+                pass
         if extra_row is not None:
             for col in ["pnl_summary", "quarterly_summary", "balance_sheet_summary", "ratios_summary"]:
                 if col in extra_row.index and pd.notna(extra_row.get(col)) and str(extra_row[col]).strip():

@@ -1,0 +1,6 @@
+scenario_id,scenario_name,index_return_pct,portfolio_projected_return_pct,description
+nifty_up_10,Nifty +10%,10.0,10.0,Broad market rally
+nifty_down_15,Nifty −15%,-15.0,-15.0,Market correction
+nifty_sideways,Nifty sideways (±2%),0.0,0.0,Range-bound market
+stress_20,Stress (−20%),-20.0,-20.0,Severe drawdown
+rally_15,Rally +15%,15.0,15.0,Strong bull move

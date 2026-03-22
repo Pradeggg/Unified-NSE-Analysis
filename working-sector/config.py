@@ -20,7 +20,11 @@ SECTOR_DISPLAY_NAMES = {
     "auto_components": "Auto Components",
     "pharma": "Pharma",
     "textiles": "Textiles",
+    "textile_manufacturing": "Textile Manufacturing",
     "chemicals": "Chemicals",
+    "plastics_mouldings": "Plastics and Mouldings",
+    "plastics_and_mouldings": "Plastics and Mouldings",
+    "plastics_and_packaging": "Plastics and Packaging",
 }
 SECTOR_DISPLAY_NAME = SECTOR_DISPLAY_NAMES.get(SECTOR, SECTOR.replace("_", " ").title())
 
@@ -73,3 +77,4 @@ PHASE3_SHORTLIST_CSV = OUTPUT_DIR / "phase3_shortlist.csv"
 PHASE4_BACKTEST_CSV = OUTPUT_DIR / "phase4_backtest_results.csv"
 SECTOR_NOTE_MD = OUTPUT_DIR / "sector_note.md"
 DASHBOARD_HTML = OUTPUT_DIR / "dashboard.html"
+RESEARCH_SOURCES_MD = OUTPUT_DIR / "research_sources.md"

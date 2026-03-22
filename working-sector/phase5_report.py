@@ -21,6 +21,7 @@ from config import (
     SECTOR_DISPLAY_NAME,
     DASHBOARD_HTML,
     OUTPUT_DIR,
+    RESEARCH_SOURCES_MD,
 )
 PHASE3_FULL_CSV = OUTPUT_DIR / "phase3_full_with_composite.csv"
 
@@ -115,11 +116,29 @@ def run_phase5(
     note_lines += [
         "---",
         "",
-        "## 5. Sources and data",
+        "## 5. Data and research sources",
         "",
-        f"- **Definition and market size:** See {SECTOR_NARRATIVE_MD.name} and literature notes for this sector.",
+        "So you can verify recency and provenance, all data and research sources are dated below.",
+        "",
+        f"- **Report generated:** {today}",
+        f"- **Pipeline data as of:** {as_of} (prices, returns, fundamentals used in this note).",
+        "",
+        "**Pipeline data sources:**",
         "- **Price data:** NSE (nse_sec_full_data.csv, nse_index_data.csv).",
         "- **Fundamental scores:** Screener/organized pipeline (fundamental_scores_database.csv).",
+        f"- **Definition and market size:** See {SECTOR_NARRATIVE_MD.name} and literature notes for this sector.",
+        "",
+    ]
+    if RESEARCH_SOURCES_MD.exists():
+        note_lines += [
+            "**Web research and LLM synthesis:** Multi-step web search was run with emphasis on **latest data** (current year, recent outlook). "
+            "Sources and retrieval dates are listed in the file below. Use it to see where each research claim came from and when it was retrieved.",
+            "",
+            f"- See **{RESEARCH_SOURCES_MD.name}** in this folder for: web search date, source list (URL, retrieved date), and LLM synthesis (with disclaimer for undated LLM knowledge).",
+            "",
+        ]
+    note_lines += [
+        "*Users should verify sources and dates for their own use.*",
         "",
     ]
     SECTOR_NOTE_MD.write_text("\n".join(note_lines), encoding="utf-8")

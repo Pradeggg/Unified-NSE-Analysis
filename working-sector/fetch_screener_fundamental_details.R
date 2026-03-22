@@ -3,7 +3,8 @@
 # Writes working-sector/output/fundamental_details.csv (symbol, pnl_summary, quarterly_summary, balance_sheet_summary, ratios_summary).
 # Ratios: from screener financial ratios table when available; when not (e.g. ROCE, ROE, EPS missing),
 # they are computed from P&L and Balance sheet (ROE = Net Profit/Equity; ROCE = EBIT or EBITDA/Capital Employed; EPS from P&L; NPM = Net Profit/Sales).
-# Usage: Rscript fetch_screener_fundamental_details.R [symbols_file]
+# Usage: Rscript fetch_screener_fundamental_details.R [symbols_file] [output_csv]
+# If NSE_SECTOR is set (e.g. plastics_and_packaging), uses working-sector/<sector>_universe.csv and output/<sector>/fundamental_details.csv.
 # Run from project root. Requires: core/screenerdata.R (get_screener_pnl_data, get_screener_quarterly_results_data, get_screener_balancesheet_data, get_screener_finratios_data).
 
 suppressMessages({
@@ -14,9 +15,15 @@ suppressMessages({
 args <- commandArgs(trailingOnly = TRUE)
 PROJECT_ROOT <- getwd()
 if (basename(PROJECT_ROOT) == "working-sector") PROJECT_ROOT <- dirname(PROJECT_ROOT)
-SYMBOLS_FILE <- if (length(args) >= 1) args[1] else file.path(PROJECT_ROOT, "working-sector", "output", "symbols_to_fetch.txt")
-UNIVERSE_CSV <- file.path(PROJECT_ROOT, "working-sector", "auto_components_universe.csv")
-OUT_CSV <- file.path(PROJECT_ROOT, "working-sector", "output", "fundamental_details.csv")
+WORKING_SECTOR <- file.path(PROJECT_ROOT, "working-sector")
+NSE_SECTOR <- Sys.getenv("NSE_SECTOR", "auto_components")
+NSE_SECTOR <- tolower(trimws(gsub("[ -]", "_", NSE_SECTOR)))
+OUTPUT_DIR <- file.path(WORKING_SECTOR, "output", NSE_SECTOR)
+if (!dir.exists(OUTPUT_DIR)) OUTPUT_DIR <- file.path(WORKING_SECTOR, "output")
+SYMBOLS_FILE <- if (length(args) >= 1) args[1] else file.path(OUTPUT_DIR, "symbols_to_fetch.txt")
+UNIVERSE_CSV <- file.path(WORKING_SECTOR, paste0(NSE_SECTOR, "_universe.csv"))
+if (!file.exists(UNIVERSE_CSV)) UNIVERSE_CSV <- file.path(WORKING_SECTOR, "auto_components_universe.csv")
+OUT_CSV <- if (length(args) >= 2) args[2] else file.path(OUTPUT_DIR, "fundamental_details.csv")
 
 screener_path <- file.path(PROJECT_ROOT, "core", "screenerdata.R")
 if (!file.exists(screener_path)) stop("core/screenerdata.R not found")

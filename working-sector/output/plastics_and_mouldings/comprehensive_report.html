@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plastics and Mouldings (India) – Comprehensive Report</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --md-primary: #00897B;
+  --md-primary-dark: #00695C;
+  --md-primary-light: #4DB6AC;
+  --md-primary-bg: #B2DFDB;
+  --md-surface: #FFFFFF;
+  --md-bg: #E0F2F1;
+  --md-text: #004D40;
+  --md-text-secondary: #00796B;
+  --md-divider: rgba(0, 137, 123, 0.2);
+  --md-elevation-1: 0 1px 3px rgba(0, 105, 92, 0.12), 0 1px 2px rgba(0, 105, 92, 0.24);
+  --md-elevation-2: 0 3px 6px rgba(0, 105, 92, 0.15), 0 2px 4px rgba(0, 105, 92, 0.12);
+  --md-elevation-3: 0 10px 20px rgba(0, 105, 92, 0.15), 0 3px 6px rgba(0, 105, 92, 0.1);
+  --md-radius: 8px;
+  --md-radius-sm: 4px;
+}
+* { box-sizing: border-box; }
+body {
+  font-family: 'Roboto', system-ui, sans-serif;
+  margin: 0;
+  padding: 0;
+  background: var(--md-bg);
+  color: var(--md-text);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+.app-bar {
+  background: linear-gradient(135deg, var(--md-primary-dark) 0%, var(--md-primary) 100%);
+  color: #fff;
+  padding: 16px 24px;
+  box-shadow: var(--md-elevation-2);
+}
+.app-bar h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+.app-bar .meta {
+  margin: 4px 0 0 0;
+  font-size: 0.875rem;
+  opacity: 0.9;
+  font-weight: 300;
+}
+.main-content { padding: 24px; max-width: 1400px; margin: 0 auto; }
+.tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 0;
+  background: var(--md-surface);
+  border-radius: var(--md-radius) var(--md-radius) 0 0;
+  box-shadow: var(--md-elevation-1);
+  overflow: hidden;
+  flex-wrap: wrap;
+}
+.tab-btn {
+  padding: 14px 20px;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--md-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  position: relative;
+  transition: color 0.2s, background 0.2s;
+}
+.tab-btn:hover { background: var(--md-bg); color: var(--md-primary-dark); }
+.tab-btn.active {
+  color: var(--md-primary);
+  background: rgba(0, 137, 123, 0.08);
+}
+.tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--md-primary);
+}
+.tab-panel {
+  display: none;
+  background: var(--md-surface);
+  padding: 24px;
+  border-radius: 0 0 var(--md-radius) var(--md-radius);
+  box-shadow: var(--md-elevation-1);
+  overflow-x: auto;
+  border: 1px solid var(--md-divider);
+  border-top: none;
+  min-height: 320px;
+}
+.tab-panel.active { display: block; }
+.card-section {
+  background: var(--md-surface);
+  border-radius: var(--md-radius);
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: var(--md-elevation-1);
+  border: 1px solid var(--md-divider);
+}
+.overview-cards { display: flex; flex-direction: column; gap: 20px; }
+.card-section pre {
+  font-family: 'Roboto', sans-serif;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  margin: 0;
+  padding: 16px;
+  background: var(--md-bg);
+  border-radius: var(--md-radius-sm);
+  border-left: 4px solid var(--md-primary-light);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--md-text);
+}
+.card-title {
+  margin: 0 0 12px 0;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--md-primary-dark);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--md-divider);
+}
+.md-rendered { font-size: 0.9rem; line-height: 1.6; }
+.md-rendered h1 { font-size: 1.1rem; margin: 0 0 0.5rem 0; color: var(--md-primary-dark); font-weight: 500; }
+.md-rendered h2 { font-size: 1rem; margin: 1rem 0 0.4rem 0; color: var(--md-primary-dark); font-weight: 500; }
+.md-rendered h3 { font-size: 0.95rem; margin: 0.75rem 0 0.35rem 0; color: var(--md-primary-dark); font-weight: 500; }
+.md-rendered p { margin: 0 0 0.6rem 0; }
+.md-rendered ul, .md-rendered ol { margin: 0.4rem 0 0.75rem 0; padding-left: 1.5rem; }
+.md-rendered li { margin: 0.2rem 0; }
+.md-rendered hr { border: none; border-top: 1px solid var(--md-divider); margin: 1rem 0; }
+.md-rendered strong { font-weight: 500; color: var(--md-text); }
+.md-rendered table { width: 100%; margin: 0.5rem 0; font-size: 0.8rem; border-collapse: collapse; }
+.md-rendered th, .md-rendered td { border: 1px solid var(--md-divider); padding: 6px 8px; text-align: left; }
+.md-rendered th { background: var(--md-primary-light); color: var(--md-text); font-weight: 500; }
+.md-rendered a { color: var(--md-primary); text-decoration: none; }
+.md-rendered a:hover { text-decoration: underline; }
+.md-rendered.md-fallback { white-space: pre-wrap; font-family: inherit; }
+.prose { padding: 0 4px; }
+.prose h3 {
+  margin: 24px 0 12px 0;
+  font-size: 1.125rem;
+  font-weight: 500;
+  color: var(--md-primary-dark);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--md-divider);
+}
+.prose h3:first-child { margin-top: 0; }
+.prose pre {
+  font-family: 'Roboto', sans-serif;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  margin: 0 0 16px 0;
+  padding: 16px;
+  background: var(--md-bg);
+  border-radius: var(--md-radius-sm);
+  border-left: 4px solid var(--md-primary-light);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--md-text);
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.8125rem;
+  border-radius: var(--md-radius);
+  overflow: hidden;
+  box-shadow: var(--md-elevation-1);
+}
+th, td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--md-divider);
+}
+th {
+  background: var(--md-primary);
+  color: #fff;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  font-weight: 500;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  transition: background 0.2s;
+}
+th:hover { background: var(--md-primary-dark); }
+.sortable th { cursor: pointer; user-select: none; position: relative; padding-right: 24px; }
+.sortable th::after { content: ' ⇅'; opacity: 0.4; font-size: 0.85em; }
+.sortable th.sort-asc::after { content: ' ▲'; opacity: 1; }
+.sortable th.sort-desc::after { content: ' ▼'; opacity: 1; }
+tbody tr {
+  transition: background 0.15s;
+}
+tbody tr:nth-child(even) { background: rgba(0, 137, 123, 0.04); }
+tbody tr:hover { background: rgba(0, 137, 123, 0.08); }
+.sortable { border-collapse: collapse; width: 100%; border-radius: var(--md-radius); overflow: hidden; box-shadow: var(--md-elevation-1); }
+.sortable td, .sortable th { border-bottom: 1px solid var(--md-divider); }
+.sortable tbody tr:last-child td { border-bottom: none; }
+.cell-best { background: rgba(0, 150, 136, 0.18) !important; font-weight: 600; color: var(--md-primary-dark); }
+.table-scroll { overflow-x: auto; margin: 0 -4px; border-radius: var(--md-radius); }
+#table-narratives td { max-width: 420px; word-wrap: break-word; }
+.narrative-card {
+  background: var(--md-surface);
+  border: 1px solid var(--md-divider);
+  border-radius: var(--md-radius);
+  padding: 20px;
+  margin-bottom: 24px;
+  box-shadow: var(--md-elevation-1);
+}
+.narrative-title {
+  margin: 0 0 8px 0;
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--md-primary-dark);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--md-divider);
+}
+.narrative-recommendation {
+  margin: 0 0 12px 0;
+  padding: 8px 12px;
+  background: var(--md-bg);
+  border-left: 4px solid var(--md-primary);
+  font-size: 0.95rem;
+}
+.narrative-rec-rationale {
+  color: var(--md-text-secondary);
+  font-style: italic;
+}
+.narrative-fund-label { margin: 12px 0 6px 0; font-size: 0.875rem; color: var(--md-text-secondary); }
+.fund-table-mini {
+  width: auto;
+  min-width: 320px;
+  margin-bottom: 12px;
+  font-size: 0.8125rem;
+}
+.fund-table-mini th { padding: 8px 12px; }
+.fund-table-mini td { padding: 8px 12px; }
+.narrative-para {
+  margin: 0 0 12px 0;
+  line-height: 1.6;
+  color: var(--md-text);
+}
+.narrative-para:last-of-type { margin-bottom: 0; }
+.guide-content { max-width: 720px; }
+.guide-section {
+  margin-bottom: 24px;
+}
+.guide-section h3 {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--md-primary-dark);
+  margin: 0 0 10px 0;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--md-divider);
+}
+.guide-section p {
+  margin: 0 0 12px 0;
+  line-height: 1.6;
+}
+.guide-table {
+  width: 100%;
+  margin-top: 8px;
+  margin-bottom: 16px;
+  font-size: 0.875rem;
+}
+.guide-table th { background: var(--md-primary-light); color: var(--md-text); }
+@media (max-width: 600px) {
+  .app-bar { padding: 12px 16px; }
+  .main-content { padding: 16px; }
+  .tab-btn { padding: 12px 14px; font-size: 0.75rem; }
+  .tab-panel { padding: 16px; }
+}
+</style>
+</head>
+<body>
+<header class="app-bar">
+  <h1>Plastics and Mouldings (India) – Comprehensive Sector Report</h1>
+  <p class="meta">Report date: 2026-03-09 &nbsp;·&nbsp; Data as of: 2026-03-06</p>
+</header>
+<main class="main-content">
+  <div class="tabs" role="tablist"><button class="tab-btn" data-tab="overview">Overview</button><button class="tab-btn" data-tab="guide">How to read</button><button class="tab-btn" data-tab="universe">Universe</button><button class="tab-btn" data-tab="shortlist">Shortlist</button><button class="tab-btn" data-tab="backtest">Backtest</button><button class="tab-btn" data-tab="narratives">Stock narratives</button></div>
+<div id="panel-overview" class="tab-panel" role="tabpanel"><div class='overview-cards'><div class='card-section'><h3 class='card-title'>Sector definition &amp; market size</h3><div id='overview-narrative' class='md-rendered'></div></div><div class='card-section'><h3 class='card-title'>Research question &amp; hypothesis</h3><div id='overview-hypothesis' class='md-rendered'></div></div><div class='card-section'><h3 class='card-title'>Literature &amp; sources</h3><div id='overview-literature' class='md-rendered'></div></div></div><script type='application/json' id='overview-md'>{"narrative": "# Plastics and Mouldings (India) – Sector Note\n\n**Report date:** 2026-03-09  \n**Data as of:** 2026-03-06\n\n---\n\n## 1. Definition and market size\n\n*(Sector narrative not found; run run_research_workflow.sh or add sector_narrative_plastics_and_mouldings.md)*\n\n---\n\n## 2. Universe and metrics\n\nThis analysis uses a **component-only** universe (ex-OEM), aligned with ACMA. Universe: 6 stocks.\n\n## 3. Shortlist (top by composite score)\n\n| SYMBOL | SUBSECTOR | CURRENT_PRICE | RET_6M | RS_VS_NIFTY_500_6M | FUND_SCORE | TECHNICAL_SCORE | COMPOSITE_SCORE |\n|--------|-----------|---------------|--------|--------------------|------------|-----------------|-----------------|\n| AMNPLST | Plasticizers | 152.09 | -29.1% | -28.7% | 59.2 | 20.0 | 35.0 |\n\n\n## 4. Backtest (momentum screen: RS_6M > 0)\n\n- Mean excess return (portfolio vs Nifty 500, 1Y forward): **12.48%**\n- Hit rate (excess > 0): **71%**\n\n*Backtest uses only price-based criteria; fundamental screen not applied historically (data limitation).*\n\n---\n\n## 5. Data and research sources\n\nSo you can verify recency and provenance, all data and research sources are dated below.\n\n- **Report generated:** 2026-03-09\n- **Pipeline data as of:** 2026-03-06 (prices, returns, fundamentals used in this note).\n\n**Pipeline data sources:**\n- **Price data:** NSE (nse_sec_full_data.csv, nse_index_data.csv).\n- **Fundamental scores:** Screener/organized pipeline (fundamental_scores_database.csv).\n- **Definition and market size:** See sector_narrative_plastics_and_mouldings.md and literature notes for this sector.\n\n**Web research and LLM synthesis:** Multi-step web search was run with emphasis on **latest data** (current year, recent outlook). Sources and retrieval dates are listed in the file below. Use it to see where each research claim came from and when it was retrieved.\n\n- See **research_sources.md** in this folder for: web search date, source list (URL, retrieved date), and LLM synthesis (with disclaimer for undated LLM knowledge).\n\n*Users should verify sources and dates for their own use.*", "hypothesis": "", "literature": ""}</script></div><div id="panel-guide" class="tab-panel" role="tabpanel">
+<div class="guide-content">
+  <section class="guide-section">
+    <h3>How to use this report</h3>
+    <p>This report has six tabs: <strong>Overview</strong> (sector definition, hypothesis, literature), <strong>How to read</strong> (this guide), <strong>Universe</strong> (all stocks with metrics), <strong>Shortlist</strong> (top names by composite score), <strong>Backtest</strong> (historical momentum screen results), and <strong>Stock narratives</strong> (per-stock commentary with fundamental breakdown). Use the tabs to switch views.</p>
+    <p><strong>Tables:</strong> In Universe, Shortlist, and Backtest, click any column header to sort by that column; click again to toggle ascending (▲) / descending (▼). <strong>Green-highlighted cells</strong> mark the top 25% of values in that column (e.g. highest composite score, best 6M return, highest excess return in backtest).</p>
+  </section>
+
+  <section class="guide-section">
+    <h3>Price and return metrics</h3>
+    <table class="guide-table">
+      <thead><tr><th>Metric</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><strong>CURRENT_PRICE</strong></td><td>Latest closing price (Rs).</td></tr>
+        <tr><td><strong>RET_1M / RET_3M / RET_6M</strong></td><td>Total return over 1, 3, and 6 months (e.g. 10% = 0.10).</td></tr>
+        <tr><td><strong>RS_VS_NIFTY_500_6M</strong></td><td>Stock return minus Nifty 500 return over 6 months. Positive = outperformed the index.</td></tr>
+        <tr><td><strong>RS_VS_NIFTY_AUTO_6M</strong></td><td>Same vs Nifty Auto index.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="guide-section">
+    <h3>Technical metrics</h3>
+    <table class="guide-table">
+      <thead><tr><th>Metric</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><strong>RSI</strong></td><td>Relative Strength Index (0–100). &lt;30 often oversold, &gt;70 overbought.</td></tr>
+        <tr><td><strong>TECHNICAL_SCORE</strong></td><td>Composite technical score (e.g. 0–100) from price and momentum; higher = stronger short-term technical picture.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="guide-section">
+    <h3>Fundamental scores</h3>
+    <p>All fundamental scores are on a 0–100 scale (higher = better). They come from the Screener/organized pipeline.</p>
+    <table class="guide-table">
+      <thead><tr><th>Score</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><strong>FUND_SCORE</strong></td><td>Overall fundamental score (earnings quality, sales growth, financial strength, institutional backing combined).</td></tr>
+        <tr><td><strong>Earnings quality</strong></td><td>Quality and sustainability of earnings (margins, consistency, cash flow).</td></tr>
+        <tr><td><strong>Sales growth</strong></td><td>Revenue growth trajectory.</td></tr>
+        <tr><td><strong>Financial strength</strong></td><td>Balance sheet health, leverage, liquidity.</td></tr>
+        <tr><td><strong>Institutional backing</strong></td><td>Degree of institutional (DII/FII) ownership and trend.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="guide-section">
+    <h3>Composite and screen</h3>
+    <table class="guide-table">
+      <thead><tr><th>Term</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><strong>COMPOSITE_SCORE</strong></td><td>Weighted combination: 0.4 × fundamental + 0.4 × technical + 0.2 × relative strength rank (0–100). Used to rank and shortlist stocks.</td></tr>
+        <tr><td><strong>PASS_FUND</strong></td><td>True if fundamental score &gt;= 70 (quality screen).</td></tr>
+        <tr><td><strong>PASS_RS</strong></td><td>True if 6M relative strength vs Nifty 500 &gt; 0 (momentum screen).</td></tr>
+        <tr><td><strong>PASS_SCREEN</strong></td><td>True if both PASS_FUND and PASS_RS.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="guide-section">
+    <h3>Backtest</h3>
+    <p><strong>REBAL_DATE</strong>: Date when the portfolio was formed. <strong>N_STOCKS</strong>: Number of stocks passing the screen. <strong>PORTFOLIO_RET_1Y</strong>: Equal-weight return of those stocks over the next year. <strong>BENCH_RET_1Y</strong>: Nifty 500 return over the same period. <strong>EXCESS_RET</strong>: Portfolio return minus benchmark. The backtest uses a momentum-only screen (RS &gt; 0); fundamental filters are not applied historically due to data limits.</p>
+  </section>
+
+  <section class="guide-section">
+    <h3>Stock narratives</h3>
+    <p>Each stock has a short narrative that synthesizes <strong>key metrics</strong> (price, returns, RSI, technical and fundamental scores) and <strong>key financial ratios/fundamentals</strong>: P&amp;L (Sales, Net Profit, EPS, YoY), <strong>Quarterly</strong> (last 4Q sales and profit), <strong>Balance sheet</strong> (Equity, Debt, Cash, Debt/Equity), and <strong>Ratios</strong> (ROCE, ROE, EPS, PE, PB, OPM, NPM, Interest Coverage, Div Yield when available). The <strong>fundamental score (0–100)</strong> is the main financial-quality metric. Run <code>fetch_screener_fundamental_details.R</code> to populate these from Screener.in.</p>
+    <p><strong>Recommendation:</strong> The LLM (Ollama) provides a view-based recommendation (Buy / Accumulate / Hold / Reduce / Avoid) with a one-line rationale derived from the metrics. This is for research context only, not investment advice.</p>
+  </section>
+</div>
+</div><div id="panel-universe" class="tab-panel" role="tabpanel"><div class="table-scroll"><table id="table-universe" class="sortable"><thead><tr>
+<th data-col="SYMBOL">SYMBOL</th>
+<th data-col="SUBSECTOR">SUBSECTOR</th>
+<th data-col="CURRENT_PRICE">CURRENT_PRICE</th>
+<th data-col="RET_1M">RET_1M</th>
+<th data-col="RET_3M">RET_3M</th>
+<th data-col="RET_6M">RET_6M</th>
+<th data-col="RS_VS_NIFTY_AUTO_6M">RS_VS_NIFTY_AUTO_6M</th>
+<th data-col="RS_VS_NIFTY_500_6M">RS_VS_NIFTY_500_6M</th>
+<th data-col="RSI">RSI</th>
+<th data-col="TECHNICAL_SCORE">TECHNICAL_SCORE</th>
+<th data-col="FUND_SCORE">FUND_SCORE</th>
+<th data-col="AS_OF_DATE">AS_OF_DATE</th>
+<th data-col="FUND_NORM">FUND_NORM</th>
+<th data-col="TECH_NORM">TECH_NORM</th>
+<th data-col="RS_RANK">RS_RANK</th>
+<th data-col="COMPOSITE_SCORE">COMPOSITE_SCORE</th>
+<th data-col="PASS_FUND">PASS_FUND</th>
+<th data-col="PASS_RS">PASS_RS</th>
+<th data-col="PASS_SCREEN">PASS_SCREEN</th>
+</tr></thead><tbody>
+<tr>
+<td class="">SHAILY</td>
+<td class="">Engineering Plastics</td>
+<td class="">1913.60</td>
+<td class="">-7.2%</td>
+<td class="">-29.9%</td>
+<td class="cell-best">8.9%</td>
+<td class="">-4.6%</td>
+<td class="cell-best">9.2%</td>
+<td class="">40.58</td>
+<td class="">40.00</td>
+<td class=""></td>
+<td class="">2026-03-06</td>
+<td class="">50.00</td>
+<td class="">40.00</td>
+<td class="">83.33</td>
+<td class="">52.67</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">AMNPLST</td>
+<td class="">Plasticizers</td>
+<td class="">152.09</td>
+<td class="">-12.9%</td>
+<td class="">-23.3%</td>
+<td class="">-29.1%</td>
+<td class="">-42.6%</td>
+<td class="">-28.7%</td>
+<td class="">20.02</td>
+<td class="">20.00</td>
+<td class="">59.22</td>
+<td class="">2026-03-06</td>
+<td class="">59.22</td>
+<td class="">20.00</td>
+<td class="">16.67</td>
+<td class="">35.02</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">POLYPLEX</td>
+<td class="">Films/Packaging</td>
+<td class="">831.90</td>
+<td class="">-2.7%</td>
+<td class="">-3.6%</td>
+<td class="">-26.6%</td>
+<td class="">-40.1%</td>
+<td class="">-26.2%</td>
+<td class="">45.66</td>
+<td class="">40.00</td>
+<td class=""></td>
+<td class="">2026-03-06</td>
+<td class="">50.00</td>
+<td class="">40.00</td>
+<td class="">33.33</td>
+<td class="">42.67</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">JINDALPOLY</td>
+<td class="">Films</td>
+<td class="">768.35</td>
+<td class="">90.5%</td>
+<td class="">39.9%</td>
+<td class="cell-best">44.4%</td>
+<td class="">30.9%</td>
+<td class="cell-best">44.8%</td>
+<td class="">86.01</td>
+<td class="cell-best">60.00</td>
+<td class=""></td>
+<td class="">2026-03-06</td>
+<td class="">50.00</td>
+<td class="">60.00</td>
+<td class="">100.00</td>
+<td class="cell-best">64.00</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">UFLEX</td>
+<td class="">Flexible Packaging</td>
+<td class="">460.70</td>
+<td class="">-5.8%</td>
+<td class="">-10.8%</td>
+<td class="">-21.8%</td>
+<td class="">-35.3%</td>
+<td class="">-21.4%</td>
+<td class="">46.65</td>
+<td class="">40.00</td>
+<td class=""></td>
+<td class="">2026-03-06</td>
+<td class="">50.00</td>
+<td class="">40.00</td>
+<td class="">50.00</td>
+<td class="">46.00</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">TAINWALCHM</td>
+<td class="">Plastics/Chemicals</td>
+<td class="">202.05</td>
+<td class="">15.9%</td>
+<td class="">3.5%</td>
+<td class="">-10.0%</td>
+<td class="">-23.5%</td>
+<td class="">-9.6%</td>
+<td class="">68.14</td>
+<td class="cell-best">80.00</td>
+<td class=""></td>
+<td class="">2026-03-06</td>
+<td class="">50.00</td>
+<td class="">80.00</td>
+<td class="">66.67</td>
+<td class="cell-best">65.33</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+</tbody></table></div></div><div id="panel-shortlist" class="tab-panel" role="tabpanel"><div class="table-scroll"><table id="table-shortlist" class="sortable"><thead><tr>
+<th data-col="SYMBOL">SYMBOL</th>
+<th data-col="SUBSECTOR">SUBSECTOR</th>
+<th data-col="CURRENT_PRICE">CURRENT_PRICE</th>
+<th data-col="RET_1M">RET_1M</th>
+<th data-col="RET_3M">RET_3M</th>
+<th data-col="RET_6M">RET_6M</th>
+<th data-col="RS_VS_NIFTY_AUTO_6M">RS_VS_NIFTY_AUTO_6M</th>
+<th data-col="RS_VS_NIFTY_500_6M">RS_VS_NIFTY_500_6M</th>
+<th data-col="RSI">RSI</th>
+<th data-col="TECHNICAL_SCORE">TECHNICAL_SCORE</th>
+<th data-col="FUND_SCORE">FUND_SCORE</th>
+<th data-col="AS_OF_DATE">AS_OF_DATE</th>
+<th data-col="FUND_NORM">FUND_NORM</th>
+<th data-col="TECH_NORM">TECH_NORM</th>
+<th data-col="RS_RANK">RS_RANK</th>
+<th data-col="COMPOSITE_SCORE">COMPOSITE_SCORE</th>
+<th data-col="PASS_FUND">PASS_FUND</th>
+<th data-col="PASS_RS">PASS_RS</th>
+<th data-col="PASS_SCREEN">PASS_SCREEN</th>
+</tr></thead><tbody>
+<tr>
+<td class="">AMNPLST</td>
+<td class="">Plasticizers</td>
+<td class="">152.09</td>
+<td class="">-12.9%</td>
+<td class="">-23.3%</td>
+<td class="">-29.1%</td>
+<td class="">-42.6%</td>
+<td class="">-28.7%</td>
+<td class="">20.02</td>
+<td class="">20.00</td>
+<td class="">59.22</td>
+<td class="">2026-03-06</td>
+<td class="">59.22</td>
+<td class="">20.00</td>
+<td class="">16.67</td>
+<td class="">35.02</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+</tbody></table></div></div><div id="panel-backtest" class="tab-panel" role="tabpanel"><div class="table-scroll"><table id="table-backtest" class="sortable"><thead><tr>
+<th data-col="REBAL_DATE">REBAL_DATE</th>
+<th data-col="N_STOCKS">N_STOCKS</th>
+<th data-col="PORTFOLIO_RET_1Y">PORTFOLIO_RET_1Y</th>
+<th data-col="BENCH_RET_1Y">BENCH_RET_1Y</th>
+<th data-col="EXCESS_RET">EXCESS_RET</th>
+</tr></thead><tbody>
+<tr>
+<td class="">2023-01-02</td>
+<td class="">0</td>
+<td class=""></td>
+<td class=""></td>
+<td class=""></td>
+</tr>
+<tr>
+<td class="">2023-02-01</td>
+<td class="">0</td>
+<td class=""></td>
+<td class=""></td>
+<td class=""></td>
+</tr>
+<tr>
+<td class="">2023-03-02</td>
+<td class="">0</td>
+<td class=""></td>
+<td class=""></td>
+<td class=""></td>
+</tr>
+<tr>
+<td class="">2023-04-05</td>
+<td class="">0</td>
+<td class=""></td>
+<td class=""></td>
+<td class=""></td>
+</tr>
+<tr>
+<td class="">2023-05-09</td>
+<td class="">0</td>
+<td class=""></td>
+<td class=""></td>
+<td class=""></td>
+</tr>
+<tr>
+<td class="">2023-06-07</td>
+<td class="">0</td>
+<td class=""></td>
+<td class=""></td>
+<td class=""></td>
+</tr>
+<tr>
+<td class="">2023-07-07</td>
+<td class="">0</td>
+<td class=""></td>
+<td class=""></td>
+<td class=""></td>
+</tr>
+<tr>
+<td class="">2023-08-07</td>
+<td class="">0</td>
+<td class=""></td>
+<td class=""></td>
+<td class=""></td>
+</tr>
+<tr>
+<td class="">2023-09-06</td>
+<td class="">4</td>
+<td class="">19.08%</td>
+<td class="">37.51%</td>
+<td class="">-18.44%</td>
+</tr>
+<tr>
+<td class="">2023-10-09</td>
+<td class="">4</td>
+<td class="">33.04%</td>
+<td class="">37.12%</td>
+<td class="">-4.08%</td>
+</tr>
+<tr>
+<td class="">2023-11-08</td>
+<td class="">3</td>
+<td class="cell-best">43.92%</td>
+<td class="">29.69%</td>
+<td class="">14.23%</td>
+</tr>
+<tr>
+<td class="">2023-12-08</td>
+<td class="">2</td>
+<td class="cell-best">51.81%</td>
+<td class="">24.45%</td>
+<td class="cell-best">27.36%</td>
+</tr>
+<tr>
+<td class="">2024-01-09</td>
+<td class="">3</td>
+<td class="">31.51%</td>
+<td class="">10.06%</td>
+<td class="">21.45%</td>
+</tr>
+<tr>
+<td class="">2024-02-08</td>
+<td class="">2</td>
+<td class="">34.91%</td>
+<td class="">4.95%</td>
+<td class="cell-best">29.96%</td>
+</tr>
+<tr>
+<td class="">2024-03-07</td>
+<td class="">1</td>
+<td class="cell-best">58.27%</td>
+<td class="">-0.56%</td>
+<td class="cell-best">58.83%</td>
+</tr>
+<tr>
+<td class="">2024-04-10</td>
+<td class="">2</td>
+<td class="cell-best">47.04%</td>
+<td class="">4.51%</td>
+<td class="cell-best">42.53%</td>
+</tr>
+<tr>
+<td class="">2024-05-14</td>
+<td class="">1</td>
+<td class="">32.15%</td>
+<td class="">8.89%</td>
+<td class="">23.26%</td>
+</tr>
+<tr>
+<td class="">2024-06-12</td>
+<td class="">3</td>
+<td class="cell-best">52.59%</td>
+<td class="">3.85%</td>
+<td class="cell-best">48.74%</td>
+</tr>
+<tr>
+<td class="">2024-07-12</td>
+<td class="">5</td>
+<td class="">10.09%</td>
+<td class="">0.9%</td>
+<td class="">9.18%</td>
+</tr>
+<tr>
+<td class="">2024-08-13</td>
+<td class="">6</td>
+<td class="">3.7%</td>
+<td class="">1.14%</td>
+<td class="">2.56%</td>
+</tr>
+<tr>
+<td class="">2024-09-12</td>
+<td class="">6</td>
+<td class="">7.27%</td>
+<td class="">-2.02%</td>
+<td class="">9.29%</td>
+</tr>
+<tr>
+<td class="">2024-10-14</td>
+<td class="">6</td>
+<td class="">7.8%</td>
+<td class="">0.1%</td>
+<td class="">7.7%</td>
+</tr>
+<tr>
+<td class="">2024-11-12</td>
+<td class="">6</td>
+<td class="">0.35%</td>
+<td class="">8.56%</td>
+<td class="">-8.2%</td>
+</tr>
+<tr>
+<td class="">2024-12-13</td>
+<td class="">6</td>
+<td class="">-20.72%</td>
+<td class="">2.84%</td>
+<td class="">-23.56%</td>
+</tr>
+<tr>
+<td class="">2025-01-14</td>
+<td class="">4</td>
+<td class="">-18.72%</td>
+<td class="">9.89%</td>
+<td class="">-28.61%</td>
+</tr>
+</tbody></table></div></div><div id="panel-narratives" class="tab-panel" role="tabpanel"><div class="narrative-card">
+<h3 class="narrative-title">SHAILY – Shaily Engineering Plastics</h3>
+<p class="narrative-para"><strong>KEY METRICS:</strong> The stock of Shaily Engineering Plastics (SHAILY) has shown mixed performance with a -7.2% return over the past month and a significant -29.9% decline over three months, yet it boasts an impressive 8.9% gain over six months. Its relative strength versus the Nifty 500 stands at 9.2%, indicating decent market positioning. The RSI of 40.6 suggests a balanced momentum, neither oversold nor overbought, while the technical score is modest at 40, hinting at limited short-term buying interest.</p>
+<p class="narrative-para"><strong>KEY FINANCIAL RATIOS / FUNDAMENTALS:</strong> Shaily Engineering Plastics has secured a fundamental score of <strong>60</strong>, reflecting moderate financial health and market confidence. The earnings quality sub-score stands at 70, driven by stable profit margins and consistent quarterly growth, with a notable YoY sales increase of 8.9%. Financial strength is rated at 50, supported by manageable debt levels and positive cash flow from operations. Institutional backing is strong at 80, suggesting robust investor confidence. The balance sheet is solid, featuring healthy equity reserves and low debt-to-equity ratio.</p>
+<p class="narrative-para"><strong>RECOMMENDATION:</strong> Hold. The moderate technical score combined with a solid fundamental foundation suggests maintaining the position for potential upside as the company recovers in the short term while keeping an eye on market momentum indicators.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">AMNPLST – Amines &amp; Plasticizers</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+ <span class="narrative-rec-rationale">— Justification: Despite strong sales growth, the negative relative strength and low technical score indicate weak momentum, while the fundamental score is above average but not strong enough to justify a more aggressive stance like Buy or Accumulate.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>54.8</td>
+<td>55.3</td>
+<td>56.7</td>
+<td>71.0</td>
+</tr></tbody></table>
+<p class="narrative-para">KEY METRICS:
+- Price: Rs 152.09
+- Returns: 1M -12.9%, 3M -23.3%, 6M -29.1%
+- Relative Strength vs Nifty 500 (6M): -28.7%
+- RSI: 20.0
+- Technical Score: 20.0
+- Fundamental Score: <strong>59.2</strong></p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS:
+- Earnings Quality: 54.8
+- Sales Growth: <strong>71.0</strong>
+- Financial Strength: 55.3
+- Institutional Backing: 56.7</p>
+<p class="narrative-para">RECOMMENDATION: Hold</p>
+<p class="narrative-para">Justification: Despite strong sales growth, the negative relative strength and low technical score indicate weak momentum, while the fundamental score is above average but not strong enough to justify a more aggressive stance like Buy or Accumulate.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">POLYPLEX – Polyplex Corporation</h3>
+<p class="narrative-para"><strong>KEY METRICS:</strong>  
+POLYPLEX Corporation is trading at Rs 831.90, with a 1-month return of -2.7%, 3-month return of -3.6%, and a 6-month return of -26.6%. The stock has underperformed the Nifty 500 by -26.2% over the past six months. The Relative Strength Index (RSI) stands at 45.7, indicating potential weakness.</p>
+<p class="narrative-para"><strong>KEY FINANCIAL RATIOS / FUNDAMENTALS:</strong>  
+The fundamental score for POLYPLEX is 42/100, reflecting a moderate assessment of financial health and growth prospects. Earnings quality scores include detailed metrics on sales growth, financial strength, institutional backing, and profitability ratios such as ROCE, ROE, EPS, PE, PB, OPM, NPM. The stock&#x27;s P&amp;L shows mixed quarterly progressions with fluctuating equity levels, indicating cautious financial management.</p>
+<p class="narrative-para"><strong>RECOMMENDATION:</strong>  
+Hold - The moderate fundamental score combined with weak technical indicators suggests holding the stock to monitor recovery trends before making further decisions.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">JINDALPOLY – Jindal Poly Films</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+ <span class="narrative-rec-rationale">— ; The stock's strong performance metrics and decent fundamental health warrant holding the position pending further accumulation opportunities or potential pullback entries.</span>
+</p>
+<p class="narrative-para">KEY METRICS: Jindal Poly Films is trading at Rs 768.35 with strong returns over the past year, quarter, and half-year period, reflecting robust market sentiment. The stock has a relative strength of 44.8% versus Nifty 500&#x27;s 6M performance, indicating it is outperforming its benchmark significantly. With an RSI of 86.0, the stock is in an overbought territory but remains attractively priced given its strong technical score of 60.0.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS: The fundamental score stands out at 64.0, suggesting solid financial health and growth prospects within the Films sub-sector. Earnings quality (e.g., EPS) and sales growth are likely robust, supported by a high composite score of 64.0. Balance sheet strength is indicated by healthy equity levels, low debt ratios, and positive cash flow trends, reinforcing institutional backing.</p>
+<p class="narrative-para">RECOMMENDATION: Hold; The stock&#x27;s strong performance metrics and decent fundamental health warrant holding the position pending further accumulation opportunities or potential pullback entries.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">UFLEX – UFlex</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+</p>
+<p class="narrative-para">KEY METRICS:
+The stock is currently priced at Rs 460.70, with negative returns over the past 1 month (-5.8%), 3 months (-10.8%), and 6 months (-21.8%). Relative strength against Nifty 500 shows a significant decline of -21.4% over six months. The RSI stands at 46.6, indicating neither overbought nor oversold conditions but rather neutrality. Technical analysis scores 40 out of 100, suggesting moderate confidence in upward momentum without strong bullish signals.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS:
+The fundamental score is highlighted as 46.0, reflecting a mixed financial health profile. Earnings quality stands at 55, indicating solid profit margins but potential volatility. Sales growth shows a modest improvement at 65, suggesting steady expansion in revenue. Financial strength is rated at 50, with adequate equity and manageable debt levels, yet room for enhancement. Institutional backing contributes to the score at 60, pointing to some degree of professional endorsement or investment interest.</p>
+<p class="narrative-para">RECOMMENDATION: Hold</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">TAINWALCHM – Tainwala Chemical and Plastic</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+ <span class="narrative-rec-rationale">— Justification: Despite the strong technical score and decent earnings quality, the significant downturn in the last six months and a fundamental score below 70 indicate mixed confidence in the company's long-term prospects, suggesting caution to hold until further clarity is provided.</span>
+</p>
+<p class="narrative-para">KEY METRICS:
+The stock of Tainwala Chemical and Plastic is currently priced at Rs 202.05, with a strong technical profile indicated by an RSI of 68.1 and a solid technical score of 80.0. However, the fundamental score stands out at 65.3, reflecting mixed financial health and growth potential.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS:
+The earnings quality is decent, supported by moderate sales growth (not specified beyond returns) and relatively strong institutional backing. The balance sheet shows a healthy equity position, though with some cash concerns that could impact short-term liquidity. Financial strength indicators suggest caution due to the negative 6-month return of -10.0%, which may signal underlying financial stress or market sentiment issues.</p>
+<p class="narrative-para">RECOMMENDATION: Hold</p>
+<p class="narrative-para">Justification: Despite the strong technical score and decent earnings quality, the significant downturn in the last six months and a fundamental score below 70 indicate mixed confidence in the company&#x27;s long-term prospects, suggesting caution to hold until further clarity is provided.</p>
+</div></div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+(function() {
+  var renderOverviewMd = function() {
+    var el = document.getElementById('overview-md');
+    if (!el) return;
+    try {
+      var data = JSON.parse(el.textContent);
+      var ids = ['narrative', 'hypothesis', 'literature'];
+      ids.forEach(function(key) {
+        var div = document.getElementById('overview-' + key);
+        if (!div) return;
+        var md = data[key] || '';
+        if (typeof marked !== 'undefined' && marked.parse) div.innerHTML = marked.parse(md);
+        else { div.textContent = md; div.classList.add('md-fallback'); }
+      });
+    } catch (e) {}
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', renderOverviewMd);
+  else renderOverviewMd();
+
+  var panels = document.querySelectorAll('.tab-panel');
+  var buttons = document.querySelectorAll('.tab-btn');
+  function show(id) {
+    panels.forEach(function(p) { p.classList.remove('active'); });
+    buttons.forEach(function(b) { b.classList.remove('active'); });
+    var p = document.getElementById('panel-' + id);
+    var b = document.querySelector('[data-tab="' + id + '"]');
+    if (p) p.classList.add('active');
+    if (b) b.classList.add('active');
+  }
+  buttons.forEach(function(b) {
+    b.addEventListener('click', function() { show(b.getAttribute('data-tab')); });
+  });
+  if (buttons.length) show(buttons[0].getAttribute('data-tab'));
+
+  function parseCellNum(txt) {
+    if (!txt) return NaN;
+    var s = txt.replace(/%|,/g, '').trim();
+    var n = parseFloat(s);
+    return isNaN(n) ? NaN : n;
+  }
+  function sortTable(tableId) {
+    var table = document.getElementById(tableId);
+    if (!table) return;
+    var headers = table.querySelectorAll('thead th');
+    var body = table.querySelector('tbody');
+    var sortState = { colIndex: -1, asc: true };
+    headers.forEach(function(th, colIndex) {
+      th.addEventListener('click', function() {
+        var rows = Array.from(body.querySelectorAll('tr'));
+        if (!rows.length) return;
+        var asc = (sortState.colIndex === colIndex) ? !sortState.asc : true;
+        sortState.colIndex = colIndex;
+        sortState.asc = asc;
+        headers.forEach(function(h, i) {
+          h.classList.remove('sort-asc', 'sort-desc');
+          if (i === colIndex) h.classList.add(asc ? 'sort-asc' : 'sort-desc');
+        });
+        var cellVal = function(row, ci) {
+          var c = row.cells[ci];
+          return c ? c.textContent.trim() : '';
+        };
+        var isNum = false;
+        for (var r = 0; r < rows.length; r++) {
+          var n = parseCellNum(cellVal(rows[r], colIndex));
+          if (!isNaN(n)) { isNum = true; break; }
+        }
+        rows.sort(function(a, b) {
+          var va = cellVal(a, colIndex);
+          var vb = cellVal(b, colIndex);
+          if (isNum) {
+            var na = parseCellNum(va);
+            var nb = parseCellNum(vb);
+            if (isNaN(na)) na = -Infinity;
+            if (isNaN(nb)) nb = -Infinity;
+            return asc ? na - nb : nb - na;
+          }
+          return asc ? va.localeCompare(vb, undefined, { numeric: true }) : vb.localeCompare(va, undefined, { numeric: true });
+        });
+        rows.forEach(function(r) { body.appendChild(r); });
+      });
+    });
+  }
+  ['table-universe','table-shortlist','table-backtest'].forEach(sortTable);
+})();
+</script>
+</body>
+</html>

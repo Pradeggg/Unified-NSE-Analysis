@@ -1,0 +1,1746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plastics and Packaging (India) – Comprehensive Report</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --md-primary: #00897B;
+  --md-primary-dark: #00695C;
+  --md-primary-light: #4DB6AC;
+  --md-primary-bg: #B2DFDB;
+  --md-surface: #FFFFFF;
+  --md-bg: #E0F2F1;
+  --md-text: #004D40;
+  --md-text-secondary: #00796B;
+  --md-divider: rgba(0, 137, 123, 0.2);
+  --md-elevation-1: 0 1px 3px rgba(0, 105, 92, 0.12), 0 1px 2px rgba(0, 105, 92, 0.24);
+  --md-elevation-2: 0 3px 6px rgba(0, 105, 92, 0.15), 0 2px 4px rgba(0, 105, 92, 0.12);
+  --md-elevation-3: 0 10px 20px rgba(0, 105, 92, 0.15), 0 3px 6px rgba(0, 105, 92, 0.1);
+  --md-radius: 8px;
+  --md-radius-sm: 4px;
+}
+* { box-sizing: border-box; }
+body {
+  font-family: 'Roboto', system-ui, sans-serif;
+  margin: 0;
+  padding: 0;
+  background: var(--md-bg);
+  color: var(--md-text);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+.app-bar {
+  background: linear-gradient(135deg, var(--md-primary-dark) 0%, var(--md-primary) 100%);
+  color: #fff;
+  padding: 16px 24px;
+  box-shadow: var(--md-elevation-2);
+}
+.app-bar h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+.app-bar .meta {
+  margin: 4px 0 0 0;
+  font-size: 0.875rem;
+  opacity: 0.9;
+  font-weight: 300;
+}
+.main-content { padding: 24px; max-width: 1400px; margin: 0 auto; }
+.tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 0;
+  background: var(--md-surface);
+  border-radius: var(--md-radius) var(--md-radius) 0 0;
+  box-shadow: var(--md-elevation-1);
+  overflow: hidden;
+  flex-wrap: wrap;
+}
+.tab-btn {
+  padding: 14px 20px;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--md-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  position: relative;
+  transition: color 0.2s, background 0.2s;
+}
+.tab-btn:hover { background: var(--md-bg); color: var(--md-primary-dark); }
+.tab-btn.active {
+  color: var(--md-primary);
+  background: rgba(0, 137, 123, 0.08);
+}
+.tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--md-primary);
+}
+.tab-panel {
+  display: none;
+  background: var(--md-surface);
+  padding: 24px;
+  border-radius: 0 0 var(--md-radius) var(--md-radius);
+  box-shadow: var(--md-elevation-1);
+  overflow-x: auto;
+  border: 1px solid var(--md-divider);
+  border-top: none;
+  min-height: 320px;
+}
+.tab-panel.active { display: block; }
+.card-section {
+  background: var(--md-surface);
+  border-radius: var(--md-radius);
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: var(--md-elevation-1);
+  border: 1px solid var(--md-divider);
+}
+.overview-cards { display: flex; flex-direction: column; gap: 20px; }
+.card-section pre {
+  font-family: 'Roboto', sans-serif;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  margin: 0;
+  padding: 16px;
+  background: var(--md-bg);
+  border-radius: var(--md-radius-sm);
+  border-left: 4px solid var(--md-primary-light);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--md-text);
+}
+.card-title {
+  margin: 0 0 12px 0;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--md-primary-dark);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--md-divider);
+}
+.md-rendered { font-size: 0.9rem; line-height: 1.6; }
+.md-rendered h1 { font-size: 1.1rem; margin: 0 0 0.5rem 0; color: var(--md-primary-dark); font-weight: 500; }
+.md-rendered h2 { font-size: 1rem; margin: 1rem 0 0.4rem 0; color: var(--md-primary-dark); font-weight: 500; }
+.md-rendered h3 { font-size: 0.95rem; margin: 0.75rem 0 0.35rem 0; color: var(--md-primary-dark); font-weight: 500; }
+.md-rendered p { margin: 0 0 0.6rem 0; }
+.md-rendered ul, .md-rendered ol { margin: 0.4rem 0 0.75rem 0; padding-left: 1.5rem; }
+.md-rendered li { margin: 0.2rem 0; }
+.md-rendered hr { border: none; border-top: 1px solid var(--md-divider); margin: 1rem 0; }
+.md-rendered strong { font-weight: 500; color: var(--md-text); }
+.md-rendered table { width: 100%; margin: 0.5rem 0; font-size: 0.8rem; border-collapse: collapse; }
+.md-rendered th, .md-rendered td { border: 1px solid var(--md-divider); padding: 6px 8px; text-align: left; }
+.md-rendered th { background: var(--md-primary-light); color: var(--md-text); font-weight: 500; }
+.md-rendered a { color: var(--md-primary); text-decoration: none; }
+.md-rendered a:hover { text-decoration: underline; }
+.md-rendered.md-fallback { white-space: pre-wrap; font-family: inherit; }
+.prose { padding: 0 4px; }
+.prose h3 {
+  margin: 24px 0 12px 0;
+  font-size: 1.125rem;
+  font-weight: 500;
+  color: var(--md-primary-dark);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--md-divider);
+}
+.prose h3:first-child { margin-top: 0; }
+.prose pre {
+  font-family: 'Roboto', sans-serif;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  margin: 0 0 16px 0;
+  padding: 16px;
+  background: var(--md-bg);
+  border-radius: var(--md-radius-sm);
+  border-left: 4px solid var(--md-primary-light);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--md-text);
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.8125rem;
+  border-radius: var(--md-radius);
+  overflow: hidden;
+  box-shadow: var(--md-elevation-1);
+}
+th, td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--md-divider);
+}
+th {
+  background: var(--md-primary);
+  color: #fff;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  font-weight: 500;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  transition: background 0.2s;
+}
+th:hover { background: var(--md-primary-dark); }
+.sortable th { cursor: pointer; user-select: none; position: relative; padding-right: 24px; }
+.sortable th::after { content: ' ⇅'; opacity: 0.4; font-size: 0.85em; }
+.sortable th.sort-asc::after { content: ' ▲'; opacity: 1; }
+.sortable th.sort-desc::after { content: ' ▼'; opacity: 1; }
+tbody tr {
+  transition: background 0.15s;
+}
+tbody tr:nth-child(even) { background: rgba(0, 137, 123, 0.04); }
+tbody tr:hover { background: rgba(0, 137, 123, 0.08); }
+.sortable { border-collapse: collapse; width: 100%; border-radius: var(--md-radius); overflow: hidden; box-shadow: var(--md-elevation-1); }
+.sortable td, .sortable th { border-bottom: 1px solid var(--md-divider); }
+.sortable tbody tr:last-child td { border-bottom: none; }
+.cell-best { background: rgba(0, 150, 136, 0.18) !important; font-weight: 600; color: var(--md-primary-dark); }
+.table-scroll { overflow-x: auto; margin: 0 -4px; border-radius: var(--md-radius); }
+#table-narratives td { max-width: 420px; word-wrap: break-word; }
+.narrative-card {
+  background: var(--md-surface);
+  border: 1px solid var(--md-divider);
+  border-radius: var(--md-radius);
+  padding: 20px;
+  margin-bottom: 24px;
+  box-shadow: var(--md-elevation-1);
+}
+.narrative-title {
+  margin: 0 0 8px 0;
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--md-primary-dark);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--md-divider);
+}
+.narrative-recommendation {
+  margin: 0 0 12px 0;
+  padding: 8px 12px;
+  background: var(--md-bg);
+  border-left: 4px solid var(--md-primary);
+  font-size: 0.95rem;
+}
+.narrative-rec-rationale {
+  color: var(--md-text-secondary);
+  font-style: italic;
+}
+.narrative-fund-label { margin: 12px 0 6px 0; font-size: 0.875rem; color: var(--md-text-secondary); }
+.fund-table-mini {
+  width: auto;
+  min-width: 320px;
+  margin-bottom: 12px;
+  font-size: 0.8125rem;
+}
+.fund-table-mini th { padding: 8px 12px; }
+.fund-table-mini td { padding: 8px 12px; }
+.narrative-para {
+  margin: 0 0 12px 0;
+  line-height: 1.6;
+  color: var(--md-text);
+}
+.narrative-para:last-of-type { margin-bottom: 0; }
+.guide-content { max-width: 720px; }
+.guide-section {
+  margin-bottom: 24px;
+}
+.guide-section h3 {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--md-primary-dark);
+  margin: 0 0 10px 0;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--md-divider);
+}
+.guide-section p {
+  margin: 0 0 12px 0;
+  line-height: 1.6;
+}
+.guide-table {
+  width: 100%;
+  margin-top: 8px;
+  margin-bottom: 16px;
+  font-size: 0.875rem;
+}
+.guide-table th { background: var(--md-primary-light); color: var(--md-text); }
+@media (max-width: 600px) {
+  .app-bar { padding: 12px 16px; }
+  .main-content { padding: 16px; }
+  .tab-btn { padding: 12px 14px; font-size: 0.75rem; }
+  .tab-panel { padding: 16px; }
+}
+</style>
+</head>
+<body>
+<header class="app-bar">
+  <h1>Plastics and Packaging (India) – Comprehensive Sector Report</h1>
+  <p class="meta">Report date: 2026-03-09 &nbsp;·&nbsp; Data as of: 2026-03-06</p>
+</header>
+<main class="main-content">
+  <div class="tabs" role="tablist"><button class="tab-btn" data-tab="overview">Overview</button><button class="tab-btn" data-tab="guide">How to read</button><button class="tab-btn" data-tab="universe">Universe</button><button class="tab-btn" data-tab="shortlist">Shortlist</button><button class="tab-btn" data-tab="backtest">Backtest</button><button class="tab-btn" data-tab="narratives">Stock narratives</button></div>
+<div id="panel-overview" class="tab-panel" role="tabpanel"><div class='overview-cards'><div class='card-section'><h3 class='card-title'>Sector definition &amp; market size</h3><div id='overview-narrative' class='md-rendered'></div></div><div class='card-section'><h3 class='card-title'>Research question &amp; hypothesis</h3><div id='overview-hypothesis' class='md-rendered'></div></div><div class='card-section'><h3 class='card-title'>Literature &amp; sources</h3><div id='overview-literature' class='md-rendered'></div></div></div><script type='application/json' id='overview-md'>{"narrative": "## Definition and Market Size\n\nThe plastics sector in India encompasses the production of various plastic products, including packaging materials, consumer goods, automotive parts, and construction components. According to multiple sources (Mordor Intelligence, ResearchandMarkets), the market size for the plastic industry in India was expected to reach USD 44.28 billion by 2025 and further surge to USD 60.11 billion by 2030, with a compound annual growth rate (CAGR) of 6.30%. The Indian plastics packaging market is anticipated to expand from USD 22.44 billion in 2025 to USD 26.13 billion by 2030, reflecting a CAGR of 3.09%.\n\n(General knowledge: The plastic industry's value was also forecasted to rise to USD 79.99 billion by 2034 with an 8.49% CAGR.)\n\n## Strategic Outlook\n\nRecent performance and policy initiatives have significantly bolstered the sector's growth. Export targets are set for the plastics sector to reach US$ 25 billion by 2027, a doubling from about $10 billion (NewKerala). Key drivers include infrastructure development, increased consumer demand across sectors like construction, automotive, and consumer goods, and government policies aimed at promoting sanitation and hygiene practices (IBEF).\n\n(General knowledge: The plastics industry in India is a major contributor to the economy, driven by its growth in various sectors.)\n\n## Why This Sector for Research\n\nThe plastics sector in India is highly relevant for equity research due to its substantial market size, robust growth projections, and significant contribution to economic development. It is also an under-researched area with ample opportunities for investment, aligning well with themes of infrastructure growth and sustainable consumption patterns. The sector's resilience and adaptability to global trends make it a critical focus for investors seeking exposure to high-growth markets in Asia.\n\n(General knowledge: The plastics industry's expansion reflects broader economic development trends in India.)", "hypothesis": "## 1. Research question (one sentence)\nWhat are the key drivers of growth in India's plastics industry, and how can investors capitalize on this trend?\n\n## 2. Definition\n- **Industry term**: Plastics and Packaging Industry in India.\n- **Universe rule**: NSE-listed companies involved in manufacturing, processing, or packaging of plastic products.\n- **Source**: Aligned with industry body reports such as those from Mordor Intelligence and IBERS.\n\n## 3. Hypotheses\n### H1 (Sector)\n- **One sentence**: The plastics sector is characterized by robust growth due to increasing demand across various sectors, evidenced by a CAGR of 6.30% for the market size reaching USD 60.11 billion by 2030.\n- **How we test it**: Analyze historical data on market size and compare with projected growth rates from industry reports.\n\n### H2 (Stock selection)\n- **One sentence**: Stocks within the plastics sector that meet fundamental quality criteria have higher returns compared to the Nifty 500 index over a 6-month horizon.\n- **How we test**: Screen for companies meeting specific fundamental scores, momentum indicators, and composite weights; backtest performance against the Nifty 500.\n\n## 4. Scope and limits\n- **In scope**: Listed Indian plastics manufacturers and packaging firms.\n- **Out of scope**: Non-listed entities, non-plastics manufacturing sectors (e.g., metals).\n- **Known limits**: Data availability for listed companies only; point-in-time snapshot as of March 9, 2026.\n\n## 5. Screen criteria (operational)\n- **Quality**: Fundamental score > 70.\n- **Momentum/RS**: Relative Strength (RS) vs Nifty 500 > 0 over the last 6 months.\n- **Composite weights**: Based on market capitalization and liquidity metrics.\n- **Shortlist size**: Top 15 companies meeting all criteria.", "literature": "## Source-by-source\n\n1. **India Plastic Industry Size, Growth & Share Analysis 2026- ...**  \n   - URL: [https://www.mordorintelligence.com/industry-reports/analysis-of-plastic-industry-in-india](https://www.mordorintelligence.com/industry-reports/analysis-of-plastic-industry-in-india)  \n   - Definition of sector: Comprehensive analysis of the plastic industry in India, covering market size, growth drivers, and key players.  \n   - Market size (₹/USD, year): Expected to reach USD 44.28 billion by 2025.  \n   - Key segments: Plastics for construction, automotive, consumer goods, etc.  \n   - How our universe aligns or deviates: Aligns with the projected growth rate of 6.30% CAGR.\n\n2. **India Plastic Packaging - Market Share Analysis, Industry Trends & Statistics, Growth Forecasts (2025 - 2030)**  \n   - URL: [https://www.researchandmarkets.com/reports/5459079/india-plastic-packaging-market-share-analysis](https://www.researchandmarkets.com/reports/5459079/india-plastic-packaging-market-share-analysis)  \n   - Definition of sector: Focuses on the plastic packaging market, including trends and growth forecasts.  \n   - Market size (₹/USD, year): Expected to reach USD 22.44 billion by 2025.  \n   - Key segments: Packaging for food & beverages, consumer goods, etc.  \n   - How our universe aligns or deviates: Aligns with the CAGR of 3.09%.\n\n3. **Indian Plastics Industry: Export Trends, Growth & Insights**  \n   - URL: [https://www.ibef.org/exports/plastic-industry-india](https://www.ibef.org/exports/plastic-industry-india)  \n   - Definition of sector: Examines export trends and growth insights for the Indian plastics industry.  \n   - Market size (₹/USD, year): Targets to increase exports to US$ 25 billion by 2027.  \n   - Key segments: Export volumes and value in various sectors.  \n   - How our universe aligns or deviates: Aligns with export growth projections.\n\n4. **India Plastics Market Size, Share & Industry Report to 2026**  \n   - URL: [https://www.omrglobal.com/industry-reports/india-plastics-market](https://www.omrglobal.com/industry-reports/india-plastics-market)  \n   - Definition of sector: Provides an overview and market share analysis for the plastics industry in India.  \n   - Market size (₹/USD, year): Projected to grow at a CAGR of 5.2% by 2030.  \n   - Key segments: Not specified in detail.  \n   - How our universe aligns or deviates: Aligns with growth projections.\n\n5. **India's Plastics Exports to Hit $20B by 2030, Industry Booms**  \n   - URL: [https://www.newkerala.com/news/a/indias-plastics-exports-projected-double-20-billion-2030-203.htm](https://www.newkerala.com/news/a/indias-plastics-exports-projected-double-20-billion-2030-203.htm)  \n   - Definition of sector: Discusses the projected growth in plastics exports from India.  \n   - Market size (₹/USD, year): Exports expected to double by 2027.  \n   - Key segments: Not specified.  \n   - How our universe aligns or deviates: Aligns with export growth targets.\n\n6. **India Plastic Market Size & Outlook, 2030**  \n   - URL: [https://www.grandviewresearch.com/horizon/outlook/plastic-market/india](https://www.grandviewresearch.com/horizon/outlook/plastic-market/india)  \n   - Definition of sector: Offers an outlook on the plastic market in India.  \n   - Market size (₹/USD, year): Projected to reach US$ 53,477.4 million by 2030.  \n   - Key segments: Not specified.  \n   - How our universe aligns or deviates: Aligns with growth projections.\n\n7. **India Plastic Packaging Market Size | Market Growth Trends & Forecast Report**  \n   - URL: [https://www.mordorintelligence.com/industry-reports/india-plastic-packaging-market](https://www.mordorintelligence.com/industry-reports/india-plastic-packaging-market)  \n   - Definition of sector: Analyzes the plastic packaging market in India.  \n   - Market size (₹/USD, year): Expected to reach USD 22.44 billion by 2025.  \n   - Key segments: Amcor plc, UFlex Limited, Jindal Poly Films Limited, etc.  \n   - How our universe aligns or deviates: Aligns with CAGR of 3.09%.\n\n8. **India Plastic Packaging Market Size | Industry Growth Trends & Forecast Report**  \n   - URL: [https://www.marketresearchfuture.com/reports/india-plastic-packaging-market-57095](https://www.marketresearchfuture.com/reports/india-plastic-packaging-market-57095)  \n   - Definition of sector: Focuses on the plastic packaging market in India.  \n   - Market size (₹/USD, year): Projected to reach USD 50 billion by 2030.  \n   - Key segments: Not specified.  \n   - How our universe aligns or deviates: Aligns with growth projections.\n\n9. **India Plastic Industry Growth Opportunities and Market ...**  \n   - URL: [https://www.datainsightsmarket.com/reports/india-plastic-industry-13282](https://www.datainsightsmarket.com/reports/india-plastic-industry-13282)  \n   - Definition of sector: Explores growth opportunities within the Indian plastics industry.  \n   - Market size (₹/USD, year): ₹46.48 billion in 2025.  \n   - Key segments: Packaging, automotive, construction.  \n   - How our…"}</script></div><div id="panel-guide" class="tab-panel" role="tabpanel">
+<div class="guide-content">
+  <section class="guide-section">
+    <h3>How to use this report</h3>
+    <p>This report has six tabs: <strong>Overview</strong> (sector definition, hypothesis, literature), <strong>How to read</strong> (this guide), <strong>Universe</strong> (all stocks with metrics), <strong>Shortlist</strong> (top names by composite score), <strong>Backtest</strong> (historical momentum screen results), and <strong>Stock narratives</strong> (per-stock commentary with fundamental breakdown). Use the tabs to switch views.</p>
+    <p><strong>Tables:</strong> In Universe, Shortlist, and Backtest, click any column header to sort by that column; click again to toggle ascending (▲) / descending (▼). <strong>Green-highlighted cells</strong> mark the top 25% of values in that column (e.g. highest composite score, best 6M return, highest excess return in backtest).</p>
+  </section>
+
+  <section class="guide-section">
+    <h3>Price and return metrics</h3>
+    <table class="guide-table">
+      <thead><tr><th>Metric</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><strong>CURRENT_PRICE</strong></td><td>Latest closing price (Rs).</td></tr>
+        <tr><td><strong>RET_1M / RET_3M / RET_6M</strong></td><td>Total return over 1, 3, and 6 months (e.g. 10% = 0.10).</td></tr>
+        <tr><td><strong>RS_VS_NIFTY_500_6M</strong></td><td>Stock return minus Nifty 500 return over 6 months. Positive = outperformed the index.</td></tr>
+        <tr><td><strong>RS_VS_NIFTY_AUTO_6M</strong></td><td>Same vs Nifty Auto index.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="guide-section">
+    <h3>Technical metrics</h3>
+    <table class="guide-table">
+      <thead><tr><th>Metric</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><strong>RSI</strong></td><td>Relative Strength Index (0–100). &lt;30 often oversold, &gt;70 overbought.</td></tr>
+        <tr><td><strong>TECHNICAL_SCORE</strong></td><td>Composite technical score (e.g. 0–100) from price and momentum; higher = stronger short-term technical picture.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="guide-section">
+    <h3>Fundamental scores</h3>
+    <p>All fundamental scores are on a 0–100 scale (higher = better). They come from the Screener/organized pipeline.</p>
+    <table class="guide-table">
+      <thead><tr><th>Score</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><strong>FUND_SCORE</strong></td><td>Overall fundamental score (earnings quality, sales growth, financial strength, institutional backing combined).</td></tr>
+        <tr><td><strong>Earnings quality</strong></td><td>Quality and sustainability of earnings (margins, consistency, cash flow).</td></tr>
+        <tr><td><strong>Sales growth</strong></td><td>Revenue growth trajectory.</td></tr>
+        <tr><td><strong>Financial strength</strong></td><td>Balance sheet health, leverage, liquidity.</td></tr>
+        <tr><td><strong>Institutional backing</strong></td><td>Degree of institutional (DII/FII) ownership and trend.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="guide-section">
+    <h3>Composite and screen</h3>
+    <table class="guide-table">
+      <thead><tr><th>Term</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><strong>COMPOSITE_SCORE</strong></td><td>Weighted combination: 0.4 × fundamental + 0.4 × technical + 0.2 × relative strength rank (0–100). Used to rank and shortlist stocks.</td></tr>
+        <tr><td><strong>PASS_FUND</strong></td><td>True if fundamental score &gt;= 70 (quality screen).</td></tr>
+        <tr><td><strong>PASS_RS</strong></td><td>True if 6M relative strength vs Nifty 500 &gt; 0 (momentum screen).</td></tr>
+        <tr><td><strong>PASS_SCREEN</strong></td><td>True if both PASS_FUND and PASS_RS.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="guide-section">
+    <h3>Backtest</h3>
+    <p><strong>REBAL_DATE</strong>: Date when the portfolio was formed. <strong>N_STOCKS</strong>: Number of stocks passing the screen. <strong>PORTFOLIO_RET_1Y</strong>: Equal-weight return of those stocks over the next year. <strong>BENCH_RET_1Y</strong>: Nifty 500 return over the same period. <strong>EXCESS_RET</strong>: Portfolio return minus benchmark. The backtest uses a momentum-only screen (RS &gt; 0); fundamental filters are not applied historically due to data limits.</p>
+  </section>
+
+  <section class="guide-section">
+    <h3>Stock narratives</h3>
+    <p>Each stock has a short narrative that synthesizes <strong>key metrics</strong> (price, returns, RSI, technical and fundamental scores) and <strong>key financial ratios/fundamentals</strong>: P&amp;L (Sales, Net Profit, EPS, YoY), <strong>Quarterly</strong> (last 4Q sales and profit), <strong>Balance sheet</strong> (Equity, Debt, Cash, Debt/Equity), and <strong>Ratios</strong> (ROCE, ROE, EPS, PE, PB, OPM, NPM, Interest Coverage, Div Yield when available). The <strong>fundamental score (0–100)</strong> is the main financial-quality metric. Run <code>fetch_screener_fundamental_details.R</code> to populate these from Screener.in.</p>
+    <p><strong>Recommendation:</strong> The LLM (Ollama) provides a view-based recommendation (Buy / Accumulate / Hold / Reduce / Avoid) with a one-line rationale derived from the metrics. This is for research context only, not investment advice.</p>
+  </section>
+</div>
+</div><div id="panel-universe" class="tab-panel" role="tabpanel"><div class="table-scroll"><table id="table-universe" class="sortable"><thead><tr>
+<th data-col="SYMBOL">SYMBOL</th>
+<th data-col="SUBSECTOR">SUBSECTOR</th>
+<th data-col="CURRENT_PRICE">CURRENT_PRICE</th>
+<th data-col="RET_1M">RET_1M</th>
+<th data-col="RET_3M">RET_3M</th>
+<th data-col="RET_6M">RET_6M</th>
+<th data-col="RS_VS_NIFTY_AUTO_6M">RS_VS_NIFTY_AUTO_6M</th>
+<th data-col="RS_VS_NIFTY_500_6M">RS_VS_NIFTY_500_6M</th>
+<th data-col="RSI">RSI</th>
+<th data-col="TECHNICAL_SCORE">TECHNICAL_SCORE</th>
+<th data-col="FUND_SCORE">FUND_SCORE</th>
+<th data-col="AS_OF_DATE">AS_OF_DATE</th>
+<th data-col="FUND_NORM">FUND_NORM</th>
+<th data-col="TECH_NORM">TECH_NORM</th>
+<th data-col="RS_RANK">RS_RANK</th>
+<th data-col="COMPOSITE_SCORE">COMPOSITE_SCORE</th>
+<th data-col="PASS_FUND">PASS_FUND</th>
+<th data-col="PASS_RS">PASS_RS</th>
+<th data-col="PASS_SCREEN">PASS_SCREEN</th>
+</tr></thead><tbody>
+<tr>
+<td class="">SUPREMEIND</td>
+<td class="">Plastics</td>
+<td class="">3947.70</td>
+<td class="">5.5%</td>
+<td class="">9.1%</td>
+<td class="cell-best">-6.4%</td>
+<td class="">-19.9%</td>
+<td class="cell-best">-6.1%</td>
+<td class="">64.17</td>
+<td class="cell-best">80.00</td>
+<td class="">46.85</td>
+<td class="">2026-03-06</td>
+<td class="">46.85</td>
+<td class="">80.00</td>
+<td class="">86.67</td>
+<td class="cell-best">68.07</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">FINOPB</td>
+<td class="">Plastics</td>
+<td class="">179.79</td>
+<td class="">-21.6%</td>
+<td class="">-36.8%</td>
+<td class="">-27.1%</td>
+<td class="">-40.6%</td>
+<td class="">-26.7%</td>
+<td class="">22.84</td>
+<td class="">20.00</td>
+<td class="">52.98</td>
+<td class="">2026-03-06</td>
+<td class="">52.98</td>
+<td class="">20.00</td>
+<td class="">20.00</td>
+<td class="">33.19</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">POLYPLEX</td>
+<td class="">Films/Packaging</td>
+<td class="">831.90</td>
+<td class="">-2.7%</td>
+<td class="">-3.6%</td>
+<td class="">-26.6%</td>
+<td class="">-40.1%</td>
+<td class="">-26.2%</td>
+<td class="">45.66</td>
+<td class="">40.00</td>
+<td class="cell-best">66.80</td>
+<td class="">2026-03-06</td>
+<td class="">66.80</td>
+<td class="">40.00</td>
+<td class="">26.67</td>
+<td class="">48.05</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">UFLEX</td>
+<td class="">Flexible Packaging</td>
+<td class="">460.70</td>
+<td class="">-5.8%</td>
+<td class="">-10.8%</td>
+<td class="">-21.8%</td>
+<td class="">-35.3%</td>
+<td class="">-21.4%</td>
+<td class="">46.65</td>
+<td class="">40.00</td>
+<td class="">50.67</td>
+<td class="">2026-03-06</td>
+<td class="">50.67</td>
+<td class="">40.00</td>
+<td class="">40.00</td>
+<td class="">44.27</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">JINDALPOLY</td>
+<td class="">Films</td>
+<td class="">768.35</td>
+<td class="">90.5%</td>
+<td class="">39.9%</td>
+<td class="cell-best">44.4%</td>
+<td class="">30.9%</td>
+<td class="cell-best">44.8%</td>
+<td class="">86.01</td>
+<td class="cell-best">60.00</td>
+<td class="cell-best">64.10</td>
+<td class="">2026-03-06</td>
+<td class="">64.10</td>
+<td class="">60.00</td>
+<td class="">100.00</td>
+<td class="cell-best">69.64</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">SAFARI</td>
+<td class="">Plastics</td>
+<td class="">1680.30</td>
+<td class="">-19.2%</td>
+<td class="">-27.0%</td>
+<td class="">-16.9%</td>
+<td class="">-30.4%</td>
+<td class="">-16.5%</td>
+<td class="">40.98</td>
+<td class="">40.00</td>
+<td class="">55.07</td>
+<td class="">2026-03-06</td>
+<td class="">55.07</td>
+<td class="">40.00</td>
+<td class="">53.33</td>
+<td class="">48.69</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">VIPIND</td>
+<td class="">Plastics/Luggage</td>
+<td class="">366.40</td>
+<td class="">-2.3%</td>
+<td class="">-6.3%</td>
+<td class="">-11.3%</td>
+<td class="">-24.8%</td>
+<td class="">-10.9%</td>
+<td class="">36.66</td>
+<td class="">30.00</td>
+<td class="cell-best">61.02</td>
+<td class="">2026-03-06</td>
+<td class="">61.02</td>
+<td class="">30.00</td>
+<td class="">73.33</td>
+<td class="">51.07</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">NILKAMAL</td>
+<td class="">Plastics</td>
+<td class="">1340.20</td>
+<td class="">-5.9%</td>
+<td class="">-9.8%</td>
+<td class="">-15.0%</td>
+<td class="">-28.5%</td>
+<td class="">-14.6%</td>
+<td class="">27.29</td>
+<td class="">20.00</td>
+<td class="">51.22</td>
+<td class="">2026-03-06</td>
+<td class="">51.22</td>
+<td class="">20.00</td>
+<td class="">60.00</td>
+<td class="">40.49</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">EPL</td>
+<td class="">Packaging</td>
+<td class="">199.70</td>
+<td class="">-4.4%</td>
+<td class="">1.9%</td>
+<td class="">-13.7%</td>
+<td class="">-27.2%</td>
+<td class="">-13.3%</td>
+<td class="">31.35</td>
+<td class="">30.00</td>
+<td class="">50.44</td>
+<td class="">2026-03-06</td>
+<td class="">50.44</td>
+<td class="">30.00</td>
+<td class="">66.67</td>
+<td class="">45.51</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">TCPLPACK</td>
+<td class="">Packaging</td>
+<td class="">2568.20</td>
+<td class="">-4.0%</td>
+<td class="">-21.1%</td>
+<td class="">-24.4%</td>
+<td class="">-37.9%</td>
+<td class="">-24.0%</td>
+<td class="">26.86</td>
+<td class="">20.00</td>
+<td class="">50.68</td>
+<td class="">2026-03-06</td>
+<td class="">50.68</td>
+<td class="">20.00</td>
+<td class="">33.33</td>
+<td class="">34.94</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">XPROINDIA</td>
+<td class="">Packaging</td>
+<td class="">916.40</td>
+<td class="">-4.9%</td>
+<td class="">-11.0%</td>
+<td class="">-18.9%</td>
+<td class="">-32.4%</td>
+<td class="">-18.5%</td>
+<td class="">48.56</td>
+<td class="cell-best">60.00</td>
+<td class="">56.93</td>
+<td class="">2026-03-06</td>
+<td class="">56.93</td>
+<td class="">60.00</td>
+<td class="">46.67</td>
+<td class="cell-best">56.11</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">SHAILY</td>
+<td class="">Engineering Plastics</td>
+<td class="">1913.60</td>
+<td class="">-7.2%</td>
+<td class="">-29.9%</td>
+<td class="cell-best">8.9%</td>
+<td class="">-4.6%</td>
+<td class="cell-best">9.2%</td>
+<td class="">40.58</td>
+<td class="">40.00</td>
+<td class="">52.91</td>
+<td class="">2026-03-06</td>
+<td class="">52.91</td>
+<td class="">40.00</td>
+<td class="">93.33</td>
+<td class="">55.83</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">AMNPLST</td>
+<td class="">Plasticizers</td>
+<td class="">152.09</td>
+<td class="">-12.9%</td>
+<td class="">-23.3%</td>
+<td class="">-29.1%</td>
+<td class="">-42.6%</td>
+<td class="">-28.7%</td>
+<td class="">20.02</td>
+<td class="">20.00</td>
+<td class="">59.22</td>
+<td class="">2026-03-06</td>
+<td class="">59.22</td>
+<td class="">20.00</td>
+<td class="">13.33</td>
+<td class="">34.35</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">TAINWALCHM</td>
+<td class="">Plastics/Chemicals</td>
+<td class="">202.05</td>
+<td class="">15.9%</td>
+<td class="">3.5%</td>
+<td class="cell-best">-10.0%</td>
+<td class="">-23.5%</td>
+<td class="cell-best">-9.6%</td>
+<td class="">68.14</td>
+<td class="cell-best">80.00</td>
+<td class="cell-best">63.24</td>
+<td class="">2026-03-06</td>
+<td class="">63.24</td>
+<td class="">80.00</td>
+<td class="">80.00</td>
+<td class="cell-best">73.30</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">POLYMED</td>
+<td class="">Medical Plastics</td>
+<td class="">1356.10</td>
+<td class="">-10.6%</td>
+<td class="">-28.6%</td>
+<td class="">-29.5%</td>
+<td class="">-43.0%</td>
+<td class="">-29.1%</td>
+<td class="">59.04</td>
+<td class="cell-best">60.00</td>
+<td class="">52.53</td>
+<td class="">2026-03-06</td>
+<td class="">52.53</td>
+<td class="">60.00</td>
+<td class="">666.7%</td>
+<td class="">46.35</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+</tbody></table></div></div><div id="panel-shortlist" class="tab-panel" role="tabpanel"><div class="table-scroll"><table id="table-shortlist" class="sortable"><thead><tr>
+<th data-col="SYMBOL">SYMBOL</th>
+<th data-col="SUBSECTOR">SUBSECTOR</th>
+<th data-col="CURRENT_PRICE">CURRENT_PRICE</th>
+<th data-col="RET_1M">RET_1M</th>
+<th data-col="RET_3M">RET_3M</th>
+<th data-col="RET_6M">RET_6M</th>
+<th data-col="RS_VS_NIFTY_AUTO_6M">RS_VS_NIFTY_AUTO_6M</th>
+<th data-col="RS_VS_NIFTY_500_6M">RS_VS_NIFTY_500_6M</th>
+<th data-col="RSI">RSI</th>
+<th data-col="TECHNICAL_SCORE">TECHNICAL_SCORE</th>
+<th data-col="FUND_SCORE">FUND_SCORE</th>
+<th data-col="AS_OF_DATE">AS_OF_DATE</th>
+<th data-col="FUND_NORM">FUND_NORM</th>
+<th data-col="TECH_NORM">TECH_NORM</th>
+<th data-col="RS_RANK">RS_RANK</th>
+<th data-col="COMPOSITE_SCORE">COMPOSITE_SCORE</th>
+<th data-col="PASS_FUND">PASS_FUND</th>
+<th data-col="PASS_RS">PASS_RS</th>
+<th data-col="PASS_SCREEN">PASS_SCREEN</th>
+</tr></thead><tbody>
+<tr>
+<td class="">TAINWALCHM</td>
+<td class="">Plastics/Chemicals</td>
+<td class="">202.05</td>
+<td class="">15.9%</td>
+<td class="">3.5%</td>
+<td class="cell-best">-10.0%</td>
+<td class="">-23.5%</td>
+<td class="cell-best">-9.6%</td>
+<td class="">68.14</td>
+<td class="cell-best">80.00</td>
+<td class="cell-best">63.24</td>
+<td class="">2026-03-06</td>
+<td class="">63.24</td>
+<td class="">80.00</td>
+<td class="">80.00</td>
+<td class="cell-best">73.30</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">JINDALPOLY</td>
+<td class="">Films</td>
+<td class="">768.35</td>
+<td class="">90.5%</td>
+<td class="">39.9%</td>
+<td class="cell-best">44.4%</td>
+<td class="">30.9%</td>
+<td class="cell-best">44.8%</td>
+<td class="">86.01</td>
+<td class="cell-best">60.00</td>
+<td class="cell-best">64.10</td>
+<td class="">2026-03-06</td>
+<td class="">64.10</td>
+<td class="">60.00</td>
+<td class="">100.00</td>
+<td class="cell-best">69.64</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">SUPREMEIND</td>
+<td class="">Plastics</td>
+<td class="">3947.70</td>
+<td class="">5.5%</td>
+<td class="">9.1%</td>
+<td class="cell-best">-6.4%</td>
+<td class="">-19.9%</td>
+<td class="cell-best">-6.1%</td>
+<td class="">64.17</td>
+<td class="cell-best">80.00</td>
+<td class="">46.85</td>
+<td class="">2026-03-06</td>
+<td class="">46.85</td>
+<td class="">80.00</td>
+<td class="">86.67</td>
+<td class="cell-best">68.07</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">XPROINDIA</td>
+<td class="">Packaging</td>
+<td class="">916.40</td>
+<td class="">-4.9%</td>
+<td class="">-11.0%</td>
+<td class="">-18.9%</td>
+<td class="">-32.4%</td>
+<td class="">-18.5%</td>
+<td class="">48.56</td>
+<td class="cell-best">60.00</td>
+<td class="">56.93</td>
+<td class="">2026-03-06</td>
+<td class="">56.93</td>
+<td class="">60.00</td>
+<td class="">46.67</td>
+<td class="cell-best">56.11</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">SHAILY</td>
+<td class="">Engineering Plastics</td>
+<td class="">1913.60</td>
+<td class="">-7.2%</td>
+<td class="">-29.9%</td>
+<td class="cell-best">8.9%</td>
+<td class="">-4.6%</td>
+<td class="cell-best">9.2%</td>
+<td class="">40.58</td>
+<td class="">40.00</td>
+<td class="">52.91</td>
+<td class="">2026-03-06</td>
+<td class="">52.91</td>
+<td class="">40.00</td>
+<td class="">93.33</td>
+<td class="">55.83</td>
+<td class="">False</td>
+<td class="">True</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">VIPIND</td>
+<td class="">Plastics/Luggage</td>
+<td class="">366.40</td>
+<td class="">-2.3%</td>
+<td class="">-6.3%</td>
+<td class="">-11.3%</td>
+<td class="">-24.8%</td>
+<td class="">-10.9%</td>
+<td class="">36.66</td>
+<td class="">30.00</td>
+<td class="cell-best">61.02</td>
+<td class="">2026-03-06</td>
+<td class="">61.02</td>
+<td class="">30.00</td>
+<td class="">73.33</td>
+<td class="">51.07</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">SAFARI</td>
+<td class="">Plastics</td>
+<td class="">1680.30</td>
+<td class="">-19.2%</td>
+<td class="">-27.0%</td>
+<td class="">-16.9%</td>
+<td class="">-30.4%</td>
+<td class="">-16.5%</td>
+<td class="">40.98</td>
+<td class="">40.00</td>
+<td class="">55.07</td>
+<td class="">2026-03-06</td>
+<td class="">55.07</td>
+<td class="">40.00</td>
+<td class="">53.33</td>
+<td class="">48.69</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">POLYPLEX</td>
+<td class="">Films/Packaging</td>
+<td class="">831.90</td>
+<td class="">-2.7%</td>
+<td class="">-3.6%</td>
+<td class="">-26.6%</td>
+<td class="">-40.1%</td>
+<td class="">-26.2%</td>
+<td class="">45.66</td>
+<td class="">40.00</td>
+<td class="cell-best">66.80</td>
+<td class="">2026-03-06</td>
+<td class="">66.80</td>
+<td class="">40.00</td>
+<td class="">26.67</td>
+<td class="">48.05</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">POLYMED</td>
+<td class="">Medical Plastics</td>
+<td class="">1356.10</td>
+<td class="">-10.6%</td>
+<td class="">-28.6%</td>
+<td class="">-29.5%</td>
+<td class="">-43.0%</td>
+<td class="">-29.1%</td>
+<td class="">59.04</td>
+<td class="cell-best">60.00</td>
+<td class="">52.53</td>
+<td class="">2026-03-06</td>
+<td class="">52.53</td>
+<td class="">60.00</td>
+<td class="">666.7%</td>
+<td class="">46.35</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">EPL</td>
+<td class="">Packaging</td>
+<td class="">199.70</td>
+<td class="">-4.4%</td>
+<td class="">1.9%</td>
+<td class="">-13.7%</td>
+<td class="">-27.2%</td>
+<td class="">-13.3%</td>
+<td class="">31.35</td>
+<td class="">30.00</td>
+<td class="">50.44</td>
+<td class="">2026-03-06</td>
+<td class="">50.44</td>
+<td class="">30.00</td>
+<td class="">66.67</td>
+<td class="">45.51</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">UFLEX</td>
+<td class="">Flexible Packaging</td>
+<td class="">460.70</td>
+<td class="">-5.8%</td>
+<td class="">-10.8%</td>
+<td class="">-21.8%</td>
+<td class="">-35.3%</td>
+<td class="">-21.4%</td>
+<td class="">46.65</td>
+<td class="">40.00</td>
+<td class="">50.67</td>
+<td class="">2026-03-06</td>
+<td class="">50.67</td>
+<td class="">40.00</td>
+<td class="">40.00</td>
+<td class="">44.27</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">NILKAMAL</td>
+<td class="">Plastics</td>
+<td class="">1340.20</td>
+<td class="">-5.9%</td>
+<td class="">-9.8%</td>
+<td class="">-15.0%</td>
+<td class="">-28.5%</td>
+<td class="">-14.6%</td>
+<td class="">27.29</td>
+<td class="">20.00</td>
+<td class="">51.22</td>
+<td class="">2026-03-06</td>
+<td class="">51.22</td>
+<td class="">20.00</td>
+<td class="">60.00</td>
+<td class="">40.49</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">TCPLPACK</td>
+<td class="">Packaging</td>
+<td class="">2568.20</td>
+<td class="">-4.0%</td>
+<td class="">-21.1%</td>
+<td class="">-24.4%</td>
+<td class="">-37.9%</td>
+<td class="">-24.0%</td>
+<td class="">26.86</td>
+<td class="">20.00</td>
+<td class="">50.68</td>
+<td class="">2026-03-06</td>
+<td class="">50.68</td>
+<td class="">20.00</td>
+<td class="">33.33</td>
+<td class="">34.94</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">AMNPLST</td>
+<td class="">Plasticizers</td>
+<td class="">152.09</td>
+<td class="">-12.9%</td>
+<td class="">-23.3%</td>
+<td class="">-29.1%</td>
+<td class="">-42.6%</td>
+<td class="">-28.7%</td>
+<td class="">20.02</td>
+<td class="">20.00</td>
+<td class="">59.22</td>
+<td class="">2026-03-06</td>
+<td class="">59.22</td>
+<td class="">20.00</td>
+<td class="">13.33</td>
+<td class="">34.35</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+<tr>
+<td class="">FINOPB</td>
+<td class="">Plastics</td>
+<td class="">179.79</td>
+<td class="">-21.6%</td>
+<td class="">-36.8%</td>
+<td class="">-27.1%</td>
+<td class="">-40.6%</td>
+<td class="">-26.7%</td>
+<td class="">22.84</td>
+<td class="">20.00</td>
+<td class="">52.98</td>
+<td class="">2026-03-06</td>
+<td class="">52.98</td>
+<td class="">20.00</td>
+<td class="">20.00</td>
+<td class="">33.19</td>
+<td class="">False</td>
+<td class="">False</td>
+<td class="">False</td>
+</tr>
+</tbody></table></div></div><div id="panel-backtest" class="tab-panel" role="tabpanel"><div class="table-scroll"><table id="table-backtest" class="sortable"><thead><tr>
+<th data-col="REBAL_DATE">REBAL_DATE</th>
+<th data-col="N_STOCKS">N_STOCKS</th>
+<th data-col="PORTFOLIO_RET_1Y">PORTFOLIO_RET_1Y</th>
+<th data-col="BENCH_RET_1Y">BENCH_RET_1Y</th>
+<th data-col="EXCESS_RET">EXCESS_RET</th>
+</tr></thead><tbody>
+<tr>
+<td class="">2023-01-02</td>
+<td class="">0</td>
+<td class=""></td>
+<td class=""></td>
+<td class=""></td>
+</tr>
+<tr>
+<td class="">2023-02-01</td>
+<td class="">0</td>
+<td class=""></td>
+<td class=""></td>
+<td class=""></td>
+</tr>
+<tr>
+<td class="">2023-03-02</td>
+<td class="">0</td>
+<td class=""></td>
+<td class=""></td>
+<td class=""></td>
+</tr>
+<tr>
+<td class="">2023-04-05</td>
+<td class="">0</td>
+<td class=""></td>
+<td class=""></td>
+<td class=""></td>
+</tr>
+<tr>
+<td class="">2023-05-09</td>
+<td class="">0</td>
+<td class=""></td>
+<td class=""></td>
+<td class=""></td>
+</tr>
+<tr>
+<td class="">2023-06-07</td>
+<td class="">0</td>
+<td class=""></td>
+<td class=""></td>
+<td class=""></td>
+</tr>
+<tr>
+<td class="">2023-07-07</td>
+<td class="">7</td>
+<td class="">20.69%</td>
+<td class="">39.52%</td>
+<td class="">-18.83%</td>
+</tr>
+<tr>
+<td class="">2023-08-07</td>
+<td class="">8</td>
+<td class="">13.23%</td>
+<td class="">33.96%</td>
+<td class="">-20.73%</td>
+</tr>
+<tr>
+<td class="">2023-09-06</td>
+<td class="">13</td>
+<td class="">16.22%</td>
+<td class="">37.51%</td>
+<td class="">-21.3%</td>
+</tr>
+<tr>
+<td class="">2023-10-09</td>
+<td class="">13</td>
+<td class="">21.73%</td>
+<td class="">37.12%</td>
+<td class="">-15.39%</td>
+</tr>
+<tr>
+<td class="">2023-11-08</td>
+<td class="">11</td>
+<td class="">27.88%</td>
+<td class="">29.69%</td>
+<td class="">-1.81%</td>
+</tr>
+<tr>
+<td class="">2023-12-08</td>
+<td class="">9</td>
+<td class="cell-best">35.11%</td>
+<td class="">24.45%</td>
+<td class="">10.66%</td>
+</tr>
+<tr>
+<td class="">2024-01-09</td>
+<td class="">8</td>
+<td class="cell-best">29.84%</td>
+<td class="">10.06%</td>
+<td class="cell-best">19.78%</td>
+</tr>
+<tr>
+<td class="">2024-02-08</td>
+<td class="">6</td>
+<td class="">24.95%</td>
+<td class="">4.95%</td>
+<td class="cell-best">19.99%</td>
+</tr>
+<tr>
+<td class="">2024-03-07</td>
+<td class="">4</td>
+<td class="cell-best">46.25%</td>
+<td class="">-0.56%</td>
+<td class="cell-best">46.8%</td>
+</tr>
+<tr>
+<td class="">2024-04-10</td>
+<td class="">6</td>
+<td class="cell-best">36.46%</td>
+<td class="">4.51%</td>
+<td class="cell-best">31.95%</td>
+</tr>
+<tr>
+<td class="">2024-05-14</td>
+<td class="">5</td>
+<td class="cell-best">28.46%</td>
+<td class="">8.89%</td>
+<td class="">19.57%</td>
+</tr>
+<tr>
+<td class="">2024-06-12</td>
+<td class="">7</td>
+<td class="">24.09%</td>
+<td class="">3.85%</td>
+<td class="cell-best">20.24%</td>
+</tr>
+<tr>
+<td class="">2024-07-12</td>
+<td class="">11</td>
+<td class="">6.89%</td>
+<td class="">0.9%</td>
+<td class="">5.98%</td>
+</tr>
+<tr>
+<td class="">2024-08-13</td>
+<td class="">12</td>
+<td class="">-2.04%</td>
+<td class="">1.14%</td>
+<td class="">-3.19%</td>
+</tr>
+<tr>
+<td class="">2024-09-12</td>
+<td class="">12</td>
+<td class="">-3.68%</td>
+<td class="">-2.02%</td>
+<td class="">-1.66%</td>
+</tr>
+<tr>
+<td class="">2024-10-14</td>
+<td class="">13</td>
+<td class="">-4.26%</td>
+<td class="">0.1%</td>
+<td class="">-4.36%</td>
+</tr>
+<tr>
+<td class="">2024-11-12</td>
+<td class="">13</td>
+<td class="">-7.59%</td>
+<td class="">8.56%</td>
+<td class="">-16.15%</td>
+</tr>
+<tr>
+<td class="">2024-12-13</td>
+<td class="">12</td>
+<td class="">-23.33%</td>
+<td class="">2.84%</td>
+<td class="">-26.18%</td>
+</tr>
+<tr>
+<td class="">2025-01-14</td>
+<td class="">9</td>
+<td class="">-19.39%</td>
+<td class="">9.89%</td>
+<td class="">-29.29%</td>
+</tr>
+</tbody></table></div></div><div id="panel-narratives" class="tab-panel" role="tabpanel"><div class="narrative-card">
+<h3 class="narrative-title">SUPREMEIND – Supreme Industries</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+ <span class="narrative-rec-rationale">— Justification: Despite strong technical momentum, the negative performance over the past six months and lower fundamental scores in key areas suggest caution.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>49.6</td>
+<td>55.7</td>
+<td>55.0</td>
+<td>30.6</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 10717 Cr (YoY +2.6%); NetProfit: 814 Cr (YoY -15.3%); EPS: 64.11</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 3027, 2609, 2394, 2687 Cr; Net Profit last 4Q: 294, 202, 165, 153 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 322 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 24%; EPS: 64.11; NPM: 7.6%</p>
+<p class="narrative-para">KEY METRICS:
+The stock of Supreme Industries (SUPREMEIND) is currently trading at Rs 3947.70, with a strong relative strength against the Nifty 500 over the past 3 months (+9.1%) but showing negative returns over the last 6 months (-6.4%). The technical score stands at 80, indicating robust momentum, while the fundamental score is a modest 46.9.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS:
+The fundamental score of 46.9 is driven down by lower scores in sales growth (30.6), financial strength (55.7), and institutional backing (55.0). Earnings quality is solid at 49.6. The company&#x27;s P&amp;L shows a YoY increase in sales to Rs 10,717 Cr but a decline in net profit to Rs 814 Cr. Quarterly sales have fluctuated between Rs 2,694 and Rs 3,287 Cr, with net profits ranging from Rs 153 to Rs 294 Cr. The balance sheet reflects moderate debt at Rs 322 Cr, with a healthy ROCE of 24%. The company&#x27;s EPS stands at 64.11, and the NPM is 7.6%.</p>
+<p class="narrative-para">RECOMMENDATION: Hold</p>
+<p class="narrative-para">Justification: Despite strong technical momentum, the negative performance over the past six months and lower fundamental scores in key areas suggest caution. The company&#x27;s sales growth and institutional backing are weak, which may impact long-term prospects. Therefore, a cautious hold or accumulation strategy is recommended to monitor potential upside while managing downside risk.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">FINOPB – Finolex Industries</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+ <span class="narrative-rec-rationale">— ; The stock exhibits moderate growth potential with a decent fundamental score but suffers from weak technical indicators and negative short-term returns, suggesting caution in immediate trading decisions.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>50.2</td>
+<td>54.4</td>
+<td>55.0</td>
+<td>55.0</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Revenue: 237 Cr (YoY +21.5%); NetProfit: 69 Cr (YoY -25.8%); EPS: 8.32</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 53, 61, 60, 63 Cr; Net Profit last 4Q: 24, 18, 15, 12 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROE: 13%; EPS: 8.32; NPM: 29.11%</p>
+<p class="narrative-para">KEY METRICS: Finolex Industries (FINOPB) is currently trading at Rs 179.79, with disappointing returns of -21.6% over the past month and -36.8% over the past quarter relative to its peers in the Nifty 500 index. The stock&#x27;s Relative Strength Score (RS) stands at -26.7%, indicating a weaker performance compared to its sector benchmark.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS: The fundamental score for Finolex Industries is 53, which suggests moderate financial quality and growth potential within the Plastics sub-sector. Earnings Quality scores at 50.2, reflecting stable earnings but room for improvement in profitability. Sales Growth has a score of 55, indicating solid revenue expansion, while Financial Strength earns a modest 54.4 points. Institutional Backing is relatively strong at 55, supporting the company&#x27;s long-term prospects.</p>
+<p class="narrative-para">RECOMMENDATION: Hold; The stock exhibits moderate growth potential with a decent fundamental score but suffers from weak technical indicators and negative short-term returns, suggesting caution in immediate trading decisions.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">POLYPLEX – Polyplex Corporation</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+ <span class="narrative-rec-rationale">— The company's fundamental score and earnings quality are solid, but the weak technical score and significant negative returns in the six-month period suggest caution.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>70.0</td>
+<td>57.7</td>
+<td>55.0</td>
+<td>76.0</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 6955 Cr (YoY +1%); NetProfit: -5 Cr (YoY -101.4%); EPS: 9.64</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 1740, 1739, 1794, 1682 Cr; Net Profit last 4Q: -9, -60, 34, 30 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 968 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 14%; EPS: 9.64; NPM: -0.07%</p>
+<p class="narrative-para">KEY METRICS: POLYPLEX Corporation&#x27;s price is Rs 831.90 with negative returns of -2.7%, -3.6%, and -26.6% over the past month, three months, and six months, respectively. The stock has a relative strength vs Nifty 500 of -26.2% in the six-month period. Its RSI stands at 45.7, indicating neither strong bullish nor bearish momentum. The technical score is 40 out of 100, suggesting moderate support from technical indicators.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS: The fundamental score for POLYPLEX is 66.8, reflecting solid financial quality. The earnings quality sub-score is 70, indicating strong profitability and reliability of reported earnings. Sales growth is robust at 76, showing steady expansion in revenue. Financial strength is rated at 57.7, with a debt level of Rs 968 Cr. Institutional backing scores 55 out of 100, suggesting moderate support from institutional investors.</p>
+<p class="narrative-para">RECOMMENDATION: Hold. The company&#x27;s fundamental score and earnings quality are solid, but the weak technical score and significant negative returns in the six-month period suggest caution. The high debt levels and declining net profit further indicate potential challenges that may affect future performance.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">UFLEX – UFlex</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>52.0</td>
+<td>59.1</td>
+<td>55.0</td>
+<td>39.3</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 15159 Cr (YoY +0.8%); NetProfit: 289 Cr (YoY +103.5%); EPS: 40.11</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 3814, 3901, 3832, 3612 Cr; Net Profit last 4Q: 169, 58, 27, 36 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 9326 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 9%; EPS: 40.11; NPM: 1.91%</p>
+<p class="narrative-para">KEY METRICS:
+The stock is currently trading at Rs 460.70 with negative returns of -5.8%, -10.8%, and -21.8% over the past month, quarter, and half-year respectively against a relative strength of -21.4% versus Nifty 500. The RSI stands at 46.6 indicating neither strong bullish nor bearish momentum. Its technical score is rated at 40 out of 100 suggesting moderate confidence in price appreciation from a purely technical standpoint.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS:
+The fundamental score for UFlex is 50.7, which is slightly above average but not exceptional. Financially, it scores well in terms of earnings quality (52), sales growth (39), financial strength (59), and institutional backing (55). The P&amp;L shows steady sales growth YoY by 0.8% and impressive profit growth YoY by 103.5%, with EPS reported at Rs 40.11. Quarterly profitability has varied but remains positive, supported by robust debt levels of Rs 9326 Cr on a solid balance sheet. Key ratios like ROCE are healthy at 9%.</p>
+<p class="narrative-para">RECOMMENDATION:
+Hold</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">JINDALPOLY – Jindal Poly Films</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+ <span class="narrative-rec-rationale">— ; Despite strong technical indicators and relative performance, the company's negative earnings and declining sales suggest caution in taking a more aggressive stance.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>65.7</td>
+<td>60.5</td>
+<td>55.0</td>
+<td>70.0</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 3115 Cr (YoY -41.6%); NetProfit: -253 Cr (YoY -330%); EPS: -57.38</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 1420, 914, 410, 372 Cr; Net Profit last 4Q: -179, 36, -13, -97 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 3444 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 6%; EPS: -57.38; NPM: -8.12%</p>
+<p class="narrative-para">KEY METRICS: The stock of Jindal Poly Films (JINDALPOLY) has shown strong returns over the past year, with a 1M return of 90.5%, 3M return of 39.9%, and 6M return of 44.4%. Its relative strength against Nifty 500 over the last six months is at 44.8%. The RSI of 86.0 indicates strong momentum, while the technical score stands at 60.0.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS: The fundamental score for Jindal Poly Films is 64.1, reflecting solid financial health and growth potential across several key areas. Earnings quality scores 65.7, indicating robust profitability. Sales growth has been strong at 70.0, with sales last quarter dropping to 372 Cr from the previous quarters&#x27; figures. Financial strength is rated at 60.5, suggesting moderate leverage. Institutional backing also scores 55.0, showing some level of investor confidence but not as high as desired.</p>
+<p class="narrative-para">RECOMMENDATION: Hold; Despite strong technical indicators and relative performance, the company&#x27;s negative earnings and declining sales suggest caution in taking a more aggressive stance.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">SAFARI – Safari Industries</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+ <span class="narrative-rec-rationale">— The stock's moderate technical score combined with a fundamental strength suggests caution; holding through potential short-term volatility may offer better long-term returns as fundamentals improve and market conditions stabilize.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>53.0</td>
+<td>56.7</td>
+<td>55.0</td>
+<td>57.0</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 1995 Cr (YoY +12.6%); NetProfit: 168 Cr (YoY +17.5%); EPS: 34.31</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 421, 528, 534, 512 Cr; Net Profit last 4Q: 38, 50, 47, 33 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 113 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 16%; EPS: 34.31; NPM: 8.42%</p>
+<p class="narrative-para">KEY METRICS: Safiri Industries (SAFARI) is currently priced at Rs 1680.30, with a modest price return of -19.2% over the past month and -27.0% over the last three months, while showing a slight improvement to -16.9% over six months. The stock exhibits a relative strength of -16.5% versus Nifty 500 in the six-month period. Its RSI stands at 41.0, indicating neither extreme bullish nor bearish conditions, and it has scored 40 out of 100 on technical metrics. Notably, its fundamental score is 55.1, highlighting solid financial health.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS: The fundamental score of 55.1 reflects strong earnings quality (53.0), robust sales growth (57.0), stable financial strength (56.7), and moderate institutional backing (55.0). In terms of profitability, the company achieved a profit of Rs 168 Cr (+17.5% YoY) with an EPS of Rs 34.31. The quarterly sales progression was steady at Rs 421 Cr to Rs 534 Cr and then back to Rs 512 Cr. On the balance sheet, the debt stands at Rs 113 Cr, accompanied by solid profitability ratios including ROCE of 16%. NPM is also healthy at 8.42%, indicating effective asset management.</p>
+<p class="narrative-para">RECOMMENDATION: Hold. The stock&#x27;s moderate technical score combined with a fundamental strength suggests caution; holding through potential short-term volatility may offer better long-term returns as fundamentals improve and market conditions stabilize.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">VIPIND – VIP Industries</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+ <span class="narrative-rec-rationale">— Justification: Despite solid fundamental scores that indicate strong underlying health, the weak technical performance and negative earnings quality suggest caution.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>68.7</td>
+<td>57.7</td>
+<td>55.0</td>
+<td>55.0</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 1916 Cr (YoY -12%); NetProfit: -236 Cr (YoY -242%); EPS: -16.65</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 494, 561, 406, 454 Cr; Net Profit last 4Q: -27, -13, -143, -53 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 779 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: -3%; EPS: -16.65; NPM: -12.32%</p>
+<p class="narrative-para">KEY METRICS:
+The stock of VIP Industries (VIPIND) is currently trading at Rs 366.40, with negative returns over the past 1 month (-2.3%), 3 months (-6.3%), and 6 months (-11.3%). The company&#x27;s relative strength against the Nifty 500 over a 6-month period has been -10.9%. With an RSI of 36.7, it suggests the stock may be in a bearish phase. The technical score is 30 out of 100, indicating weak momentum from a purely technical standpoint. However, its fundamental score stands at a solid 61, reflecting robust underlying business fundamentals.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS:
+The financial fundamentals have been scored as follows: Earnings Quality (68.7), Sales Growth (55.0), Financial Strength (57.7), and Institutional Backing (55.0). The company has shown a YoY sales decline of 12% to Rs 1,916 Cr, while net profits declined sharply by 242%, reaching -236 Cr. EPS stands at a negative value of -16.65, indicating ongoing profitability issues. Over the past four quarters, sales have fluctuated between 454 and 561 Cr, with consistent losses each quarter. The balance sheet shows significant debt at Rs 779 Cr, which could impact financial flexibility.</p>
+<p class="narrative-para">RECOMMENDATION:
+Hold</p>
+<p class="narrative-para">Justification: Despite solid fundamental scores that indicate strong underlying health, the weak technical performance and negative earnings quality suggest caution. The company&#x27;s declining sales and profitability issues, coupled with high debt levels, warrant a cautious approach, making &#x27;Hold&#x27; the most appropriate recommendation until further improvements in financials or market conditions are observed.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">NILKAMAL – Nilkamal</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+ <span class="narrative-rec-rationale">— Justification: Despite solid earnings quality and sales growth, the negative performance over recent periods, low technical score, and weak relative strength against Nifty 500 suggest caution.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>48.5</td>
+<td>51.7</td>
+<td>55.0</td>
+<td>53.0</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 3707 Cr (YoY +11.9%); NetProfit: 109 Cr (YoY +1.9%); EPS: 72.51</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 894, 883, 968, 962 Cr; Net Profit last 4Q: 34, 15, 34, 25 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 539 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 9%; EPS: 72.51; NPM: 2.94%</p>
+<p class="narrative-para">KEY METRICS:
+The stock is trading at Rs 1340.20 with negative returns of -5.9%, -9.8%, and -15.0% over the past month, quarter, and half-year respectively. Relative strength against the Nifty 500 (6M) stands at -14.6%. The RSI value is low at 27.3, indicating a lack of momentum. Technical score is modest at 20.0, while the fundamental score highlights moderate financial quality at 51.2.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS:
+The earnings quality score is strong at 48.5, reflecting solid profitability. Sales growth is robust with a score of 53.0. Financial strength is average, scored at 51.7, with debt standing at Rs 539 Cr. Institutional backing receives a decent score of 55.0. The P&amp;L shows sales growing YoY by 11.9% to Rs 3707 Cr and net profit margin improving slightly to Rs 109 Cr (YoY +1.9%). EPS is reported at 72.51, with an annual return on capital employed (ROCE) of 9%. Net Profit Margin (NPM) stands at 2.94%.</p>
+<p class="narrative-para">RECOMMENDATION: Hold</p>
+<p class="narrative-para">Justification: Despite solid earnings quality and sales growth, the negative performance over recent periods, low technical score, and weak relative strength against Nifty 500 suggest caution. The fundamental score of 51.2 indicates moderate financial health, balancing both strong profitability metrics and manageable debt levels. Therefore, holding the stock is advised to monitor its progress while awaiting clearer momentum indicators.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">EPL – EPL</h3>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>49.6</td>
+<td>56.6</td>
+<td>55.0</td>
+<td>44.2</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 4568 Cr (YoY +8.4%); NetProfit: 406 Cr (YoY +11.5%); EPS: 12.52</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 1105, 1108, 1206, 1149 Cr; Net Profit last 4Q: 116, 101, 106, 83 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 850 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 20%; EPS: 12.52; NPM: 8.89%</p>
+<p class="narrative-para"><strong>Key Metrics:</strong> EPL is trading at Rs 199.70 with mixed returns over the past year (1M -4.4%), positive 3M return of 1.9%, and a significant 6M loss of -13.7%. Relative strength against Nifty 500 over 6 months shows a -13.3% performance, indicating underperformance in the market. The RSI at 31.3 suggests oversold conditions, while the technical score is low at 30.0. Fundamental score stands at 50.4, reflecting moderate financial health.</p>
+<p class="narrative-para"><strong>Key Financial Ratios / Fundamentals:</strong> The fundamental components include earnings quality (49.6), sales growth (44.2), financial strength (56.6), and institutional backing (55.0). Earnings quality is solid with an EPS of Rs 12.52. Sales have shown YoY growth of +8.4%, while net profit has increased by +11.5%. Quarterly sales ranged from 1105 Cr to 1206 Cr, showing consistent revenue generation despite a dip in the last quarter. The balance sheet features moderate debt at Rs 850 Cr with positive ratios like ROCE of 20%. Institutional backing is robust (55.0), indicating strong confidence from institutional investors.</p>
+<p class="narrative-para"><strong>Recommendation:</strong> Hold; While EPL demonstrates solid earnings quality and sales growth, its weak technical indicators and negative fundamental score suggest caution. The significant 6M loss and low technical score may warrant holding off on aggressive buying or selling strategies for now.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">TCPLPACK – TCPL Packaging</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+ <span class="narrative-rec-rationale">— Justification: The company's fundamental score is below average, indicating mixed financial health and growth potential.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>50.4</td>
+<td>56.1</td>
+<td>55.0</td>
+<td>44.2</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 1779 Cr (YoY +0.5%); NetProfit: 114 Cr (YoY -20.3%); EPS: 125.39</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 422, 425, 460, 471 Cr; Net Profit last 4Q: 38, 22, 29, 25 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 691 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 20%; EPS: 125.39; NPM: 6.41%</p>
+<p class="narrative-para">KEY METRICS:
+Price at Rs 2568.20 with disappointing returns over the past year (1M -4%), three months (-21.1%), and six months (-24.4%). Relative strength against the Nifty 500 is negative by 24 points, indicating underperformance in a down market. The RSI of 26.9 suggests oversold conditions, while the low technical score of 20 indicates weak momentum on the chart.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS:
+The fundamental score stands at 50.7, which is relatively modest. Earnings quality scores 50.4, hinting at potential issues with profit margins or earnings sustainability. Sales growth is solid at 44.2 points, reflecting steady expansion in revenue. Financial strength is rated 56.1, suggesting adequate liquidity but room for improvement in asset utilization and debt management. Institutional backing is strong at 55.0. The P&amp;L shows sales of Rs 1779 Cr with a marginal YoY growth of +0.5%, while profits have declined by 20.3% YoY to Rs 114 Cr. Quarterly performance has been volatile but profitable, with net profit ranging from Rs 22 Cr to Rs 29 Cr over the last four quarters. The balance sheet features significant debt at Rs 691 Cr, which could be a concern for long-term solvency.</p>
+<p class="narrative-para">RECOMMENDATION: Hold</p>
+<p class="narrative-para">Justification: The company&#x27;s fundamental score is below average, indicating mixed financial health and growth potential. Despite solid sales growth and modest earnings quality, the negative profitability trend and high debt levels suggest caution. Given the modest technical momentum reflected in the low score, a cautious hold stance is recommended until further improvement in earnings quality and operational efficiency is demonstrated.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">XPROINDIA – Xpro India</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+ <span class="narrative-rec-rationale">— The company's moderate technical momentum is offset by weak relative performance against the Nifty 500 and a solid yet not exceptional fundamental score, indicating cautious holding until further signs of recovery emerge.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>62.2</td>
+<td>58.6</td>
+<td>55.0</td>
+<td>48.3</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 529 Cr (YoY -0.8%); NetProfit: 13 Cr (YoY -65.8%); EPS: 5.5</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 158, 145, 120, 106 Cr; Net Profit last 4Q: 7, -5, 5, 7 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 317 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 9%; EPS: 5.5; NPM: 2.46%</p>
+<p class="narrative-para">KEY METRICS:
+The stock of Xpro India (XPROINDIA) is currently trading at Rs 916.40, with a 6-month return of -18.9%. The relative strength against the Nifty 500 over the same period is -18.5%, indicating underperformance. With an RSI of 48.6 and a technical score of 60, the stock presents moderate momentum without strong bullish bias. The fundamental score stands out at 56.9, suggesting solid but not exceptional financial quality.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS:
+The fundamental analysis of Xpro India reveals mixed signals. Earnings quality is rated at 62.2, reflecting respectable profitability and stability. Sales growth is slightly weaker at 48.3, with YoY sales declining by 0.8% and net profit dropping by 65.8%. Financial strength is moderately strong at 58.6, supported by a healthy debt level of Rs 317 Cr. Institutional backing scores 55.0, indicating moderate confidence from major investors. The P&amp;L shows fluctuating quarterly performance, with sales and profits oscillating between positive and negative values. Ratios such as ROCE (9%) and EPS (5.5) are reasonable, but net profit margin (NPM) stands out at 2.46%, suggesting efficient cost management despite declining profitability.</p>
+<p class="narrative-para">RECOMMENDATION: Hold. The company&#x27;s moderate technical momentum is offset by weak relative performance against the Nifty 500 and a solid yet not exceptional fundamental score, indicating cautious holding until further signs of recovery emerge.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">SHAILY – Shaily Engineering Plastics</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Buy
+ <span class="narrative-rec-rationale">— ; The strong financial fundamentals (Fundamental score of 52.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>52.4</td>
+<td>55.0</td>
+<td>55.0</td>
+<td>50.8</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 972 Cr (YoY +23.5%); NetProfit: 158 Cr (YoY +69.9%); EPS: 34.45</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 218, 247, 257, 250 Cr; Net Profit last 4Q: 29, 41, 51, 37 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 189 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 17%; EPS: 34.45; NPM: 16.26%</p>
+<p class="narrative-para">KEY METRICS: Shaily Engineering Plastics (SHAILY) has a current price of Rs 1913.60, with returns of -7.2% over the past month and -29.9% over the past three months, but a positive return of 8.9% over the past six months. The stock shows moderate relative strength compared to the Nifty 500 at 9.2%. With an RSI of 40.6 indicating neither overbought nor oversold conditions, and a technical score of 40.0, the fundamental score stands out at 52.9.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS: The company&#x27;s earnings quality is strong at 52.4, reflecting solid profitability. Sales growth scores are equally robust at 50.8, indicating healthy revenue expansion with a YoY increase of 23.5% in sales and 69.9% in net profit. Financial strength is moderate at 55.0, supported by manageable debt levels (Debt: Rs 189 Cr) and positive cash flow. Institutional backing also scores well at 55.0, suggesting confidence from investors. Quarterly progression shows stable earnings with sales ranging between Rs 218 Cr to Rs 257 Cr, bolstered by increasing net profits from Rs 29 Cr to Rs 51 Cr.</p>
+<p class="narrative-para">RECOMMENDATION: Buy; The strong financial fundamentals (Fundamental score of 52.9) coupled with positive recent returns and solid growth metrics justify a buy recommendation.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">AMNPLST – Amines &amp; Plasticizers</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Avoid
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>54.8</td>
+<td>55.3</td>
+<td>56.7</td>
+<td>71.0</td>
+</tr></tbody></table>
+<p class="narrative-para">KEY METRICS:
+The stock has shown negative returns of -12.9% in the last month, -23.3% in the last three months, and -29.1% over six months. Relative to Nifty 500, it ranks poorly at -28.7%. With a RSI of 20.0, it indicates oversold conditions. The technical score is low at 20.0, suggesting weak momentum from chart patterns.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS:
+The fundamental score stands out at 59.2, reflecting decent quality despite the stock&#x27;s recent performance struggles. Earnings quality scores high at 54.8, with solid sales growth of 71.0 indicating strong market demand for plasticizers. Financial strength is moderate at 55.3, showing reasonable liquidity and manageable debt levels. Institutional backing also scores well at 56.7, suggesting confidence from larger investors.</p>
+<p class="narrative-para">RECOMMENDATION:
+Avoid</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">TAINWALCHM – Tainwala Chemical and Plastic</h3>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>70.4</td>
+<td>54.1</td>
+<td>55.0</td>
+<td>64.0</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 22 Cr (YoY +37.5%); NetProfit: 11 Cr (YoY +120%); EPS: 11.35</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 5, 1, 5, 10 Cr; Net Profit last 4Q: 1, 3, 4, 3 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 0 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 4%; EPS: 11.35; NPM: 50%</p>
+<p class="narrative-para"><strong>KEY METRICS:</strong> The stock is trading at Rs 202.05 with a strong 1-month return of 15.9%, but it has underperformed the Nifty 500 by 9.6% over six months. With an RSI of 68.1 indicating bullish momentum, the technical score stands at 80.0. The fundamental score, however, is modest at 63.2, failing to pass the screen&#x27;s criteria for strong fundamentals (FUND &gt;=70) and positive six-month returns.</p>
+<p class="narrative-para"><strong>KEY FINANCIAL RATIOS / FUNDAMENTALS:</strong> The earnings quality sub-score of 70.4 reflects solid profitability, while sales growth scores 64.0 highlight robust revenue expansion at 37.5% YoY. Financial strength is rated lower at 54.1, with a conservative balance sheet showing no debt and healthy cash flow from quarterly revenues ranging between 5 to 10 Cr. The institutional backing score of 55.0 suggests moderate investor confidence. Despite solid EPS (11.35) and a respectable net profit growth of 120% YoY, the financial strength score drags the overall fundamental assessment.</p>
+<p class="narrative-para"><strong>RECOMMENDATION:</strong> Hold. The strong technical performance and earnings quality justify cautious optimism, but the weak fundamentals and negative six-month returns necessitate patience for potential upside.</p>
+</div>
+<div class="narrative-card">
+<h3 class="narrative-title">POLYMED – Poly Medicure</h3>
+<p class="narrative-recommendation"><strong>Recommendation:</strong> Hold
+ <span class="narrative-rec-rationale">— The mixed fundamental score combined with negative returns over the past six months suggests caution, but steady profitability and moderate technical strength warrant holding the stock to monitor for potential upside as fundamentals improve or momentum strengthens.</span>
+</p>
+<p class="narrative-fund-label"><em>Fundamental scores (0–100)</em></p>
+<table class="fund-table-mini"><thead><tr>
+<th>Earnings quality</th>
+<th>Financial strength</th>
+<th>Institutional backing</th>
+<th>Sales growth</th>
+</tr></thead><tbody><tr>
+<td>54.1</td>
+<td>58.0</td>
+<td>55.0</td>
+<td>44.2</td>
+</tr></tbody></table>
+<p class="narrative-fund-label"><em>P&amp;L (key items, YoY)</em></p>
+<p class="narrative-para narrative-extra">Sales: 1782 Cr (YoY +6.8%); NetProfit: 348 Cr (YoY +2.7%); EPS: 34.31</p>
+<p class="narrative-fund-label"><em>Quarterly results</em></p>
+<p class="narrative-para narrative-extra">Sales last 4Q: 441, 403, 444, 494 Cr; Net Profit last 4Q: 92, 93, 92, 71 Cr</p>
+<p class="narrative-fund-label"><em>Balance sheet</em></p>
+<p class="narrative-para narrative-extra">Debt: 240 Cr</p>
+<p class="narrative-fund-label"><em>Ratios (ROCE, ROE, EPS, PE, PB, etc.)</em></p>
+<p class="narrative-para narrative-extra">ROCE: 18%; EPS: 34.31; NPM: 19.53%</p>
+<p class="narrative-para">KEY METRICS: The stock is trading at Rs 1356.10 with a 6M return of -29.5%. Relative strength vs Nifty 500 (6M) is -29.1%, and RSI stands at 59.0, indicating neither overbought nor oversold conditions. Technical score is 60.0, suggesting moderate technical strength.</p>
+<p class="narrative-para">KEY FINANCIAL RATIOS / FUNDAMENTALS: The fundamental score is 52.5, reflecting a mixed financial health with earnings quality (54.1), sales growth (44.2), financial strength (58.0), and institutional backing (55.0) all scoring below 60. Profitability metrics show solid EPS of 34.31, while YoY sales grew by 6.8% to Rs 1782 Cr and net profit rose modestly to Rs 348 Cr. The balance sheet indicates manageable debt at Rs 240 Cr with a ROCE of 18%. Ratios like NPM stand at 19.53%, suggesting efficient operations.</p>
+<p class="narrative-para">RECOMMENDATION: Hold. The mixed fundamental score combined with negative returns over the past six months suggests caution, but steady profitability and moderate technical strength warrant holding the stock to monitor for potential upside as fundamentals improve or momentum strengthens.</p>
+</div></div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+(function() {
+  var renderOverviewMd = function() {
+    var el = document.getElementById('overview-md');
+    if (!el) return;
+    try {
+      var data = JSON.parse(el.textContent);
+      var ids = ['narrative', 'hypothesis', 'literature'];
+      ids.forEach(function(key) {
+        var div = document.getElementById('overview-' + key);
+        if (!div) return;
+        var md = data[key] || '';
+        if (typeof marked !== 'undefined' && marked.parse) div.innerHTML = marked.parse(md);
+        else { div.textContent = md; div.classList.add('md-fallback'); }
+      });
+    } catch (e) {}
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', renderOverviewMd);
+  else renderOverviewMd();
+
+  var panels = document.querySelectorAll('.tab-panel');
+  var buttons = document.querySelectorAll('.tab-btn');
+  function show(id) {
+    panels.forEach(function(p) { p.classList.remove('active'); });
+    buttons.forEach(function(b) { b.classList.remove('active'); });
+    var p = document.getElementById('panel-' + id);
+    var b = document.querySelector('[data-tab="' + id + '"]');
+    if (p) p.classList.add('active');
+    if (b) b.classList.add('active');
+  }
+  buttons.forEach(function(b) {
+    b.addEventListener('click', function() { show(b.getAttribute('data-tab')); });
+  });
+  if (buttons.length) show(buttons[0].getAttribute('data-tab'));
+
+  function parseCellNum(txt) {
+    if (!txt) return NaN;
+    var s = txt.replace(/%|,/g, '').trim();
+    var n = parseFloat(s);
+    return isNaN(n) ? NaN : n;
+  }
+  function sortTable(tableId) {
+    var table = document.getElementById(tableId);
+    if (!table) return;
+    var headers = table.querySelectorAll('thead th');
+    var body = table.querySelector('tbody');
+    var sortState = { colIndex: -1, asc: true };
+    headers.forEach(function(th, colIndex) {
+      th.addEventListener('click', function() {
+        var rows = Array.from(body.querySelectorAll('tr'));
+        if (!rows.length) return;
+        var asc = (sortState.colIndex === colIndex) ? !sortState.asc : true;
+        sortState.colIndex = colIndex;
+        sortState.asc = asc;
+        headers.forEach(function(h, i) {
+          h.classList.remove('sort-asc', 'sort-desc');
+          if (i === colIndex) h.classList.add(asc ? 'sort-asc' : 'sort-desc');
+        });
+        var cellVal = function(row, ci) {
+          var c = row.cells[ci];
+          return c ? c.textContent.trim() : '';
+        };
+        var isNum = false;
+        for (var r = 0; r < rows.length; r++) {
+          var n = parseCellNum(cellVal(rows[r], colIndex));
+          if (!isNaN(n)) { isNum = true; break; }
+        }
+        rows.sort(function(a, b) {
+          var va = cellVal(a, colIndex);
+          var vb = cellVal(b, colIndex);
+          if (isNum) {
+            var na = parseCellNum(va);
+            var nb = parseCellNum(vb);
+            if (isNaN(na)) na = -Infinity;
+            if (isNaN(nb)) nb = -Infinity;
+            return asc ? na - nb : nb - na;
+          }
+          return asc ? va.localeCompare(vb, undefined, { numeric: true }) : vb.localeCompare(va, undefined, { numeric: true });
+        });
+        rows.forEach(function(r) { body.appendChild(r); });
+      });
+    });
+  }
+  ['table-universe','table-shortlist','table-backtest'].forEach(sortTable);
+})();
+</script>
+</body>
+</html>

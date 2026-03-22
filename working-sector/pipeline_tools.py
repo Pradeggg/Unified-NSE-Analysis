@@ -168,11 +168,106 @@ def list_outputs() -> str:
     return "\n".join(lines)
 
 
+def run_fetch_fundamental_scores() -> str:
+    """
+    Fetch EARNINGS_QUALITY, SALES_GROWTH, FINANCIAL_STRENGTH, INSTITUTIONAL_BACKING from Screener
+    for any current-sector universe symbols missing from fundamental_scores_database.csv, and merge
+    them in. Run before the pipeline so Phase 2 and narratives get the four sub-scores (like Auto
+    Components). Requires R and core/screenerdata.R. If skipped or failed, pipeline continues;
+    report will show fundamental strength only where the database already has the symbol.
+    """
+    try:
+        import os
+        import subprocess
+        from config import UNIVERSE_CSV, OUTPUT_DIR, FUNDAMENTAL_CSV, WORKING_SECTOR, PROJECT_ROOT
+        if not UNIVERSE_CSV.exists():
+            return "No universe CSV; skip fundamental scores fetch."
+        import pandas as pd
+        universe_df = pd.read_csv(UNIVERSE_CSV)
+        universe = universe_df["SYMBOL"].astype(str).str.strip().str.upper().tolist()
+        existing = set()
+        if FUNDAMENTAL_CSV.exists():
+            fund_df = pd.read_csv(FUNDAMENTAL_CSV)
+            if "symbol" in fund_df.columns:
+                existing = set(fund_df["symbol"].astype(str).str.strip().str.upper())
+        missing = [s for s in universe if s not in existing]
+        if not missing:
+            return f"All {len(universe)} universe symbols already in fundamental_scores_database. No fetch needed."
+        OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+        symbols_file = OUTPUT_DIR / "symbols_to_fetch.txt"
+        symbols_file.write_text("\n".join(missing) + "\n", encoding="utf-8")
+        r_script = WORKING_SECTOR / "fetch_screener_fundamentals.R"
+        if not r_script.exists():
+            return f"R script not found: {r_script}. Run pipeline anyway; report may miss fundamental strength for some symbols."
+        result = subprocess.run(
+            ["Rscript", str(r_script), str(symbols_file), str(FUNDAMENTAL_CSV)],
+            cwd=str(PROJECT_ROOT),
+            capture_output=True,
+            text=True,
+            timeout=3600,
+        )
+        if result.returncode != 0:
+            err = (result.stderr or result.stdout or "")[:400]
+            return f"Fundamental scores fetch failed: {err}. Run pipeline anyway; report may miss sub-scores for {len(missing)} symbols."
+        return f"Fetched fundamental scores (earnings quality, sales growth, financial strength, institutional backing) for {len(missing)} symbols and merged into fundamental_scores_database. Run full pipeline next."
+    except subprocess.TimeoutExpired:
+        return "Fundamental scores fetch timed out. Run pipeline anyway; report may miss sub-scores."
+    except FileNotFoundError:
+        return "R not found (Rscript). Run pipeline anyway; report may miss fundamental strength table for symbols not already in database."
+    except Exception as e:
+        return f"Fundamental scores fetch failed: {e!s}. Run pipeline anyway."
+
+
+def run_fetch_fundamental_details() -> str:
+    """
+    Fetch P&L, quarterly, balance sheet, and ratios from Screener.in for the current sector universe.
+    Runs the R script fetch_screener_fundamental_details.R; writes fundamental_details.csv in the
+    sector output dir. Run before run_narratives so the comprehensive report shows fundamental
+    strength and financial ratios in each stock card. Requires R and core/screenerdata.R.
+
+    Returns:
+        Summary: path written and row count, or a message if R/script failed (pipeline continues).
+    """
+    try:
+        import os
+        import subprocess
+        from config import OUTPUT_DIR, WORKING_SECTOR, SECTOR, PROJECT_ROOT
+        out_csv = OUTPUT_DIR / "fundamental_details.csv"
+        env = dict(os.environ)
+        env["NSE_SECTOR"] = SECTOR
+        r_script = WORKING_SECTOR / "fetch_screener_fundamental_details.R"
+        if not r_script.exists():
+            return f"R script not found: {r_script}. Fundamental details will be missing in narratives."
+        result = subprocess.run(
+            ["Rscript", str(r_script)],
+            cwd=str(PROJECT_ROOT),
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=600,
+        )
+        if result.returncode != 0:
+            err = (result.stderr or result.stdout or "")[:500]
+            return f"Fetch fundamental details (R script) failed: {err}. Narratives will run without P&L/ratios."
+        if out_csv.exists():
+            n = len(out_csv.read_text(encoding="utf-8").splitlines()) - 1
+            return f"Fetched fundamental details for {n} symbols. Wrote {out_csv.name} in {OUTPUT_DIR}. Run run_narratives next."
+        return "Fundamental details script ran; check output dir for fundamental_details.csv."
+    except subprocess.TimeoutExpired:
+        return "Fetch fundamental details timed out (10 min). Narratives will run without P&L/ratios."
+    except FileNotFoundError:
+        return "R not found (Rscript). Install R or skip; narratives will run without P&L/ratios in report."
+    except Exception as e:
+        return f"Fetch fundamental details failed: {e!s}. Narratives will run without P&L/ratios."
+
+
 def run_narratives() -> str:
     """
     Generate stock narratives (Ollama Granite 4) for each stock in the Phase 3 shortlist/full table.
-    Reads phase3_full_with_composite.csv and fundamental details; writes stock_narratives.md and
-    stock_narratives.json. Run after Phase 3 (or full pipeline). Requires Ollama running.
+    Reads phase3_full_with_composite.csv and fundamental details (fundamental_details.csv); writes
+    stock_narratives.md and stock_narratives.json. Run after Phase 3 (or full pipeline). For
+    fundamental strength and ratios in the report, run run_fetch_fundamental_details first.
+    Requires Ollama running.
 
     Returns:
         A short summary of how many narratives were written and output paths.
@@ -190,6 +285,48 @@ def run_narratives() -> str:
         return "Narratives run completed. Check output directory for stock_narratives.md and .json."
     except Exception as e:
         return f"Narratives failed: {e!s}"
+
+
+def run_comprehensive_report() -> str:
+    """
+    Build the comprehensive sector report (MD, HTML, XLSX) from pipeline outputs and stock narratives.
+    Use after Phase 5 and run_narratives. Reads from current sector output dir; writes comprehensive_report.md,
+    comprehensive_report.html, comprehensive_report.xlsx there.
+    """
+    try:
+        import build_comprehensive_report as bcr
+        bcr.main()
+        out_dir = _output_dir()
+        return (
+            f"Comprehensive report built. Outputs in {out_dir}: "
+            "comprehensive_report.md, comprehensive_report.html, comprehensive_report.xlsx"
+        )
+    except Exception as e:
+        return f"Comprehensive report failed: {e!s}"
+
+
+def download_nse_sector_universe(sector_key: str | None = None, use_nse_api: bool = True) -> str:
+    """
+    Download Plastics and Packaging (or current sector) stocks from NSE and save as <sector>_universe.csv.
+    Uses NSE session + equity-stockIndices API when use_nse_api=True; otherwise uses curated list.
+    Run this before the pipeline to refresh the universe for plastics_and_packaging (or set NSE_SECTOR).
+
+    Args:
+        sector_key: Sector key (e.g. plastics_and_packaging). If None, uses config.SECTOR.
+        use_nse_api: If True, try NSE API first; if False or API fails, use curated list.
+
+    Returns:
+        Summary: path written and number of symbols.
+    """
+    try:
+        from config import SECTOR, WORKING_SECTOR
+        import nse_fetch_sector_universe as nse_fetch
+        key = (sector_key or SECTOR).strip().lower().replace(" ", "_")
+        path = nse_fetch.fetch_and_save(sector_key=key, output_path=WORKING_SECTOR / f"{key}_universe.csv", use_nse_api=use_nse_api)
+        n_lines = len(path.read_text(encoding="utf-8").splitlines()) - 1  # exclude header
+        return f"Downloaded {n_lines} symbols to {path.name}. Set NSE_SECTOR={key!r} and run the pipeline."
+    except Exception as e:
+        return f"Download NSE sector universe failed: {e!s}"
 
 
 def web_search(
@@ -231,7 +368,7 @@ def web_search_iterative(
 ) -> str:
     """
     Run iterative web search: first round searches the topic; second round uses Ollama to suggest
-    follow-up queries from the first snippets, then searches those. Results are deduplicated.
+    follow-up queries (emphasising latest data). Results are deduplicated and tagged with retrieved_date.
     Use for deeper research (e.g. sector outlook, market size, industry reports).
 
     Args:
@@ -256,10 +393,81 @@ def web_search_iterative(
             return f"Iterative web search ('{topic}'): no results after {rounds} round(s)."
         summary = f"Iterative search: '{topic}' — {len(results)} unique results ({rounds} round(s), engine={engine}). Top 8:\n\n"
         for i, r in enumerate(results[:8], 1):
-            summary += f"{i}. {r.get('title', '')}\n   {r.get('url', '')}\n   {r.get('snippet', '')[:350]}...\n\n"
+            rd = r.get("retrieved_date", "")
+            summary += f"{i}. {r.get('title', '')}\n   {r.get('url', '')}\n   Retrieved: {rd}\n   {r.get('snippet', '')[:350]}...\n\n"
         return summary.strip()
     except Exception as e:
         return f"Iterative web search failed: {e!s}"
+
+
+def run_sector_research(
+    topic_query: str | None = None,
+    rounds: int = 3,
+    engine: str = "duckduckgo",
+    engines: list[str] | None = None,
+) -> str:
+    """
+    Run multi-step sector research: web search focused on LATEST data (current year, recent outlook),
+    then LLM synthesis that cites sources and dates. Writes research_sources.md so the report and user
+    can see data/research source and when it was retrieved. Use before or with the full pipeline so
+    the sector note can reference research_sources.md.
+
+    Args:
+        topic_query: Optional search topic; if omitted, uses sector name + "India latest [year] market size outlook".
+        rounds: Number of iterative search rounds (default 3 for broader coverage).
+        engine: duckduckgo (default), google, or bing (used when engines is None).
+        engines: If set, use only these engines (e.g. ["duckduckgo", "yahoo"] for DDGS + SerpAPI).
+
+    Returns:
+        Summary including: search date, number of sources, path to research_sources.md, and reminder that sources/dates are in the report.
+    """
+    try:
+        from config import SECTOR_DISPLAY_NAME, OUTPUT_DIR, PHASE2_TABLE_CSV, SECTOR, WORKING_SECTOR
+        import web_search as ws
+        results, synthesis, research_sites_queried = ws.research_with_synthesis(
+            sector_display_name=SECTOR_DISPLAY_NAME,
+            topic_query=topic_query,
+            rounds=rounds,
+            engine=engine,
+            engines=engines,
+            max_results_per_query=8,
+        )
+        pipeline_as_of = None
+        if PHASE2_TABLE_CSV.exists():
+            try:
+                import pandas as pd
+                df = pd.read_csv(PHASE2_TABLE_CSV, nrows=1)
+                if "AS_OF_DATE" in df.columns:
+                    pipeline_as_of = str(df["AS_OF_DATE"].iloc[0])
+            except Exception:
+                pass
+        path = ws.write_research_sources_md(
+            output_dir=OUTPUT_DIR,
+            sector_display_name=SECTOR_DISPLAY_NAME,
+            synthesis=synthesis,
+            results=results,
+            pipeline_data_as_of=pipeline_as_of,
+            research_sites_used=research_sites_queried,
+        )
+        # Generate sector narrative, hypothesis memo, and literature notes from research + LLM
+        doc_paths = ws.write_sector_docs_from_research(
+            working_sector_dir=WORKING_SECTOR,
+            sector_key=SECTOR,
+            sector_display_name=SECTOR_DISPLAY_NAME,
+            synthesis=synthesis,
+            results=results,
+        )
+        doc_list = ", ".join(p.name for p in doc_paths.values())
+        return (
+            f"Sector research completed. Multi-step search (rounds={rounds}) emphasised latest data; "
+            f"additional targeted searches ran on {len(research_sites_queried)} Indian stock market, research and government sites. "
+            f"Found {len(results)} sources; LLM synthesis cites each source and retrieval date. "
+            f"Wrote {path.name} in {OUTPUT_DIR}. "
+            f"Generated sector docs from research + LLM: {doc_list}. "
+            "The sector note (Phase 5) and comprehensive report use these; research_sources.md lists all data and research sources with dates."
+        )
+    except Exception as e:
+        return f"Sector research failed: {e!s}"
 
 
 def get_phase_help() -> str:
@@ -274,8 +482,13 @@ def get_phase_help() -> str:
 - Phase 5 (Report): Sector note (Markdown) and HTML dashboard. Outputs: sector_note.md, dashboard.html.
 - run_full_pipeline: Run Phase 2 -> 3 -> 4 -> 5 in sequence.
 - run_narratives: Generate per-stock narratives (Ollama) after Phase 3; writes stock_narratives.md and .json.
+- run_comprehensive_report: Build comprehensive report (MD, HTML, XLSX) from pipeline + narratives; use after Phase 5 and narratives.
+- run_fetch_fundamental_scores: Fetch EARNINGS_QUALITY, SALES_GROWTH, FINANCIAL_STRENGTH, INSTITUTIONAL_BACKING from Screener for universe symbols missing from fundamental_scores_database; merge into DB. Run before run_full_pipeline so Phase 2 and narratives get the four sub-scores (like Auto Components report).
+- run_fetch_fundamental_details: Fetch P&L, quarterly, balance sheet, ratios from Screener (R script); writes fundamental_details.csv in sector output. Run before run_narratives so the report shows fundamental strength and financial ratios per stock.
+- download_nse_sector_universe: Download Plastics and Packaging (or current sector) stocks from NSE; writes <sector>_universe.csv. Use before pipeline for plastics_and_packaging.
 - web_search: Single web search (duckduckgo/google/bing) for market size, news, reports.
-- web_search_iterative: Multi-round search with Ollama-suggested follow-up queries; use for deeper sector research."""
+- web_search_iterative: Multi-round search with emphasis on latest data; follow-ups suggest dated reports.
+- run_sector_research: Multi-step research (latest-data search + LLM synthesis); writes research_sources.md with sources and dates so the report and user can verify data and research provenance."""
 
 
 # Registry for the agent: name -> callable (for executing tool calls)
@@ -285,7 +498,12 @@ TOOL_FUNCTIONS = [
     run_phase4,
     run_phase5,
     run_full_pipeline,
+    run_fetch_fundamental_scores,
+    run_fetch_fundamental_details,
     run_narratives,
+    run_comprehensive_report,
+    download_nse_sector_universe,
+    run_sector_research,
     web_search,
     web_search_iterative,
     list_outputs,
