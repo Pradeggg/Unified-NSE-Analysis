@@ -4,11 +4,14 @@ Script and agent tools for web search during sector research: market size, outlo
 
 ## Engines
 
-| Engine      | Requirement              | Notes                    |
-|------------|---------------------------|--------------------------|
-| **duckduckgo** | None (default)           | No API key; region e.g. `in-en` for India |
-| **google**     | `pip install googlesearch-python` | May be rate-limited; often URLs only |
-| **bing**       | `BING_SEARCH_KEY` or `BING_SUBSCRIPTION_KEY` env | Azure Bing Web Search API |
+| Engine        | Requirement | Notes |
+|---------------|-------------|--------|
+| **duckduckgo** | None (default) | No API key; region e.g. `in-en` for India. **Free.** |
+| **google**     | `pip install googlesearch-python` | No key; rate-limited. **Free.** |
+| **bing**       | `BING_SEARCH_KEY` or `BING_SUBSCRIPTION_KEY` | Azure; free tier ~1k queries/mo. |
+| **yahoo**      | `SERPAPI_API_KEY` | Via SerpAPI (paid). |
+| **brave**      | `BRAVE_API_KEY` or `BRAVE_SUBSCRIPTION_TOKEN` | **Free tier: 500 queries/month**, no credit card. [Get key](https://api-dashboard.search.brave.com/) |
+| **searxng**     | `SEARXNG_BASE_URL` (e.g. `https://search.example.org`) | Use any SearXNG instance; **no API key**. Self-host or use a public instance that allows JSON. |
 
 ## Standalone script
 
@@ -30,7 +33,7 @@ python3 working-sector/web_search.py "pharma sector India outlook" --iterative -
 
 **Options**
 
-- `--engine` — `duckduckgo` (default), `google`, `bing`
+- `--engine` — `duckduckgo` (default), `google`, `bing`, `yahoo`, `brave`, `searxng`
 - `--max-results` — Max results per query (default 10)
 - `--iterative` — Enable multi-round search
 - `--rounds` — Number of rounds (default 2); round 2+ use Ollama to suggest follow-up queries
@@ -51,12 +54,17 @@ Example prompts: “Search the web for auto components India market size”, “
 ## Iterative search flow
 
 1. **Round 1:** Search the given topic; collect title, URL, snippet for each result.
-2. **Round 2+ (if rounds > 1 and Ollama available):** Send topic + first round snippets to Ollama; get 1–2 suggested follow-up queries; run those searches; append results.
-3. Deduplicate by URL and return aggregated results.
+2. **Round 2+ (if rounds > 1 and Ollama available):** Send topic + first round snippets to Ollama; get 1–2 suggested follow-up queries **emphasising latest data** (e.g. "latest", "2025", "recent", "outlook"); run those searches; append results.
+3. Deduplicate by URL; tag every result with **retrieved_date** (today) so reports can cite when data was obtained.
+4. **run_sector_research (agent tool):** Runs multi-step search + LLM synthesis that cites sources and dates; writes **research_sources.md** so the sector note and user can see data/research source and when it is from. The sector note (Phase 5) includes a "Data and research sources" section and references research_sources.md when present.
 
 ## Dependencies
 
-- **duckduckgo-search** — `pip install duckduckgo-search` (required for default engine)
-- **ollama** — For iterative follow-up suggestions (optional; use `--no-ollama` to skip)
-- **googlesearch-python** — Optional, for `--engine google`
-- **Bing** — Set `BING_SEARCH_KEY` or `BING_SUBSCRIPTION_KEY` for Azure Bing Web Search API
+- **ddgs** (or duckduckgo-search) — required for default engine
+- **ollama** — for iterative follow-up suggestions (optional; use `--no-ollama` to skip)
+- **googlesearch-python** — optional, for `--engine google`
+- **requests** — used by Bing, Yahoo, Brave, SearXNG
+- **Bing** — set `BING_SEARCH_KEY` for Azure
+- **Yahoo** — set `SERPAPI_API_KEY` for SerpAPI
+- **Brave** — set `BRAVE_API_KEY` for Brave Search (500 free queries/month)
+- **SearXNG** — set `SEARXNG_BASE_URL` to a SearXNG instance URL (no key)

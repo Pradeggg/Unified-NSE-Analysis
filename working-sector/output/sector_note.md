@@ -73,8 +73,16 @@ This analysis uses a **component-only** universe (ex-OEM), aligned with ACMA. Un
 
 ---
 
-## 5. Sources and data
+## 5. Data and research sources
 
-- **Definition and market size:** See sector_narrative_auto_components.md and literature notes for this sector.
+So you can verify recency and provenance, all data and research sources are dated below.
+
+- **Report generated:** 2026-03-09
+- **Pipeline data as of:** 2026-03-06 (prices, returns, fundamentals used in this note).
+
+**Pipeline data sources:**
 - **Price data:** NSE (nse_sec_full_data.csv, nse_index_data.csv).
 - **Fundamental scores:** Screener/organized pipeline (fundamental_scores_database.csv).
+- **Definition and market size:** See sector_narrative_auto_components.md and literature notes for this sector.
+
+*Users should verify sources and dates for their own use.*

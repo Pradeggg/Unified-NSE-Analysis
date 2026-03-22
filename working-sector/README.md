@@ -21,8 +21,9 @@ This folder holds the **enhanced research approach**, sector-specific plans, and
 | **PIPELINE_README.md** | How to run the Python pipeline (Phases 2–5) step-by-step. |
 | **AGENT_README.md** | AI agent (Ollama Granite4 + tool calling): run phases via natural language. |
 | **config.py**, **phase2_data.py** … **phase5_report.py**, **run_pipeline.py** | Python pipeline; outputs in **output/** (CSVs, sector note, dashboard HTML). |
-| **web_search.py**, **WEB_SEARCH_README.md** | Web search: multiple engines (DuckDuckGo, Google, Bing) and iterative search for sector research. |
-| **agent.py**, **pipeline_tools.py** | Agent loop and pipeline tools for Ollama (phases, narratives, web search). |
+| **web_search.py**, **WEB_SEARCH_README.md** | Web search: multiple engines (DuckDuckGo, Google, Bing), iterative search, and **targeted site searches** on Indian stock market, research and government sites (Moneycontrol, ET, NSE, CRISIL, RBI, SEBI, PIB, etc.) for sector research. |
+| **nse_fetch_sector_universe.py** | Download Plastics and Packaging (or sector) stocks from NSE; writes `<sector>_universe.csv`. Use before pipeline for `plastics_and_packaging`. |
+| **agent.py**, **pipeline_tools.py** | Agent loop and pipeline tools for Ollama (phases, narratives, web search, download_nse_sector_universe). |
 
 ---
 
@@ -37,6 +38,18 @@ This folder holds the **enhanced research approach**, sector-specific plans, and
 7. Use **screen_spec_template.md** (or copy to `screen_spec_auto_components.md`) to document final screen logic.
 
 ---
+
+## Plastics and Packaging sector (NSE download)
+
+To use the **Plastics and Packaging** sector with stocks downloaded from NSE:
+
+1. **Download universe from NSE** (optional; uses NSE API when available, else curated list):
+   ```bash
+   python working-sector/nse_fetch_sector_universe.py --sector plastics_and_packaging
+   # Or with CLI before run-all:
+   python working-sector/agent_cli.py --sector "Plastics and Packaging" --download-universe --run-all
+   ```
+2. This writes `plastics_and_packaging_universe.csv` in working-sector. Then run the pipeline with `--sector "Plastics and Packaging"` as usual.
 
 ## Reuse for other sectors
 

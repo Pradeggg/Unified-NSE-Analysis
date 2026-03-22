@@ -64,23 +64,34 @@ Short narratives generated from pipeline data and fundamental details (Ollama Gr
 |---|---|---|---|
 | 55.2 | 56.8 | 54.2 | 53.0 |
 
-Key Metrics:
+*P&L (key items, YoY):* Sales: 16136 Cr (YoY +6.7%); NetProfit: 1139 Cr (YoY +24.8%); EPS: 23.62
+
+*Quarterly results:* Sales last 4Q: 3853, 3909, 4032, 4343 Cr; Net Profit last 4Q: 283, 284, 299, 273 Cr
+
+*Balance sheet:* Debt: 6658 Cr
+
+*Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 15%
+
+KEY METRICS:
 - Price: Rs 1923.90
 - Returns: 1M 20.9%, 3M 37.8%, 6M 66.9%
-- Relative Strength vs Nifty 500 (6M): 67.3%
+- Relative strength vs Nifty 500 (6M): 67.3%
 - RSI: 74.7
-- Technical Score: 70.0
+- Technical score: 70.0
+- Fundamental score: 54.8
 
-Key Financial Ratios / Fundamentals:
-- Fundamental Score: 54.8
-- Earnings Quality: 55.2
-- Sales Growth: 53.0
-- Financial Strength: 56.8
-- Institutional Backing: 54.2
+KEY FINANCIAL RATIOS / FUNDAMENTALS:
+- Earnings quality: 55.2
+- Sales growth: 53.0
+- Financial strength: 56.8
+- Institutional backing: 54.2
+- P&L: Sales YoY +6.7%, Net Profit YoY +24.8%
+- Quarterly progression: Sales last 4Q increased from 3853 Cr to 4343 Cr, Net Profit increased from 283 Cr to 273 Cr
+- Balance sheet: Debt Rs 6658 Cr
+- Ratios: ROCE 15%
 
-Recommendation: Hold
-
-Justification: The stock shows strong momentum with impressive returns over the past 6 months, but the fundamental score is below the threshold of 70, indicating underlying concerns that may not be fully reflected in current price performance.
+RECOMMENDATION:
+Hold; The stock shows strong momentum with impressive returns and relative strength, but the fundamental score is below the screen threshold, indicating potential concerns in the underlying financial health.
 
 
 ## UNOMINDA – UNO Minda
@@ -99,11 +110,14 @@ Justification: The stock shows strong momentum with impressive returns over the 
 
 *Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 19%
 
-KEY METRICS: The stock is trading at Rs 1121.30 with modest returns over the past year, including a -6.9% return in one month and a -13.2% return in three months. Relative strength against the Nifty 500 stands at 5.2%, indicating decent performance relative to the broader market. The RSI of 25.1 suggests that the stock is neither overbought nor oversold, but rather in neutral territory. With a technical score of 20 out of 100 and a fundamental score of 49.4 also below 50, both metrics indicate lukewarm performance from a valuation standpoint.
+KEY METRICS:
+The stock is trading at Rs 1121.30 with mixed returns over the past year, including a 6-month return of 4.9%. It has outperformed the Nifty 500 by 5.2% in the same period. The relative strength score (RS) stands at 25.1, and the technical score is 20.0, indicating moderate momentum.
 
-KEY FINANCIAL RATIOS / FUNDAMENTALS: The financial health is assessed with earnings quality at 53 points, which reflects relatively strong profitability. Sales growth stands at 33.5 points, indicating modest expansion in revenue, but the sales YoY increased by 12.4%, and net profit saw a notable jump of 19.7%. The balance sheet features substantial debt of Rs 2852 crore, which should be weighed carefully. Financial strength is scored at 57.6, reflecting a moderate risk profile. Institutional backing scores 55 points, suggesting some degree of confidence from major investors.
+KEY FINANCIAL RATIOS / FUNDAMENTALS:
+The fundamental score is 49.4 out of 100, reflecting a solid but not exceptional financial profile. Earnings quality scores 53.0, with strong profitability growth. Sales growth is modest at 33.5, driven by a 12.4% YoY increase in sales revenue. Financial strength scores 57.6, indicating stable balance sheet metrics and manageable debt levels (Debt: Rs 2852 Cr). Institutional backing also scores well at 55.0, suggesting confidence from major investors. The quarterly P&L shows consistent growth in both sales and net profit, with a notable increase in net profit YoY.
 
-RECOMMENDATION: Hold. While the stock shows modest growth in earnings and sales with decent profitability margins, the technical indicators are weak, and the fundamental score indicates room for improvement. The balance sheet's high debt level also warrants caution. Given these factors, a hold strategy is recommended to monitor any positive developments without immediate action.
+RECOMMENDATION:
+Hold | Moderate revenue growth and profitability outperformance justify cautious holding
 
 
 ## BOSCHLTD – Bosch
@@ -114,21 +128,19 @@ RECOMMENDATION: Hold. While the stock shows modest growth in earnings and sales 
 |---|---|---|---|
 | 52.0 | 57.5 | 63.0 | 47.0 |
 
-KEY METRICS:
-- Price: Rs 33335.00
-- Returns: 1M -9.2%, 3M -10.0%, 6M -13.7%
-- Relative Strength vs Nifty 500 (6M): -13.3%
-- RSI: 32.4
-- Technical Score: 30.0
-- Fundamental Score: **53.5**
+*P&L (key items, YoY):* Sales: 19380 Cr (YoY +7.1%); NetProfit: 2757 Cr (YoY +36.8%); EPS: 934.68
 
-KEY FINANCIAL RATIOS / FUNDAMENTALS:
-- Earnings Quality: 52.0
-- Sales Growth: 47.0
-- Financial Strength: 57.5
-- Institutional Backing: 63.0
+*Quarterly results:* Sales last 4Q: 4911, 4789, 4795, 4886 Cr; Net Profit last 4Q: 554, 1116, 554, 533 Cr
 
-RECOMMENDATION: Hold
+*Balance sheet:* Debt: 109 Cr
+
+*Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 21%
+
+**Key Metrics:** The stock is trading at Rs 33335.00 with negative returns of -9.2% (1M), -10.0% (3M) and -13.7% (6M). It has a relative strength of -13.3% versus the Nifty 500 over the 6-month period. The RSI is low at 32.4, indicating oversold conditions. Technical score stands at 30.0, while fundamental score reflects moderate quality with 53.5.
+
+**Key Financial Ratios / Fundamentals:** The earnings quality is strong at 52.0, highlighting robust profitability. Sales growth rate is also impressive at 47.0 reflecting expansion in revenue streams. Financial strength scores 57.5 indicating solid balance sheet health. Institutional backing is noteworthy at 63.0 suggesting confidence from major investors. Profitability metrics are positive with sales of Rs 19380 Cr (YoY +7.1%) and net profit of Rs 2757 Cr (YoY +36.8%). EPS stands at 934.68, a testament to shareholder value creation. The company's balance sheet shows moderate debt levels at Rs 109 Cr.
+
+**Recommendation:** Hold. While the stock demonstrates solid earnings quality and sales growth, its weak technical indicators and relatively lower fundamental score suggest caution until momentum improves or further fundamentals strengthen.
 
 
 ## EXIDEIND – Exide Industries
@@ -147,17 +159,15 @@ RECOMMENDATION: Hold
 
 *Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 10%
 
-**Key Metrics:** The stock is trading at Rs 315.95 with negative returns of -7.5% in the last month and -17.2% over three months, slightly better than its six-month return of -16.1%. It underperformed the Nifty 500 by 15.7% over the same period. The Relative Strength Index (RSI) stands at 32.7, indicating a weak momentum. The technical score is low at 30 out of 100. The fundamental score is 51.1 out of 100, reflecting moderate financial quality.
+KEY METRICS:
+Price at Rs 315.95 with negative returns over the past year (6M return of -16.1%). Relative strength vs Nifty 500 is also down (-15.7%). Low RSI of 32.7 indicates oversold conditions, and the technical score is 30.0. Fundamental score stands out at 51.1, suggesting mixed financial health.
 
-**Key Financial Ratios / Fundamentals:** 
-- Earnings Quality: 52.0
-- Sales Growth: 44.2
-- Financial Strength: 55.2
-- Institutional Backing: 55.0
+KEY FINANCIAL RATIOS / FUNDAMENTALS:
+The fundamental score of 51.1 reflects a moderate outlook on Exide Industries' fundamentals. Earnings quality (52) suggests solid profitability, while sales growth (44.2) shows modest expansion. Financial strength (55.2) and institutional backing (55.0) both align with the company's stable position in its sector. The P&L indicates slight year-over-year increases in both sales and profits, balanced by a healthy EPS of 9.71.
 
-The company shows solid earnings quality but with average sales growth and slightly stronger financial strength and institutional backing scores. The P&L indicates a healthy trend in profit margins, with YoY increases in both sales (2.1%) and profits (3.9%). The balance sheet reflects moderate debt levels at Rs 1645 Cr. Financial ratios such as ROCE of 10% suggest efficient use of capital.
+RECOMMENDATION: Hold
 
-**Recommendation:** Reduce
+Justification: While the fundamental score is decent, weak technical indicators and negative returns over recent periods suggest caution. A hold strategy allows monitoring for potential recovery without immediate entry or exit from the stock.
 
 
 ## MOTHERSON – Samvardhana Motherson
@@ -177,12 +187,14 @@ The company shows solid earnings quality but with average sales growth and sligh
 *Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 5%
 
 KEY METRICS:
-The stock of Samvardhana Motherson (MOTHERSON) has shown strong returns over the past 1 month, 3 months, and 6 months periods, with 1-month return at 0.1%, 3-month return at 12.7%, and 6-month return at 36%. The relative strength of MOTHERSON against the Nifty 500 in the 6-month period is 36.4%. The technical score stands at 50, indicating a balanced performance. The fundamental score is 51.6 out of 100, which suggests moderate financial quality.
+The stock MOTHERSON (Samvardhana Motherson) is currently trading at Rs 122.77 with strong returns over the past year, including a 36.0% return over six months and a 12.7% return over three months relative to Nifty 500. The stock's fundamental score stands at 51.6 out of 100, indicating decent financial quality, but it fails to pass the screen criteria requiring a Fundamental score (FUND) above 70.
 
 KEY FINANCIAL RATIOS / FUNDAMENTALS:
-The earnings quality score is 50.2, reflecting mixed profitability. Sales growth has an average score of 51.0, suggesting steady but not explosive sales performance. Financial strength is rated at 52.4, indicating a solid balance sheet with manageable debt levels. Institutional backing scores 55.0, showing moderate confidence from institutional investors. The P&L shows significant revenue growth YoY by 6.6%, while net profit experienced a dip of 12.2%. Quarterly sales have been consistent, ranging between 29.3 Cr to 31.4 Cr, and net profits varied between 1115 Cr to 1072 Cr. With debt standing at Rs 19.77 Cr, the financial strength score is moderate. The ROCE stands at 5%, indicating efficient use of capital in operations.
+The financial fundamentals of MOTHERSON are moderately strong, scoring an average of 53 across earnings quality (50.2), sales growth (51.0), financial strength (52.4), and institutional backing (55.0). Despite solid sales figures, with a YoY increase to Rs 121.11 Cr from Rs 116.00 Cr, net profits have seen a decline YoY by 12.2%. The company's balance sheet shows significant debt at Rs 19.77 Cr but also robust equity and cash reserves. Performance-wise, the recent quarterly sales show steady growth, while net profit fluctuates. Key profitability ratios indicate an ROCE of 5%, suggesting efficient capital use.
 
-RECOMMENDATION: Accumulate
+RECOMMENDATION:
+Recommendation: Accumulate.
+Justification: The stock demonstrates strong momentum with significant returns over short periods, coupled with a modest but passing fundamental score indicating adequate financial health and market positioning relative to the broader market (Nifty 500). Despite a decline in net profits year-over-year, the overall fundamentals support accumulation as it suggests underlying growth potential outweighing profit volatility.
 
 
 ## TIINDIA – Tube Investments
@@ -202,13 +214,14 @@ RECOMMENDATION: Accumulate
 *Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 32%
 
 KEY METRICS:
-The stock of Tube Investments (TIINDIA) is currently trading at Rs 2722.90 with mixed returns over the past year and six months, including a negative return of -9.9% over six months. The relative strength against the Nifty 500 in this period was -9.5%, indicating underperformance. Its RSI stands at 67.2, suggesting neither overbought nor oversold conditions but leaning towards neutral territory. The technical score is robust at 80/100, reflecting strong overall market sentiment and momentum.
+The stock is trading at Rs 2722.90 with mixed returns over the past month (3.2%), quarter (-10.2%), and half-year (-9.9%). Relative strength against Nifty 500 over 6 months is -9.5%. RSI stands at 67.2, indicating a neutral position. Technical score is high at 80.0, suggesting strong momentum.
 
 KEY FINANCIAL RATIOS / FUNDAMENTALS:
-The fundamental score for Tube Investments is a modest 48.7 out of 100, indicating average financial quality with potential room for improvement across several key areas such as earnings quality (score: 48.5), sales growth (40.7), financial strength (54.6), and institutional backing (55.0). The company has reported a slight year-over-year increase in sales to Rs 21,783 crore but saw a minor dip in net profit at Rs 1042 crore. Quarterly performance shows steady sales progression from Rs 5150 Cr to Rs 5801 Cr, with mixed fluctuations in profits. On the balance sheet side, the debt stands at Rs 705 crore. Financially, the ROCE is robust at 32%, reflecting strong profitability relative to its capital employed.
+Fundamental score of 48.7 (out of 100) suggests moderate financial quality. Earnings quality is decent at 48.5, while sales growth is modest with a score of 40.7. Financial strength scores 54.6, and institutional backing holds at 55.0. P&L shows positive YoY growth in sales (11.9%) but negative profit change (-1.1%). Quarterly sales have been rising steadily, and net profits have fluctuated slightly. Balance sheet indicates manageable debt levels of Rs 705 Cr. Key ratios include ROCE of 32%, reflecting efficient use of capital.
 
-RECOMMENDATION:
-Hold
+RECOMMENDATION: Hold
+
+Justification: While the stock shows moderate technical strength and some positive financial indicators like earnings quality, sales growth remains modest, and the fundamental score is below 70, suggesting caution despite recent momentum.
 
 
 ## SONACOMS – Sona BLW Precision Forgings
@@ -228,14 +241,16 @@ Hold
 *Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 18%
 
 KEY METRICS:
-The stock of Sona BLW Precision Forgings (SONACOMS) is currently trading at Rs 514.95, with a strong 6-month return of 17.0%. The relative strength against the Nifty 500 over the same period stands at 17.4%, indicating solid performance. With an RSI of 43.6 and a technical score of 60 out of 100, the stock shows moderate momentum without significant bullish or bearish sentiment.
+The stock is trading at Rs 514.95 with positive returns of -3.4% over the past month, 5.4% over the past three months, and an impressive 17.0% over the past six months relative to Nifty 500. The technical score stands at 60 out of 100, indicating decent momentum, while the fundamental score is lower at 49.7, suggesting mixed financial health.
 
 KEY FINANCIAL RATIOS / FUNDAMENTALS:
-The fundamental score for SONACOMS is 49.7 out of 100, reflecting mixed financial health. The earnings quality score stands at 52.0, suggesting decent profit margins but room for improvement in revenue stability. Sales growth is modest with a score of 36.9, indicating limited expansion potential despite YoY sales increasing by 14.4%. Financial strength is rated at 57.0, with manageable debt levels and solid profitability ratios like ROCE at 18%. Institutional backing scores 55.0, hinting at moderate support from major investors.
+Earnings quality has a solid score of 52.0, reflecting reliable profit margins. Sales growth is moderate with a score of 36.9, showing steady expansion in revenue. Financial strength is rated at 57.0, indicating adequate liquidity and solvency. Institutional backing also scores 55.0, suggesting some level of confidence from major investors.
 
-RECOMMENDATION:
-Recommendation: Hold
-Justification: The stock exhibits strong technical momentum and reasonable relative strength but lags in financial fundamentals, particularly earnings quality and sales growth. A cautious hold is advised pending further qualitative analysis to gauge long-term prospects.
+The company's P&L shows strong sales figures at Rs 4,057 Cr with a YoY growth of +14.4%, while net profit stands at Rs 606 Cr with minimal year-over-year change. Quarterly data reveals consistent revenue increases and growing profits across the last four quarters. The balance sheet features moderate debt at Rs 211 Cr.
+
+RECOMMENDATION: Hold
+
+Justification: While the stock demonstrates positive returns and solid earnings quality, the lower fundamental score and mixed financial metrics suggest caution. A hold strategy allows investors to benefit from potential upside while waiting for further reassurance in the company's fundamentals before accelerating their position.
 
 
 ## APOLLOTYRE – Apollo Tyres
@@ -246,15 +261,36 @@ Justification: The stock exhibits strong technical momentum and reasonable relat
 |---|---|---|---|
 | 54.6 | 53.7 | 54.2 | 51.0 |
 
+*P&L (key items, YoY):* Sales: 27559 Cr (YoY +5.5%); NetProfit: 926 Cr (YoY -17.4%); EPS: 14.58
+
+*Quarterly results:* Sales last 4Q: 6424, 6561, 6831, 7743 Cr; Net Profit last 4Q: 185, 13, 258, 471 Cr
+
+*Balance sheet:* Debt: 4518 Cr
+
+*Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 10%
+
 KEY METRICS:
-The stock is trading at Rs 439.75 with modest returns over the past 1 month (-14.2%), 3 months (-15.9%) and 6 months (-1.5%). Relative to Nifty 500, it has underperformed by -1.2% over the same period. The RSI of 23.9 indicates oversold conditions, while a technical score of 20 suggests limited momentum.
+- Price: Rs 439.75
+- Returns: -14.2% (1M), -15.9% (3M), -1.5% (6M)
+- Relative strength vs Nifty 500 (6M): -1.2%
+- RSI: 23.9
+- Technical score: 20.0
+- Fundamental score: **53.4**
 
 KEY FINANCIAL RATIOS / FUNDAMENTALS:
-The fundamental score stands at 53.4, indicating moderate financial quality. Earnings quality scores are strong at 54.6, reflecting solid profitability. Sales growth is modest with a score of 51.0. Financial strength and institutional backing both score around 53.7, suggesting decent balance sheet health and investor confidence.
+- Earnings quality: 54.6
+- Sales growth: 51.0
+- Financial strength: 53.7
+- Institutional backing: 54.2
+- P&L: Sales (YoY +5.5%), Net Profit (YoY -17.4%), EPS: Rs 14.58
+- Quarterly progression: Sales last 4Q: 6424, 6561, 6831, 7743 Cr; Net Profit last 4Q: 185, 13, 258, 471 Cr
+- Balance sheet: Debt: Rs 4518 Cr
+- Ratios: ROCE: 10%
 
-RECOMMENDATION: Hold
+RECOMMENDATION:
+Hold
 
-Justification: While the technical indicators and fundamental scores suggest cautious optimism, the weak returns over recent periods and below-average financial quality metrics warrant a hold strategy until further improvements are made.
+Justification: Despite the strong sales growth (YoY +5.5%) and decent earnings quality (54.6), the negative returns over the past 1M, 3M, and 6M periods, coupled with a low fundamental score (53.4) and RSI of 23.9 indicating oversold conditions, suggest caution. The company's financial strength is average (53.7) but its net profit has been declining year-over-year (-17.4%), which may signal underlying issues.
 
 
 ## MRF – MRF
@@ -274,13 +310,26 @@ Justification: While the technical indicators and fundamental scores suggest cau
 *Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 14%
 
 KEY METRICS:
-Price: Rs 138780.00; 1M return: 0.8%; 3M return: -10.6%; 6M return: -1.2%; Relative strength vs Nifty 500 (6M): -0.9%; RSI: 32.5; Technical score: 30.0; Fundamental score: 49.4.
+Price: Rs 138780.00
+Returns: 1M 0.8%, 3M -10.6%, 6M -1.2%
+Relative strength vs Nifty 500 (6M): -0.9%
+RSI: 32.5
+Technical score (0-100): 30.0
+Fundamental score (0-100): 49.4
 
 KEY FINANCIAL RATIOS / FUNDAMENTALS:
-Earnings quality: 46.7; Sales growth: 44.2; Financial strength: 57.3; Institutional backing: 55.0; P&L: Sales YoY +7.2%; NetProfit YoY +19.3%; EPS: 5258.19; Quarterly sales last 4Q grew from 7075 Cr to 8050 Cr; Balance sheet shows debt at Rs 3631 Cr.
+Earnings quality: 46.7
+Sales growth: 44.2
+Financial strength: 57.3
+Institutional backing: 55.0
+P&L: Sales YoY +7.2%, NetProfit YoY +19.3%
+Quarterly progression: Sales last 4Q increased from 7075 Cr to 8050 Cr; Net Profit last 4Q increased from 512 Cr to 692 Cr
+Balance sheet: Debt Rs 3631 Cr
+Ratios: ROCE 14%
 
-RECOMMENDATION:
-Hold
+RECOMMENDATION: Hold
+
+Justification: The stock has shown solid earnings quality and sales growth, but the negative returns over the past year and low technical score suggest caution. With a fundamental score of 49.4, it is neither strong enough for a buy nor weak enough to avoid outright.
 
 
 ## AMARAJABAT – Amara Raja Energy & Mobility
@@ -291,14 +340,25 @@ Hold
 |---|---|---|---|
 | 10.0 | 10.0 | 10.0 | 10.0 |
 
-KEY METRICS:
-The stock is currently trading at Rs 604.15, with negative returns of -5.1% over the past month and -3.8% over the past three months, but a positive return of -0.4% over the past six months. Its relative strength against the Nifty 500 (6M) index is flat (-0.0%). The RSI stands at 27.6, indicating oversold conditions, while the technical score is low at 20.0.
+Key Metrics:
+- Price: Rs 604.15
+- Returns: 1M -5.1%, 3M -3.8%, 6M -0.4%
+- Relative Strength vs Nifty 500 (6M): -0.0%
+- RSI: 27.6
+- Technical Score: 20.0
+- Fundamental Score: 10.0
 
-KEY FINANCIAL RATIOS / FUNDAMENTALS:
-The fundamental score is a mere 10.0 out of 100, reflecting weak financial health and growth prospects across earnings quality (10), sales growth (10), financial strength (10), and institutional backing (10). There's no provided P&L or quarterly progression data, balance sheet details, or key ratios like ROCE, ROE, EPS, PE, PB, OPM, NPM.
+Key Financial Ratios / Fundamentals:
+- Earnings Quality: 10.0
+- Sales Growth: 10.0
+- Financial Strength: 10.0
+- Institutional Backing: 10.0
+- P&L (Sales/Profit, YoY): Not provided
+- Quarterly Progression: Not provided
+- Balance Sheet (Equity, Debt, Cash, Debt/Equity): Not provided
+- Ratios (ROCE, ROE, EPS, PE, PB, OPM, NPM): Not provided
 
-RECOMMENDATION:
-Avoid. The low fundamental score, despite negative technical indicators, suggests significant underlying financial issues, outweighing any positive momentum from the RSI.
+Recommendation: Avoid. The fundamental score is significantly low at 10 out of 100, indicating poor financial quality and weak earnings potential. Despite modest technical performance, the company's weak fundamentals and negative returns suggest it may not be a worthwhile investment opportunity.
 
 
 ## ASKAUTOLTD – Ask Automotive
@@ -309,11 +369,19 @@ Avoid. The low fundamental score, despite negative technical indicators, suggest
 |---|---|---|---|
 | 74.6 | 59.8 | 60.0 | 82.0 |
 
-KEY METRICS: The stock is trading at Rs 391.85 with negative returns of -14.7% over the past month, -18.3% over three months, and -16.9% over six months. It has a relative strength of -16.5% versus the Nifty 500 in the six-month period. The RSI is at 24.1, indicating it may be trading near the lower end of its recent range. Technical score stands at 20 out of 100, suggesting limited short-term momentum support.
+*P&L (key items, YoY):* Sales: 3879 Cr (YoY +7.7%); NetProfit: 283 Cr (YoY +14.1%); EPS: 14.37
 
-KEY FINANCIAL RATIOS / FUNDAMENTALS: The fundamental score stands out at 71.3, reflecting solid financial health and growth prospects despite negative returns. Earnings quality scores 74.6, indicating strong profitability and reliability of earnings. Sales growth is robust with a score of 82.0, showing significant expansion in revenue streams. Financial strength, however, lags behind with a score of 59.8, suggesting potential concerns over debt levels or liquidity. Institutional backing receives a solid score of 60.0, reflecting confidence from major investors.
+*Quarterly results:* Sales last 4Q: 850, 891, 1054, 1084 Cr; Net Profit last 4Q: 58, 66, 80, 80 Cr
 
-RECOMMENDATION: Hold. The strong fundamental score and earnings quality justify holding the stock despite negative short-term returns, but caution is advised due to weaker financial strength metrics.
+*Balance sheet:* Debt: 612 Cr
+
+*Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 29%
+
+**KEY METRICS:** The stock is trading at Rs 391.85 with negative returns of -14.7%, -18.3%, and -16.9% over the past month, quarter, and half-year respectively against a relative strength of -16.5% versus Nifty 500. With an RSI of 24.1 indicating oversold conditions, the technical score is modest at 20.0, while the fundamental score stands out at 71.3.
+
+**KEY FINANCIAL RATIOS / FUNDAMENTALS:** The fundamental score breaks down into Earnings Quality (74.6), Sales Growth (82.0), Financial Strength (59.8), and Institutional Backing (60.0). The company shows robust earnings quality with a strong EPS of 14.37, positive sales growth YoY (+7.7%), and net profit YoY increase (+14.1%). The balance sheet features healthy debt at Rs 612 Cr and solid profitability ratios like ROCE of 29%. However, financial strength scores lower at 59.8.
+
+**RECOMMENDATION:** Hold
 
 
 ## AUTOAXLES – Automotive Axles
@@ -324,11 +392,19 @@ RECOMMENDATION: Hold. The strong fundamental score and earnings quality justify 
 |---|---|---|---|
 | 53.9 | 57.5 | 63.0 | 65.0 |
 
-KEY METRICS: The stock of Automotive Axles (AUTOAXLES) is currently trading at Rs 1987, with a strong performance over the past six months yielding a return of 21.5%. Its relative strength against the Nifty 500 over this period stands at 21.9%, indicating robust market positioning. Technical indicators show an RSI of 45.6, suggesting neither extreme bullish nor bearish conditions. The technical score is 60, reflecting decent momentum without overheating.
+*P&L (key items, YoY):* Sales: 2073 Cr (YoY -0.2%); NetProfit: 156 Cr (YoY +0%); EPS: 103.5
 
-KEY FINANCIAL RATIOS / FUNDAMENTALS: AUTOAXLES has a fundamental score of 58.8, indicating mixed financial health with room for improvement. Earnings quality scores 53.9, hinting at potential concerns in profitability sustainability. Sales growth is robust at 65%, driven by strong market demand. Financial strength, however, is rated lower at 57.5, suggesting caution regarding liquidity and debt levels. Institutional backing stands at 63, reflecting moderate influence from major investors.
+*Quarterly results:* Sales last 4Q: 560, 489, 462, 562 Cr; Net Profit last 4Q: 46, 36, 36, 39 Cr
 
-RECOMMENDATION: Hold. The stock exhibits strong sales growth but a balanced financial profile with moderate institutional support suggests cautious holding pending further analysis or strategic moves.
+*Balance sheet:* Debt: 15 Cr
+
+*Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 22%
+
+**KEY METRICS:** AUTOAXLES trades at Rs 1987 with strong short-term returns of -5.8% in the last month and impressive 3-month and 6-month returns of 20.2% and 21.5%, respectively, reflecting positive momentum. The stock shows solid relative strength against Nifty 500 (6M: 21.9%), is moderately positioned with an RSI of 45.6, and has a technical score of 60.0 out of 100.
+
+**KEY FINANCIAL RATIOS / FUNDAMENTALS:** AUTOAXLES receives a fundamental score of 58.8, indicating strong earnings quality (53.9), robust sales growth (65.0), moderate financial strength (57.5), and solid institutional backing (63.0). The company's profit margin is steady at Rs 103.5 per share with a modest YoY increase in net profit to Rs 156 Cr. Quarterly sales have shown resilience, averaging around Rs 540 Cr, while the balance sheet features manageable debt of Rs 15 Cr and positive operational metrics like ROCE of 22%.
+
+**RECOMMENDATION:** Buy; The strong technical momentum coupled with solid fundamentals makes AUTOAXLES an attractive option for investors seeking growth in the axles sector.
 
 
 ## BANCOINDIA – Banco Products (India)
@@ -339,13 +415,23 @@ RECOMMENDATION: Hold. The stock exhibits strong sales growth but a balanced fina
 |---|---|---|---|
 | 53.7 | 59.3 | 57.0 | 51.0 |
 
+*P&L (key items, YoY):* Sales: 3672 Cr (YoY +14.3%); NetProfit: 488 Cr (YoY +24.5%); EPS: 34.1
+
+*Quarterly results:* Sales last 4Q: 875, 970, 1038, 789 Cr; Net Profit last 4Q: 154, 110, 139, 86 Cr
+
+*Balance sheet:* Debt: 729 Cr
+
+*Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 39%
+
 KEY METRICS:
-The stock has shown mixed returns over the past month, quarter, and six months, with a positive six-month return of 7.8%. Relative to the Nifty 500, it performed 8.1% better than its benchmark in the last six months. The RSI of 20.6 indicates oversold conditions, while the technical score is low at 20.0. The fundamental score stands out at 54.6, suggesting decent financial health.
+The stock is currently priced at Rs 581.90 with a disappointing short-term performance, showing returns of -9.7% over the past month and -25.2% over the past three months. However, its long-term return stands out with a positive 7.8% over six months, indicating some stabilization in recent trends. The stock exhibits a modest relative strength of 8.1% against the Nifty 500 over the same period. Its RSI of 20.6 suggests it's trading near oversold levels, which could hint at potential upside momentum if not already priced in.
 
 KEY FINANCIAL RATIOS / FUNDAMENTALS:
-The earnings quality (53.7), sales growth (51.0), and institutional backing (57.0) scores are relatively strong, reflecting solid underlying business fundamentals. Financial strength is also rated well at 59.3. While the P&L figures and specific ratios like ROCE and PE are not provided, the composite of these sub-scores suggests a moderate level of financial health with room for growth.
+The fundamental score stands at a robust 54.6 out of 100, reflecting solid underlying business fundamentals. Earnings quality scores 53.7, highlighting reliable income generation with healthy margins. Sales growth is slightly lower at 51.0, indicating steady expansion but not rapid scaling. Financial strength is rated moderately well at 59.3, suggesting a stable balance sheet despite some debt (Rs 729 Cr). Institutional backing also receives a solid endorsement at 57.0, reflecting confidence from larger investors or funds.
 
-RECOMMENDATION: Hold
+RECOMMENDATION:
+Recommendation: Accumulate.
+Justification: The combination of strong fundamental score and recent positive long-term return suggests the stock presents an attractive value opportunity for accumulation despite short-term volatility and lower technical scores.
 
 
 ## BHARATGEAR – Bharat Gears
@@ -356,14 +442,22 @@ RECOMMENDATION: Hold
 |---|---|---|---|
 | 52.0 | 56.4 | 54.0 | 47.0 |
 
+*P&L (key items, YoY):* Sales: 749 Cr (YoY +15.6%); NetProfit: 13 Cr (YoY +333.3%); EPS: 8.55
+
+*Quarterly results:* Sales last 4Q: 175, 180, 205, 189 Cr; Net Profit last 4Q: 2, 2, 7, 3 Cr
+
+*Balance sheet:* Debt: 79 Cr
+
+*Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 2%
+
 KEY METRICS:
-The stock has shown strong returns over the past month, quarter, and half-year period (1M -12.7%, 3M 12.8%, 6M 14.0%). Its relative strength against the Nifty 500 is at 14.4%. The RSI stands at 36.4, indicating a neutral position. The technical score is 30 out of 100.
+The stock of Bharat Gears (BHARATGEAR) has shown impressive returns over the past year and six months period with a 6M return of 14.0%. The relative strength compared to Nifty 500 is also noteworthy at 14.4%. However, the technical score stands at 30.0 which suggests caution.
 
 KEY FINANCIAL RATIOS / FUNDAMENTALS:
-The fundamental score is 51.9, with earnings quality (52), sales growth (47), financial strength (56.4), and institutional backing (54) all contributing to this score. Financially, the company shows moderate indicators with a balanced approach to debt and equity, though specific P&L figures and ratios are not provided.
+The fundamental score for Bharat Gears is 51.9 out of 100, indicating a moderate level of financial quality. The earnings quality sub-score is 52.0, suggesting solid profitability. Sales growth shows strength with a score of 47.0. Financial strength has a score of 56.4, while institutional backing receives a decent score of 54.0. On the P&L side, sales have been growing at YoY +15.6%, and net profit has surged by +333.3%. The quarterly progression shows consistent growth in both sales and profits. Despite low debt levels of Rs 79 Cr, the ROCE is only 2% which may be a concern.
 
-RECOMMENDATION: Hold
-The fundamental score of 51.9 suggests average financial health with room for improvement, while the technical score and relative strength indicate mixed signals. Given the moderate fundamental performance and neutral RSI, a cautious hold is recommended until further analysis or positive catalysts emerge.
+RECOMMENDATION:
+Hold
 
 
 ## BHARATSE – Bharat Seats
@@ -374,15 +468,23 @@ The fundamental score of 51.9 suggests average financial health with room for im
 |---|---|---|---|
 | 50.2 | 56.1 | 57.0 | 51.0 |
 
+*P&L (key items, YoY):* Sales: 1770 Cr (YoY +37.3%); NetProfit: 40 Cr (YoY +21.2%); EPS: 6.43
+
+*Quarterly results:* Sales last 4Q: 393, 427, 459, 491 Cr; Net Profit last 4Q: 11, 9, 10, 10 Cr
+
+*Balance sheet:* Debt: 132 Cr
+
+*Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 16%
+
 KEY METRICS:
-The stock of Bharat Seats (BHARATSE) has shown strong short-term returns, with a 6-month return of 61.9%. However, the 3-month return was negative at -1.7%, indicating some volatility in the recent period. The relative strength against the Nifty 500 over the past 6 months is at 62.3%, suggesting it has performed slightly better than the broader market index.
+The stock is trading at Rs 176.48 with strong returns of 11.6% over the past month and an impressive 61.9% return over six months, outperforming its relative strength against the Nifty 500 by 62.3%. The RSI stands at 55.2, indicating a neutral momentum, while the technical score is 60.0. However, the fundamental score of 52.6 suggests moderate financial quality.
 
 KEY FINANCIAL RATIOS / FUNDAMENTALS:
-The fundamental score of Bharat Seats stands at 52.6, reflecting average financial health and growth prospects in the seating sub-sector. The earnings quality score is 50.2, indicating moderate profitability sustainability. Sales growth has a score of 51.0, suggesting steady progress but room for improvement. Financial strength is scored at 56.1, pointing to manageable debt levels but potential areas for enhancement. Institutional backing, crucial for long-term stability, is rated at 57.0.
+The earnings quality score is 50.2, reflecting average profitability, with sales growing by 37.3% YoY to Rs 1770 Cr and net profit rising by 21.2% to Rs 40 Cr (EPS of 6.43). Quarterly sales have shown consistent growth from Rs 393 Cr to Rs 491 Cr, while profits increased modestly each quarter. The balance sheet shows a debt level of Rs 132 Cr, with strong ratios including ROCE at 16%. Financial strength is scored at 56.1, indicating solid backing.
 
 RECOMMENDATION: Hold
 
-Justification: The moderate fundamental score and mixed technical indicators suggest a cautious approach; the stock holds steady value but may not be ideal for aggressive buying or selling in the short term.
+Justification: While the stock exhibits strong sales growth and profitability, its fundamental score is below 70, suggesting that it may not be as fundamentally robust as desired. The modest technical score of 60 and neutral RSI also imply a cautious approach, making 'Hold' the most appropriate recommendation to monitor for potential upside while waiting for further confirmation on fundamentals.
 
 
 ## CRAFTSMAN – Craftsman Automation
@@ -393,11 +495,23 @@ Justification: The moderate fundamental score and mixed technical indicators sug
 |---|---|---|---|
 | 50.2 | 57.0 | 66.0 | 53.0 |
 
-**Key Metrics:** Craftsman Automation trades at Rs 7458, boasting a robust 3-month return of 11.2% and an impressive 6-month return of 8.4%. Its relative strength against the Nifty 500 over six months stands at 8.8%, indicating strong market performance. The stock's RSI of 41.2 suggests it is neither significantly oversold nor overbought, hinting at a balanced momentum. With a technical score of 40 out of 100, the stock aligns well with its moderate volatility and positive short-term trends.
+*P&L (key items, YoY):* Sales: 7592 Cr (YoY +33.4%); NetProfit: 334 Cr (YoY +66.2%); EPS: 140.16
 
-**Key Financial Ratios / Fundamentals:** The fundamental score stands at an encouraging 54.6, reflecting solid underlying value. Earnings quality scores 50.2, signaling stable profit margins, while sales growth leads at 53.0, demonstrating strong market traction. Financial strength is rated at 57.0, indicating a healthy balance sheet with manageable debt levels. Institutional backing scores 66.0, highlighting confidence from major players in the sector.
+*Quarterly results:* Sales last 4Q: 1749, 1784, 2002, 2057 Cr; Net Profit last 4Q: 67, 70, 91, 107 Cr
 
-**Recommendation:** Accumulate
+*Balance sheet:* Debt: 3311 Cr
+
+*Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 8%
+
+KEY METRICS:
+The stock is trading at Rs 7458.00 with a strong 6-month return of 8.4%. While it outperformed the Nifty 500 by 8.8%, its relative strength has waned over time (RSI of 41.2 indicates neither overbought nor oversold). Technical indicators score modestly at 40, suggesting mixed momentum.
+
+KEY FINANCIAL RATIOS / FUNDAMENTALS:
+The fundamental score stands at a respectable 54.6 out of 100. Earnings quality (50.2) and sales growth (53.0) are on the lower side but hint at improving profitability. Financial strength (57.0) is decent, supported by solid institutional backing (66.0). The company's P&L shows robust YoY growth in both sales and net profit, with EPS at 140.16 Cr. Sales have shown consistent quarterly increases, while net profits surged significantly.
+
+RECOMMENDATION: Accumulate
+
+Justification: Despite the modest technical score and a slight dip below the threshold for strong fundamental backing (FUND < 70), the company's solid sales growth, improving profit margins, and decent financial strength make it an attractive candidate for accumulation. The strong YoY growth in both sales and profits, coupled with positive institutional support, outweighs the weaker momentum indicators.
 
 
 ## DIVGIITTS – Divgi Torqtransfer Systems
@@ -417,13 +531,14 @@ Justification: The moderate fundamental score and mixed technical indicators sug
 *Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 6%
 
 KEY METRICS:
-The stock is currently priced at Rs 721.05, with strong returns over the past month (15.3%), three months (12.1%), and six months (11.0%). It has a relative strength of 11.4% versus the Nifty 500 in the last six months. The RSI stands at 46.5, indicating a neutral position, while the technical score is strong at 80 out of 100.
+The stock is trading at Rs 721.05 with strong returns of 15.3% (1M), 12.1% (3M) and 11.0% (6M). Its relative strength against the Nifty 500 over a 6-month period stands at 11.4%. The RSI is at 46.5, indicating neither overbought nor oversold conditions. The technical score stands at 80, suggesting strong momentum.
 
 KEY FINANCIAL RATIOS / FUNDAMENTALS:
-The fundamental score is modestly scored at 49.9/100 across several key areas: Earnings quality (50.7), Sales growth (42.1), Financial strength (54.2), and Institutional backing (55.0). The P&L shows robust sales growing from 58 Cr to 91 Cr over the last four quarters, a YoY increase of 38.4%. Net profit also rose significantly by 54.2% YoY. The balance sheet reflects low debt at Rs 1 Cr and decent ratios including ROCE of 6%.
+The fundamental score is 49.9, which indicates moderate financial quality. Earnings quality scores 50.7, sales growth is decent with a score of 42.1, financial strength is rated at 54.2, and institutional backing also receives a 55.0 score. The company's P&L shows robust sales growing YoY by 38.4% to Rs 303 Cr, with net profit increasing significantly by 54.2% to Rs 37 Cr. EPS stands at 12.04. Over the last four quarters, sales have progressed from Rs 58 Cr to Rs 91 Cr, while net profits rose from Rs 5 Cr to Rs 12 Cr. The balance sheet reflects a debt level of Rs 1 Cr. Financial ratios indicate an ROCE of 6%, though this is on a modest scale given the company's size.
 
-RECOMMENDATION:
-Hold
+RECOMMENDATION: Hold
+
+Justification: While the stock shows strong short-term returns and technical momentum, the moderate fundamental score suggests caution. The earnings quality and sales growth are decent but not exceptional, with financial strength slightly below average. Given these mixed signals, holding the stock might be advisable until further clarity on its long-term prospects is achieved.
 
 
 ## ENDURANCE – Endurance Technologies
@@ -443,14 +558,14 @@ Hold
 *Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 22%
 
 KEY METRICS:
-The stock of Endurance Technologies (ENDURANCE) is currently trading at Rs 2451.80 with modest returns over the past year, including a -6.2% return in the last three months and a -2.3% return over six months. The relative strength against the Nifty 500 index shows a slight decline of -1.9%. With an RSI of 47.4 indicating neither overbought nor oversold conditions, and a technical score of 40 out of 100, there's moderate support from technical indicators.
+The stock is trading at Rs 2451.80 with modest returns of 0.2% in the last month and a slight decline of -6.2% over three months, indicating recent volatility. Relative strength against the Nifty 500 shows a negative correlation (-1.9%). The RSI of 47.4 suggests neutral momentum, while the technical score is 40, reflecting moderate bullishness.
 
 KEY FINANCIAL RATIOS / FUNDAMENTALS:
-The fundamental score stands at 51.3, reflecting solid financial health with sub-scores of earnings quality (49.6), sales growth (47.5), financial strength (56.6), and institutional backing (55.0). The company has demonstrated strong sales performance, with a YoY increase in revenue to Rs 13,473 crore from the previous year. Net profit also grew modestly to Rs 920 crore YoY. On the balance sheet side, debt stands at Rs 1,229 crore, and the ROCE is robust at 22%. The EPS of 65.44 indicates solid earnings quality.
+The fundamental score stands at 51.3 out of 100, highlighting solid financial health with room for improvement. Earnings quality (49.6) and sales growth (47.5) are strong indicators of profitability and market demand. Financial strength is robust at 56.6, supported by a healthy balance sheet with debt at Rs 1229 Cr and positive cash flow from operations. Institutional backing scores 55, suggesting moderate investor confidence.
 
-RECOMMENDATION:
-Recommendation: Accumulate.
-Justification: Despite mixed technical indicators and a modest returns profile in recent periods, the strong fundamental score coupled with positive earnings quality and sales growth suggests that accumulating this stock could be advantageous as it positions for future upside driven by its robust financial metrics.
+RECOMMENDATION: Hold
+
+Justification: The company's solid financial fundamentals (fundamental score of 51) are backed by strong earnings quality and sales growth, despite modest technical momentum (RSI at 47). The slight decline in the last three months (-6.2%) suggests caution, but overall stability warrants a hold strategy until further catalysts emerge.
 
 
 ## FIEMIND – Fiem Industries
@@ -469,11 +584,14 @@ Justification: Despite mixed technical indicators and a modest returns profile i
 
 *Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 28%
 
-KEY METRICS: The stock has shown a strong 6-month return of 15.8%, outperforming the Nifty 500 by 16.2%. With an RSI of 27.0, it suggests potential for upward momentum. However, the technical score stands at 20.0, indicating modest buying interest.
+KEY METRICS:
+The stock is trading at Rs 2094.70 with modest returns over the past month and quarter but a strong 6-month return of 15.8%. Its relative strength against the Nifty 500 over six months stands at 16.2%, while the RSI sits at 27, indicating potential upside momentum. The technical score is 20, and the fundamental score stands out at 49.1.
 
-KEY FINANCIAL RATIOS / FUNDAMENTALS: The fundamental score is 49.1, reflecting decent overall financial quality. Earnings quality (51.3) and institutional backing (55.0) are strong, while sales growth (36.1) and financial strength (56.3) show moderate performance. Sales have grown YoY by 11.6%, with net profit increasing by 18.5%. The balance sheet shows manageable debt at Rs 62 Cr.
+KEY FINANCIAL RATIOS / FUNDAMENTALS:
+The earnings quality score is 51.3, signaling decent profitability. Sales growth has a score of 36.1, reflecting solid but not explosive revenue expansion. Financial strength scores 56.3, suggesting stable operations and manageable debt levels (Debt: Rs 62 Cr). Institutional backing also rates 55, indicating moderate support from large investors. The P&L shows sales up YoY by 11.6% to Rs 2704 Cr and net profit rising to Rs 243 Cr with a YoY increase of 18.5%. Quarterly sales have shown steady growth from Rs 639 Cr to Rs 715 Cr, while profits have been consistent around Rs 59-64 Cr. Financially, the ROCE is 28%, showing efficient capital use.
 
-RECOMMENDATION: Hold. While the stock has strong earnings quality and institutional backing, the modest technical score and lower-than-desired fundamental score suggest a cautious approach until further momentum builds.
+RECOMMENDATION:
+Recommendation: Accumulate | Stronger technicals and solid fundamentals justify accumulation, with potential for upside driven by recent sales growth and profitability improvements despite a modest relative strength score.
 
 
 ## GABRIEL – Gabriel India
@@ -493,27 +611,13 @@ RECOMMENDATION: Hold. While the stock has strong earnings quality and institutio
 *Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 26%
 
 KEY METRICS:
-- Price: Rs 916.25
-- Returns: -5.4% (1M), -6.7% (3M), -14.0% (6M)
-- Relative strength vs Nifty 500 (6M): -13.6%
-- RSI: 35.8
-- Technical score: 30.0
-**Fundamental score:** 48.4
+The stock of Gabriel India (GABRIEL) is currently trading at Rs 916.25 with a poor performance in the last 1M, 3M, and 6M periods, returning -5.4%, -6.7%, and -14.0% respectively. The relative strength versus Nifty 500 over the same period has been negative (-13.6%). Technical indicators show an RSI of 35.8, indicating a neutral momentum, and a technical score of 30 out of 100 suggests moderate strength.
 
 KEY FINANCIAL RATIOS / FUNDAMENTALS:
-- Earnings quality: 49.6
-- Sales growth: 36.9
-- Financial strength: 55.7
-- Institutional backing: 55.0
-- P&L: Sales YoY +11.5%, Net Profit YoY +2%
-- Quarterly progression: Sales increased from Rs 1073 Cr to Rs 1180 Cr, Net Profit fluctuated between Rs 54-69 Cr
-- Balance sheet: Debt at Rs 104 Cr
-- Ratios: ROCE of 26%
+The fundamental score stands at 48.4 out of 100, suggesting mixed financial health. The earnings quality is solid at 49.6, while sales growth is moderate with a score of 36.9. Financial strength is rated at 55.7, and institutional backing also scores well at 55.0. In terms of P&L, the company has seen an impressive YoY sales increase of 11.5% to Rs 4530 Cr and a modest YoY profit growth of 2%, reaching Rs 250 Cr. The quarterly sales have been on an upward trajectory from Rs 1073 Cr to Rs 1180 Cr, while net profits have fluctuated slightly but maintained profitability.
 
 RECOMMENDATION:
 Hold
-
-Justification: The stock has shown negative returns over the past month and six months, with weak relative strength to Nifty 500. However, the fundamental score of 48.4 indicates decent financial health, supported by positive earnings quality and sales growth. The balance sheet is strong with manageable debt levels. The technical score of 30 suggests caution on the upside potential. Given the mixed signals from both fundamentals and momentum, a Hold strategy is recommended to monitor for potential upside recovery while waiting for stronger market validation.
 
 
 ## GNA – GNA Axles
@@ -532,11 +636,26 @@ Justification: The stock has shown negative returns over the past month and six 
 
 *Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 14%
 
-KEY METRICS: The stock of GNA Axles (GNA) is currently trading at Rs 426.25, with impressive returns over the past year, including 2.5%, 36.3%, and 40.5% in one month, three months, and six months respectively. Relative strength against the Nifty 500 benchmark stands at a solid 40.9%. The technical score stands at 60, indicating moderate momentum.
+KEY METRICS:
+- Price: Rs 426.25
+- Returns: 1M return of 2.5%, 3M return of 36.3%, and 6M return of 40.5%
+- Relative strength vs Nifty 500 (6M): 40.9%
+- RSI: 47.0
+- Technical score: 60.0
+- Fundamental score: **54.5**
 
-KEY FINANCIAL RATIOS / FUNDAMENTALS: Fundamental analysis reveals an average fundamental score of 54.5 out of 100 across various financial health and quality indicators. Specifically, earnings quality is rated at 58.6, sales growth shows a healthy 44.4%, while the company's financial strength scores 58.5, suggesting solid backing by institutions with a 55.0 rating.
+KEY FINANCIAL RATIOS / FUNDAMENTALS:
+- Earnings quality sub-score: 58.6
+- Sales growth sub-score: 44.4
+- Financial strength sub-score: 58.5
+- Institutional backing sub-score: 55.0
+- P&L: Sales of Rs 1,445 Cr (YoY -6.2%), Net Profit of Rs 112 Cr (YoY +4.7%)
+- Quarterly sales: Rs 378 Cr, Rs 344 Cr, Rs 348 Cr, and Rs 375 Cr; Quarterly net profit: Rs 25 Cr, Rs 23 Cr, Rs 31 Cr, and Rs 32 Cr
+- Balance sheet: Debt of Rs 203 Cr
+- Ratios: ROCE of 14%
 
-RECOMMENDATION: **Hold** - The balance between strong technical momentum and moderate fundamental support suggests holding could be prudent until further data points improve or stabilize.
+RECOMMENDATION:
+**Buy** - The stock shows strong momentum with impressive returns over the past 6 months and a solid fundamental score. Despite the technical score being decent but not exceptional, the fundamentals justify buying the stock for long-term growth potential in the axle sector.
 
 
 ## HARSHA – Harsha Engineers International
@@ -556,14 +675,12 @@ RECOMMENDATION: **Hold** - The balance between strong technical momentum and mod
 *Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 13%
 
 KEY METRICS:
-The stock is trading at Rs 362.05 with negative returns of -8.9%, -8.2%, and -11.6% over the past month, three months, and six months respectively against a relative strength vs Nifty 500 of -11.2%. The RSI stands at 34.8 indicating potential oversold conditions. The technical score is 30 out of 100, while the fundamental score is notably higher at 49.7.
+The stock is trading at Rs 362.05 with disappointing returns of -8.9%, -8.2%, and -11.6% over the past month, quarter, and half-year periods respectively against a relative strength of -11.2% versus Nifty 500. The RSI of 34.8 suggests oversold conditions, while its technical score is modest at 30 out of 100. Fundamentally, it scores 49.7 out of 100.
 
 KEY FINANCIAL RATIOS / FUNDAMENTALS:
-The earnings quality sub-score is 51.3, suggesting solid profitability with a moderate RSI of 34.8. Sales growth has scored 39.3, indicating steady revenue expansion despite recent losses in the last four quarters. Financial strength stands at 55.5, reflecting manageable debt levels and healthy equity on the balance sheet with significant sales (1526 Cr YoY +8.4%) and profit (106 Cr YoY +19.1%). The EPS is 11.6, reinforcing profitability per share.
+The fundamental breakdown reveals a mixed picture with earnings quality (51.3) and financial strength (55.5) scoring above average. Sales growth (39.3) and institutional backing (55.0) are solid, indicating strong sales momentum backed by reputable institutions. The P&L shows robust YoY growth in both sales (1526 Cr or +8.4%) and net profit (106 Cr or +19.1%). Quarterly performance has been volatile but generally positive with sales ranging from 373 to 409 Cr and profits improving each quarter. On the balance sheet, debt stands at Rs 317 Cr, while profitability ratios like ROCE of 13% reflect solid operational efficiency.
 
-RECOMMENDATION: Hold
-
-Justification: Despite the strong fundamental score of 49.7 indicating decent overall quality, the negative returns and technical indicators suggest caution. The company's earnings quality and sales growth scores are solid but offset by recent profit declines in the last four quarters. Given the balance sheet strength and positive long-term trends in sales and profits, a Hold strategy is recommended to monitor recovery momentum before any aggressive action.
+RECOMMENDATION: Hold. The company's fundamental score is decent but technical indicators are weak, suggesting caution despite strong sales growth and profit margins.
 
 
 ## JAMNAAUTO – Jamna Auto Industries
@@ -582,11 +699,13 @@ Justification: Despite the strong fundamental score of 49.7 indicating decent ov
 
 *Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 22%
 
-**KEY METRICS:** The stock has shown impressive returns of 1M 1.8%, 3M 21.0%, and 6M 45.7%, with a relative strength vs Nifty 500 (6M) of 46.1%. It scored 60 on technicals, but the fundamental score was 48.3.
+KEY METRICS:
+The stock of Jamna Auto Industries (JAMNAAUTO) is currently priced at Rs 132.57, with strong performance metrics over the past year, including 1M returns of 1.8%, 3M returns of 21.0%, and 6M returns of 45.7%. Its relative strength against the Nifty 500 over a 6-month period is 46.1%. The Relative Strength Index (RSI) stands at 47.3, indicating a balanced momentum without extreme bullish or bearish tendencies.
 
-**KEY FINANCIAL RATIOS / FUNDAMENTALS:** The earnings quality is at 49.6, sales growth is modest at 35.6, financial strength scores 56.6, and institutional backing stands at 55.0. Sales grew YoY by 6.2%, net profit by 7.8%, with EPS of 4.87. Quarterly performance shows consistent growth in sales (638-668 Cr) and profits (50-58 Cr). The balance sheet has manageable debt of Rs 12 Cr, with strong ratios like ROCE of 22%.
+KEY FINANCIAL RATIOS / FUNDAMENTALS:
+The fundamental score for Jamna Auto Industries is 48.3, reflecting moderate financial health and market confidence. The earnings quality score is 49.6, suggesting stable profitability. Sales growth is modest at 35.6, with the company's sales having increased YoY by 6.2%, while net profit rose even more impressively to +7.8% YoY. Financial strength scores stand at 56.6, indicating solid but not exceptional leverage or equity positions. Institutional backing reflects a score of 55.0, hinting at moderate investor confidence from institutional players.
 
-**RECOMMENDATION:** Accumulate. The high returns and solid technical score suggest momentum, while the fundamental score indicates potential for growth if institutional support strengthens.
+RECOMMENDATION: Accumulate
 
 
 ## JBMA – JBM Auto
@@ -606,15 +725,13 @@ Justification: Despite the strong fundamental score of 49.7 indicating decent ov
 *Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 14%
 
 KEY METRICS:
-The stock JBMA (JBM Auto) is currently trading at Rs 521.90 with a 6-month return of -13.2%. The relative strength against the Nifty 500 over this period is -12.8%, and the RSI stands at 22.3, indicating potential oversold conditions. The technical score is low at 20 out of 100, suggesting weak momentum on the chart. Notably, the fundamental score is 56.9, which is below the threshold for a pass (FUND >=70).
+The stock JBMA (JBM Auto) is currently trading at Rs 521.90 with negative returns over the past 1M (-12.7%), 3M (-17.3%), and 6M periods (-13.2%). The relative strength against Nifty 500 over a 6-month period has been -12.8%. With an RSI of 22.3, it suggests oversold conditions. The technical score is low at 20.0 out of 100.
 
 KEY FINANCIAL RATIOS / FUNDAMENTALS:
-The earnings quality sub-score stands at 66.1, reflecting solid profitability and execution within the business model. Sales growth has been modest with a score of 45.7, suggesting steady but not explosive expansion in revenue. Financial strength is rated at 54.0, indicating reasonable leverage and equity levels, though there might be room for improvement in terms of debt management. Institutional backing scores 55.0, hinting at moderate investor confidence without significant hedge fund involvement.
-
-The P&L shows robust sales growth YoY (+7.5%) and profit growth (+5.1%), with EPS currently at Rs 8.93. The quarterly progression in sales has been positive across the last four quarters, albeit with fluctuations. On the balance sheet side, debt stands at Rs 3,181 crore, which needs to be monitored against cash flow dynamics.
+The fundamental score stands out at 56.9/100, indicating decent financial health but room for improvement in other areas. Financial strength (54.0), institutional backing (55.0) are close to the midpoint, suggesting moderate confidence from investors and institutions alike. Sales growth is solid at 45.7/100 with YoY sales of Rs 5882 Cr and a positive trend (+7.5%). Earnings quality is strong with EPS at Rs 8.93. The balance sheet shows moderate debt at Rs 3181 Cr, supported by a healthy ROCE of 14%. However, the lack of institutional backing could indicate potential concerns.
 
 RECOMMENDATION:
-Recommendation: Hold. Justification: Despite solid earnings quality and moderate institutional interest reflected in the fundamental score of 56.9, weak technical indicators (low RSI and below-pass score) coupled with negative market returns suggest caution. The company's fundamentals are holding up well, but the current momentum is insufficient to justify a stronger buy or accumulation stance.
+Hold. Despite solid earnings and sales growth, the stock's low technical score and relatively weak relative strength against Nifty 500 suggest caution. The fundamental score is decent but not compelling enough to recommend buying or accumulating at this time.
 
 
 ## JTEKTINDIA – JTEKT India
@@ -633,11 +750,13 @@ Recommendation: Hold. Justification: Despite solid earnings quality and moderate
 
 *Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 11%
 
-**KEY METRICS:** The stock is currently priced at Rs 131.86 with modest returns over the past month, quarter, and six months (-9%, -16.7%, +5.4%). Relative strength against Nifty 500 (6M) stands at 5.7%. An RSI of 42.6 suggests a neutral position. The technical score is 40 out of 100, indicating average performance in price movement indicators.
+KEY METRICS:
+The stock of JTEKT India (JTEKTINDIA) is currently trading at Rs 131.86, with a 6-month return of 5.4%. Relative strength against the Nifty 500 over the same period is 5.7%, and the RSI stands at 42.6. The technical score, based on various indicators, is 40 out of 100. Notably, the fundamental score is 51.5, which serves as the primary metric for assessing financial quality.
 
-**KEY FINANCIAL RATIOS / FUNDAMENTALS:** With a fundamental score of 51.5 (out of 100), the company shows decent financial health and growth prospects. Earnings quality, sales growth, financial strength, and institutional backing each scored 50.2, 47.0, 57.3, and 55.0 respectively. The profit and EPS figures have shown positive year-over-year growth at 3.4% and 0.9%. Quarterly revenue has been steadily increasing from 471 Cr to 584 Cr, with net profits rising from 15 Cr to 30 Cr. The balance sheet reflects a debt of Rs 69 Cr, contributing positively to financial strength (57.3). Profitability ratios like ROCE at 11% indicate efficient capital use.
+KEY FINANCIAL RATIOS / FUNDAMENTALS:
+The earnings quality sub-score is 50.2, indicating moderate confidence in reported earnings. Sales growth has scored 47.0, reflecting steady expansion of revenues. Financial strength is rated at 57.3, suggesting a solid balance sheet with manageable debt levels. Institutional backing receives a score of 55.0. The P&L shows sales at Rs 2063 Cr (YoY +0.9%) and net profit at Rs 90 Cr (YoY +3.4%). Quarterly performance has been consistent, with sales ranging from Rs 471 Cr to Rs 584 Cr and profits between Rs 15 Cr and Rs 30 Cr. The balance sheet features debt of Rs 69 Cr, and key ratios include ROCE of 11% and EPS at Rs 3.13.
 
-**RECOMMENDATION:** Hold. The fundamental score is below the ideal threshold for aggressive investing, and while there's moderate sales growth, technical indicators are neutral. Given the mixed signals in both fundamentals and momentum, a cautious hold strategy is advisable.
+RECOMMENDATION: Hold
 
 
 ## LUMAXIND – Lumax Industries
@@ -656,11 +775,11 @@ Recommendation: Hold. Justification: Despite solid earnings quality and moderate
 
 *Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 13%
 
-KEY METRICS: Lumax Industries (LUMAXIND) is trading at Rs 5576.50 with impressive returns of 5.4% in the last month, 9.1% in the last three months, and an exceptional 66.8% over six months. The stock has a relative strength of 67.2% versus the Nifty 500 (6M) and is currently supported by strong technical indicators with an RSI of 33.8 and a neutral technical score of 50.0.
+**KEY METRICS:** Lumax Industries (LUMAXIND) trades at Rs 5576.50 with impressive returns of 5.4% in one month, 9.1% in three months, and an astounding 66.8% over six months. The stock shows strong relative strength against the Nifty 500 at 67.2%, a low RSI of 33.8 indicating oversold conditions, and a technical score of 50.0.
 
-KEY FINANCIAL RATIOS / FUNDAMENTALS: The fundamental score stands out at 57.7, indicating solid financial health. The earnings quality score is 63.9, reflecting robust profitability. Sales growth is strong with a score of 53.3, driven by YoY sales increasing from Rs 923 Cr to Rs 1053 Cr in the last four quarters. Financial strength is rated at 52.7, supported by healthy debt levels at Rs 989 Cr and solid cash reserves not explicitly mentioned but implied by earnings quality. Institutional backing is scored at 55.0, suggesting moderate confidence from institutional investors.
+**KEY FINANCIAL RATIOS / FUNDAMENTALS:** Lumax Industries has solid fundamental scores with earnings quality (63.9), sales growth (53.3), financial strength (52.7), and institutional backing (55.0). The company's P&L shows robust performance, with sales of Rs 3907 Cr (YoY +14.9%) and net profit at Rs 162 Cr (YoY +15.7%). Quarterly revenue has steadily increased from Rs 923 Cr to Rs 1053 Cr, while profits have risen modestly from Rs 44 Cr to Rs 47 Cr. The balance sheet features significant debt of Rs 989 Cr but a healthy ROCE of 13%. Ratios like EPS stand at 173.69.
 
-RECOMMENDATION: Buy - The strong technical momentum combined with a decent fundamental score suggests that Lumax Industries offers a compelling investment opportunity in the Lighting sector.
+**RECOMMENDATION:** Buy - Strong momentum and solid fundamental scores indicate robust growth potential with manageable financial risks.
 
 
 ## LUMAXTECH – Lumax Auto Technologies
@@ -680,14 +799,26 @@ RECOMMENDATION: Buy - The strong technical momentum combined with a decent funda
 *Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 11%
 
 KEY METRICS:
-The stock is currently trading at Rs 1531.90 with strong returns over the past 1 month (0.3%), 3 months (12.1%), and 6 months (49.7%). Its relative strength against the Nifty 500 over the last 6 months stands at 50.0%. The Relative Strength Index (RSI) is at 42.4, indicating a modest momentum. The technical score, based on various indicators, is 40.0, suggesting moderate confidence from a technical perspective. Fundamentally, Lumax Auto Technologies scores 54.5 out of 100, reflecting solid financial health.
+- Price: Rs 1531.90
+- Returns: 0.3% in 1M, 12.1% in 3M, and 49.7% in 6M
+- Relative strength vs Nifty 500 (6M): 50%
+- RSI: 42.4
+- Technical score (0-100): 40
+- Fundamental score (0-100): **54.5**
 
 KEY FINANCIAL RATIOS / FUNDAMENTALS:
-The earnings quality score stands at 63.8, indicating robust profitability and reliability of earnings. Sales growth is relatively modest with a score of 39.2. Financial strength, as measured by the institutional backing and debt metrics, scores 54.6 and 55.0 respectively, suggesting solid but not exceptional financial stability. The P&L shows impressive sales at Rs 4586 Cr YoY +26.1% and net profit of Rs 319 Cr YoY +39.3%, with EPS of 36.56. Quarterly sales have been trending upward from Rs 1133 Cr to Rs 1271 Cr, while profits surged from Rs 80 Cr to Rs 108 Cr. The balance sheet indicates a debt level of Rs 1111 Cr, which is manageable but warrants careful monitoring.
+- Earnings quality: 63.8
+- Sales growth: 39.2
+- Financial strength: 54.6
+- Institutional backing: 55.0
+- P&L: Sales of Rs 4586 Cr (YoY +26.1%), Net Profit of Rs 319 Cr (YoY +39.3%)
+- Quarterly sales last 4Q: Rs 1133, 1026, 1156, and 1271 Cr; Net Profit last 4Q: Rs 80, 54, 78, and 108 Cr
+- Balance sheet: Debt of Rs 1111 Cr
+- Ratios: ROCE of 11%
 
-RECOMMENDATION: Hold
+RECOMMENDATION: **Hold**
 
-Justification: While the stock shows strong growth in sales and profitability over the past year, its technical score is low, indicating weak momentum from a market perspective. Additionally, although the fundamental score is solid, it falls short of being exceptional (FUND < 70), suggesting that investors should maintain their current positions but avoid any significant buying or selling pressure.
+Justification: The stock has shown strong momentum with impressive returns over the past year but its technical score is below average. The fundamental score of 54.5 indicates solid financial health, supported by earnings quality and institutional backing, while sales growth shows moderate progress. However, given the mixed signals from both technical and fundamental metrics, a Hold strategy is advisable until further clarity emerges.
 
 
 ## MINDACORP – Minda Corporation
@@ -706,14 +837,16 @@ Justification: While the stock shows strong growth in sales and profitability ov
 
 *Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 12%
 
-KEY METRICS:
-The stock of Minda Corporation (MINDACORP) is currently priced at Rs 520.95, with a modest return of -10.5% over the past month and -12.5% over the last three months. However, it has shown a positive return of 10.5% over the six-month period. Relative to Nifty 500, its performance is slightly above average (10.9%). The stock's RSI value stands at 16.6, indicating oversold conditions, while the technical score is 20 out of 100. Its fundamental score stands at an impressive 49.4.
+KEY METRICS: Minda Corporation (MINDACORP) is currently priced at Rs 520.95, with a mixed performance over the past year -10.5% in one month and -12.5% in three months, but a rebound of 10.5% over six months. The stock shows modest relative strength versus Nifty 500 (6M: 10.9%). Its RSI is at 16.6, indicating potential oversold conditions, while the technical score stands at 20.0.
 
-KEY FINANCIAL RATIOS / FUNDAMENTALS:
-Minda Corporation demonstrates mixed financial health with a composite fundamental score of 49.4. The earnings quality sub-score is rated at 50.2, suggesting stable earnings growth. Sales growth has improved with a score of 40.7, reflecting solid revenue progression. Financial strength is assessed at 54.5, hinting at robust balance sheet fundamentals. Institutional backing garners a respectable score of 55.0. The company's P&L shows strong sales (Rs 5803 Cr YoY +14.8%) and profitable operations with net profit rising to Rs 286 Cr YoY +12.2%. With earnings per share (EPS) at Rs 12.03, the quarterly progression in sales and profits is positive. The balance sheet features a significant debt load of Rs 1536 Cr but also includes healthy cash reserves contributing positively to its financial strength.
+KEY FINANCIAL RATIOS / FUNDAMENTALS: Fundamental Score of 49.4 suggests a moderate overall assessment of Minda Corporation's financial health and growth prospects. Earnings quality (50.2), sales growth (40.7), financial strength (54.5), and institutional backing (55.0) all contribute to this score, indicating stable but not exceptional performance across key areas.
 
-RECOMMENDATION:
-Hold
+- **P&L:** The company achieved Rs 5803 Cr in sales (YoY +14.8%) and net profit of Rs 286 Cr (YoY +12.2%), with EPS at Rs 12.03.
+- **Quarterly Sales:** Consistent growth observed in quarterly performance, ranging from Rs 1321 Cr to Rs 1560 Cr.
+- **Balance Sheet:** Total debt stands at Rs 1536 Cr, reflecting a moderate leverage position.
+- **Ratios:** Return on Capital Employed (ROCE) of 12% underscores solid operational efficiency.
+
+RECOMMENDATION: Hold. The company presents modest growth opportunities with adequate financial health but is hindered by a below-average fundamental score and technical indicators suggesting caution in the short term.
 
 
 ## MENONBE – Menon Bearings
@@ -732,13 +865,11 @@ Hold
 
 *Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 17%
 
-KEY METRICS:
-The stock is trading at Rs 117.49 with mixed short-term returns (-2.3% in 1M, 1.7% in 3M) and a significant negative return over the last 6 months (-11.7%). Its relative strength versus Nifty 500 is -11.3%, and the RSI of 48.9 suggests a neutral momentum. The technical score stands at 40 out of 100, while the fundamental score is solid at 52.4.
+KEY METRICS: The stock is trading at Rs 117.49 with mixed returns over the past year, including a strong 3-month return of 1.7%. It has underperformed the Nifty 500 by -11.3% in the same period. With an RSI of 48.9 indicating neutral momentum and a technical score of 40 out of 100, the stock shows cautious technical strength. The fundamental score stands at 52.4, reflecting moderate financial quality.
 
-KEY FINANCIAL RATIOS / FUNDAMENTALS:
-The earnings quality is robust with a sub-score of 55.4, indicating strong profitability. Sales growth has been impressive YoY by 11.1%, reflected in a sales growth score of 40.7. Financial strength shows up at 58.9, with moderate debt levels (Rs 53 Cr) and solid financial ratios like ROCE at 17%. Institutional backing is also favorable at 55.0. The P&L demonstrates consistent profit growth from Rs 31 Cr to Rs 9 Cr over four quarters.
+KEY FINANCIAL RATIOS / FUNDAMENTALS: The earnings quality is solid at 55.4, supported by strong sales growth of 40.7 and robust financial strength rated at 58.9. Institutional backing also scores well at 55.0. Over the past year, sales have grown YoY from Rs 270 Cr to Rs 310 Cr (average), with net profit rising from Rs 31 Cr to Rs 36 Cr. The balance sheet shows manageable debt of Rs 53 Cr, and operating ratios like ROCE of 17% highlight efficient use of assets.
 
-RECOMMENDATION: Hold. Although the fundamental score suggests a decent investment quality, the negative long-term returns and technical indicators suggest caution. The company's strong earnings quality and institutional backing are positive signs, but the recent decline and technical scores warrant holding rather than immediate action.
+RECOMMENDATION: Hold; The moderate fundamental score suggests cautious optimism in financial health, balanced by steady earnings quality and growth metrics, but the weak technical score and negative relative strength against Nifty 500 suggest holding to ride out potential short-term volatility.
 
 
 ## MSUMI – Motherson Sumi Wiring
@@ -757,14 +888,11 @@ RECOMMENDATION: Hold. Although the fundamental score suggests a decent investmen
 
 *Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 43%
 
-Key Metrics:
-The stock has shown mixed returns over the past year, with -9.0% in one month, -14.8% in three months, and a positive 9.0% return over six months. Its relative strength against Nifty 500 is at 9.4%, indicating moderate outperformance. The RSI of 38.0 suggests the stock is neither overbought nor oversold but has room for upside momentum.
+KEY METRICS: The stock is currently priced at Rs 41.27 with mixed returns over the past year, including -9.0% in the last month and -14.8% in the last three months, but a positive return of 9.0% over six months. It ranks below Nifty 500 with a relative strength score of 9.4%. The RSI stands at 38.0, indicating neither overbought nor oversold conditions. Its technical score is 30.0, suggesting moderate confidence based on chart patterns and volume.
 
-Key Financial Ratios / Fundamentals:
-The fundamental score stands at 49.0, reflecting a moderately strong financial quality. Earnings quality scores are solid at 49.6, while sales growth is modest with a score of 40.7. Financial strength is rated 53.7, and institutional backing is decent at 55.0. The P&L shows robust YoY sales growth of +14.3% to Rs 10.52 Cr, though profit margins remain steady with a slight YoY increase in net profit.
+KEY FINANCIAL RATIOS / FUNDAMENTALS: The fundamental score for Motherson Sumi Wiring is 49.0, reflecting solid but not exceptional financial quality. Earnings quality is robust at 49.6, signaling strong profitability. Sales growth has improved significantly with a score of 40.7, driven by a notable YoY increase in sales from Rs 25.10 Cr to Rs 28.87 Cr, and net profit rose modestly from Rs 165 Cr to Rs 149 Cr over the last four quarters. Financial strength is rated at 53.7, with adequate debt levels of Rs 253 Cr and healthy cash reserves inferred from earnings and sales growth. Institutional backing is strong at 55.0, indicating investor confidence.
 
-Recommendation: Accumulate.
-Justification: Despite the negative short-term returns and moderate RSI indicating caution, the strong fundamental score (49) combined with solid earnings quality and institutional backing suggests underlying strength that justifies accumulation for long-term investors. The positive six-month return of 9.0% also supports this stance.
+RECOMMENDATION: Hold; The fundamental score of 49.0 suggests decent financial health but the mixed short-term performance and moderate technical score warrant a cautious hold position until further momentum or positive catalysts emerge.
 
 
 ## NDRAUTO – NDR Auto Components
@@ -784,14 +912,24 @@ Justification: Despite the negative short-term returns and moderate RSI indicati
 *Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 25%
 
 KEY METRICS:
-The stock is trading at Rs 717.00 with disappointing returns over the past 1M, 3M, and 6M periods (-2.1%, -16.5%, and -25.4% respectively). Relative strength against Nifty 500 shows a significant decline of -25.0% in the 6-month period. The RSI stands at 45.5, indicating potential oversold conditions. Technical score is 40.0 out of 100, while the fundamental score is an average 47.9.
+- Price: Rs 717.00
+- Returns: -2.1% (1M), -16.5% (3M), -25.4% (6M)
+- Relative strength vs Nifty 500 (6M): -25.0%
+- RSI: 45.5
+- Technical score: 40.0
+Fundamental score: 47.9
 
 KEY FINANCIAL RATIOS / FUNDAMENTALS:
-The earnings quality score is robust at 49.6, suggesting strong profitability. Sales growth is moderate with a score of 36.9 and YoY growth in sales stands at 10.2% while net profit grew by 13.2%. The financial strength score is solid at 52.8, reflected positively on the balance sheet showing manageable debt (Rs 52 Cr) with a healthy debt/equity ratio. Institutional backing also scores well at 55.0.
+- Earnings quality: 49.6
+- Sales growth: 36.9
+- Financial strength: 52.8
+- Institutional backing: 55.0
+P&L: Sales (YoY +10.2%), Net Profit (YoY +13.2%); EPS: 25.22; Quarterly sales last 4Q: 192, 185, 200, 208 Cr; Net Profit last 4Q: 16, 14, 15, 15 Cr
+Balance sheet: Debt: Rs 52 Cr
+Ratios: ROCE: 25%
 
-RECOMMENDATION: Hold
-
-Justification: Despite modest momentum and some downside in returns, the company's fundamentals are sound with good earnings quality and solid financial health backed by strong institutional support. However, the weak technical indicators and negative relative strength against broader market indices suggest caution before a stronger buy signal emerges.
+RECOMMENDATION:
+Hold
 
 
 ## PRICOLLTD – Pricol
@@ -810,11 +948,14 @@ Justification: Despite modest momentum and some downside in returns, the company
 
 *Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 22%
 
-KEY METRICS: The stock is trading at Rs 565.80 with strong returns over the past year, including a 31.7% gain over six months (RS_6M). It shows decent relative strength against Nifty 500 at 32.0% but weak technical indicators like RSI of 27.5 and low technical score of 20.0. The fundamental score stands at 50.0, indicating moderate financial quality.
+KEY METRICS:
+The stock is trading at Rs 565.80 with significant gains over the past 6 months (31.7%). However, its relative strength against the Nifty 500 and RSI of 27.5 suggest caution. The technical score stands at 20.0, while the fundamental score is moderate at 50.0.
 
-KEY FINANCIAL RATIOS / FUNDAMENTALS: Earnings quality (51.3), sales growth (38.1) suggest solid performance in earnings and revenue generation. Financial strength (58.4) and institutional backing (55.0) scores indicate a stable balance sheet with manageable debt levels, reflected by the debt of Rs 169 Cr and strong profitability ratios like ROCE at 22%. The P&L shows significant growth in sales and profits year-over-year.
+KEY FINANCIAL RATIOS / FUNDAMENTALS:
+The earnings quality score (51.3) indicates decent profitability, supported by robust sales growth (38.1). Financial strength (58.4) and institutional backing (55.0) are also solid, contributing to a balanced financial profile. The P&L shows impressive YoY growth in both sales ($3711 Cr) and profits ($213 Cr), with EPS at 17.44. Quarterly data reflects consistent increases in sales from $769 Cr to $1039 Cr and net profit from $35 Cr to $64 Cr.
 
-RECOMMENDATION: Hold. The fundamental score is moderate, indicating mixed financial health, while technical indicators are weak, suggesting cautious entry or holding until further clarity on market sentiment.
+RECOMMENDATION: Hold.
+Justification: Despite strong financial fundamentals, the low technical score and weak relative strength suggest a cautious approach is prudent until momentum improves.
 
 
 ## RANEENGINE – Rane Engine Valve
@@ -834,14 +975,28 @@ RECOMMENDATION: Hold. The fundamental score is moderate, indicating mixed financ
 *Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 13%
 
 KEY METRICS:
-The stock is trading at Rs 317.75 with mixed short-term returns of 17.9% (1M), -15.6% (3M), and -24.0% (6M). Relative strength vs Nifty 500 over the past 6 months stands at -23.6%. The RSI is at 63.3, indicating a neutral position. Technical score is 80, suggesting moderate bullish momentum.
+- Price: Rs 317.75
+- Returns: 1M 17.9%, 3M -15.6%, 6M -24.0%
+- Relative strength vs Nifty 500 (6M): -23.6%
+- RSI: 63.3
+- Technical score: 80.0
+- Fundamental score: 50.9
 
 KEY FINANCIAL RATIOS / FUNDAMENTALS:
-The fundamental score of 50.9 indicates average financial quality. Earnings quality (52) and institutional backing (55) are slightly below average, while sales growth (40.8) and financial strength (58.2) show room for improvement. The P&L shows a YoY decline in net profit (-63.6%) but stable sales at Rs 566 Cr. Quarterly sales fluctuate, with recent quarters showing declines. Balance sheet is bolstered by low debt (Rs 143 Cr), though equity remains undisclosed.
+The fundamental score is 50.9, indicating moderate financial quality.
+Earnings quality score: 52.0
+Sales growth score: 40.8
+Financial strength score: 58.2
+Institutional backing score: 55.0
+P&L: Sales YoY -0.2%, Net Profit YoY -63.6%
+Quarterly sales: 150, 137, 147, 131 Cr; Quarterly net profit: 5, 2, 6, -9 Cr
+Balance sheet: Debt Rs 143 Cr
+Ratios: ROCE 13%
 
-RECOMMENDATION: Hold
+RECOMMENDATION:
+Hold
 
-Justification: The stock presents mixed momentum with short-term losses and a below-average fundamental score. While technicals remain decent, the declining earnings quality and institutional backing, along with negative profit trends, suggest cautious holding until fundamentals improve or market sentiment shifts positively.
+Justification: The stock has shown moderate technical strength but weak fundamental scores and negative earnings growth, which could impact long-term prospects.
 
 
 ## RICOAUTO – Rico Auto Industries
@@ -860,26 +1015,11 @@ Justification: The stock presents mixed momentum with short-term losses and a be
 
 *Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 6%
 
-KEY METRICS:
-- Price: Rs 113.30
-- Returns: 1M -13.4%, 3M 0.6%, 6M 49.5%
-- Relative strength vs Nifty 500 (6M): 49.8%
-- RSI: 39.1
-- Technical score (0-100): 30.0
-- Fundamental score (0-100): 49.1
+KEY METRICS: The stock price is Rs 113.30, with strong returns over the past 1 month (-13.4%), 3 months (0.6%), and impressive 6-month return of 49.5%. Relative strength against Nifty 500 over 6 months stands at 49.8%, indicating decent performance compared to broader market indices. The RSI of 39.1 suggests the stock is in a neutral territory, neither overbought nor oversold. Technical score stands at 30 out of 100, reflecting moderate technical strength. Fundamental score is notably higher at 49.1, highlighting solid financial fundamentals.
 
-KEY FINANCIAL RATIOS / FUNDAMENTALS:
-- Earnings quality: 50.2
-- Sales growth: 39.3
-- Financial strength: 54.5
-- Institutional backing: 55.0
-- P&L: Sales (Rs 2346 Cr, YoY +6.1%), NetProfit (Rs 53 Cr, YoY +152.4%)
-- Quarterly sales: Rs 545 Cr, Rs 543 Cr, Rs 627 Cr, Rs 629 Cr; Net Profit: Rs 7 Cr, Rs 17 Cr, Rs 18 Cr, Rs 11 Cr
-- Balance sheet: Debt (Rs 692 Cr)
-- Ratios: ROCE (6%)
+KEY FINANCIAL RATIOS / FUNDAMENTALS: The fundamental score breaks down into earnings quality (50.2), sales growth (39.3), financial strength (54.5), and institutional backing (55.0). P&L shows robust sales of Rs 2346 Cr, up YoY by 6.1%, and net profit rising impressively to Rs 53 Cr, a YoY increase of 152.4%. EPS stands at Rs 3.83, reflecting strong profitability. Quarterly sales have shown steady growth from Rs 545 Cr to Rs 629 Cr, indicating consistent demand. The balance sheet features moderate debt at Rs 692 Cr, with no immediate red flags. Financial ratios like ROCE of 6% indicate efficient use of capital.
 
-RECOMMENDATION:
-Hold
+RECOMMENDATION: Accumulate; Strong momentum in returns and solid fundamental score suggest accumulating the stock for long-term gains driven by sales growth and profitability improvements.
 
 
 ## SANDHAR – Sandhar Technologies
@@ -899,14 +1039,14 @@ Hold
 *Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 15%
 
 KEY METRICS:
-The stock is trading at Rs 498.10 with modest returns over the past month and three months (-9.4% and -9.9%, respectively), but a significant gain of 19.4% over six months, indicating recent momentum recovery. Its relative strength compared to the Nifty 500 over six months stands at 19.8%. The RSI is at 36.0, suggesting neither extreme bullish nor bearish conditions.
+The stock is trading at Rs 498.10 with a 1-month return of -9.4%, 3-month return of -9.9%, and a positive 6-month return of 19.4%. The relative strength against the Nifty 500 over 6 months is 19.8%. With an RSI of 36.0, it indicates a neutral position. The technical score stands at 30.0, suggesting moderate buying interest.
 
 KEY FINANCIAL RATIOS / FUNDAMENTALS:
-The fundamental score is 47.8 out of 100, indicating a solid but not exceptional financial profile for Sandhar Technologies. Earnings quality scores 48.5, reflecting stable profit margins and earnings reliability. Sales growth stands at 35.0, showing steady expansion in revenue with YoY sales increasing by 17.4% and profits by 24.6%. Financial strength is rated at 57.0, suggesting a balanced capital structure. Institutional backing also scores 55.0, indicating moderate involvement from institutional investors.
+The fundamental score for Sandhar Technologies is 47.8 out of 100, indicating solid but not exceptional financial health. Earnings quality scores 48.5, signaling strong profitability. Sales growth is modest at 35.0, reflecting steady expansion. Financial strength is rated 57.0, with a healthy debt level of Rs 955 Cr and robust earnings metrics like EPS of 29.48. The institutional backing score is 55.0, suggesting moderate support from major investors.
 
-RECOMMENDATION:
-Recommendation: Accumulate.
-Justification: The stock's solid fundamental score of 47.8 combined with positive sales growth and earnings quality metrics suggests it has strong underlying fundamentals to support its recent momentum recovery over six months.
+RECOMMENDATION: Hold
+
+Justification: While the stock shows strong sales growth and profitability, its negative short-term returns and lower technical score suggest caution. The fundamental score of 47.8 indicates solid but not exceptional financial health, balancing the decision to hold rather than take immediate action like buying or accumulating.
 
 
 ## SANSERA – Sansera Engineering
@@ -926,15 +1066,14 @@ Justification: The stock's solid fundamental score of 47.8 combined with positiv
 *Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 13%
 
 KEY METRICS:
-The stock of Sansera Engineering (SANSERA) is currently trading at Rs 2197.70 with impressive returns over the past year, including a 72.4% return over six months. Its relative strength against the Nifty 500 stands at 72.8%, indicating strong market performance compared to peers. The RSI of 46.0 suggests neither overbought nor oversold conditions. With a technical score of 60 and a fundamental score of 48.6, the stock shows moderate technical strength but weaker financial fundamentals.
+The stock of Sansera Engineering (SANSERA) is currently trading at Rs 2197.70 with strong returns over the past 1 month (15.7%), 3 months (42.1%), and 6 months (72.4%). It has a relative strength of 72.8% versus Nifty 500 in the 6-month period. The Relative Strength Index (RSI) stands at 46.0, indicating a neutral momentum. The technical score is 60 out of 100, suggesting moderate buying interest.
 
 KEY FINANCIAL RATIOS / FUNDAMENTALS:
-The fundamental score is 48.6, which indicates below-average financial health and growth potential. The earnings quality score is 49.6, suggesting stable profit margins with limited upside potential. Sales growth has a score of 39.3, reflecting moderate progress in expanding revenue. Financial strength is rated at 53.5, indicating solid balance sheet but some concerns regarding leverage and solvency. Institutional backing scores 55.0, hinting at modest support from large investors. The P&L shows robust sales growth of +8.8% YoY and net profit increases by +21.2%, with EPS at Rs 42.21. Quarterly sales have shown a steady upward trend, while profits have fluctuated slightly but remain positive.
+The fundamental score for Sansera Engineering is 48.6 out of 100, reflecting mixed financial quality indicators. Earnings quality scores are at 49.6, indicating stable earnings with some room for improvement. Sales growth is modest at 39.3, showing consistent but slow expansion in revenue. Financial strength is rated at 53.5, suggesting adequate liquidity and solvency but potential areas for enhancement. Institutional backing stands at 55.0, indicating a moderate level of confidence from institutional investors.
 
-RECOMMENDATION:
-Recommendation: Hold
+RECOMMENDATION: Accumulate
 
-Justification: Although the stock has demonstrated strong performance in terms of returns and technical indicators, its fundamental score is below average, indicating potential risks that could outweigh gains. The moderate earnings quality and sales growth scores further support holding the position cautiously until more favorable fundamentals emerge.
+Justification: Despite the fundamental score being below the ideal threshold of 70, the strong returns over the past 6 months (72.4%) and solid technical score (60) suggest that there is significant buying interest and momentum in the stock. The company's earnings quality and institutional backing are also reasonably robust, supporting a gradual accumulation strategy.
 
 
 ## SHARDAMOTR – Sharda Motor Industries
@@ -953,11 +1092,27 @@ Justification: Although the stock has demonstrated strong performance in terms o
 
 *Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 35%
 
-KEY METRICS: The stock is currently priced at Rs 830.85, with negative returns of -9.6%, -15.3%, and -20.2% over the past month, quarter, and half-year respectively against the Nifty 500 benchmark. Relative strength stands at -19.8%. Technical indicators show a modest RSI of 29.8, while the technical score is low at 20.0.
+KEY METRICS:
+- Price: Rs 830.85
+- Returns: 1M -9.6%, 3M -15.3%, 6M -20.2%
+- Relative strength vs Nifty 500 (6M): -19.8%
+- RSI: 29.8
+- Technical score: 20.0
+- Fundamental score: 49.9
 
-KEY FINANCIAL RATIOS / FUNDAMENTALS: The fundamental score is 49.9, indicating moderate financial quality. Earnings quality is strong at 52.6, reflecting robust profit margins and earnings stability. Sales growth has been solid at 36.9, with YoY sales increasing by 11.9%. Financial strength is rated at 56.8, supported by manageable debt levels (Rs 50 Cr) and a healthy ROCE of 35%. Institutional backing scores 55.0, suggesting decent investor confidence.
+KEY FINANCIAL RATIOS / FUNDAMENTALS:
+- Earnings quality: 52.6
+- Sales growth: 36.9
+- Financial strength: 56.8
+- Institutional backing: 55.0
+- P&L: Sales YoY +11.9%, NetProfit YoY +7.9%
+- Quarterly sales: 750, 756, 787, 882 Cr; Net Profit last 4Q: 84, 100, 75, 81 Cr
+- Balance sheet: Debt 50 Cr
+- Ratios: ROCE 35%
 
-RECOMMENDATION: Hold. The stock's weak technical performance and below-average fundamental score suggest caution despite solid earnings quality and sales growth.
+RECOMMENDATION: Hold
+
+Justification: The stock has underperformed the Nifty 500 and experienced negative returns over multiple periods, with a low technical score indicating bearish sentiment. While earnings quality is decent, sales growth and financial strength scores are moderate, suggesting potential for future improvement. However, the fundamental score of 49.9 indicates caution due to weak underlying fundamentals and declining momentum.
 
 
 ## SHRIPISTON – Shriram Pistons & Rings
@@ -977,14 +1132,13 @@ RECOMMENDATION: Hold. The stock's weak technical performance and below-average f
 *Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 27%
 
 KEY METRICS:
-The stock is currently priced at Rs 2928.70 with impressive returns of -5.8% in the last month, 7.4% over the past three months, and an astounding 20.4% over six months. Its relative strength against the Nifty 500 over six months stands at 20.8%, indicating a strong performance compared to broader market movements. The RSI of 39.5 suggests a neutral momentum, while the technical score is modest at 30 out of 100.
+The stock is trading at Rs 2928.70 with impressive returns of -5.8% in the last month, 7.4% in the last three months, and a remarkable 20.4% over six months. It shows strong relative strength against the Nifty 500 by outperforming it by 20.8%. The RSI stands at 39.5, indicating neither overbought nor oversold conditions.
 
 KEY FINANCIAL RATIOS / FUNDAMENTALS:
-The fundamental score stands at a solid 48.7, reflecting moderate financial health and growth prospects in the sub-sector of Engine/Parts. The earnings quality is rated at 50.2, indicating stable income generation from operations. Sales growth has been noteworthy with a score of 36.9, driven by a YoY increase in sales to Rs 3991 Cr (+12.4%). Financial strength is assessed at 55.7, supported by manageable debt levels amounting to Rs 537 Cr and positive profitability ratios such as ROCE of 27%. Institutional backing also receives a solid rating of 55.0, suggesting strong confidence from institutional investors.
+The fundamental score of 48.7 suggests a solid financial foundation with earnings quality (50.2), sales growth (36.9), financial strength (55.7), and institutional backing (55.0) all scoring above average. The P&L shows strong sales at Rs 3991 Cr, up by 12.4% YoY, and net profit of Rs 554 Cr, increasing by 7.4%. Quarterly performance is robust, with sales ranging from Rs 988 to Rs 1023 Cr and net profits between Rs 126 and Rs 142 Cr. The balance sheet features a debt load of Rs 537 Cr, supported by strong ratios including ROCE of 27%.
 
-RECOMMENDATION:
-Recommendation: Accumulate.
-Justification: The combination of strong sales growth and earnings quality, along with decent financial strength and institutional support, suggests accumulating this stock for long-term gains despite the modest technical score.
+RECOMMENDATION: Hold.
+Justification: The stock exhibits solid fundamentals with moderate technical indicators and positive momentum over six months, suggesting a hold strategy to capitalize on its growth potential while monitoring for any adverse market moves.
 
 
 ## SSWL – Steel Strips Wheels
@@ -1004,12 +1158,14 @@ Justification: The combination of strong sales growth and earnings quality, alon
 *Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 17%
 
 KEY METRICS:
-The stock SSWL is currently trading at Rs 195.74 with a disappointing performance over the past year, showing returns of -8.8%. Its relative strength against the Nifty 500 (6M) is -8.4%, and an RSI of 22.2 indicates oversold conditions. The technical score stands at 20.0 out of 100, while the fundamental score is a moderate 45.4.
+The stock SSWL is currently priced at Rs 195.74, with a 1-month return of -9.9%, 3-month return of -4.8%, and a 6-month return of -8.8%. Its relative strength against the Nifty 500 over the past 6 months has been -8.4%. The RSI is at 22.2, indicating oversold conditions, while the technical score stands at 20.0 out of 100. The fundamental score is a modest 45.4 out of 100.
 
 KEY FINANCIAL RATIOS / FUNDAMENTALS:
-The earnings quality score is strong at 48.5, reflecting robust profitability and earnings integrity. Sales growth is modest with a score of 29.6, indicating steady but not explosive expansion in revenue. Financial strength is scored at 52.1, suggesting solid liquidity and manageable debt levels. Institutional backing garners a respectable score of 55.0, hinting at some level of confidence from major investors.
+The earnings quality score is 48.5, reflecting solid profitability. Sales growth has been steady at 29.6, with YoY sales increasing by 11.6% and net profit slightly down by -2.6%. The financial strength score is 52.1, suggesting a stable balance sheet. Institutional backing is rated at 55.0. The quarterly sales trend shows consistent growth from 1234 Cr to 1321 Cr. With a debt of Rs 903 Cr, the ROCE stands at 17%, indicating efficient use of capital.
 
-Based on the comprehensive analysis across financial health, growth metrics, and technical indicators, Recommendation: Accumulate. The company demonstrates strong earnings quality and institutional support, which are reflected in its moderate fundamental score. Despite modest sales growth and a negative technical profile, the positive P&L trend and solid balance sheet provide sufficient justification to accumulate this stock for long-term gains.
+RECOMMENDATION: Hold
+
+Justification: Despite the technical indicators suggesting potential upside and solid earnings quality, the fundamental score is below 70, which may indicate underlying risks or concerns. The sales growth, while positive, has a slight dip in net profit YoY. Therefore, holding the stock allows for monitoring future developments without immediate selling pressure.
 
 
 ## SUNDRMFAST – Sundram Fasteners
@@ -1028,11 +1184,22 @@ Based on the comprehensive analysis across financial health, growth metrics, and
 
 *Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 17%
 
-KEY METRICS: The stock is trading at Rs 848.40 with a negative 6-month return of -10.0%. It has underperformed the Nifty 500 by 9.6% over the same period. Relative Strength Index (RSI) stands at 26.1, indicating potential weakness. Technical score is low at 20.0 points.
+KEY METRICS:
+- Price: Rs 848.40
+- Returns: -10.7% (1M), -13.8% (3M), -10.0% (6M)
+- Relative strength vs Nifty 500 (6M): -9.6%
+- RSI: 26.1
+- Technical score: 20.0
+- Fundamental score: **48.0**
 
-KEY FINANCIAL RATIOS / FUNDAMENTALS: The fundamental score of 48.0 suggests moderate financial health with earnings quality at 51.3 and sales growth at 33.1. Financial strength scores 55.0, reflecting solid balance sheet metrics including a debt level of Rs 741 Cr. Profitability ratios like ROCE at 17% are robust, but EPS stands at 26.37 which is modest.
+KEY FINANCIAL RATIOS / FUNDAMENTALS:
+- Earnings quality: 51.3
+- Sales growth: 33.1 (YoY +2.9%)
+- Financial strength: 55.0 (Debt: Rs 741 Cr, ROCE: 17%)
+- Institutional backing: 55.0
 
-RECOMMENDATION: Hold; The moderate fundamental score combined with weak technical indicators suggests caution despite decent earnings quality and growth fundamentals.
+RECOMMENDATION:
+Hold
 
 
 ## SUNDRMBRAK – Sundaram Brake Linings
@@ -1051,28 +1218,11 @@ RECOMMENDATION: Hold; The moderate fundamental score combined with weak technica
 
 *Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 8%
 
-KEY METRICS:
-- Price: Rs 594.75
-- Returns: 1M return of 1.2%, 3M return of -21.1%, and 6M return of -23.9%
-- Relative strength vs Nifty 500 (6M): -23.6%
-- RSI: 40.3
-- Technical score: 40 out of 100
-- Fundamental score: 47.7 out of 100
+**KEY METRICS:** The stock is trading at Rs 594.75 with a poor 6-month return of -23.9%. Its relative strength against the Nifty 500 over the same period was also negative (-23.6%). A moderate RSI of 40.3 suggests neither extreme bullish nor bearish conditions. Technical score stands at 40, indicating average momentum. The fundamental score is decent at 47.7.
 
-KEY FINANCIAL RATIOS / FUNDAMENTALS:
-- Earnings quality: 50.2
-- Sales growth: 33.1
-- Financial strength: 55.2
-- Institutional backing: 55.0
-- P&L: Sales at Rs 351 Cr (YoY -0.3%), Net Profit at Rs -4 Cr (YoY -180%)
-- Quarterly sales: Rs 97 Cr, Rs 92 Cr, Rs 78 Cr, and Rs 84 Cr; Quarterly net profit: Rs 1 Cr, Rs -1 Cr, Rs -3 Cr, and Rs -1 Cr
-- Balance sheet: Debt of Rs 39 Cr
-- Ratios: ROCE at 8%
+**KEY FINANCIAL RATIOS / FUNDAMENTALS:** With a composite earnings quality score of 50.2 and sales growth rate of 33.1%, the company shows moderate profitability and steady sales expansion. Financial strength scores 55.2, hinting at manageable debt levels. Institutional backing is equally strong at 55.0. The P&L reflects modest sales growth (351 Cr YoY -0.3%) but negative profit (-4 Cr YoY -180%). EPS stands at a loss of Rs -9.08. Quarterly revenues declined from 97 Cr to 78 Cr, followed by recovery. Balance sheet shows moderate debt at Rs 39 Cr and solid ROCE of 8%.
 
-RECOMMENDATION:
-Hold
-
-Justification: The company's fundamental score is below the threshold for a strong recommendation, indicating underlying financial quality concerns. Despite recent price gains, returns over the past year have been negative, and the technical score reflects moderate momentum. Given the deteriorating earnings and sales performance, holding the stock may be prudent until further improvement in fundamentals is demonstrated.
+**RECOMMENDATION:** Hold. The company's modest financial strength and decent fundamental score are offset by poor recent profitability and revenue trends.
 
 
 ## SUPRAJIT – Suprajit Engineering
@@ -1092,14 +1242,26 @@ Justification: The company's fundamental score is below the threshold for a stro
 *Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 20%
 
 KEY METRICS:
-The stock of Suprajit Engineering (SUPRAJIT) is currently priced at Rs 425.35, with a modest return over the past 6 months of -3.5%. The company's relative strength against the Nifty 500 over the same period was -3.1%. With an RSI of 45.5 indicating neither overbought nor oversold conditions, and a technical score of 40 out of 100, suggesting moderate momentum support. The fundamental score stands at 51.5, highlighting mixed financial health indicators.
+- Price: Rs 425.35
+- Returns: 1M -10.2%, 3M -9.5%, 6M -3.5%
+- Relative strength vs Nifty 500 (6M): -3.1%
+- RSI: 45.5
+- Technical score: 40.0
+- Fundamental score: **51.5**
 
 KEY FINANCIAL RATIOS / FUNDAMENTALS:
-The fundamental components of Suprajit Engineering are moderately scored across earnings quality (50.2), sales growth (45.8), financial strength (58.4), and institutional backing (55.0). The company reported robust quarterly progress with sales increasing from 877 Cr to 979 Cr over the last four quarters, accompanied by a corresponding rise in net profit from 13 Cr to 51 Cr. On the balance sheet side, debt stands at Rs 927 Cr, which is relatively high but manageable given its earnings quality and growth trajectory. The financial ratios indicate solid operational efficiency with an ROCE of 20%, suggesting effective use of capital.
+- Earnings quality: 50.2
+- Sales growth: 45.8
+- Financial strength: 58.4
+- Institutional backing: 55.0
+- P&L: Sales Rs 3,660 Cr (YoY +11.7%), Net Profit Rs 139 Cr (YoY +40.4%)
+- Quarterly sales and profits increased in the last four quarters
+- Balance sheet: Debt Rs 927 Cr
+- Ratios: ROCE 20%
 
-RECOMMENDATION:
-Recommendation: Hold.
-Justification: While Suprajit Engineering demonstrates strong sales growth and profitability improvements, the mixed technical scores and moderate fundamental assessment suggest caution against aggressive buying or selling pressure at this time. The company's financial health appears stable with adequate backing from institutions, but investors should monitor for potential short-term corrections before making larger allocations.
+RECOMMENDATION: Hold
+
+Justification: The stock shows modest sales growth but solid profit margins and earnings quality, supported by a decent balance sheet. However, negative returns over short periods and weak technical indicators suggest caution; holding provides an opportunity to wait for potential recovery while monitoring fundamentals.
 
 
 ## TALBROAUTO – Talbros Auto Components
@@ -1118,13 +1280,11 @@ Justification: While Suprajit Engineering demonstrates strong sales growth and p
 
 *Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 18%
 
-KEY METRICS:
-The stock is trading at Rs 240.95 with negative returns of -9.9% in the past month and -14.5% in the past three months, indicating bearish momentum. Relative strength against the Nifty 500 shows a decline of -5.8%. The RSI of 19.4 suggests oversold conditions. Technical score is low at 20 out of 100.
+KEY METRICS: The stock is trading at Rs 240.95 with modest returns over the past year (1M -9.9%, 3M -14.5%, 6M -6.2%). Its relative strength against the Nifty 500 over six months is -5.8%. With an RSI of 19.4, it indicates a bearish trend. The technical score stands at 20 out of 100, suggesting weak momentum.
 
-KEY FINANCIAL RATIOS / FUNDAMENTALS:
-The fundamental score stands at 47.2, indicating mixed financial health. Earnings quality is robust with a score of 50.2. Sales growth is modest with a score of 30.6, reflecting stable demand but slow expansion. Financial strength has a moderate score of 56.1, while institutional backing scores slightly lower at 55.0. The company's P&L shows sales increasing YoY by 1.5% and profits growing by 5.3%. Quarterly sales have been steady, with net profit fluctuating but showing resilience. The balance sheet indicates manageable debt of Rs 86 Cr.
+KEY FINANCIAL RATIOS / FUNDAMENTALS: The fundamental score is notably low at 47.2, indicating concerns on the financial front. Earnings quality scores 50.2, hinting at potential issues in profit margins or revenue consistency. Sales growth has a score of 30.6, reflecting modest expansion. Financial strength is rated at 56.1, suggesting adequate liquidity but some leverage concerns given the debt level of Rs 86 Cr. Institutional backing scores 55.0, indicating moderate investor confidence.
 
-RECOMMENDATION: Hold. The fundamental score is below the threshold for a strong recommendation, suggesting cautious optimism due to moderate financial health and lack of significant technical strength.
+RECOMMENDATION: Hold; The company's low fundamental and technical scores suggest caution despite solid earnings quality.
 
 
 ## UCAL – Ucal Limited
@@ -1143,11 +1303,15 @@ RECOMMENDATION: Hold. The fundamental score is below the threshold for a strong 
 
 *Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 7%
 
-KEY METRICS: The stock is trading at Rs 100.25 with negative returns over the past 1M (11.3%), 3M (-19.3%) and 6M (-29.9%). It has underperformed the Nifty 500 by -29.5% in the same period, indicating poor relative strength. The Relative Strength Index (RSI) stands at 19.3, suggesting an oversold condition but also potential weakness. Technical analysis scores low at 20.0, pointing towards a bearish outlook.
+KEY METRICS:
+The stock is currently trading at Rs 100.25 with significant short-term declines over the past month (11.3%), quarter (-19.3%), and half-year (-29.9%). Relative strength versus Nifty 500 shows a notable weakness of -29.5% in the 6-month period. The RSI of 19.3 indicates oversold conditions, suggesting potential short-term buying interest. Technical score stands at 20.0, indicating underwhelming technical performance.
 
-KEY FINANCIAL RATIOS / FUNDAMENTALS: With a fundamental score of 59.6 out of 100, the company shows mixed financial health. Earnings quality is strong at 70, reflecting reliable income generation. Sales growth is moderate at 47.5, indicating steady expansion despite losses in profitability. Financial strength scores 57.4, suggesting decent balance sheet resilience but room for improvement. Institutional backing is rated at 55, hinting at limited external investment confidence.
+KEY FINANCIAL RATIOS / FUNDAMENTALS:
+The fundamental score is 59.6 out of 100, reflecting a mixed financial health profile with sub-scores: Earnings quality (70), Sales growth (47.5), Financial strength (57.4), and Institutional backing (55). The company reported sales growth at +0.1% YoY but suffered a substantial net profit decline to -41 Cr YoY (-156.2%). With EPS at -18.43, the company is experiencing deteriorating profitability. Quarterly sales showed volatility, ranging from 199 to 211 Cr, while net profits fluctuated between losses of -21 Cr to -10 Cr. The balance sheet carries significant debt (301 Cr) without detailed equity or cash figures.
 
-RECOMMENDATION: Hold. The company's fundamental score of 59.6 suggests cautious optimism, balanced by recent financial challenges and underwhelming technical indicators despite its relative strength in sales growth.
+RECOMMENDATION: Hold
+
+Justification: Despite strong earnings quality and a modest sales growth rate, the company's fundamental score is below 70, indicating underlying concerns that outweigh its technical indicators of buying interest. The significant decline in profitability and high debt levels suggest caution against aggressive trading strategies. A hold suggests monitoring for potential recovery or consolidation phase before making further decisions.
 
 
 ## VARROC – Varroc Engineering
@@ -1167,13 +1331,14 @@ RECOMMENDATION: Hold. The company's fundamental score of 59.6 suggests cautious 
 *Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 20%
 
 KEY METRICS:
-The stock is trading at Rs 514.65 with negative returns of -16.2% in the past month and -19.3% over the last three months. Its relative strength against the Nifty 500 (6M) stands at -0.6%, indicating a weak performance compared to the broader market index. The RSI of 28.3 suggests the stock is potentially oversold, while its technical score is low at 20 out of 100.
+The stock of Varroc Engineering (VARROC) is currently priced at Rs 514.65, with negative returns over the past 1M, 3M, and 6M periods (-16.2%, -19.3%, and -1.0%, respectively). Its relative strength compared to the Nifty 500 over a 6-month period stands at -0.6%. The Relative Strength Index (RSI) is at 28.3, indicating potential weakness. The technical score is 20 out of 100, suggesting limited short-term momentum support. The fundamental score is 49.6 out of 100, which is below the threshold for passing a basic screening test focused on fundamentals.
 
 KEY FINANCIAL RATIOS / FUNDAMENTALS:
-The fundamental score for Varroc Engineering stands at 49.6/100, reflecting moderate financial quality. Earnings quality scores are solid at 50.2, signaling reliable earnings. Sales growth has been robust with a score of 42.1 and YoY sales grew by 5.7%, while net profit saw significant year-over-year growth from 182 Cr to 2208 Cr (YoY +160%). Financial strength is rated at 53.7, indicating manageable debt levels (Debt: Rs 915 Cr), and a solid balance sheet with strong equity position. Institutional backing also scores moderately well at 55.0.
+Varroc Engineering's earnings quality score is 50.2, signaling moderate confidence in its reported earnings. Sales growth has been impressive with an earnings quality score of 42.1 and YoY sales growth of +5.7%. The financial strength score stands at 53.7, reflecting decent stability metrics on the balance sheet. Institutional backing is scored at 55.0, indicating some level of confidence from institutional investors. The quarterly progression shows fluctuating net profits, ranging from a loss in Q4 (last year) to significant gains in subsequent quarters (+107 Cr and +63 Cr). On the balance sheet side, total debt stands at Rs 915 Cr, with profit margins such as ROCE of 20% suggesting efficient utilization of assets. The EPS is reported at Rs 11.55.
 
 RECOMMENDATION:
-Hold | Weak technical indicators and fundamental score below 70 suggest holding until further momentum or fundamentals improve.
+Recommendation: Hold.
+Justification: Despite solid earnings quality and sales growth fundamentals (scores above 50), the weak technical indicators and negative relative strength against the broader market, combined with a fundamental score below 70, suggest caution in immediate action beyond holding the stock to evaluate potential recovery phases.
 
 
 ## WHEELS – Wheels India
@@ -1192,11 +1357,15 @@ Hold | Weak technical indicators and fundamental score below 70 suggest holding 
 
 *Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 16%
 
-KEY METRICS: WHEELS India (WHEELS) trades at Rs 880.25 with strong short-term returns of 2.7% in one month and a solid 20.7% return over six months, positioning it well above the Nifty 500 relative strength of 21.1%. The stock's RSI of 53.8 suggests neither extreme bullish nor bearish conditions, indicating balanced momentum. With a technical score of 60 and a fundamental score of 46.8 (highlighting moderate financial health), WHEELS scores 58.1 overall but fails the screen for passing with both strong fundamentals and positive recent performance.
+KEY METRICS:
+The stock of Wheels India (WHEELS) is currently trading at Rs 880.25 with a strong performance over the past six months, yielding a return of 20.7%. Its relative strength against the Nifty 500 stands at 21.1%, indicating a decent position in the market. The RSI value of 53.8 suggests neither extreme bullish nor bearish conditions, hinting at a balanced momentum. The technical score is 60, reflecting moderate appeal on price action fronts, while its fundamental score of 46.8 is notably lower, suggesting weaker financial health or valuation metrics.
 
-KEY FINANCIAL RATIOS / FUNDAMENTALS: The earnings quality score is 50.2, reflecting solid profitability without significant manipulation or earnings volatility. Sales growth remains modest at 30.5 due to stable market penetration in the wheels sector. Financial strength scores of 54.3 indicate adequate liquidity and manageable debt levels, while institutional backing (55.0) suggests some level of confidence from larger investors. The company reported sales of Rs 5178 Cr YoY +9.1%, net profits at Rs 138 Cr YoY +23.2%, with EPS standing at 55.32. Quarterly sales have been consistent, ranging from Rs 1277 to Rs 1371 Cr, while net profits fluctuated slightly but remained positive. The balance sheet shows debt at Rs 736 Cr, contributing to a ROCE of 16%.
+KEY FINANCIAL RATIOS / FUNDAMENTALS:
+The fundamentals have been scored at 46.8 out of 100, with earnings quality (50.2), sales growth (30.5), financial strength (54.3), and institutional backing (55.0) all contributing to this moderate assessment. The P&L shows robust sales figures at Rs 5178 Cr, up by 9.1% YoY, alongside solid profit margins with a net profit of Rs 138 Cr, rising 23.2% YoY. The EPS stands out at Rs 55.32. In terms of quarterly progression, sales have shown slight fluctuations but remain positive, while profits are consistently increasing. On the balance sheet, the company has debt at Rs 736 Cr. Financial ratios such as ROCE at 16% indicate efficient use of capital for generating returns.
 
-RECOMMENDATION: Hold; Given the mixed signals between strong technicals and moderate fundamentals, holding this stock allows for monitoring potential upside driven by sales growth without immediately reacting to weaker fundamental indicators.
+RECOMMENDATION:
+Recommendation: Accumulate.
+Justification: The strong sales growth and profit margins bolster its earnings quality significantly, while moderate technical scores suggest favorable price movements. Despite the lower fundamental score reflecting cautious financial health metrics, the overall positive trend in fundamentals and market position (relative strength) suggests accumulating for long-term gains is advisable.
 
 
 ## ZFCVINDIA – ZF Commercial Vehicle Control Systems
@@ -1216,25 +1385,10 @@ RECOMMENDATION: Hold; Given the mixed signals between strong technicals and mode
 *Ratios (ROCE, ROE, EPS, PE, PB, etc.):* ROCE: 20%
 
 KEY METRICS:
-- Price: Rs 14,376.00
-- Returns: 1M -6.2%, 3M 13.8%, 6M 4.5%
-- Relative strength vs Nifty 500 (6M): 4.8%
-- RSI: 26.4
-- Technical score: 20.0
-- Fundamental score: **50.3**
+The stock is trading at Rs 14,376 with a relative strength of 4.8% compared to the Nifty 500 (6M). It has shown positive returns over the past 3 months (+13.8%) and 6 months (+4.5%), but its RSI of 26.4 indicates oversold conditions. The technical score is low at 20, while the fundamental score stands out at 50.3.
 
 KEY FINANCIAL RATIOS / FUNDAMENTALS:
-- Earnings quality: 54.5
-- Sales growth: 33.1
-- Financial strength: 59.8
-- Institutional backing: 55.0
-- P&L: Sales (Rs 3,976 Cr) YoY +3.8%; Net Profit (Rs 498 Cr) YoY +8%; EPS: Rs 262.32
-- Quarterly progression: Sales last 4Q: Rs 1,012, 976, 913, 1075 Cr; Net Profit last 4Q: Rs 127, 122, 108, 140 Cr
-- Balance sheet: Debt: Rs 62 Cr
-- Ratios: ROCE: 20%
+Earnings quality scores 54.5, indicating solid profitability. Sales growth is modest at 33.1 due to YoY gains of 3.8%. Financial strength is rated at 59.8, with a debt level of Rs 62 Cr. Institutional backing receives a score of 55.0. The P&L shows sales of Rs 3,976 Cr and net profit of Rs 498 Cr (both up YoY). Quarterly sales have been stable around Rs 1,000-1,075 Cr, with net profits ranging from Rs 108 to Rs 140 Cr. Financial ratios like ROCE at 20% suggest efficient use of capital.
 
-RECOMMENDATION:
-Hold
-
-Justification: The stock shows mixed performance with decent sales and profit growth but a relatively low fundamental score. While the technicals are weak (low technical score), earnings quality is solid, indicating reliable income generation potential despite modest momentum indicators.
+RECOMMENDATION: Hold
 

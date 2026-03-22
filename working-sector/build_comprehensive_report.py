@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 """
-Build a comprehensive Auto Components sector report from all pipeline outputs.
+Build a comprehensive sector report from all pipeline outputs (any sector).
 Produces:
   - Comprehensive .md (single markdown with narrative, hypothesis, literature, universe, shortlist, backtest, stock narratives)
   - Interactive .html (tabs, sortable tables)
   - .xlsx (multiple sheets for easy consumption in Excel)
+Uses NSE_SECTOR env or --sector to choose sector; reads from working-sector/output/<sector>/.
 Run from project root or working-sector. Requires: pandas; for .xlsx: openpyxl (pip install openpyxl).
 """
 import html as html_module
 import json
+import os
 import sys
 from pathlib import Path
 from datetime import date
@@ -17,24 +19,53 @@ import pandas as pd
 
 WORKING_SECTOR = Path(__file__).resolve().parent
 PROJECT_ROOT = WORKING_SECTOR.parent
-OUTPUT_DIR = WORKING_SECTOR / "output"
+if str(WORKING_SECTOR) not in sys.path:
+    sys.path.insert(0, str(WORKING_SECTOR))
 
-# Inputs
-SECTOR_NOTE_MD = OUTPUT_DIR / "auto_components_sector_note.md"
-SECTOR_NARRATIVE_MD = WORKING_SECTOR / "sector_narrative_auto_components.md"
-HYPOTHESIS_MD = WORKING_SECTOR / "hypothesis_auto_components.md"
-LITERATURE_MD = WORKING_SECTOR / "literature_notes_auto_components.md"
-PHASE3_FULL_CSV = OUTPUT_DIR / "phase3_full_with_composite.csv"
-PHASE3_SHORTLIST_CSV = OUTPUT_DIR / "phase3_shortlist.csv"
-PHASE4_BACKTEST_CSV = OUTPUT_DIR / "phase4_backtest_results.csv"
-STOCK_NARRATIVES_JSON = OUTPUT_DIR / "stock_narratives.json"
-STOCK_NARRATIVES_MD = OUTPUT_DIR / "stock_narratives.md"
-UNIVERSE_CSV = WORKING_SECTOR / "auto_components_universe.csv"
+# Sector-aware paths: use config when available (NSE_SECTOR set), else default to auto_components
+def _get_paths():
+    try:
+        from config import OUTPUT_DIR, SECTOR, SECTOR_DISPLAY_NAME
+        sector = SECTOR
+        display = SECTOR_DISPLAY_NAME
+    except Exception:
+        sector = os.environ.get("NSE_SECTOR", "auto_components").strip().lower().replace(" ", "_")
+        display = sector.replace("_", " ").title()
+        OUTPUT_DIR = WORKING_SECTOR / "output" / sector
+    return {
+        "OUTPUT_DIR": OUTPUT_DIR,
+        "SECTOR_DISPLAY_NAME": display,
+        "SECTOR_NOTE_MD": OUTPUT_DIR / "sector_note.md",
+        "SECTOR_NARRATIVE_MD": WORKING_SECTOR / f"sector_narrative_{sector}.md",
+        "HYPOTHESIS_MD": WORKING_SECTOR / f"hypothesis_{sector}.md",
+        "LITERATURE_MD": WORKING_SECTOR / f"literature_notes_{sector}.md",
+        "PHASE3_FULL_CSV": OUTPUT_DIR / "phase3_full_with_composite.csv",
+        "PHASE3_SHORTLIST_CSV": OUTPUT_DIR / "phase3_shortlist.csv",
+        "PHASE4_BACKTEST_CSV": OUTPUT_DIR / "phase4_backtest_results.csv",
+        "STOCK_NARRATIVES_JSON": OUTPUT_DIR / "stock_narratives.json",
+        "STOCK_NARRATIVES_MD": OUTPUT_DIR / "stock_narratives.md",
+        "UNIVERSE_CSV": WORKING_SECTOR / f"{sector}_universe.csv",
+        "REPORT_MD": OUTPUT_DIR / "comprehensive_report.md",
+        "REPORT_HTML": OUTPUT_DIR / "comprehensive_report.html",
+        "REPORT_XLSX": OUTPUT_DIR / "comprehensive_report.xlsx",
+    }
 
-# Outputs
-REPORT_MD = OUTPUT_DIR / "auto_components_comprehensive_report.md"
-REPORT_HTML = OUTPUT_DIR / "auto_components_comprehensive_report.html"
-REPORT_XLSX = OUTPUT_DIR / "auto_components_comprehensive_report.xlsx"
+_p = _get_paths()
+OUTPUT_DIR = _p["OUTPUT_DIR"]
+SECTOR_NOTE_MD = _p["SECTOR_NOTE_MD"]
+SECTOR_NARRATIVE_MD = _p["SECTOR_NARRATIVE_MD"]
+HYPOTHESIS_MD = _p["HYPOTHESIS_MD"]
+LITERATURE_MD = _p["LITERATURE_MD"]
+PHASE3_FULL_CSV = _p["PHASE3_FULL_CSV"]
+PHASE3_SHORTLIST_CSV = _p["PHASE3_SHORTLIST_CSV"]
+PHASE4_BACKTEST_CSV = _p["PHASE4_BACKTEST_CSV"]
+STOCK_NARRATIVES_JSON = _p["STOCK_NARRATIVES_JSON"]
+STOCK_NARRATIVES_MD = _p["STOCK_NARRATIVES_MD"]
+UNIVERSE_CSV = _p["UNIVERSE_CSV"]
+REPORT_MD = _p["REPORT_MD"]
+REPORT_HTML = _p["REPORT_HTML"]
+REPORT_XLSX = _p["REPORT_XLSX"]
+SECTOR_DISPLAY_NAME = _p["SECTOR_DISPLAY_NAME"]
 
 
 def _read_text(path: Path, default: str = "") -> str:
@@ -62,7 +93,7 @@ def build_md(
 ) -> str:
     today = date.today().isoformat()
     lines = [
-        "# Auto Components (India) – Comprehensive Sector Report",
+        f"# {SECTOR_DISPLAY_NAME} (India) – Comprehensive Sector Report",
         "",
         f"**Report date:** {today}  |  **Data as of:** {as_of}",
         "",
@@ -81,7 +112,7 @@ def build_md(
     lines += ["", "---", "", "## 3. Literature and sources", ""]
     lines.append(literature or "*(Literature notes not found.)*")
     lines += ["", "---", "", "## 4. Universe and metrics", ""]
-    lines.append(f"Component-only universe (ex-OEM), aligned with ACMA. **{len(full_df)}** stocks.")
+    lines.append(f"Universe: **{len(full_df)}** stocks (definition and alignment with industry sources in sector narrative and hypothesis memo).")
     lines += ["", ""]
 
     if not full_df.empty:
@@ -140,9 +171,9 @@ def build_md(
         lines.append(f"### {sym} – {name}")
         lines.append("")
         fund_parts = []
-        for k in ["fund_earnings_quality", "fund_sales_growth", "fund_financial_strength", "fund_institutional_backing"]:
+        for k in ["fund_earnings_quality", "fund_sales_growth", "fund_financial_strength", "fund_institutional_backing", "fund_overall"]:
             if k in n and n[k] is not None:
-                label = k.replace("fund_", "").replace("_", " ").title()
+                label = "Overall (0–100)" if k == "fund_overall" else k.replace("fund_", "").replace("_", " ").title()
                 fund_parts.append(f"**{label}:** {n[k]:.1f}")
         if fund_parts:
             lines.append("*Fundamental (0–100):* " + " | ".join(fund_parts))
@@ -159,8 +190,8 @@ def build_md(
         lines.append(n.get("narrative", ""))
         lines += ["", ""]
     lines += ["---", "", "## 8. Sources and data", ""]
-    lines.append("- **Definition and market size:** ACMA FY25; listed universe and mcap from [Sharescart Auto Ancillary](https://www.sharescart.com/industry/auto-ancillary/) (113 companies, ₹7.53 L Cr); sector_view_auto_components.md, literature_notes_auto_components.md.")
-    lines.append("- **Strategic outlook:** auto-components.md (policy, EV, ADAS, clusters, challenges).")
+    lines.append("- **Definition and market size:** See sector narrative and literature notes for this sector (generated from web research + LLM; files in working-sector).")
+    lines.append("- **Research question and hypothesis:** See hypothesis memo for this sector.")
     lines.append("- **Price data:** NSE (nse_sec_full_data.csv, nse_index_data.csv).")
     lines.append("- **Fundamental scores:** Screener/organized pipeline (fundamental_scores_database.csv).")
     lines.append("- **Narratives:** Generated using Ollama Granite 4 from pipeline, fundamental scores, and optional P&L/quarterly/balance-sheet/ratios (ROCE, ROE, EPS, PE, PB, etc.) from fetch_screener_fundamental_details.R.")
@@ -247,6 +278,7 @@ def _narratives_to_html(narratives: list[dict], html_escape_fn) -> str:
         "fund_sales_growth": "Sales growth",
         "fund_financial_strength": "Financial strength",
         "fund_institutional_backing": "Institutional backing",
+        "fund_overall": "Overall (0–100)",
     }
     out = []
     for n in narratives:
@@ -462,7 +494,7 @@ def build_html(
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Auto Components (India) – Comprehensive Report</title>
+<title>""" + SECTOR_DISPLAY_NAME + """ (India) – Comprehensive Report</title>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -745,7 +777,7 @@ tbody tr:hover { background: rgba(0, 137, 123, 0.08); }
 </head>
 <body>
 <header class="app-bar">
-  <h1>Auto Components (India) – Comprehensive Sector Report</h1>
+  <h1>""" + SECTOR_DISPLAY_NAME + """ (India) – Comprehensive Sector Report</h1>
   <p class="meta">Report date: """ + today + """ &nbsp;·&nbsp; Data as of: """ + as_of + """</p>
 </header>
 <main class="main-content">
@@ -922,7 +954,7 @@ def build_xlsx(
         summary = pd.DataFrame([
             ["Report date", today],
             ["Data as of", as_of],
-            ["Sector", "Auto Components (India)"],
+            ["Sector", f"{SECTOR_DISPLAY_NAME} (India)"],
             ["Universe count", len(full_df) if full_df is not None and not full_df.empty else 0],
             ["Shortlist count", len(shortlist_df) if shortlist_df is not None and not shortlist_df.empty else 0],
         ])
