@@ -30,7 +30,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install pandas requests jugaad-data pyreadr openpyxl numpy
+          pip install pandas requests jugaad-data pyreadr openpyxl numpy twilio
 
       - name: Fetch latest NSE data
         run: |
@@ -52,6 +52,14 @@ jobs:
         id: changes
         run: |
           git diff --quiet && echo "changed=false" >> $GITHUB_OUTPUT || echo "changed=true" >> $GITHUB_OUTPUT
+
+      - name: Send WhatsApp report notification
+        env:
+          TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
+          TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+          TWILIO_FROM: ${{ secrets.TWILIO_FROM }}
+          TWILIO_TO: ${{ secrets.TWILIO_TO }}
+        run: python scripts/send_whatsapp_report.py
 
       - name: Commit and push updated data + reports
         if: steps.changes.outputs.changed == 'true'
