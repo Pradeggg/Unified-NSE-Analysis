@@ -26,7 +26,10 @@ SECTOR_DISPLAY_NAME = SECTOR_DISPLAY_NAMES.get(SECTOR, SECTOR.replace("_", " ").
 
 # Input files (universe is per-sector)
 UNIVERSE_CSV = WORKING_SECTOR / f"{SECTOR}_universe.csv"
-STOCK_CSV = DATA_DIR / "nse_sec_full_data.csv"
+# Prefer full stock file; fall back to universe-only file (kept fresh by GitHub Actions)
+_full_stock = DATA_DIR / "nse_sec_full_data.csv"
+_univ_stock = DATA_DIR / "nse_universe_stock_data.csv"
+STOCK_CSV = _full_stock if _full_stock.exists() else _univ_stock
 INDEX_CSV = DATA_DIR / "nse_index_data.csv"
 FUNDAMENTAL_CSV = ORGANIZED_DATA / "fundamental_scores_database.csv"
 if not FUNDAMENTAL_CSV.exists():
