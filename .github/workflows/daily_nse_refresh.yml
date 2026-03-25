@@ -66,9 +66,12 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Pull latest remote commits before staging so push never races
+          git fetch origin main
+          git rebase origin/main -X theirs
           git add data/nse_universe_stock_data.csv
           git add data/nse_index_data.csv
           git add working-sector/output/
           TODAY=$(date -u +"%Y-%m-%d")
-          git commit -m "chore: auto-refresh NSE data and pipeline outputs (${TODAY})"
-          git push
+          git commit -m "chore: auto-refresh NSE data and pipeline outputs (${TODAY})" || echo "Nothing new to commit"
+          git push origin main
