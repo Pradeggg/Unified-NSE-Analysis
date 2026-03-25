@@ -1,0 +1,66 @@
+name: Daily NSE Data Refresh
+
+on:
+  schedule:
+    # Run at 11:00 UTC (4:30 PM IST) Mon-Fri — after NSE market close (3:30 PM IST)
+    - cron: '0 11 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      from_date:
+        description: 'Fetch from date (YYYY-MM-DD). Leave empty for auto (since last update).'
+        required: false
+        default: ''
+
+jobs:
+  refresh-data:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install pandas requests jugaad-data pyreadr openpyxl numpy
+
+      - name: Fetch latest NSE data
+        run: |
+          if [ -n "${{ github.event.inputs.from_date }}" ]; then
+            python scripts/fetch_nse_data.py --from "${{ github.event.inputs.from_date }}"
+          else
+            python scripts/fetch_nse_data.py
+          fi
+
+      - name: Run analysis pipeline (Phases 2–5)
+        run: |
+          python working-sector/phase2_data.py
+          python working-sector/phase3_screens.py
+          python working-sector/phase4_backtest.py
+          python working-sector/phase5_report.py
+          python working-sector/build_comprehensive_report.py
+
+      - name: Check for changes
+        id: changes
+        run: |
+          git diff --quiet && echo "changed=false" >> $GITHUB_OUTPUT || echo "changed=true" >> $GITHUB_OUTPUT
+
+      - name: Commit and push updated data + reports
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/nse_universe_stock_data.csv
+          git add data/nse_index_data.csv
+          git add working-sector/output/
+          TODAY=$(date -u +"%Y-%m-%d")
+          git commit -m "chore: auto-refresh NSE data and pipeline outputs (${TODAY})"
+          git push
