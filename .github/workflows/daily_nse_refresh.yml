@@ -67,4 +67,5 @@ jobs:
           git add working-sector/output/
           TODAY=$(date -u +"%Y-%m-%d")
           git commit -m "chore: auto-refresh NSE data and pipeline outputs (${TODAY})"
-          git push
+          git pull --rebase origin main
+          git push origin main
