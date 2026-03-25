@@ -1,0 +1,31 @@
+name: Send WhatsApp Report Now
+
+on:
+  push:
+    branches:
+      - claude/check-latest-updates-xWWmJ
+    paths:
+      - '.github/workflows/send_whatsapp_now.yml'
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install twilio
+        run: pip install twilio
+
+      - name: Send WhatsApp report
+        env:
+          TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
+          TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+          TWILIO_FROM: ${{ secrets.TWILIO_FROM }}
+          TWILIO_TO: ${{ secrets.TWILIO_TO }}
+        run: python scripts/send_whatsapp_report.py
