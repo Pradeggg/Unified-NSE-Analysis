@@ -1,7 +1,7 @@
 # Auto Components (India) – Sector Note
 
 **Report date:** 2026-03-25  
-**Data as of:** 2026-03-06
+**Data as of:** 2026-03-25
 
 ---
 
@@ -47,27 +47,27 @@ This analysis uses a **component-only** universe (ex-OEM), aligned with ACMA. Un
 
 | SYMBOL | SUBSECTOR | CURRENT_PRICE | RET_6M | RS_VS_NIFTY_500_6M | FUND_SCORE | TECHNICAL_SCORE | COMPOSITE_SCORE |
 |--------|-----------|---------------|--------|--------------------|------------|-----------------|-----------------|
-| BHARATFORG | Forgings | 1923.90 | 66.9% | 67.3% | 54.8 | 70.0 | 69.5 |
-| DIVGIITTS | Transmission | 721.05 | 11.0% | 11.4% | 49.9 | 80.0 | 64.7 |
-| BHARATSE | Seating | 176.48 | 61.9% | 62.3% | 52.6 | 60.0 | 63.8 |
-| SANSERA | Forgings | 2197.70 | 72.4% | 72.8% | 48.6 | 60.0 | 63.4 |
-| AUTOAXLES | Axles | 1987.00 | 21.5% | 21.9% | 58.8 | 60.0 | 63.3 |
-| GNA | Axles | 426.25 | 40.5% | 40.9% | 54.5 | 60.0 | 62.8 |
-| LUMAXIND | Lighting | 5576.50 | 66.8% | 67.2% | 57.7 | 50.0 | 62.2 |
-| JAMNAAUTO | Suspension | 132.57 | 45.7% | 46.1% | 48.3 | 60.0 | 60.8 |
-| WHEELS | Wheels | 880.25 | 20.7% | 21.1% | 46.8 | 60.0 | 58.1 |
-| SONACOMS | Electrical | 514.95 | 17.0% | 17.4% | 49.7 | 60.0 | 57.9 |
-| TIINDIA | Other | 2722.90 | -9.9% | -9.5% | 48.7 | 80.0 | 57.4 |
-| MOTHERSON | Electrical | 122.77 | 36.0% | 36.4% | 51.6 | 50.0 | 57.2 |
-| LUMAXTECH | Lighting | 1531.90 | 49.7% | 50.0% | 54.5 | 40.0 | 56.1 |
-| RANEENGINE | Engine/Parts | 317.75 | -24.0% | -23.6% | 50.9 | 80.0 | 53.6 |
-| RICOAUTO | Castings | 113.30 | 49.5% | 49.8% | 49.1 | 30.0 | 49.5 |
+| LUMAXTECH | Lighting | 1623.30 | 44.1% | 49.6% | 54.5 | 80.0 | 72.5 |
+| SANSERA | Forgings | 2183.00 | 69.2% | 74.7% | 48.6 | 80.0 | 71.4 |
+| SHRIPISTON | Engine/Parts | 3102.10 | 22.5% | 28.0% | 48.7 | 80.0 | 68.9 |
+| SONACOMS | Electrical | 511.45 | 14.9% | 20.4% | 49.7 | 80.0 | 68.5 |
+| ASKAUTOLTD | Other | 444.15 | -12.9% | -7.4% | 71.3 | 80.0 | 67.3 |
+| WHEELS | Wheels | 1089.55 | 47.8% | 53.3% | 46.8 | 70.0 | 65.9 |
+| JBMA | Other | 572.65 | -6.3% | -0.9% | 56.9 | 80.0 | 65.8 |
+| BHARATFORG | Forgings | 1736.50 | 53.0% | 58.5% | 54.8 | 50.0 | 61.5 |
+| TIINDIA | Other | 2682.40 | -12.0% | -6.5% | 48.7 | 80.0 | 59.2 |
+| MINDACORP | Electrical | 543.95 | 7.2% | 12.6% | 49.4 | 60.0 | 58.7 |
+| DIVGIITTS | Transmission | 697.65 | 6.7% | 12.2% | 49.9 | 60.0 | 58.4 |
+| RANEENGINE | Engine/Parts | 317.75 | -24.0% | -18.5% | 50.9 | 80.0 | 55.8 |
+| LUMAXIND | Lighting | 5148.50 | 23.4% | 28.9% | 57.7 | 30.0 | 52.9 |
+| PRICOLLTD | Electrical | 543.95 | 14.3% | 19.8% | 50.0 | 40.0 | 52.2 |
+| GNA | Axles | 396.15 | 26.1% | 31.6% | 54.5 | 30.0 | 52.1 |
 
 
 ## 4. Backtest (momentum screen: RS_6M > 0)
 
-- Mean excess return (portfolio vs Nifty 500, 1Y forward): **-1.71%**
-- Hit rate (excess > 0): **37%**
+- Mean excess return (portfolio vs Nifty 500, 1Y forward): **-1.56%**
+- Hit rate (excess > 0): **40%**
 
 *Backtest uses only price-based criteria; fundamental screen not applied historically (data limitation).*
 
