@@ -1,6 +1,6 @@
 # Auto Components (India) – Sector Note
 
-**Report date:** 2026-03-09  
+**Report date:** 2026-03-25  
 **Data as of:** 2026-03-06
 
 ---
