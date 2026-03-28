@@ -62,6 +62,13 @@ jobs:
           TWILIO_TO: ${{ secrets.TWILIO_TO }}
         run: python scripts/send_whatsapp_report.py
 
+      - name: Email report
+        env:
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+        run: python scripts/send_email_report.py
+
       - name: Commit and push updated data + reports
         if: steps.changes.outputs.changed == 'true'
         run: |

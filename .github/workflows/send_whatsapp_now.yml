@@ -19,7 +19,10 @@ jobs:
       - name: Overlay scripts from feature branch
         run: |
           git fetch origin claude/check-latest-updates-xWWmJ
-          git checkout origin/claude/check-latest-updates-xWWmJ -- scripts/generate_nse_report.py scripts/send_whatsapp_report.py
+          git checkout origin/claude/check-latest-updates-xWWmJ -- \
+            scripts/generate_nse_report.py \
+            scripts/send_whatsapp_report.py \
+            scripts/send_email_report.py
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -32,10 +35,17 @@ jobs:
       - name: Generate NSE report
         run: python scripts/generate_nse_report.py
 
-      - name: Send WhatsApp report (run 5)
+      - name: Send WhatsApp report (run 6)
         env:
           TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
           TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
           TWILIO_FROM: ${{ secrets.TWILIO_FROM }}
           TWILIO_TO: ${{ secrets.TWILIO_TO }}
         run: python scripts/send_whatsapp_report.py
+
+      - name: Email report
+        env:
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+        run: python scripts/send_email_report.py
