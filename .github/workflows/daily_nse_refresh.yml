@@ -47,6 +47,7 @@ jobs:
           python working-sector/phase4_backtest.py
           python working-sector/phase5_report.py
           python working-sector/build_comprehensive_report.py
+          python scripts/generate_nse_report.py
 
       - name: Check for changes
         id: changes
