@@ -10,6 +10,8 @@ on:
 jobs:
   send:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -19,8 +21,19 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install twilio
-        run: pip install twilio
+      - name: Install dependencies
+        run: pip install pandas requests jugaad-data pyreadr openpyxl numpy twilio
+
+      - name: Fetch NSE data (Mar 26–27)
+        run: python scripts/fetch_nse_data.py --from 2026-03-26
+
+      - name: Run analysis pipeline (Phases 2–5)
+        run: |
+          python working-sector/phase2_data.py
+          python working-sector/phase3_screens.py
+          python working-sector/phase4_backtest.py
+          python working-sector/phase5_report.py
+          python working-sector/build_comprehensive_report.py
 
       - name: Send WhatsApp report (run 2)
         env:
@@ -29,3 +42,17 @@ jobs:
           TWILIO_FROM: ${{ secrets.TWILIO_FROM }}
           TWILIO_TO: ${{ secrets.TWILIO_TO }}
         run: python scripts/send_whatsapp_report.py
+
+      - name: Commit and push updated data + reports
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git rebase origin/main -X theirs
+          git add data/nse_universe_stock_data.csv
+          git add data/nse_index_data.csv
+          git add working-sector/output/
+          git add reports/
+          git diff --cached --quiet || git commit -m "chore: auto-refresh NSE data and pipeline outputs (2026-03-27)"
+          git push origin main
+
