@@ -1,7 +1,7 @@
 # Auto Components (India) – Sector Note
 
-**Report date:** 2026-03-30  
-**Data as of:** 2026-03-30
+**Report date:** 2026-03-31  
+**Data as of:** 2026-03-31
 
 ---
 
@@ -47,21 +47,21 @@ This analysis uses a **component-only** universe (ex-OEM), aligned with ACMA. Un
 
 | SYMBOL | SUBSECTOR | CURRENT_PRICE | RET_6M | RS_VS_NIFTY_500_6M | FUND_SCORE | TECHNICAL_SCORE | COMPOSITE_SCORE |
 |--------|-----------|---------------|--------|--------------------|------------|-----------------|-----------------|
-| SHRIPISTON | Engine/Parts | 3016.50 | 17.0% | 27.1% | 48.7 | 80.0 | 69.8 |
-| WHEELS | Wheels | 997.25 | 36.2% | 46.3% | 46.8 | 80.0 | 69.5 |
-| ASKAUTOLTD | Other | 444.75 | -15.5% | -5.5% | 71.3 | 70.0 | 65.9 |
-| SANSERA | Forgings | 2074.50 | 52.1% | 62.2% | 48.6 | 60.0 | 63.4 |
+| WHEELS | Wheels | 997.25 | 33.0% | 43.0% | 46.8 | 80.0 | 69.9 |
+| ASKAUTOLTD | Other | 444.75 | -17.4% | -7.4% | 71.3 | 80.0 | 69.4 |
+| SHRIPISTON | Engine/Parts | 3016.50 | 12.6% | 22.6% | 48.7 | 80.0 | 69.3 |
+| SANSERA | Forgings | 2074.50 | 48.4% | 58.4% | 48.6 | 60.0 | 63.4 |
 | RANEENGINE | Engine/Parts | 317.75 | -24.0% | -14.0% | 50.9 | 80.0 | 57.5 |
-| LUMAXTECH | Lighting | 1522.20 | 42.4% | 52.5% | 54.5 | 40.0 | 57.0 |
-| BHARATFORG | Forgings | 1674.60 | 47.3% | 57.4% | 54.8 | 30.0 | 53.5 |
-| LUMAXIND | Lighting | 4654.00 | 12.4% | 22.4% | 57.7 | 30.0 | 52.5 |
-| SONACOMS | Electrical | 481.50 | 9.2% | 19.2% | 49.7 | 40.0 | 52.5 |
-| TIINDIA | Other | 2517.30 | -15.8% | -5.8% | 48.7 | 60.0 | 52.4 |
-| ZFCVINDIA | Brakes/Transmission | 13768.00 | 1.8% | 11.9% | 50.3 | 40.0 | 51.4 |
-| MINDACORP | Electrical | 505.65 | 0.3% | 10.4% | 49.4 | 40.0 | 50.2 |
-| CRAFTSMAN | Castings | 6977.00 | 1.2% | 11.2% | 54.6 | 30.0 | 48.8 |
-| PRICOLLTD | Electrical | 513.90 | 4.5% | 14.5% | 50.0 | 30.0 | 48.2 |
-| GNA | Axles | 356.70 | 15.8% | 25.9% | 54.5 | 20.0 | 47.7 |
+| LUMAXTECH | Lighting | 1522.20 | 32.6% | 42.7% | 54.5 | 40.0 | 56.5 |
+| BHARATFORG | Forgings | 1674.60 | 39.2% | 49.3% | 54.8 | 30.0 | 53.5 |
+| CRAFTSMAN | Castings | 6977.00 | 2.0% | 12.1% | 54.6 | 40.0 | 53.2 |
+| LUMAXIND | Lighting | 4654.00 | 11.5% | 21.5% | 57.7 | 30.0 | 52.5 |
+| GNA | Axles | 356.70 | 13.6% | 23.7% | 54.5 | 30.0 | 52.1 |
+| TIINDIA | Other | 2517.30 | -18.1% | -8.0% | 48.7 | 60.0 | 52.0 |
+| ZFCVINDIA | Brakes/Transmission | 13768.00 | 0.5% | 10.6% | 50.3 | 40.0 | 51.0 |
+| MINDACORP | Electrical | 505.65 | -2.9% | 7.2% | 49.4 | 40.0 | 49.0 |
+| SONACOMS | Electrical | 481.50 | 6.0% | 16.0% | 49.7 | 30.0 | 48.5 |
+| JBMA | Other | 515.25 | -17.3% | -7.2% | 56.9 | 40.0 | 48.1 |
 
 
 ## 4. Backtest (momentum screen: RS_6M > 0)
