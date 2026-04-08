@@ -1,7 +1,7 @@
 # Auto Components (India) – Sector Note
 
-**Report date:** 2026-04-07  
-**Data as of:** 2026-04-07
+**Report date:** 2026-04-08  
+**Data as of:** 2026-04-08
 
 ---
 
@@ -47,21 +47,21 @@ This analysis uses a **component-only** universe (ex-OEM), aligned with ACMA. Un
 
 | SYMBOL | SUBSECTOR | CURRENT_PRICE | RET_6M | RS_VS_NIFTY_500_6M | FUND_SCORE | TECHNICAL_SCORE | COMPOSITE_SCORE |
 |--------|-----------|---------------|--------|--------------------|------------|-----------------|-----------------|
-| LUMAXTECH | Lighting | 1634.40 | 48.1% | 55.8% | 54.5 | 80.0 | 73.4 |
-| SANSERA | Forgings | 2150.60 | 53.6% | 61.3% | 48.6 | 80.0 | 71.4 |
-| SONACOMS | Electrical | 515.15 | 18.7% | 26.4% | 49.7 | 80.0 | 69.7 |
-| ASKAUTOLTD | Other | 433.15 | -18.4% | -10.7% | 71.3 | 80.0 | 68.2 |
-| BHARATGEAR | Gears | 94.85 | 6.5% | 14.2% | 51.9 | 60.0 | 61.4 |
-| WHEELS | Wheels | 960.35 | 21.7% | 29.4% | 46.8 | 60.0 | 61.0 |
-| JBMA | Other | 560.35 | -23.9% | -16.2% | 56.9 | 80.0 | 59.9 |
-| SANDHAR | Other | 472.60 | 2.6% | 10.4% | 47.8 | 60.0 | 58.9 |
-| RICOAUTO | Castings | 108.18 | 1.8% | 9.5% | 49.1 | 60.0 | 58.5 |
-| PRICOLLTD | Electrical | 539.10 | 1.3% | 9.0% | 50.0 | 60.0 | 58.5 |
-| TIINDIA | Other | 2588.20 | -22.8% | -15.1% | 48.7 | 80.0 | 57.4 |
-| BHARATSE | Seating | 163.02 | -2.6% | 5.1% | 52.6 | 60.0 | 57.0 |
-| RANEENGINE | Engine/Parts | 317.75 | -24.0% | -16.3% | 50.9 | 80.0 | 56.6 |
-| GNA | Axles | 379.70 | 22.3% | 30.0% | 54.5 | 40.0 | 56.5 |
-| SUPRAJIT | Cables | 418.20 | -6.3% | 1.4% | 51.5 | 60.0 | 55.2 |
+| LUMAXTECH | Lighting | 1691.70 | 55.3% | 59.4% | 54.5 | 80.0 | 73.4 |
+| BHARATFORG | Forgings | 1781.40 | 41.0% | 45.2% | 54.8 | 80.0 | 73.1 |
+| GNA | Axles | 409.75 | 31.4% | 35.6% | 54.5 | 80.0 | 72.5 |
+| SANSERA | Forgings | 2248.10 | 57.3% | 61.5% | 48.6 | 80.0 | 71.4 |
+| SONACOMS | Electrical | 533.70 | 23.4% | 27.6% | 49.7 | 80.0 | 69.3 |
+| BHARATSE | Seating | 176.72 | 11.2% | 15.4% | 52.6 | 80.0 | 69.2 |
+| WHEELS | Wheels | 991.90 | 25.3% | 29.5% | 46.8 | 80.0 | 69.0 |
+| SHRIPISTON | Engine/Parts | 3130.90 | 17.4% | 21.6% | 48.7 | 80.0 | 68.5 |
+| ASKAUTOLTD | Other | 440.50 | -17.6% | -13.4% | 71.3 | 80.0 | 67.3 |
+| PRICOLLTD | Electrical | 569.35 | 8.0% | 12.2% | 50.0 | 80.0 | 66.9 |
+| LUMAXIND | Lighting | 5251.00 | 25.1% | 29.3% | 57.7 | 60.0 | 64.9 |
+| FIEMIND | Lighting | 2161.30 | 3.0% | 7.2% | 49.1 | 80.0 | 64.4 |
+| SUPRAJIT | Cables | 427.40 | -5.1% | -1.0% | 51.5 | 80.0 | 63.2 |
+| CRAFTSMAN | Castings | 7351.50 | 8.9% | 13.1% | 54.6 | 60.0 | 61.2 |
+| JBMA | Other | 580.25 | -19.2% | -15.0% | 56.9 | 80.0 | 60.7 |
 
 
 ## 4. Backtest (momentum screen: RS_6M > 0)
