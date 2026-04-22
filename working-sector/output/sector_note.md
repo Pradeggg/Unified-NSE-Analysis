@@ -1,7 +1,7 @@
 # Auto Components (India) – Sector Note
 
-**Report date:** 2026-04-21  
-**Data as of:** 2026-04-21
+**Report date:** 2026-04-22  
+**Data as of:** 2026-04-22
 
 ---
 
@@ -47,21 +47,21 @@ This analysis uses a **component-only** universe (ex-OEM), aligned with ACMA. Un
 
 | SYMBOL | SUBSECTOR | CURRENT_PRICE | RET_6M | RS_VS_NIFTY_500_6M | FUND_SCORE | TECHNICAL_SCORE | COMPOSITE_SCORE |
 |--------|-----------|---------------|--------|--------------------|------------|-----------------|-----------------|
-| RICOAUTO | Castings | 116.08 | 23.8% | 25.0% | 49.1 | 80.0 | 69.1 |
-| LUMAXTECH | Lighting | 1774.80 | 34.6% | 35.9% | 54.5 | 70.0 | 68.1 |
-| ZFCVINDIA | Brakes/Transmission | 15380.00 | 17.7% | 18.9% | 50.3 | 80.0 | 67.9 |
-| SANSERA | Forgings | 2374.60 | 69.3% | 70.5% | 48.6 | 70.0 | 67.4 |
-| WHEELS | Wheels | 1045.90 | 19.3% | 20.5% | 46.8 | 80.0 | 66.9 |
-| SONACOMS | Electrical | 581.30 | 40.5% | 41.7% | 49.7 | 70.0 | 66.6 |
-| BHARATFORG | Forgings | 1895.80 | 55.4% | 56.7% | 54.8 | 60.0 | 65.5 |
-| BHARATGEAR | Gears | 108.92 | 22.5% | 23.7% | 51.9 | 70.0 | 65.4 |
-| SHRIPISTON | Engine/Parts | 3586.80 | 31.0% | 32.2% | 48.7 | 70.0 | 65.3 |
-| GNA | Axles | 450.65 | 43.8% | 45.1% | 54.5 | 60.0 | 64.9 |
-| LUMAXIND | Lighting | 5506.40 | 7.6% | 8.8% | 57.7 | 70.0 | 64.3 |
-| MOTHERSON | Electrical | 124.70 | 17.6% | 18.9% | 51.6 | 70.0 | 63.9 |
-| SANDHAR | Other | 488.70 | 7.3% | 8.5% | 47.8 | 80.0 | 63.9 |
-| DIVGIITTS | Transmission | 748.10 | 11.6% | 12.8% | 49.9 | 70.0 | 61.6 |
-| MINDACORP | Electrical | 544.45 | -6.1% | -4.9% | 49.4 | 80.0 | 60.7 |
+| LUMAXTECH | Lighting | 1794.40 | 37.8% | 38.6% | 54.5 | 70.0 | 68.1 |
+| WHEELS | Wheels | 1077.20 | 22.8% | 23.7% | 46.8 | 80.0 | 66.9 |
+| SONACOMS | Electrical | 588.45 | 40.2% | 41.0% | 49.7 | 70.0 | 66.6 |
+| ZFCVINDIA | Brakes/Transmission | 15184.00 | 11.9% | 12.7% | 50.3 | 80.0 | 66.2 |
+| BHARATFORG | Forgings | 1903.20 | 56.0% | 56.8% | 54.8 | 60.0 | 65.5 |
+| ASKAUTOLTD | Other | 442.80 | -15.2% | -14.4% | 71.3 | 80.0 | 65.2 |
+| RICOAUTO | Castings | 118.41 | 26.7% | 27.5% | 49.1 | 70.0 | 65.1 |
+| GNA | Axles | 457.20 | 46.0% | 46.8% | 54.5 | 60.0 | 64.9 |
+| SANDHAR | Other | 486.85 | 6.9% | 7.7% | 47.8 | 80.0 | 64.3 |
+| SANSERA | Forgings | 2547.00 | 81.8% | 82.6% | 48.6 | 60.0 | 63.4 |
+| DIVGIITTS | Transmission | 733.80 | 8.7% | 9.5% | 49.9 | 70.0 | 61.6 |
+| SHRIPISTON | Engine/Parts | 3591.60 | 31.4% | 32.2% | 48.7 | 60.0 | 61.3 |
+| MOTHERSON | Electrical | 131.76 | 23.5% | 24.3% | 51.6 | 60.0 | 61.2 |
+| JAMNAAUTO | Suspension | 126.29 | 24.4% | 25.3% | 48.3 | 60.0 | 60.3 |
+| CRAFTSMAN | Castings | 7684.50 | 13.4% | 14.3% | 54.6 | 60.0 | 60.3 |
 
 
 ## 4. Backtest (momentum screen: RS_6M > 0)
