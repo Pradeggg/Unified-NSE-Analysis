@@ -1,7 +1,7 @@
 # Auto Components (India) – Sector Note
 
-**Report date:** 2026-04-24  
-**Data as of:** 2026-04-24
+**Report date:** 2026-04-27  
+**Data as of:** 2026-04-27
 
 ---
 
@@ -47,21 +47,21 @@ This analysis uses a **component-only** universe (ex-OEM), aligned with ACMA. Un
 
 | SYMBOL | SUBSECTOR | CURRENT_PRICE | RET_6M | RS_VS_NIFTY_500_6M | FUND_SCORE | TECHNICAL_SCORE | COMPOSITE_SCORE |
 |--------|-----------|---------------|--------|--------------------|------------|-----------------|-----------------|
-| GNA | Axles | 429.30 | 38.7% | 39.4% | 54.5 | 80.0 | 72.9 |
-| LUMAXTECH | Lighting | 1727.00 | 37.2% | 37.9% | 54.5 | 80.0 | 72.5 |
-| SONACOMS | Electrical | 564.85 | 36.4% | 37.1% | 49.7 | 80.0 | 70.2 |
-| BHARATFORG | Forgings | 1856.00 | 52.5% | 53.3% | 54.8 | 70.0 | 69.5 |
-| SANSERA | Forgings | 2530.70 | 74.1% | 74.8% | 48.6 | 70.0 | 67.4 |
-| FIEMIND | Lighting | 2175.00 | 13.4% | 14.2% | 49.1 | 80.0 | 66.9 |
-| WHEELS | Wheels | 1047.95 | 19.0% | 19.8% | 46.8 | 80.0 | 66.9 |
-| ZFCVINDIA | Brakes/Transmission | 15002.00 | 10.7% | 11.4% | 50.3 | 80.0 | 65.7 |
-| SHRIPISTON | Engine/Parts | 3478.70 | 28.2% | 28.9% | 48.7 | 70.0 | 65.3 |
-| MOTHERSON | Electrical | 125.70 | 20.7% | 21.4% | 51.6 | 70.0 | 65.2 |
-| CRAFTSMAN | Castings | 7570.00 | 13.2% | 13.9% | 54.6 | 70.0 | 64.3 |
-| DIVGIITTS | Transmission | 752.50 | 15.1% | 15.8% | 49.9 | 70.0 | 63.7 |
-| BHARATGEAR | Gears | 108.47 | 13.2% | 14.0% | 51.9 | 70.0 | 63.7 |
-| MENONBE | Bearings | 118.74 | -5.2% | -4.5% | 52.4 | 80.0 | 63.6 |
-| PRICOLLTD | Electrical | 594.65 | 12.9% | 13.6% | 50.0 | 70.0 | 62.0 |
+| LUMAXTECH | Lighting | 1747.60 | 41.6% | 42.1% | 54.5 | 80.0 | 72.1 |
+| SONACOMS | Electrical | 588.65 | 45.3% | 45.7% | 49.7 | 80.0 | 71.0 |
+| BHARATFORG | Forgings | 1901.10 | 59.6% | 60.1% | 54.8 | 70.0 | 69.5 |
+| RICOAUTO | Castings | 116.42 | 28.9% | 29.4% | 49.1 | 80.0 | 69.1 |
+| AUTOAXLES | Axles | 1877.90 | 9.0% | 9.5% | 58.8 | 80.0 | 68.7 |
+| GNA | Axles | 440.60 | 41.9% | 42.3% | 54.5 | 70.0 | 68.5 |
+| FIEMIND | Lighting | 2211.40 | 15.9% | 16.4% | 49.1 | 80.0 | 67.4 |
+| ZFCVINDIA | Brakes/Transmission | 14888.00 | 12.2% | 12.7% | 50.3 | 80.0 | 65.7 |
+| SHRIPISTON | Engine/Parts | 3569.20 | 30.6% | 31.1% | 48.7 | 70.0 | 65.3 |
+| MOTHERSON | Electrical | 127.93 | 25.9% | 26.3% | 51.6 | 70.0 | 65.2 |
+| WHEELS | Wheels | 1053.00 | 14.4% | 14.9% | 46.8 | 80.0 | 65.2 |
+| BHARATGEAR | Gears | 109.75 | 19.1% | 19.6% | 51.9 | 70.0 | 64.9 |
+| SANDHAR | Other | 504.40 | 5.4% | 5.8% | 47.8 | 80.0 | 63.9 |
+| SANSERA | Forgings | 2602.40 | 80.9% | 81.4% | 48.6 | 60.0 | 63.4 |
+| DIVGIITTS | Transmission | 743.80 | 15.5% | 16.0% | 49.9 | 70.0 | 63.3 |
 
 
 ## 4. Backtest (momentum screen: RS_6M > 0)
