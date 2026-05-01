@@ -1,7 +1,7 @@
 # Auto Components (India) – Sector Note
 
-**Report date:** 2026-04-30  
-**Data as of:** 2026-04-30
+**Report date:** 2026-05-01  
+**Data as of:** 2026-05-01
 
 ---
 
@@ -47,21 +47,21 @@ This analysis uses a **component-only** universe (ex-OEM), aligned with ACMA. Un
 
 | SYMBOL | SUBSECTOR | CURRENT_PRICE | RET_6M | RS_VS_NIFTY_500_6M | FUND_SCORE | TECHNICAL_SCORE | COMPOSITE_SCORE |
 |--------|-----------|---------------|--------|--------------------|------------|-----------------|-----------------|
-| BHARATFORG | Forgings | 1881.60 | 53.4% | 55.7% | 54.8 | 80.0 | 73.5 |
-| GNA | Axles | 430.55 | 39.3% | 41.5% | 54.5 | 80.0 | 72.5 |
-| SANSERA | Forgings | 2513.60 | 76.4% | 78.7% | 48.6 | 80.0 | 71.4 |
-| SONACOMS | Electrical | 607.25 | 39.4% | 41.6% | 49.7 | 80.0 | 71.0 |
-| CRAFTSMAN | Castings | 7688.00 | 18.6% | 20.8% | 54.6 | 80.0 | 70.0 |
-| SHRIPISTON | Engine/Parts | 3491.10 | 29.8% | 32.0% | 48.7 | 80.0 | 68.9 |
-| AUTOAXLES | Axles | 1845.80 | 8.2% | 10.5% | 58.8 | 80.0 | 68.3 |
-| MOTHERSON | Electrical | 121.21 | 16.4% | 18.7% | 51.6 | 80.0 | 67.9 |
-| ASKAUTOLTD | Other | 439.95 | -9.3% | -7.0% | 71.3 | 80.0 | 67.7 |
-| BHARATGEAR | Gears | 107.24 | 12.7% | 15.0% | 51.9 | 80.0 | 67.2 |
-| DIVGIITTS | Transmission | 720.65 | 14.2% | 16.5% | 49.9 | 80.0 | 66.9 |
-| ZFCVINDIA | Brakes/Transmission | 14699.00 | 12.0% | 14.3% | 50.3 | 80.0 | 66.2 |
-| FIEMIND | Lighting | 2182.70 | 11.2% | 13.5% | 49.1 | 80.0 | 65.2 |
-| JBMA | Other | 630.15 | -3.2% | -0.9% | 56.9 | 80.0 | 65.0 |
-| MENONBE | Bearings | 125.86 | 3.9% | 6.1% | 52.4 | 80.0 | 64.9 |
+| BHARATFORG | Forgings | 1881.60 | 53.9% | 56.1% | 54.8 | 80.0 | 73.5 |
+| SANSERA | Forgings | 2513.60 | 79.7% | 82.0% | 48.6 | 80.0 | 71.4 |
+| SONACOMS | Electrical | 607.25 | 34.1% | 36.4% | 49.7 | 80.0 | 70.2 |
+| CRAFTSMAN | Castings | 7688.00 | 18.7% | 21.0% | 54.6 | 80.0 | 70.0 |
+| SHRIPISTON | Engine/Parts | 3491.10 | 31.3% | 33.5% | 48.7 | 80.0 | 68.9 |
+| AUTOAXLES | Axles | 1845.80 | 9.0% | 11.3% | 58.8 | 80.0 | 68.3 |
+| BHARATGEAR | Gears | 107.24 | 15.7% | 18.0% | 51.9 | 80.0 | 68.1 |
+| ASKAUTOLTD | Other | 439.95 | -6.4% | -4.1% | 71.3 | 80.0 | 67.7 |
+| DIVGIITTS | Transmission | 720.65 | 13.4% | 15.6% | 49.9 | 80.0 | 66.4 |
+| ZFCVINDIA | Brakes/Transmission | 14699.00 | 12.5% | 14.7% | 50.3 | 80.0 | 66.2 |
+| MENONBE | Bearings | 125.86 | 6.1% | 8.3% | 52.4 | 80.0 | 65.3 |
+| JBMA | Other | 630.15 | -1.2% | 1.0% | 56.9 | 80.0 | 65.0 |
+| GNA | Axles | 430.55 | 42.4% | 44.7% | 54.5 | 60.0 | 64.9 |
+| HARSHA | Forgings | 386.70 | 1.0% | 3.2% | 49.7 | 80.0 | 63.4 |
+| BHARATSE | Seating | 187.25 | -3.5% | -1.2% | 52.6 | 80.0 | 62.4 |
 
 
 ## 4. Backtest (momentum screen: RS_6M > 0)
