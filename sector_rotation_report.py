@@ -1762,7 +1762,7 @@ a{color:var(--primary-alt);text-decoration:none}
 /* ---- OVERVIEW GRID ---- */
 .overview-grid{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:20px}
 @media(max-width:900px){.overview-grid{grid-template-columns:1fr}}
-.summary-card{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow);padding:18px}
+.summary-card{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow);padding:18px;min-width:0;max-width:100%;overflow-wrap:anywhere}
 .summary-card h3{font-size:13px;font-weight:700;color:var(--primary);margin-bottom:10px}
 .summary-card p{font-size:13px;line-height:1.65;color:var(--text)}
 .buy-list{list-style:none;padding:0}
@@ -1956,6 +1956,9 @@ details.narr[open] summary::before{transform:rotate(90deg)}
 .flow-na{background:#f1f5f9;color:#94a3b8}
 .flow-detail{font-size:11px;color:#475569}
 .flow-today{font-size:10px;color:#94a3b8;margin-left:auto}
+.breadth-strip{display:flex;align-items:center;gap:10px;padding:8px 14px;background:#eef6ff;border:1px solid #bfdbfe;border-radius:8px;margin-bottom:10px;flex-wrap:wrap;font-size:11px;color:#334155}
+.breadth-kicker{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#1e40af}
+.breadth-context{font-weight:800;color:#1e3a5f}
 
 /* ---- INSIDER/PROMOTER ALERT BADGES (P1-4) ---- */
 .ins{display:inline-block;padding:2px 7px;border-radius:10px;font-size:9.5px;font-weight:700;white-space:nowrap}
@@ -2279,6 +2282,16 @@ def render_html_interactive(
             _flow_banner = _fbh(flow_info)
         except Exception:
             pass
+
+    # Build cross-index breadth context strip (B1)
+    _breadth_strip = ""
+    try:
+        breadth_csv = ROOT / "reports" / "latest" / "index_intelligence.csv"
+        if breadth_csv.exists():
+            from index_intelligence import breadth_context_html
+            _breadth_strip = breadth_context_html(pd.read_csv(breadth_csv))
+    except Exception:
+        pass
 
     sec_narratives = narratives.get("sectors", {})
     stk_narratives = narratives.get("stocks", {})
@@ -2776,7 +2789,7 @@ def render_html_interactive(
         '</header>',
         '<div class="disc">⚠ Research &amp; screening output only — not personal financial advice. '
         'Validate prices, liquidity, events, and risk before acting.</div>',
-        f'<div class="content" style="padding-top:12px;padding-bottom:0">{_regime_banner}{_flow_banner}</div>' if (_regime_banner or _flow_banner) else '',
+        f'<div class="content" style="padding-top:12px;padding-bottom:0">{_regime_banner}{_flow_banner}{_breadth_strip}</div>' if (_regime_banner or _flow_banner or _breadth_strip) else '',
         # Nav
         '<nav class="main-nav"><div class="nav-inner">',
         '<button class="nav-btn" data-tab="overview">Overview</button>',

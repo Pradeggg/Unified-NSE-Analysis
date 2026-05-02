@@ -180,7 +180,7 @@ Every external and internal data source the platform uses or will use. Items mar
 | A7 Quality Compounder | ⏳ BLOCKED | — | Needs 5-year P&L trend from Screener.in (source N) |
 | A8 Hidden Champions | ⏳ BLOCKED | — | Needs A7 fundamentals + small-cap filter |
 | **Phase 4 — Branch B: Index Reports** | | | |
-| B1 Cross-Index Breadth Dashboard | 🔜 READY | — | Multi-index breadth table; derives from existing index data |
+| B1 Cross-Index Breadth Dashboard | ✅ DONE | Codex | `index_intelligence.py`; standalone HTML/CSV; breadth strip in sector report |
 | B2 Global Correlation Monitor | 🔜 READY | — | yfinance for SPX/HSI/Gold/Oil; rolling 30d correlation |
 | B3 Sectoral Heat Calendar | 🔜 READY | — | 12×N_sectors heatmap of avg monthly returns |
 | B4 FII/DII Flow Battle Tracker | ⏳ BLOCKED | — | Needs P1-3 (FII/DII flows) fully running |
