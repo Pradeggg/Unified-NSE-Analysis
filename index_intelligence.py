@@ -33,6 +33,21 @@ TARGET_INDICES = [
     "NIFTY METAL",
 ]
 
+INDEX_ALIASES = {
+    "NIFTY SMALLCAP 250": ["NIFTY SMALLCAP 250", "NIFTY SMLCAP 250"],
+}
+
+SMALLCAP_EXCLUSION_INDICES = [
+    "NIFTY 50",
+    "NIFTY NEXT 50",
+    "NIFTY 100",
+    "NIFTY MIDCAP 50",
+    "NIFTY MIDCAP 100",
+    "NIFTY MIDCAP 150",
+    "NIFTY 200",
+    "NIFTY LARGEMIDCAP 250",
+]
+
 
 @dataclass(frozen=True)
 class IndexReportPaths:
@@ -138,12 +153,14 @@ def cross_index_breadth(index_constituent_data: dict[str, pd.DataFrame]) -> pd.D
 def build_stock_metric_frame(stock_history: pd.DataFrame, min_days: int = 50) -> pd.DataFrame:
     """Build latest per-symbol breadth inputs from stock OHLC history."""
     if stock_history.empty:
-        return pd.DataFrame(columns=["SYMBOL", "CLOSE", "SMA_50", "SMA_200", "HIGH_52W", "LOW_52W", "RET_1D", "DATA_DATE"])
+        return pd.DataFrame(columns=["SYMBOL", "CLOSE", "SMA_50", "SMA_200", "HIGH_52W", "LOW_52W", "RET_1D", "TOTTRDQTY", "DATA_DATE"])
 
     df = stock_history.copy()
     df["TIMESTAMP"] = pd.to_datetime(df["TIMESTAMP"])
     for col in ["CLOSE", "HIGH", "LOW"]:
         df[col] = pd.to_numeric(df[col], errors="coerce")
+    if "TOTTRDQTY" in df.columns:
+        df["TOTTRDQTY"] = pd.to_numeric(df["TOTTRDQTY"], errors="coerce")
     df = df.dropna(subset=["SYMBOL", "TIMESTAMP", "CLOSE"]).sort_values(["SYMBOL", "TIMESTAMP"])
 
     rows: list[dict] = []
@@ -157,6 +174,7 @@ def build_stock_metric_frame(stock_history: pd.DataFrame, min_days: int = 50) ->
         latest_close = float(close.iloc[-1])
         prev_close = float(close.iloc[-2]) if len(close) > 1 else math.nan
         ret_1d = (latest_close / prev_close - 1.0) * 100.0 if prev_close and not math.isnan(prev_close) else math.nan
+        latest_volume = float(hist["TOTTRDQTY"].iloc[-1]) if "TOTTRDQTY" in hist.columns and pd.notna(hist["TOTTRDQTY"].iloc[-1]) else math.nan
         rows.append({
             "SYMBOL": str(symbol).strip().upper(),
             "CLOSE": latest_close,
@@ -165,6 +183,7 @@ def build_stock_metric_frame(stock_history: pd.DataFrame, min_days: int = 50) ->
             "HIGH_52W": float(high.tail(252).max()),
             "LOW_52W": float(low.tail(252).min()),
             "RET_1D": ret_1d,
+            "TOTTRDQTY": latest_volume,
             "DATA_DATE": hist["TIMESTAMP"].iloc[-1].date().isoformat(),
         })
     return pd.DataFrame(rows)
@@ -183,6 +202,60 @@ def load_index_constituents(mapping_csv: Path = INDEX_MAPPING_CSV) -> dict[str, 
     return constituents
 
 
+def _normalise_constituents(constituents: dict[str, list[str]]) -> dict[str, list[str]]:
+    return {
+        str(index_name).strip().upper(): [
+            str(symbol).strip().upper()
+            for symbol in symbols
+            if str(symbol).strip() and str(symbol).strip().upper() != "NAN"
+        ]
+        for index_name, symbols in constituents.items()
+    }
+
+
+def _symbols_for_index(constituents: dict[str, list[str]], index_name: str) -> list[str]:
+    for alias in INDEX_ALIASES.get(index_name.upper(), [index_name.upper()]):
+        symbols = constituents.get(alias.upper(), [])
+        if symbols:
+            return symbols
+    return []
+
+
+def infer_smallcap_250_constituents(
+    stock_metrics: pd.DataFrame,
+    constituents: dict[str, list[str]],
+    count: int = 250,
+) -> list[str]:
+    """Infer a smallcap breadth basket when the local NSE mapping lacks constituents."""
+    if stock_metrics.empty or "SYMBOL" not in stock_metrics.columns:
+        return []
+
+    metrics = stock_metrics.copy()
+    metrics["SYMBOL"] = metrics["SYMBOL"].astype(str).str.strip().str.upper()
+    metrics = metrics.drop_duplicates("SYMBOL", keep="last")
+    normalised_constituents = _normalise_constituents(constituents)
+
+    nifty_500 = set(normalised_constituents.get("NIFTY 500", []))
+    universe = nifty_500 if nifty_500 else set(metrics["SYMBOL"])
+    excluded: set[str] = set()
+    for index_name in SMALLCAP_EXCLUSION_INDICES:
+        excluded.update(normalised_constituents.get(index_name, []))
+
+    candidates = metrics[metrics["SYMBOL"].isin(universe - excluded)].copy()
+    if candidates.empty:
+        candidates = metrics[~metrics["SYMBOL"].isin(excluded)].copy()
+    if candidates.empty:
+        return []
+
+    if "TOTTRDQTY" in candidates.columns:
+        candidates["TOTTRDQTY"] = pd.to_numeric(candidates["TOTTRDQTY"], errors="coerce").fillna(0)
+        candidates = candidates.sort_values(["TOTTRDQTY", "SYMBOL"], ascending=[False, True])
+    else:
+        candidates = candidates.sort_values("SYMBOL")
+
+    return candidates["SYMBOL"].head(count).tolist()
+
+
 def build_index_constituent_data(
     stock_metrics: pd.DataFrame,
     constituents: dict[str, list[str]],
@@ -192,11 +265,14 @@ def build_index_constituent_data(
     metrics["SYMBOL"] = metrics["SYMBOL"].astype(str).str.strip().str.upper()
     metrics = metrics.drop_duplicates("SYMBOL", keep="last").set_index("SYMBOL")
     selected = target_indices or TARGET_INDICES
+    normalised_constituents = _normalise_constituents(constituents)
 
     result: dict[str, pd.DataFrame] = {}
     for index_name in selected:
         key = index_name.upper()
-        symbols = constituents.get(key, [])
+        symbols = _symbols_for_index(normalised_constituents, key)
+        if not symbols and key == "NIFTY SMALLCAP 250":
+            symbols = infer_smallcap_250_constituents(stock_metrics, normalised_constituents)
         if not symbols:
             result[key] = pd.DataFrame(columns=metrics.reset_index().columns)
             continue
