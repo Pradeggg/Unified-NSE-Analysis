@@ -1,14 +1,18 @@
 import unittest
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import pandas as pd
 
+import sector_rotation_report
 from sector_rotation_report import (
+    _log_signals,
     calculate_peak_resilience,
     classify_consolidation_breakout,
     compute_supertrend,
     merge_fundamental_scores,
     report_output_paths,
+    render_html_interactive,
     rank_peak_resilience_stocks,
     rank_rotating_sectors,
     rank_stock_candidates,
@@ -279,6 +283,116 @@ class SectorRotationReportTests(unittest.TestCase):
         self.assertEqual(paths.html.relative_to(root).as_posix(), "reports/sector_rotation/2026/Sector_Rotation_Report_20260502.html")
         self.assertEqual(paths.latest_markdown.relative_to(root).as_posix(), "reports/latest/sector_rotation.md")
         self.assertEqual(paths.latest_html.relative_to(root).as_posix(), "reports/latest/sector_rotation.html")
+
+    def test_log_signals_persists_insider_alert_context(self):
+        candidates = pd.DataFrame(
+            [
+                {
+                    "SYMBOL": "ABC",
+                    "SECTOR_NAME": "Defence",
+                    "COMPANY_NAME": "ABC Ltd",
+                    "TRADING_SIGNAL": "BUY",
+                    "SETUP_CLASS": "LEADER_BREAKOUT",
+                    "ACTION_BUCKET": "BUY_WATCH",
+                    "ACTION_REASON": "Breakout with institutional context",
+                    "INVESTMENT_SCORE": 78,
+                    "TECHNICAL_SCORE": 82,
+                    "RSI": 61,
+                    "SUPERTREND_STATE": "BULLISH",
+                    "CURRENT_PRICE": 123.45,
+                    "INSIDER_ALERT": "PROMOTER_BUYING",
+                    "INSIDER_SCORE": 2,
+                    "INSIDER_DETAIL": "Promoter Buying: ABC Promoter ₹12.3Cr",
+                }
+            ]
+        )
+
+        original_log = sector_rotation_report._SIGNAL_LOG
+        try:
+            with TemporaryDirectory() as tmp:
+                sector_rotation_report._SIGNAL_LOG = Path(tmp) / "signal_log.csv"
+                _log_signals(candidates, pd.Timestamp("2026-05-02"), regime="BULL")
+                logged = pd.read_csv(sector_rotation_report._SIGNAL_LOG)
+        finally:
+            sector_rotation_report._SIGNAL_LOG = original_log
+
+        self.assertEqual(logged.loc[0, "insider_alert"], "PROMOTER_BUYING")
+        self.assertEqual(logged.loc[0, "insider_score"], 2)
+        self.assertEqual(logged.loc[0, "insider_detail"], "Promoter Buying: ABC Promoter ₹12.3Cr")
+
+    def test_html_includes_insider_alert_candidate_even_below_top_five(self):
+        sector_rank = pd.DataFrame(
+            [
+                {
+                    "SYMBOL": "NIFTYDEF",
+                    "SECTOR_NAME": "Defence",
+                    "CLOSE": 1000,
+                    "RET_5D": 1,
+                    "RET_1M": 5,
+                    "RET_3M": 8,
+                    "RET_6M": 10,
+                    "RS_1M": 2,
+                    "ROTATION_SCORE": 10,
+                }
+            ]
+        )
+        candidates = pd.DataFrame(
+            [
+                {
+                    "SYMBOL": f"TOP{i}",
+                    "COMPANY_NAME": f"Top {i}",
+                    "SECTOR_NAME": "Defence",
+                    "CURRENT_PRICE": 100 + i,
+                    "TRADING_SIGNAL": "HOLD",
+                    "SETUP_CLASS": "NEUTRAL",
+                    "ACTION_BUCKET": "WATCHLIST",
+                    "INVESTMENT_SCORE": 80 - i,
+                    "TECHNICAL_SCORE": 70,
+                    "ENHANCED_FUND_SCORE": 60,
+                    "RELATIVE_STRENGTH": 10,
+                    "RSI": 55,
+                    "SUPERTREND_STATE": "BULLISH",
+                    "PATTERN": "TRENDING_OR_CHOPPY",
+                    "VOLUME_RATIO": 1,
+                }
+                for i in range(5)
+            ]
+            + [
+                {
+                    "SYMBOL": "ALERT",
+                    "COMPANY_NAME": "Alert Ltd",
+                    "SECTOR_NAME": "Defence",
+                    "CURRENT_PRICE": 99,
+                    "TRADING_SIGNAL": "HOLD",
+                    "SETUP_CLASS": "NEUTRAL",
+                    "ACTION_BUCKET": "WATCHLIST",
+                    "INVESTMENT_SCORE": 50,
+                    "TECHNICAL_SCORE": 55,
+                    "ENHANCED_FUND_SCORE": 58,
+                    "RELATIVE_STRENGTH": 6,
+                    "RSI": 52,
+                    "SUPERTREND_STATE": "BULLISH",
+                    "PATTERN": "TRENDING_OR_CHOPPY",
+                    "VOLUME_RATIO": 1,
+                    "INSIDER_ALERT": "PROMOTER_BUYING",
+                    "INSIDER_SCORE": 2,
+                    "INSIDER_DETAIL": "Promoter Buying: Alert Promoter ₹5.0Cr",
+                }
+            ]
+        )
+
+        html = render_html_interactive(
+            sector_rank,
+            candidates,
+            pd.DataFrame(),
+            Path("source.csv"),
+            pd.Timestamp("2026-05-02"),
+            {"sectors": {}, "stocks": {}, "market_summary": ""},
+        )
+
+        self.assertIn("<strong>ALERT</strong>", html)
+        self.assertIn("<th>Insider</th>", html)
+        self.assertIn("Promo Buy", html)
 
 
 if __name__ == "__main__":
