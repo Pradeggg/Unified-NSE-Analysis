@@ -83,13 +83,28 @@ SECTOR_KEYWORDS = {
 class ReportPaths:
     markdown: Path
     html: Path
+    latest_markdown: Path
+    latest_html: Path
 
 
 def _latest_file(pattern: str, directory: Path = REPORTS_DIR) -> Path:
-    files = sorted(directory.glob(pattern), key=lambda p: p.stat().st_mtime, reverse=True)
+    files = sorted(directory.rglob(pattern), key=lambda p: p.stat().st_mtime, reverse=True)
     if not files:
         raise FileNotFoundError(f"No files matched {directory / pattern}")
     return files[0]
+
+
+def report_output_paths(generated_at: datetime | pd.Timestamp) -> ReportPaths:
+    ts = pd.Timestamp(generated_at).to_pydatetime()
+    suffix = ts.strftime("%Y%m%d")
+    year = ts.strftime("%Y")
+    output_dir = REPORTS_DIR / "sector_rotation" / year
+    return ReportPaths(
+        markdown=output_dir / f"Sector_Rotation_Report_{suffix}.md",
+        html=output_dir / f"Sector_Rotation_Report_{suffix}.html",
+        latest_markdown=REPORTS_DIR / "latest" / "sector_rotation.md",
+        latest_html=REPORTS_DIR / "latest" / "sector_rotation.html",
+    )
 
 
 def _pct_return(series: pd.Series, days: int, dates: pd.Series) -> float:
@@ -302,6 +317,77 @@ def _column_or_default(df: pd.DataFrame, column: str, default: object) -> pd.Ser
     return pd.Series(default, index=df.index)
 
 
+def _classify_setup(df: pd.DataFrame) -> pd.Series:
+    """Classify each candidate into an A+ setup class based on technical conditions."""
+    pat = _column_or_default(df, "PATTERN", "").astype(str)
+    vol = pd.to_numeric(_column_or_default(df, "VOLUME_RATIO", math.nan), errors="coerce").fillna(1.0)
+    rsi = pd.to_numeric(_column_or_default(df, "RSI", 50), errors="coerce").fillna(50)
+    st = _column_or_default(df, "SUPERTREND_STATE", "").astype(str)
+    ret5d = pd.to_numeric(_column_or_default(df, "RET_5D", 0), errors="coerce").fillna(0)
+    ret1m = pd.to_numeric(_column_or_default(df, "RET_1M", 0), errors="coerce").fillna(0)
+    dd = pd.to_numeric(_column_or_default(df, "DRAWDOWN_FROM_52W_HIGH_PCT", -100), errors="coerce").fillna(-100)
+    sig = _column_or_default(df, "TRADING_SIGNAL", "").astype(str)
+
+    leader_breakout = (
+        pat.eq("CONSOLIDATION_BREAKOUT") & vol.gt(1.5) & rsi.between(55, 72) & st.eq("BULLISH")
+    )
+    fast_recovery = (
+        ret5d.gt(3) & ret1m.gt(8) & dd.lt(-5) & st.eq("BULLISH")
+    )
+    base_near_high = (
+        dd.between(-5, 0) & rsi.between(50, 65) & vol.lt(1.2) & st.eq("BULLISH")
+    )
+    pullback_in_uptrend = (
+        st.eq("BULLISH") & rsi.between(38, 52) & ret5d.lt(-2)
+    )
+    momentum_extended = rsi.gt(72) & ret1m.gt(15)
+    weak_trend = st.eq("BEARISH") | sig.isin(["SELL", "WEAK_SELL"]) | ret1m.lt(-5)
+
+    conditions = [
+        leader_breakout,
+        fast_recovery,
+        base_near_high,
+        pullback_in_uptrend,
+        momentum_extended,
+        weak_trend,
+    ]
+    labels = [
+        "LEADER_BREAKOUT",
+        "FAST_RECOVERY",
+        "BASE_NEAR_HIGH",
+        "PULLBACK_IN_UPTREND",
+        "MOMENTUM_EXTENDED",
+        "WEAK_TREND",
+    ]
+    result = pd.Series("NEUTRAL", index=df.index)
+    for cond, label in zip(reversed(conditions), reversed(labels)):
+        result = result.where(~cond, label)
+    return result
+
+
+def _compute_entry_levels(df: pd.DataFrame) -> pd.DataFrame:
+    """Add ENTRY_LOW, ENTRY_HIGH, STOP_LOSS, TARGET_1, TARGET_2 columns."""
+    price = pd.to_numeric(_column_or_default(df, "CURRENT_PRICE", math.nan), errors="coerce")
+    res = pd.to_numeric(_column_or_default(df, "RESISTANCE", math.nan), errors="coerce")
+    sup = pd.to_numeric(_column_or_default(df, "SUPPORT", math.nan), errors="coerce")
+    st_val = pd.to_numeric(_column_or_default(df, "SUPERTREND_VALUE", math.nan), errors="coerce")
+
+    entry_low = (price * 0.99).round(2)
+    entry_high = pd.concat([res * 0.995, price * 1.02], axis=1).min(axis=1).round(2)
+    risk = entry_low - pd.concat([st_val, sup * 0.98, entry_low * 0.94], axis=1).max(axis=1)
+    stop_loss = (entry_low - risk).round(2)
+    target_1 = res.round(2)
+    target_2 = (entry_low + risk * 2.5).round(2)
+
+    df = df.copy()
+    df["ENTRY_LOW"] = entry_low
+    df["ENTRY_HIGH"] = entry_high
+    df["STOP_LOSS"] = stop_loss
+    df["TARGET_1"] = target_1
+    df["TARGET_2"] = target_2
+    return df
+
+
 def rank_stock_candidates(stocks: pd.DataFrame) -> pd.DataFrame:
     df = stocks.copy()
     tech = pd.to_numeric(df["TECHNICAL_SCORE"], errors="coerce").clip(0, 100).fillna(50)
@@ -321,6 +407,8 @@ def rank_stock_candidates(stocks: pd.DataFrame) -> pd.DataFrame:
 
     df["RS_RANK_SCORE"] = rs.round(2)
     df["INVESTMENT_SCORE"] = (0.38 * tech + 0.27 * rs + 0.25 * fund + pattern_bonus + supertrend_bonus + signal_bonus).round(2)
+    df["SETUP_CLASS"] = _classify_setup(df)
+    df = _compute_entry_levels(df)
     return df.sort_values(["INVESTMENT_SCORE", "TECHNICAL_SCORE", "RELATIVE_STRENGTH"], ascending=False).reset_index(drop=True)
 
 
@@ -739,6 +827,74 @@ def _load_fundamental_details(symbols: list[str]) -> dict:
     return result
 
 
+# ===== SIGNAL LOGGER (P0-1) =====
+
+_SIGNAL_LOG = ROOT / "data" / "signal_log.csv"
+_SIGNAL_LOG_COLS = [
+    "date_issued", "symbol", "sector", "company", "signal", "setup_class",
+    "investment_score", "technical_score", "rsi", "supertrend_state",
+    "price_at_issue", "entry_low", "entry_high", "stop_loss", "target_1", "target_2",
+    "regime_at_issue",
+    "date_resolved", "price_at_resolution", "return_pct", "hit_target", "hit_stop",
+]
+
+
+def _log_signals(candidates: pd.DataFrame, date: datetime, regime: str = "UNKNOWN") -> None:
+    """Append today's candidates to the signal log without duplicating existing entries."""
+    today_str = date.strftime("%Y-%m-%d")
+
+    existing = pd.DataFrame(columns=_SIGNAL_LOG_COLS)
+    if _SIGNAL_LOG.exists():
+        try:
+            existing = pd.read_csv(_SIGNAL_LOG)
+        except Exception:
+            pass
+
+    already_logged = set()
+    if not existing.empty and "date_issued" in existing.columns and "symbol" in existing.columns:
+        already_logged = set(
+            existing[existing["date_issued"] == today_str]["symbol"].tolist()
+        )
+
+    new_rows = []
+    for _, r in candidates.iterrows():
+        sym = str(r.get("SYMBOL", ""))
+        if not sym or sym in already_logged:
+            continue
+        price = r.get("CURRENT_PRICE", math.nan)
+        new_rows.append({
+            "date_issued": today_str,
+            "symbol": sym,
+            "sector": r.get("SECTOR_NAME", ""),
+            "company": r.get("COMPANY_NAME", ""),
+            "signal": r.get("TRADING_SIGNAL", ""),
+            "setup_class": r.get("SETUP_CLASS", "NEUTRAL"),
+            "investment_score": r.get("INVESTMENT_SCORE", math.nan),
+            "technical_score": r.get("TECHNICAL_SCORE", math.nan),
+            "rsi": r.get("RSI", math.nan),
+            "supertrend_state": r.get("SUPERTREND_STATE", ""),
+            "price_at_issue": price,
+            "entry_low": r.get("ENTRY_LOW", math.nan),
+            "entry_high": r.get("ENTRY_HIGH", math.nan),
+            "stop_loss": r.get("STOP_LOSS", math.nan),
+            "target_1": r.get("TARGET_1", math.nan),
+            "target_2": r.get("TARGET_2", math.nan),
+            "regime_at_issue": regime,
+            "date_resolved": "",
+            "price_at_resolution": math.nan,
+            "return_pct": math.nan,
+            "hit_target": "",
+            "hit_stop": "",
+        })
+
+    if new_rows:
+        appended = pd.concat([existing, pd.DataFrame(new_rows)], ignore_index=True)
+        appended.to_csv(_SIGNAL_LOG, index=False)
+        print(f"  Signal log: appended {len(new_rows)} new entries → {len(appended)} total rows.")
+    else:
+        print(f"  Signal log: no new entries (already logged for {today_str}).")
+
+
 # ===== NARRATIVE GENERATION =====
 
 def _build_narrative_prompt(sector_rank: pd.DataFrame, candidates: pd.DataFrame,
@@ -796,11 +952,22 @@ def _build_narrative_prompt(sector_rank: pd.DataFrame, candidates: pd.DataFrame,
         vol_str = f"{float(vol):.2f}x" if vol and not (isinstance(vol, float) and math.isnan(vol)) else "N/A"
         price_str = f"₹{float(price):.2f}" if price and not (isinstance(price, float) and math.isnan(price)) else "N/A"
 
+        setup = row.get("SETUP_CLASS", "NEUTRAL")
+        entry_low = row.get("ENTRY_LOW", math.nan)
+        stop_loss = row.get("STOP_LOSS", math.nan)
+        target_1 = row.get("TARGET_1", math.nan)
+        target_2 = row.get("TARGET_2", math.nan)
+        el_str = f"₹{float(entry_low):.2f}" if entry_low and not (isinstance(entry_low, float) and math.isnan(entry_low)) else "N/A"
+        sl_str = f"₹{float(stop_loss):.2f}" if stop_loss and not (isinstance(stop_loss, float) and math.isnan(stop_loss)) else "N/A"
+        t1_str = f"₹{float(target_1):.2f}" if target_1 and not (isinstance(target_1, float) and math.isnan(target_1)) else "N/A"
+        t2_str = f"₹{float(target_2):.2f}" if target_2 and not (isinstance(target_2, float) and math.isnan(target_2)) else "N/A"
+
         stock_line = (
-            f"  {sym} ({co}) | {sec} | Price: {price_str} | Signal: {sig} | "
+            f"  {sym} ({co}) | {sec} | Price: {price_str} | Signal: {sig} | Setup: {setup} | "
             f"Score: {score:.1f} | Tech: {tech:.1f} | RS: {rs:+.1f}% | RSI: {rsi:.1f} | "
             f"Supertrend: {st} @ {st_str} | Pattern: {pat} | Vol: {vol_str} | "
             f"Fund: {fund:.1f} | Resistance: {res_str} | Support: {sup_str} | "
+            f"Entry: {el_str} | Stop: {sl_str} | T1: {t1_str} | T2: {t2_str} | "
             f"Minervini: {minv} | CAN-SLIM: {canslim}"
         )
         fd = (fund_details or {}).get(str(sym), {})
@@ -1343,6 +1510,40 @@ def _vol_cell(vol: object) -> str:
     return f'<span class="{css}">{v:.2f}×</span>'
 
 
+def _setup_badge(setup_class: str) -> str:
+    label_map = {
+        "LEADER_BREAKOUT":     "⭐ Leader Breakout",
+        "FAST_RECOVERY":       "🚀 Fast Recovery",
+        "BASE_NEAR_HIGH":      "🏔 Base Near High",
+        "PULLBACK_IN_UPTREND": "🔄 Pullback Buy",
+        "MOMENTUM_EXTENDED":   "⚠️ Extended",
+        "WEAK_TREND":          "🔻 Weak Trend",
+        "NEUTRAL":             "Neutral",
+    }
+    css_map = {
+        "LEADER_BREAKOUT":     "setup-lb",
+        "FAST_RECOVERY":       "setup-fr",
+        "BASE_NEAR_HIGH":      "setup-bnh",
+        "PULLBACK_IN_UPTREND": "setup-pu",
+        "MOMENTUM_EXTENDED":   "setup-me",
+        "WEAK_TREND":          "setup-wt",
+        "NEUTRAL":             "setup-n",
+    }
+    label = label_map.get(setup_class, html_mod.escape(setup_class))
+    css = css_map.get(setup_class, "setup-n")
+    return f'<span class="setup {css}">{label}</span>'
+
+
+def _price_fmt(v: object) -> str:
+    try:
+        f = float(v)
+        if math.isnan(f):
+            return "—"
+        return f"₹{f:.2f}"
+    except (TypeError, ValueError):
+        return "—"
+
+
 def _dd_cell(dd: object) -> str:
     try:
         v = float(dd) if dd is not None else math.nan
@@ -1594,8 +1795,23 @@ details.narr[open] summary::before{transform:rotate(90deg)}
 [data-sblock].sblock-enter{animation:sblock-in .25s ease both}
 @keyframes sblock-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
+/* ---- SETUP CLASS BADGES ---- */
+.setup{display:inline-block;padding:2px 7px;border-radius:10px;font-size:9.5px;font-weight:700;white-space:nowrap;margin-top:3px}
+.setup-lb{background:#fef08a;color:#713f12;border:1px solid #fde047}
+.setup-fr{background:#bbf7d0;color:#14532d}
+.setup-bnh{background:#dbeafe;color:#1e40af}
+.setup-pu{background:#e0e7ff;color:#3730a3}
+.setup-me{background:#ffedd5;color:#c2410c}
+.setup-wt{background:#fee2e2;color:#991b1b}
+.setup-n{background:#f1f5f9;color:#64748b}
+
 /* ---- KEY LEVELS ---- */
-.levels{font-size:11px;line-height:1.6}
+.levels{font-size:11px;line-height:1.8;display:flex;flex-wrap:wrap;gap:4px 8px}
+.levels-sub{font-size:10px;color:#64748b;line-height:1.6}
+.lev-entry{font-weight:700;color:#1e40af}
+.lev-stop{font-weight:700;color:#dc2626}
+.lev-tgt{font-weight:700;color:#15803d}
+.lev-tgt2{font-weight:600;color:#059669}
 .lev-r{color:#dc2626}
 .lev-s{color:#15803d}
 
@@ -1750,6 +1966,7 @@ def render_html_interactive(
     source_file: Path,
     generated_at: datetime,
     narratives: dict,
+    regime_info: dict | None = None,
 ) -> str:
     gen_date = generated_at.strftime("%Y-%m-%d")
     data_date = (
@@ -1757,6 +1974,14 @@ def render_html_interactive(
         if "ANALYSIS_DATE" in candidates.columns and candidates["ANALYSIS_DATE"].notna().any()
         else gen_date
     )
+    # Build regime banner HTML
+    _regime_banner = ""
+    if regime_info:
+        try:
+            from regime_detector import regime_badge_html as _rbh
+            _regime_banner = _rbh(regime_info)
+        except Exception:
+            pass
 
     sec_narratives = narratives.get("sectors", {})
     stk_narratives = narratives.get("stocks", {})
@@ -1931,6 +2156,7 @@ def render_html_interactive(
             co = _h(r.get("COMPANY_NAME", sym))
             price = _fmth(r.get("CURRENT_PRICE"), digits=2)
             sig_html = _signal_badge(str(r.get("TRADING_SIGNAL", "HOLD")))
+            setup_html = _setup_badge(str(r.get("SETUP_CLASS", "NEUTRAL")))
             inv_bar = _score_bar(r.get("INVESTMENT_SCORE"), "invest")
             tech_bar = _score_bar(r.get("TECHNICAL_SCORE"), "tech")
             fund_bar = _score_bar(r.get("ENHANCED_FUND_SCORE"), "fund")
@@ -1939,15 +2165,24 @@ def render_html_interactive(
             st_html = _st_badge(str(r.get("SUPERTREND_STATE", "UNKNOWN")))
             pat_html = _pattern_badge(str(r.get("PATTERN", "")))
             vol_html = _vol_cell(r.get("VOLUME_RATIO"))
-            res_v = r.get("RESISTANCE")
-            sup_v = r.get("SUPPORT")
-            st_val = r.get("SUPERTREND_VALUE")
-            res_str = f"₹{float(res_v):.2f}" if res_v and not (isinstance(res_v, float) and math.isnan(res_v)) else "—"
-            sup_str = f"₹{float(sup_v):.2f}" if sup_v and not (isinstance(sup_v, float) and math.isnan(sup_v)) else "—"
-            st_str = f"₹{float(st_val):.2f}" if st_val and not (isinstance(st_val, float) and math.isnan(st_val)) else "—"
+
+            entry_low_str  = _price_fmt(r.get("ENTRY_LOW"))
+            entry_high_str = _price_fmt(r.get("ENTRY_HIGH"))
+            stop_str       = _price_fmt(r.get("STOP_LOSS"))
+            tgt1_str       = _price_fmt(r.get("TARGET_1"))
+            tgt2_str       = _price_fmt(r.get("TARGET_2"))
+            res_str        = _price_fmt(r.get("RESISTANCE"))
+            sup_str        = _price_fmt(r.get("SUPPORT"))
+            st_str         = _price_fmt(r.get("SUPERTREND_VALUE"))
 
             levels_html = (
                 f'<div class="levels">'
+                f'<span class="lev-entry">Entry: {html_mod.escape(entry_low_str)}–{html_mod.escape(entry_high_str)}</span>'
+                f'<span class="lev-stop">Stop: {html_mod.escape(stop_str)}</span>'
+                f'<span class="lev-tgt">T1: {html_mod.escape(tgt1_str)}</span>'
+                f'<span class="lev-tgt2">T2: {html_mod.escape(tgt2_str)}</span>'
+                f'</div>'
+                f'<div class="levels-sub">'
                 f'<span class="lev-r">R: {html_mod.escape(res_str)}</span>'
                 f' · <span class="lev-s">S: {html_mod.escape(sup_str)}</span>'
                 f' · <span style="color:#7c3aed">ST: {html_mod.escape(st_str)}</span>'
@@ -1975,7 +2210,7 @@ def render_html_interactive(
                 f'<td><strong>{html_mod.escape(sym)}</strong></td>'
                 f'<td>{co}</td>'
                 f'<td class="num" data-val="{price}">₹{price}</td>'
-                f'<td>{sig_html}</td>'
+                f'<td>{sig_html}<br>{setup_html}</td>'
                 f'<td data-val="{_fmth(r.get("INVESTMENT_SCORE"))}">{inv_bar}</td>'
                 f'<td data-val="{_fmth(r.get("TECHNICAL_SCORE"))}">{tech_bar}</td>'
                 f'<td data-val="{_fmth(r.get("ENHANCED_FUND_SCORE"))}">{fund_bar}</td>'
@@ -1996,9 +2231,9 @@ def render_html_interactive(
             f'</colgroup>'
             f'<thead><tr>'
             f'<th>Symbol</th><th>Company</th><th class="num">Price</th>'
-            f'<th>Signal</th><th>Score</th><th>Tech</th><th>Fund</th>'
+            f'<th>Signal / Setup</th><th>Score</th><th>Tech</th><th>Fund</th>'
             f'<th class="num">RS%</th><th class="num">RSI</th>'
-            f'<th>Supertrend</th><th>Pattern</th><th>Vol</th><th>Levels</th>'
+            f'<th>Supertrend</th><th>Pattern</th><th>Vol</th><th>Entry · Stop · Targets</th>'
             f'</tr></thead>'
             f'<tbody>{stock_rows_html}</tbody>'
             f'</table></div>'
@@ -2163,6 +2398,7 @@ def render_html_interactive(
         '</header>',
         '<div class="disc">⚠ Research &amp; screening output only — not personal financial advice. '
         'Validate prices, liquidity, events, and risk before acting.</div>',
+        f'<div class="content" style="padding-top:12px;padding-bottom:0">{_regime_banner}</div>' if _regime_banner else '',
         # Nav
         '<nav class="main-nav"><div class="nav-inner">',
         '<button class="nav-btn" data-tab="overview">Overview</button>',
@@ -2208,10 +2444,21 @@ def generate_report(top_n_sectors: int = 6, top_n_per_sector: int = 8) -> Report
         peak_resilience = rank_peak_resilience_stocks(peak_resilience)
 
     generated_at = datetime.now()
-    # Date-only suffix (no timestamp)
-    suffix = generated_at.strftime("%Y%m%d")
-    md_path = REPORTS_DIR / f"Sector_Rotation_Report_{suffix}.md"
-    html_path = REPORTS_DIR / f"Sector_Rotation_Report_{suffix}.html"
+    paths = report_output_paths(generated_at)
+
+    # Detect market regime (P1-1)
+    regime_info: dict = {}
+    regime_name = "ROTATION"
+    try:
+        from regime_detector import detect_regime, regime_badge_html as _regime_badge_html
+        regime_info = detect_regime()
+        regime_name = regime_info.get("current_regime", "ROTATION")
+        print(f"  Regime: {regime_name} (confidence {regime_info.get('confidence', 0):.0%}, {regime_info.get('regime_duration_days', 1)}d)")
+    except Exception as exc:
+        print(f"  Regime detection skipped ({exc}); using ROTATION default.")
+
+    # Log signals for outcome tracking (P0-1)
+    _log_signals(candidates, generated_at, regime=regime_name)
 
     # Load rich fundamental data (P&L, quarterly, ratios) for all candidates
     candidate_symbols = candidates["SYMBOL"].dropna().tolist() if "SYMBOL" in candidates.columns else []
@@ -2221,14 +2468,20 @@ def generate_report(top_n_sectors: int = 6, top_n_per_sector: int = 8) -> Report
     narratives = generate_narratives(sector_rank, candidates, fund_details=fund_details)
 
     md = render_markdown(sector_rank, candidates, peak_resilience, source_file, generated_at)
-    md_path.write_text(md, encoding="utf-8")
-    html_path.write_text(
-        render_html_interactive(sector_rank, candidates, peak_resilience, source_file, generated_at, narratives),
-        encoding="utf-8",
-    )
-    print(f"Wrote {md_path}")
-    print(f"Wrote {html_path}")
-    return ReportPaths(markdown=md_path, html=html_path)
+    html_text = render_html_interactive(sector_rank, candidates, peak_resilience, source_file, generated_at, narratives, regime_info=regime_info)
+    for path, text in [
+        (paths.markdown, md),
+        (paths.html, html_text),
+        (paths.latest_markdown, md),
+        (paths.latest_html, html_text),
+    ]:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+    print(f"Wrote {paths.markdown}")
+    print(f"Wrote {paths.html}")
+    print(f"Wrote {paths.latest_markdown}")
+    print(f"Wrote {paths.latest_html}")
+    return paths
 
 
 def main() -> None:

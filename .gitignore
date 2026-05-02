@@ -37,6 +37,14 @@ Thumbs.db
 *.tmp
 *.log
 *.bak
+__pycache__/
+reports/_apex_*
+reports/_test_*
+reports/temp/
+data/_sector_rotation_*.csv
+data/_missing_fund_symbols.txt
+working-sector/output/sector_rotation_missing_fundamentals.txt
+nse_analysis.db
 
 # Large files that exceed GitHub's 100MB limit
 # These files are too large for GitHub without Git LFS
