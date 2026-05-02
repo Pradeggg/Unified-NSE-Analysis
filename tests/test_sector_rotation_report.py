@@ -110,6 +110,65 @@ class SectorRotationReportTests(unittest.TestCase):
         self.assertEqual(ranked.iloc[0]["SYMBOL"], "AAA")
         self.assertIn("INVESTMENT_SCORE", ranked.columns)
 
+    def test_rank_stock_candidates_assigns_action_buckets_from_setup_quality(self):
+        stocks = pd.DataFrame(
+            [
+                {
+                    "SYMBOL": "BREAKOUT",
+                    "SECTOR_NAME": "Defence",
+                    "TECHNICAL_SCORE": 82,
+                    "RELATIVE_STRENGTH": 35,
+                    "ENHANCED_FUND_SCORE": 74,
+                    "TRADING_SIGNAL": "BUY",
+                    "PATTERN": "CONSOLIDATION_BREAKOUT",
+                    "VOLUME_RATIO": 2.1,
+                    "RSI": 63,
+                    "RET_5D": 2,
+                    "RET_1M": 11,
+                    "DRAWDOWN_FROM_52W_HIGH_PCT": -2,
+                    "SUPERTREND_STATE": "BULLISH",
+                },
+                {
+                    "SYMBOL": "EXTENDED",
+                    "SECTOR_NAME": "Defence",
+                    "TECHNICAL_SCORE": 78,
+                    "RELATIVE_STRENGTH": 28,
+                    "ENHANCED_FUND_SCORE": 68,
+                    "TRADING_SIGNAL": "BUY",
+                    "PATTERN": "TRENDING_OR_CHOPPY",
+                    "VOLUME_RATIO": 1.0,
+                    "RSI": 76,
+                    "RET_5D": 6,
+                    "RET_1M": 20,
+                    "DRAWDOWN_FROM_52W_HIGH_PCT": -3,
+                    "SUPERTREND_STATE": "BULLISH",
+                },
+                {
+                    "SYMBOL": "WEAK",
+                    "SECTOR_NAME": "Defence",
+                    "TECHNICAL_SCORE": 45,
+                    "RELATIVE_STRENGTH": -8,
+                    "ENHANCED_FUND_SCORE": 55,
+                    "TRADING_SIGNAL": "SELL",
+                    "PATTERN": "TRENDING_OR_CHOPPY",
+                    "VOLUME_RATIO": 0.8,
+                    "RSI": 42,
+                    "RET_5D": -4,
+                    "RET_1M": -8,
+                    "DRAWDOWN_FROM_52W_HIGH_PCT": -18,
+                    "SUPERTREND_STATE": "BEARISH",
+                },
+            ]
+        )
+
+        ranked = rank_stock_candidates(stocks).set_index("SYMBOL")
+
+        self.assertEqual(ranked.loc["BREAKOUT", "SETUP_CLASS"], "LEADER_BREAKOUT")
+        self.assertEqual(ranked.loc["BREAKOUT", "ACTION_BUCKET"], "BUY_WATCH")
+        self.assertEqual(ranked.loc["EXTENDED", "ACTION_BUCKET"], "WAIT_FOR_PULLBACK")
+        self.assertEqual(ranked.loc["WEAK", "ACTION_BUCKET"], "AVOID")
+        self.assertTrue(ranked["ACTION_REASON"].str.len().gt(0).all())
+
     def test_merge_fundamental_scores_fills_missing_scores_without_overwriting_existing(self):
         analysis = pd.DataFrame(
             [

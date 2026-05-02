@@ -388,6 +388,47 @@ def _compute_entry_levels(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def assign_action_buckets(df: pd.DataFrame) -> pd.DataFrame:
+    """Add ACTION_BUCKET and ACTION_REASON using setup quality and risk state."""
+    out = df.copy()
+    setup = _column_or_default(out, "SETUP_CLASS", "NEUTRAL").astype(str)
+    signal = _column_or_default(out, "TRADING_SIGNAL", "").astype(str)
+    st = _column_or_default(out, "SUPERTREND_STATE", "").astype(str)
+    pattern = _column_or_default(out, "PATTERN", "").astype(str)
+    rsi = pd.to_numeric(_column_or_default(out, "RSI", 50), errors="coerce").fillna(50)
+    tech = pd.to_numeric(_column_or_default(out, "TECHNICAL_SCORE", 50), errors="coerce").fillna(50)
+    dd = pd.to_numeric(_column_or_default(out, "DRAWDOWN_FROM_52W_HIGH_PCT", -100), errors="coerce").fillna(-100)
+
+    bucket = pd.Series("WATCHLIST", index=out.index)
+    reason = pd.Series("Mixed setup; wait for cleaner confirmation.", index=out.index)
+
+    avoid = setup.eq("WEAK_TREND") | st.eq("BEARISH") | signal.isin(["SELL", "WEAK_SELL"])
+    extended = setup.eq("MOMENTUM_EXTENDED") | (rsi.gt(72) & dd.ge(-8))
+    buy_watch = (
+        setup.eq("LEADER_BREAKOUT")
+        & st.eq("BULLISH")
+        & signal.isin(["STRONG_BUY", "BUY", "HOLD"])
+        & tech.ge(65)
+    )
+    breakout_watch = setup.eq("BASE_NEAR_HIGH") | pattern.eq("NEAR_RESISTANCE")
+    hold_trail = setup.isin(["FAST_RECOVERY", "PULLBACK_IN_UPTREND"]) & st.eq("BULLISH")
+
+    bucket = bucket.where(~breakout_watch, "BREAKOUT_WATCH")
+    reason = reason.where(~breakout_watch, "Near high/base setup; wait for price and volume breakout confirmation.")
+    bucket = bucket.where(~hold_trail, "HOLD_TRAIL")
+    reason = reason.where(~hold_trail, "Constructive trend; use defined stop and trail winners.")
+    bucket = bucket.where(~buy_watch, "BUY_WATCH")
+    reason = reason.where(~buy_watch, "High-quality breakout with bullish trend and acceptable momentum.")
+    bucket = bucket.where(~extended, "WAIT_FOR_PULLBACK")
+    reason = reason.where(~extended, "Momentum is extended; prefer a pullback or fresh base before entry.")
+    bucket = bucket.where(~avoid, "AVOID")
+    reason = reason.where(~avoid, "Weak trend or sell signal; avoid fresh exposure until repaired.")
+
+    out["ACTION_BUCKET"] = bucket
+    out["ACTION_REASON"] = reason
+    return out
+
+
 def rank_stock_candidates(stocks: pd.DataFrame) -> pd.DataFrame:
     df = stocks.copy()
     tech = pd.to_numeric(df["TECHNICAL_SCORE"], errors="coerce").clip(0, 100).fillna(50)
@@ -409,6 +450,7 @@ def rank_stock_candidates(stocks: pd.DataFrame) -> pd.DataFrame:
     df["INVESTMENT_SCORE"] = (0.38 * tech + 0.27 * rs + 0.25 * fund + pattern_bonus + supertrend_bonus + signal_bonus).round(2)
     df["SETUP_CLASS"] = _classify_setup(df)
     df = _compute_entry_levels(df)
+    df = assign_action_buckets(df)
     return df.sort_values(["INVESTMENT_SCORE", "TECHNICAL_SCORE", "RELATIVE_STRENGTH"], ascending=False).reset_index(drop=True)
 
 
@@ -681,13 +723,14 @@ def render_markdown(
         lines += [
             f"### {sector}",
             "",
-            "| Symbol | Company | Price | Signal | Score | Tech | RS | Fund | RSI | Supertrend | Pattern | Volume Ratio |",
-            "|---|---|---:|---|---:|---:|---:|---:|---:|---|---|---:|",
+            "| Symbol | Company | Price | Signal | Setup | Action | Score | Tech | RS | Fund | RSI | Supertrend | Pattern | Volume Ratio |",
+            "|---|---|---:|---|---|---|---:|---:|---:|---:|---:|---|---|---:|",
         ]
         for _, row in part.iterrows():
             lines.append(
                 f"| {row['SYMBOL']} | {row.get('COMPANY_NAME', '')} | {_fmt(row.get('CURRENT_PRICE'), digits=2)} | "
-                f"{row.get('TRADING_SIGNAL', '')} | {_fmt(row.get('INVESTMENT_SCORE'))} | {_fmt(row.get('TECHNICAL_SCORE'))} | "
+                f"{row.get('TRADING_SIGNAL', '')} | {row.get('SETUP_CLASS', 'NEUTRAL')} | {row.get('ACTION_BUCKET', 'WATCHLIST')} | "
+                f"{_fmt(row.get('INVESTMENT_SCORE'))} | {_fmt(row.get('TECHNICAL_SCORE'))} | "
                 f"{_fmt(row.get('RELATIVE_STRENGTH'), '%')} | {_fmt(row.get('ENHANCED_FUND_SCORE'))} | {_fmt(row.get('RSI'))} | "
                 f"{row.get('SUPERTREND_STATE', '')} | {row.get('PATTERN', '')} | {_fmt(row.get('VOLUME_RATIO'), 'x', 2)} |"
             )
@@ -699,12 +742,12 @@ def render_markdown(
     ]
     top_candidates = candidates.head(18)
     for _, row in top_candidates.iterrows():
-        risk = "Constructive" if row.get("SUPERTREND_STATE") == "BULLISH" and row.get("TRADING_SIGNAL") in {"BUY", "STRONG_BUY"} else "Watchlist"
         breakout_text = "breakout confirmation present" if row.get("IS_CONSOLIDATION_BREAKOUT") else "no confirmed consolidation breakout"
         lines += [
             f"### {row['SYMBOL']} - {row.get('COMPANY_NAME', '')}",
             "",
-            f"- **Sector:** {row.get('SECTOR_NAME')} | **Guidance bucket:** {risk}",
+            f"- **Sector:** {row.get('SECTOR_NAME')} | **Setup:** {row.get('SETUP_CLASS', 'NEUTRAL')} | **Action:** {row.get('ACTION_BUCKET', 'WATCHLIST')}",
+            f"- **Action reason:** {row.get('ACTION_REASON', 'Mixed setup; wait for cleaner confirmation.')}",
             f"- **Relative strength:** {_fmt(row.get('RELATIVE_STRENGTH'), '%')} vs Nifty 500; RS rank score {_fmt(row.get('RS_RANK_SCORE'))}.",
             f"- **Technical pattern:** {row.get('PATTERN')} with {breakout_text}; resistance {_fmt(row.get('RESISTANCE'), digits=2)}, support {_fmt(row.get('SUPPORT'), digits=2)}.",
             f"- **Supertrend:** {row.get('SUPERTREND_STATE')} around {_fmt(row.get('SUPERTREND_VALUE'), digits=2)}.",
@@ -831,7 +874,7 @@ def _load_fundamental_details(symbols: list[str]) -> dict:
 
 _SIGNAL_LOG = ROOT / "data" / "signal_log.csv"
 _SIGNAL_LOG_COLS = [
-    "date_issued", "symbol", "sector", "company", "signal", "setup_class",
+    "date_issued", "symbol", "sector", "company", "signal", "setup_class", "action_bucket", "action_reason",
     "investment_score", "technical_score", "rsi", "supertrend_state",
     "price_at_issue", "entry_low", "entry_high", "stop_loss", "target_1", "target_2",
     "regime_at_issue",
@@ -869,6 +912,8 @@ def _log_signals(candidates: pd.DataFrame, date: datetime, regime: str = "UNKNOW
             "company": r.get("COMPANY_NAME", ""),
             "signal": r.get("TRADING_SIGNAL", ""),
             "setup_class": r.get("SETUP_CLASS", "NEUTRAL"),
+            "action_bucket": r.get("ACTION_BUCKET", "WATCHLIST"),
+            "action_reason": r.get("ACTION_REASON", ""),
             "investment_score": r.get("INVESTMENT_SCORE", math.nan),
             "technical_score": r.get("TECHNICAL_SCORE", math.nan),
             "rsi": r.get("RSI", math.nan),
@@ -953,6 +998,7 @@ def _build_narrative_prompt(sector_rank: pd.DataFrame, candidates: pd.DataFrame,
         price_str = f"₹{float(price):.2f}" if price and not (isinstance(price, float) and math.isnan(price)) else "N/A"
 
         setup = row.get("SETUP_CLASS", "NEUTRAL")
+        action = row.get("ACTION_BUCKET", "WATCHLIST")
         entry_low = row.get("ENTRY_LOW", math.nan)
         stop_loss = row.get("STOP_LOSS", math.nan)
         target_1 = row.get("TARGET_1", math.nan)
@@ -963,7 +1009,7 @@ def _build_narrative_prompt(sector_rank: pd.DataFrame, candidates: pd.DataFrame,
         t2_str = f"₹{float(target_2):.2f}" if target_2 and not (isinstance(target_2, float) and math.isnan(target_2)) else "N/A"
 
         stock_line = (
-            f"  {sym} ({co}) | {sec} | Price: {price_str} | Signal: {sig} | Setup: {setup} | "
+            f"  {sym} ({co}) | {sec} | Price: {price_str} | Signal: {sig} | Setup: {setup} | Action: {action} | "
             f"Score: {score:.1f} | Tech: {tech:.1f} | RS: {rs:+.1f}% | RSI: {rsi:.1f} | "
             f"Supertrend: {st} @ {st_str} | Pattern: {pat} | Vol: {vol_str} | "
             f"Fund: {fund:.1f} | Resistance: {res_str} | Support: {sup_str} | "
@@ -1534,6 +1580,28 @@ def _setup_badge(setup_class: str) -> str:
     return f'<span class="setup {css}">{label}</span>'
 
 
+def _action_badge(action_bucket: str) -> str:
+    label_map = {
+        "BUY_WATCH": "Buy Watch",
+        "BREAKOUT_WATCH": "Breakout Watch",
+        "HOLD_TRAIL": "Hold/Trail",
+        "WAIT_FOR_PULLBACK": "Wait Pullback",
+        "AVOID": "Avoid",
+        "WATCHLIST": "Watchlist",
+    }
+    css_map = {
+        "BUY_WATCH": "act-buy",
+        "BREAKOUT_WATCH": "act-brk",
+        "HOLD_TRAIL": "act-hold",
+        "WAIT_FOR_PULLBACK": "act-wait",
+        "AVOID": "act-avoid",
+        "WATCHLIST": "act-watch",
+    }
+    label = label_map.get(action_bucket, html_mod.escape(action_bucket))
+    css = css_map.get(action_bucket, "act-watch")
+    return f'<span class="action {css}">{label}</span>'
+
+
 def _price_fmt(v: object) -> str:
     try:
         f = float(v)
@@ -1804,6 +1872,13 @@ details.narr[open] summary::before{transform:rotate(90deg)}
 .setup-me{background:#ffedd5;color:#c2410c}
 .setup-wt{background:#fee2e2;color:#991b1b}
 .setup-n{background:#f1f5f9;color:#64748b}
+.action{display:inline-block;padding:2px 7px;border-radius:10px;font-size:9.5px;font-weight:800;white-space:nowrap;margin-top:3px;text-transform:uppercase;letter-spacing:0}
+.act-buy{background:#dcfce7;color:#166534;border:1px solid #86efac}
+.act-brk{background:#e0f2fe;color:#075985;border:1px solid #7dd3fc}
+.act-hold{background:#ecfdf5;color:#047857}
+.act-wait{background:#fef3c7;color:#92400e}
+.act-avoid{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
+.act-watch{background:#f1f5f9;color:#475569}
 
 /* ---- KEY LEVELS ---- */
 .levels{font-size:11px;line-height:1.8;display:flex;flex-wrap:wrap;gap:4px 8px}
@@ -2157,6 +2232,7 @@ def render_html_interactive(
             price = _fmth(r.get("CURRENT_PRICE"), digits=2)
             sig_html = _signal_badge(str(r.get("TRADING_SIGNAL", "HOLD")))
             setup_html = _setup_badge(str(r.get("SETUP_CLASS", "NEUTRAL")))
+            action_html = _action_badge(str(r.get("ACTION_BUCKET", "WATCHLIST")))
             inv_bar = _score_bar(r.get("INVESTMENT_SCORE"), "invest")
             tech_bar = _score_bar(r.get("TECHNICAL_SCORE"), "tech")
             fund_bar = _score_bar(r.get("ENHANCED_FUND_SCORE"), "fund")
@@ -2210,7 +2286,7 @@ def render_html_interactive(
                 f'<td><strong>{html_mod.escape(sym)}</strong></td>'
                 f'<td>{co}</td>'
                 f'<td class="num" data-val="{price}">₹{price}</td>'
-                f'<td>{sig_html}<br>{setup_html}</td>'
+                f'<td>{sig_html}<br>{setup_html}<br>{action_html}</td>'
                 f'<td data-val="{_fmth(r.get("INVESTMENT_SCORE"))}">{inv_bar}</td>'
                 f'<td data-val="{_fmth(r.get("TECHNICAL_SCORE"))}">{tech_bar}</td>'
                 f'<td data-val="{_fmth(r.get("ENHANCED_FUND_SCORE"))}">{fund_bar}</td>'
@@ -2231,7 +2307,7 @@ def render_html_interactive(
             f'</colgroup>'
             f'<thead><tr>'
             f'<th>Symbol</th><th>Company</th><th class="num">Price</th>'
-            f'<th>Signal / Setup</th><th>Score</th><th>Tech</th><th>Fund</th>'
+            f'<th>Signal / Setup / Action</th><th>Score</th><th>Tech</th><th>Fund</th>'
             f'<th class="num">RS%</th><th class="num">RSI</th>'
             f'<th>Supertrend</th><th>Pattern</th><th>Vol</th><th>Entry · Stop · Targets</th>'
             f'</tr></thead>'
