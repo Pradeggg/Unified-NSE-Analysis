@@ -1,4 +1,5 @@
 import unittest
+from pathlib import Path
 
 import pandas as pd
 
@@ -7,6 +8,7 @@ from sector_rotation_report import (
     classify_consolidation_breakout,
     compute_supertrend,
     merge_fundamental_scores,
+    report_output_paths,
     rank_peak_resilience_stocks,
     rank_rotating_sectors,
     rank_stock_candidates,
@@ -209,6 +211,15 @@ class SectorRotationReportTests(unittest.TestCase):
 
         self.assertEqual(list(ranked["SYMBOL"]), ["FAST"])
         self.assertIn("PEAK_RESILIENCE_SCORE", ranked.columns)
+
+    def test_report_output_paths_use_sector_rotation_year_folder_and_latest_aliases(self):
+        paths = report_output_paths(pd.Timestamp("2026-05-02 01:17:36"))
+        root = Path.cwd()
+
+        self.assertEqual(paths.markdown.relative_to(root).as_posix(), "reports/sector_rotation/2026/Sector_Rotation_Report_20260502.md")
+        self.assertEqual(paths.html.relative_to(root).as_posix(), "reports/sector_rotation/2026/Sector_Rotation_Report_20260502.html")
+        self.assertEqual(paths.latest_markdown.relative_to(root).as_posix(), "reports/latest/sector_rotation.md")
+        self.assertEqual(paths.latest_html.relative_to(root).as_posix(), "reports/latest/sector_rotation.html")
 
 
 if __name__ == "__main__":
