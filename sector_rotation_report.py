@@ -809,17 +809,15 @@ def _load_fundamental_details(symbols: list[str]) -> dict:
             pass
         return None
 
-    # Build working dataframe: start with persistent cache, supplement with legacy sources
+    # Build working dataframe: use persistent cache only (P0-4: consolidated)
+    # PG: legacy sources removed — all data now lives in the single cache file.
+    # Legacy sources were: reports/Apex_Resilience_screener_fundamentals_*.csv,
+    #   working-sector/output/fundamental_details.csv
     frames = []
-    for src in [
-        CACHE,
-        ROOT / "reports" / "Apex_Resilience_screener_fundamentals_20260428.csv",
-        ROOT / "working-sector" / "output" / "fundamental_details.csv",
-    ]:
-        if src.exists():
-            f = _read_src(src)
-            if f is not None:
-                frames.append(f)
+    if CACHE.exists():
+        f = _read_src(CACHE)
+        if f is not None:
+            frames.append(f)
 
     existing = pd.concat(frames).drop_duplicates("SYMBOL", keep="first") if frames else pd.DataFrame(columns=fund_cols)
     have = set(existing["SYMBOL"].tolist())
@@ -850,6 +848,9 @@ def _load_fundamental_details(symbols: list[str]) -> dict:
                         merged = pd.concat([cache_df, fetched]).drop_duplicates("SYMBOL", keep="first")
                         merged.to_csv(CACHE, index=False)
                         print(f"  Fetched {len(fetched)} symbols; cache now has {len(merged)} rows.")
+                        # P0-4: clean up tmp file after successful merge into cache
+                        if out_csv.exists():
+                            out_csv.unlink()
             except Exception as exc:
                 print(f"  Fundamental fetch failed ({exc}); using available data only.")
         try:
@@ -878,6 +879,9 @@ _SIGNAL_LOG_COLS = [
     "investment_score", "technical_score", "rsi", "supertrend_state",
     "price_at_issue", "entry_low", "entry_high", "stop_loss", "target_1", "target_2",
     "regime_at_issue",
+    "fno_pcr", "fno_oi_change_5d", "fno_buildup", "fno_signal",
+    "fii_flow_signal",
+    "insider_alert", "insider_score", "insider_detail",
     "date_resolved", "price_at_resolution", "return_pct", "hit_target", "hit_stop",
 ]
 
@@ -925,6 +929,14 @@ def _log_signals(candidates: pd.DataFrame, date: datetime, regime: str = "UNKNOW
             "target_1": r.get("TARGET_1", math.nan),
             "target_2": r.get("TARGET_2", math.nan),
             "regime_at_issue": regime,
+            "fno_pcr": r.get("FNO_PCR", math.nan),
+            "fno_oi_change_5d": r.get("FNO_OI_CHANGE_5D", math.nan),
+            "fno_buildup": r.get("FNO_BUILDUP", ""),
+            "fno_signal": r.get("FNO_SIGNAL", ""),
+            "fii_flow_signal": r.get("_FII_FLOW_SIGNAL", ""),
+            "insider_alert": r.get("INSIDER_ALERT", ""),
+            "insider_score": r.get("INSIDER_SCORE", math.nan),
+            "insider_detail": r.get("INSIDER_DETAIL", ""),
             "date_resolved": "",
             "price_at_resolution": math.nan,
             "return_pct": math.nan,
@@ -933,7 +945,8 @@ def _log_signals(candidates: pd.DataFrame, date: datetime, regime: str = "UNKNOW
         })
 
     if new_rows:
-        appended = pd.concat([existing, pd.DataFrame(new_rows)], ignore_index=True)
+        new_df = pd.DataFrame(new_rows)
+        appended = new_df if existing.empty else pd.concat([existing, new_df], ignore_index=True)
         appended.to_csv(_SIGNAL_LOG, index=False)
         print(f"  Signal log: appended {len(new_rows)} new entries → {len(appended)} total rows.")
     else:
@@ -969,6 +982,23 @@ def _build_narrative_prompt(sector_rank: pd.DataFrame, candidates: pd.DataFrame,
             f"3M: {ret3m:+.1f}% | 6M: {ret6m:+.1f}% | RS vs Nifty500 1M: {rs1m:+.1f}% | "
             f"Rotation Score: {score:.1f}"
         )
+
+    # PG: inject FII/DII flow context into LLM prompt (P1-3)
+    try:
+        from fetch_fii_dii_flows import load_flow_signals
+        _flow = load_flow_signals()
+        fii_5d = _flow.get("fii_net_5d", 0)
+        dii_5d = _flow.get("dii_net_5d", 0)
+        fsig = _flow.get("flow_signal", "NO_DATA")
+        lines += [
+            "",
+            "INSTITUTIONAL FLOW CONTEXT:",
+            f"  FII net (5-day rolling): ₹{fii_5d:+,.0f} Cr — Signal: {fsig}",
+            f"  DII net (5-day rolling): ₹{dii_5d:+,.0f} Cr",
+            f"  FII trend: {_flow.get('fii_trend', '?')} · DII trend: {_flow.get('dii_trend', '?')}",
+        ]
+    except Exception:
+        pass  # graceful: flow data is optional context for LLM
 
     lines += ["", "INVESTMENT CANDIDATES (all sectors):"]
     for _, row in candidates.iterrows():
@@ -1016,6 +1046,20 @@ def _build_narrative_prompt(sector_rank: pd.DataFrame, candidates: pd.DataFrame,
             f"Entry: {el_str} | Stop: {sl_str} | T1: {t1_str} | T2: {t2_str} | "
             f"Minervini: {minv} | CAN-SLIM: {canslim}"
         )
+        # F&O derivative signals (P1-2)
+        fno_signal = row.get("FNO_SIGNAL", "")
+        fno_pcr_v = row.get("FNO_PCR", math.nan)
+        fno_oi_chg = row.get("FNO_OI_CHANGE_5D", math.nan)
+        fno_buildup = row.get("FNO_BUILDUP", "")
+        fno_pcr_str = f"{float(fno_pcr_v):.2f}" if fno_pcr_v and not (isinstance(fno_pcr_v, float) and math.isnan(fno_pcr_v)) else "N/A"
+        fno_oi_str = f"{float(fno_oi_chg):+.1f}%" if fno_oi_chg and not (isinstance(fno_oi_chg, float) and math.isnan(fno_oi_chg)) else "N/A"
+        if fno_signal and str(fno_signal) not in ("", "nan", "None"):
+            stock_line += f"\n    F&O: Signal={fno_signal} | PCR={fno_pcr_str} | OI Change 5D={fno_oi_str} | Buildup={fno_buildup}"
+        # Insider/promoter alerts (P1-4)
+        _ins_alert = row.get("INSIDER_ALERT", "")
+        _ins_detail = row.get("INSIDER_DETAIL", "")
+        if _ins_alert and str(_ins_alert) not in ("", "nan", "None"):
+            stock_line += f"\n    Insider: {_ins_alert} — {_ins_detail}"
         fd = (fund_details or {}).get(str(sym), {})
         if fd.get("pnl"):
             stock_line += f"\n    P&L: {fd['pnl']}"
@@ -1732,20 +1776,22 @@ a{color:var(--primary-alt);text-decoration:none}
 /* ---- TABLES ---- */
 .tbl-wrap{display:block;width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:var(--radius);border:1px solid var(--border);background:var(--card);margin-bottom:16px;box-shadow:var(--shadow)}
 table{width:100%;border-collapse:collapse;font-size:13px}
-#tab-candidates table{min-width:860px;table-layout:fixed}
+#tab-candidates table{min-width:1360px;table-layout:fixed}
 #tab-candidates table colgroup col:nth-child(1){width:90px}
-#tab-candidates table colgroup col:nth-child(2){width:150px}
-#tab-candidates table colgroup col:nth-child(3){width:80px}
-#tab-candidates table colgroup col:nth-child(4){width:76px}
-#tab-candidates table colgroup col:nth-child(5){width:96px}
-#tab-candidates table colgroup col:nth-child(6){width:96px}
-#tab-candidates table colgroup col:nth-child(7){width:96px}
-#tab-candidates table colgroup col:nth-child(8){width:56px}
-#tab-candidates table colgroup col:nth-child(9){width:52px}
-#tab-candidates table colgroup col:nth-child(10){width:86px}
-#tab-candidates table colgroup col:nth-child(11){width:80px}
+#tab-candidates table colgroup col:nth-child(2){width:135px}
+#tab-candidates table colgroup col:nth-child(3){width:82px}
+#tab-candidates table colgroup col:nth-child(4){width:140px}
+#tab-candidates table colgroup col:nth-child(5){width:70px}
+#tab-candidates table colgroup col:nth-child(6){width:70px}
+#tab-candidates table colgroup col:nth-child(7){width:70px}
+#tab-candidates table colgroup col:nth-child(8){width:60px}
+#tab-candidates table colgroup col:nth-child(9){width:54px}
+#tab-candidates table colgroup col:nth-child(10){width:90px}
+#tab-candidates table colgroup col:nth-child(11){width:82px}
 #tab-candidates table colgroup col:nth-child(12){width:58px}
-#tab-candidates table colgroup col:nth-child(13){width:auto}
+#tab-candidates table colgroup col:nth-child(13){width:80px}
+#tab-candidates table colgroup col:nth-child(14){width:90px}
+#tab-candidates table colgroup col:nth-child(15){width:175px}
 thead tr{background:var(--primary)}
 th{padding:10px 10px;text-align:left;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#fff;white-space:nowrap;cursor:pointer;user-select:none;overflow:hidden;text-overflow:ellipsis}
 th:hover{background:#2d5480}
@@ -1890,6 +1936,56 @@ details.narr[open] summary::before{transform:rotate(90deg)}
 .lev-r{color:#dc2626}
 .lev-s{color:#15803d}
 
+/* ---- F&O SIGNAL BADGES (P1-2) ---- */
+.fno{display:inline-block;padding:2px 7px;border-radius:10px;font-size:9.5px;font-weight:700;white-space:nowrap}
+.fno-bull{background:#dcfce7;color:#15803d;border:1px solid #86efac}
+.fno-mbull{background:#fef9c3;color:#854d0e}
+.fno-neutral{background:#f1f5f9;color:#64748b}
+.fno-mbear{background:#ffedd5;color:#c2410c}
+.fno-bear{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
+.fno-na{color:#cbd5e1;font-size:9px}
+.fno-detail{font-size:9px;color:#64748b;margin-top:2px;line-height:1.3}
+
+/* ---- FII/DII FLOW BANNER (P1-3) ---- */
+.flow-banner{display:flex;align-items:center;gap:12px;padding:8px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:10px;flex-wrap:wrap}
+.flow-badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;white-space:nowrap}
+.flow-bull{background:#dcfce7;color:#15803d;border:1px solid #86efac}
+.flow-caution{background:#fef9c3;color:#854d0e;border:1px solid #fde047}
+.flow-bear{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
+.flow-neutral{background:#f1f5f9;color:#64748b}
+.flow-na{background:#f1f5f9;color:#94a3b8}
+.flow-detail{font-size:11px;color:#475569}
+.flow-today{font-size:10px;color:#94a3b8;margin-left:auto}
+
+/* ---- INSIDER/PROMOTER ALERT BADGES (P1-4) ---- */
+.ins{display:inline-block;padding:2px 7px;border-radius:10px;font-size:9.5px;font-weight:700;white-space:nowrap}
+.ins-bull{background:#dcfce7;color:#15803d;border:1px solid #86efac}
+.ins-info{background:#dbeafe;color:#1e40af;border:1px solid #93c5fd}
+.ins-bear{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
+.ins-warn{background:#ffedd5;color:#c2410c;border:1px solid #fdba74}
+.ins-neutral{background:#f1f5f9;color:#64748b}
+.ins-na{color:#cbd5e1;font-size:9px}
+.ins-detail{font-size:9px;color:#64748b;margin-top:2px;line-height:1.3;max-width:180px;overflow:hidden;text-overflow:ellipsis}
+
+/* ---- DASHBOARD TOOLBAR (P1-5) ---- */
+.dash-toolbar{display:flex;align-items:center;gap:8px;padding:8px 0;margin-bottom:8px;flex-wrap:wrap}
+.dash-search{flex:1;min-width:180px;max-width:320px;padding:7px 12px 7px 32px;border:1px solid var(--border);border-radius:20px;font-size:12px;color:var(--text);background:var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='%2394a3b8' viewBox='0 0 24 24'%3E%3Cpath d='M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z'/%3E%3C/svg%3E") no-repeat 10px center;transition:border-color .15s,box-shadow .15s}
+.dash-search:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.15)}
+.dash-search::placeholder{color:#94a3b8}
+.dash-btn{padding:6px 14px;border:1px solid var(--border);border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;background:var(--card);color:var(--text);transition:all .15s;white-space:nowrap}
+.dash-btn:hover{background:var(--primary);color:#fff;border-color:var(--primary)}
+.dash-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.dash-count{font-size:11px;color:var(--muted);margin-left:auto}
+
+/* ---- HEATMAP VIEW (P1-5) ---- */
+.hm-grid{display:grid;grid-template-columns:repeat(10,1fr);gap:4px;padding:8px}
+.hm-cell{padding:8px 4px;border-radius:6px;text-align:center;font-size:10px;font-weight:700;color:#fff;cursor:default;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transition:transform .12s;line-height:1.3}
+.hm-cell:hover{transform:scale(1.08);z-index:2;box-shadow:0 3px 12px rgba(0,0,0,.25)}
+.hm-score{display:block;font-size:8px;font-weight:400;opacity:.85;margin-top:1px}
+.hm-wrap{display:none;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:16px;padding:4px}
+.hm-wrap.hm-active{display:block}
+.sblock-area.hm-hidden>*{display:none}
+
 /* ---- RESILIENCE GAUGE ---- */
 .dd-bar-wrap{display:flex;align-items:center;gap:6px}
 .dd-bar-outer{width:60px;height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden}
@@ -1910,15 +2006,19 @@ details.narr[open] summary::before{transform:rotate(90deg)}
 .sec-title{font-size:15px;font-weight:800;color:var(--primary);margin-bottom:4px}
 .sec-sub{font-size:12px;color:var(--muted);margin-bottom:16px}
 
-/* ---- PRINT ---- */
+/* ---- PRINT (P1-5 enhanced) ---- */
 @media print{
-  .main-nav,.site-hdr{display:none!important}
-  .tab-pane{display:block!important}
+  .main-nav,.pills-nav,.dash-toolbar,.disc,.hm-wrap,.pills-arrow{display:none!important}
+  .tab-pane{display:block!important;opacity:1!important}
+  .site-hdr{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .chart-wrap{display:none!important}
-  body{background:#fff;font-size:11px}
-  .tbl-wrap{box-shadow:none;border:1px solid #ccc}
+  body{background:#fff;font-size:10px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .tbl-wrap{box-shadow:none;border:1px solid #ccc;overflow:visible}
+  table{font-size:10px}
   thead tr{background:#1e3a5f!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .card,.sec-narr-card{break-inside:avoid}
+  .narr-body{break-inside:avoid}
+  [data-sblock]{page-break-inside:avoid}
 }
 @media(max-width:768px){
   .content{padding:12px}
@@ -1926,37 +2026,91 @@ details.narr[open] summary::before{transform:rotate(90deg)}
   .metric-card{min-width:140px}
   .hdr-title{font-size:.9rem}
 }
+@media(max-width:900px){
+  #tab-candidates table{min-width:800px}
+  #tab-candidates table colgroup col:nth-child(1){width:105px}
+  #tab-candidates table colgroup col:nth-child(3){width:84px}
+  #tab-candidates table colgroup col:nth-child(4){width:140px}
+  #tab-candidates table colgroup col:nth-child(8){width:65px}
+  #tab-candidates table colgroup col:nth-child(9){width:58px}
+  #tab-candidates table colgroup col:nth-child(10){width:92px}
+  #tab-candidates table colgroup col:nth-child(14){width:80px}
+  #tab-candidates table colgroup col:nth-child(15){width:175px}
+  #tab-candidates table colgroup col:nth-child(2),
+  #tab-candidates table colgroup col:nth-child(5),
+  #tab-candidates table colgroup col:nth-child(6),
+  #tab-candidates table colgroup col:nth-child(7),
+  #tab-candidates table colgroup col:nth-child(11),
+  #tab-candidates table colgroup col:nth-child(12),
+  #tab-candidates table colgroup col:nth-child(13),
+  #tab-candidates th:nth-child(2),
+  #tab-candidates th:nth-child(5),
+  #tab-candidates th:nth-child(6),
+  #tab-candidates th:nth-child(7),
+  #tab-candidates th:nth-child(11),
+  #tab-candidates th:nth-child(12),
+  #tab-candidates th:nth-child(13),
+  #tab-candidates td:nth-child(2),
+  #tab-candidates td:nth-child(5),
+  #tab-candidates td:nth-child(6),
+  #tab-candidates td:nth-child(7),
+  #tab-candidates td:nth-child(11),
+  #tab-candidates td:nth-child(12),
+  #tab-candidates td:nth-child(13){display:none}
+  #tab-candidates th,#tab-candidates td{padding:8px 10px}
+  #tab-candidates .sig,
+  #tab-candidates .setup,
+  #tab-candidates .action{font-size:9px;padding:2px 7px}
+  #tab-candidates .levels{display:block;line-height:1.55}
+  #tab-candidates .levels span{display:block;margin-bottom:2px}
+  #tab-candidates .levels-sub{display:none}
+}
 """
 
 _JS = r"""
 (function(){
-  // Tab switching
+  var _ls=function(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v);}catch(e){return null;}};
+
+  // Tab switching (P1-5: persists active tab via localStorage)
   function showTab(id){
     document.querySelectorAll('.tab-pane').forEach(p=>p.classList.toggle('active',p.id==='tab-'+id));
     document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
     history.replaceState(null,'','#'+id);
+    _ls('nse_tab',id);
   }
   document.querySelectorAll('.nav-btn').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
-  var init=location.hash.slice(1)||'overview';
-  showTab(init);
 
-  // Table sorting
+  // Table sorting (P1-5: paired-row aware for candidates tab, persists sort state)
   document.querySelectorAll('table').forEach(function(table){
     var ths=table.querySelectorAll('th');
+    var isCand=!!table.closest('#tab-candidates');
     ths.forEach(function(th,idx){
       th.addEventListener('click',function(){
         var tbody=table.querySelector('tbody');
         if(!tbody)return;
-        var rows=Array.from(tbody.querySelectorAll('tr'));
+        var allRows=Array.from(tbody.querySelectorAll('tr'));
         var asc=th.dataset.sort!=='asc';
-        rows.sort(function(a,b){
-          var av=(a.cells[idx]&&(a.cells[idx].dataset.val||a.cells[idx].textContent.trim()))||'';
-          var bv=(b.cells[idx]&&(b.cells[idx].dataset.val||b.cells[idx].textContent.trim()))||'';
-          var an=parseFloat(av.replace(/[^0-9.\-]/g,'')),bn=parseFloat(bv.replace(/[^0-9.\-]/g,''));
-          if(!isNaN(an)&&!isNaN(bn))return asc?an-bn:bn-an;
-          return asc?av.localeCompare(bv):bv.localeCompare(av);
-        });
-        rows.forEach(r=>tbody.appendChild(r));
+        if(isCand){
+          var pairs=[];
+          for(var i=0;i<allRows.length;i+=2) pairs.push([allRows[i],allRows[i+1]]);
+          pairs.sort(function(a,b){
+            var av=(a[0].cells[idx]&&(a[0].cells[idx].dataset.val||a[0].cells[idx].textContent.trim()))||'';
+            var bv=(b[0].cells[idx]&&(b[0].cells[idx].dataset.val||b[0].cells[idx].textContent.trim()))||'';
+            var an=parseFloat(av.replace(/[^0-9.\-]/g,'')),bn=parseFloat(bv.replace(/[^0-9.\-]/g,''));
+            if(!isNaN(an)&&!isNaN(bn))return asc?an-bn:bn-an;
+            return asc?av.localeCompare(bv):bv.localeCompare(av);
+          });
+          pairs.forEach(function(p){p.forEach(function(r){if(r)tbody.appendChild(r);});});
+        } else {
+          allRows.sort(function(a,b){
+            var av=(a.cells[idx]&&(a.cells[idx].dataset.val||a.cells[idx].textContent.trim()))||'';
+            var bv=(b.cells[idx]&&(b.cells[idx].dataset.val||b.cells[idx].textContent.trim()))||'';
+            var an=parseFloat(av.replace(/[^0-9.\-]/g,'')),bn=parseFloat(bv.replace(/[^0-9.\-]/g,''));
+            if(!isNaN(an)&&!isNaN(bn))return asc?an-bn:bn-an;
+            return asc?av.localeCompare(bv):bv.localeCompare(av);
+          });
+          allRows.forEach(r=>tbody.appendChild(r));
+        }
         ths.forEach(t=>{delete t.dataset.sort;t.classList.remove('sort-asc','sort-desc');});
         th.dataset.sort=asc?'asc':'desc';
         th.classList.add(asc?'sort-asc':'sort-desc');
@@ -1964,7 +2118,7 @@ _JS = r"""
     });
   });
 
-  // Sector filter pills — slide-track with arrow nav
+  // Sector filter pills — slide-track with arrow nav (P1-5: persists selected sector)
   var pillsTrack=document.querySelector('.sec-pills');
   var arrowL=document.querySelector('.pills-arrow-l');
   var arrowR=document.querySelector('.pills-arrow-r');
@@ -1992,11 +2146,59 @@ _JS = r"""
     });
     if(activePill) activePill.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
     updateArrows();
+    _ls('nse_sector',sec);
   }
-
   document.querySelectorAll('[data-spill]').forEach(function(pill){
     pill.addEventListener('click',function(){selectSector(pill.dataset.spill,pill);});
   });
+
+  // Narrative search filter (P1-5)
+  var searchInput=document.getElementById('narrSearch');
+  var matchCount=document.getElementById('matchCount');
+  if(searchInput){
+    var _debounce;
+    searchInput.addEventListener('input',function(){
+      clearTimeout(_debounce);
+      _debounce=setTimeout(function(){
+        var q=searchInput.value.trim().toLowerCase();
+        _ls('nse_search',q);
+        var shown=0,total=0;
+        document.querySelectorAll('#tab-candidates [data-sblock] tbody').forEach(function(tbody){
+          var rows=Array.from(tbody.querySelectorAll('tr'));
+          for(var i=0;i<rows.length;i+=2){
+            total++;
+            var dr=rows[i],nr=rows[i+1];
+            if(!q){dr.style.display='';if(nr)nr.style.display='';shown++;continue;}
+            var txt=(dr.textContent+' '+(nr?nr.textContent:'')).toLowerCase();
+            var match=txt.indexOf(q)>=0;
+            dr.style.display=match?'':'none';
+            if(nr)nr.style.display=match?'':'none';
+            if(match)shown++;
+          }
+        });
+        if(matchCount) matchCount.textContent=q?(shown+' / '+total+' stocks'):(total+' stocks');
+      },200);
+    });
+  }
+
+  // Heatmap toggle (P1-5)
+  var hmBtn=document.getElementById('hmToggle');
+  if(hmBtn){
+    hmBtn.addEventListener('click',function(){
+      var sba=document.querySelector('.sblock-area');
+      var hmw=document.querySelector('.hm-wrap');
+      if(!sba||!hmw)return;
+      var active=hmw.classList.toggle('hm-active');
+      sba.classList.toggle('hm-hidden',active);
+      hmBtn.classList.toggle('active',active);
+      hmBtn.textContent=active?'Table View':'Heatmap';
+      _ls('nse_heatmap',active?'1':'0');
+    });
+  }
+
+  // Print button (P1-5)
+  var printBtn=document.getElementById('printReport');
+  if(printBtn){printBtn.addEventListener('click',function(){window.print();});}
 
   // Rotation chart
   if(typeof Chart!=='undefined'&&document.getElementById('rotChart')){
@@ -2030,6 +2232,16 @@ _JS = r"""
       }
     });
   }
+
+  // Restore persisted state on load (P1-5)
+  var savedTab=_ls('nse_tab')||location.hash.slice(1)||'overview';
+  showTab(savedTab);
+  var savedSec=_ls('nse_sector');
+  if(savedSec){var pill=document.querySelector('[data-spill="'+savedSec+'"]');if(pill)selectSector(savedSec,pill);}
+  var savedSearch=_ls('nse_search');
+  if(savedSearch&&searchInput){searchInput.value=savedSearch;searchInput.dispatchEvent(new Event('input'));}
+  var savedHm=_ls('nse_heatmap');
+  if(savedHm==='1'&&hmBtn){hmBtn.click();}
 })();
 """
 
@@ -2042,6 +2254,7 @@ def render_html_interactive(
     generated_at: datetime,
     narratives: dict,
     regime_info: dict | None = None,
+    flow_info: dict | None = None,
 ) -> str:
     gen_date = generated_at.strftime("%Y-%m-%d")
     data_date = (
@@ -2055,6 +2268,15 @@ def render_html_interactive(
         try:
             from regime_detector import regime_badge_html as _rbh
             _regime_banner = _rbh(regime_info)
+        except Exception:
+            pass
+
+    # Build FII/DII flow banner HTML (P1-3)
+    _flow_banner = ""
+    if flow_info and flow_info.get("flow_signal") not in (None, "NO_DATA"):
+        try:
+            from fetch_fii_dii_flows import flow_badge_html as _fbh
+            _flow_banner = _fbh(flow_info)
         except Exception:
             pass
 
@@ -2214,9 +2436,22 @@ def render_html_interactive(
         '</div>'
     )
 
+    def _has_insider_alert(row: pd.Series) -> bool:
+        alert = str(row.get("INSIDER_ALERT", "") or "").strip().lower()
+        return alert not in ("", "nan", "none")
+
+    def _display_candidates_for_sector(sector_candidates: pd.DataFrame) -> pd.DataFrame:
+        top_rows = sector_candidates.head(5)
+        if "INSIDER_ALERT" not in sector_candidates.columns:
+            return top_rows
+        alert_rows = sector_candidates[sector_candidates.apply(_has_insider_alert, axis=1)]
+        if alert_rows.empty:
+            return top_rows
+        return pd.concat([top_rows, alert_rows]).drop_duplicates("SYMBOL", keep="first")
+
     sector_blocks_html = ""
     for rank_idx, sname in enumerate(sector_order, start=1):
-        part = candidates[candidates["SECTOR_NAME"] == sname].head(5)
+        part = _display_candidates_for_sector(candidates[candidates["SECTOR_NAME"] == sname])
         if part.empty:
             continue
         sec_row = sector_rank[sector_rank["SECTOR_NAME"] == sname]
@@ -2241,6 +2476,35 @@ def render_html_interactive(
             st_html = _st_badge(str(r.get("SUPERTREND_STATE", "UNKNOWN")))
             pat_html = _pattern_badge(str(r.get("PATTERN", "")))
             vol_html = _vol_cell(r.get("VOLUME_RATIO"))
+
+            # F&O signal badge (P1-2)
+            _fno_sig = str(r.get("FNO_SIGNAL", "") or "")
+            _fno_buildup = str(r.get("FNO_BUILDUP", "") or "")
+            _fno_pcr_val = r.get("FNO_PCR")
+            if _fno_sig and _fno_sig not in ("", "nan", "None"):
+                _fno_label_map = {"BULL": "🟢 Bull", "MILD_BULL": "🟡 Mild Bull", "NEUTRAL": "⚪ Neutral", "MILD_BEAR": "🟠 Mild Bear", "BEAR": "🔴 Bear"}
+                _fno_css_map = {"BULL": "fno-bull", "MILD_BULL": "fno-mbull", "NEUTRAL": "fno-neutral", "MILD_BEAR": "fno-mbear", "BEAR": "fno-bear"}
+                _fno_lbl = _fno_label_map.get(_fno_sig.upper(), _fno_sig)
+                _fno_cls = _fno_css_map.get(_fno_sig.upper(), "fno-neutral")
+                _bu_lbl = {"LONG_BUILDUP": "Long Buildup", "SHORT_BUILDUP": "Short Buildup", "SHORT_COVERING": "Short Cover", "LONG_UNWINDING": "Long Unwind"}.get(_fno_buildup.upper(), "")
+                _pcr_s = f"PCR: {float(_fno_pcr_val):.2f}" if _fno_pcr_val and not (isinstance(_fno_pcr_val, float) and math.isnan(_fno_pcr_val)) else ""
+                _det_parts = [p for p in [_bu_lbl, _pcr_s] if p]
+                _fno_det = f'<div class="fno-detail">{" · ".join(_det_parts)}</div>' if _det_parts else ""
+                fno_html = f'<span class="fno {_fno_cls}">{_fno_lbl}</span>{_fno_det}'
+            else:
+                fno_html = '<span class="fno fno-na">—</span>'
+
+            # Insider/promoter alert badge (P1-4)
+            _ins_at = str(r.get("INSIDER_ALERT", "") or "")
+            _ins_sc = r.get("INSIDER_SCORE")
+            _ins_det = str(r.get("INSIDER_DETAIL", "") or "")
+            if _ins_at and _ins_at not in ("", "nan", "None"):
+                _ins_lmap = {"PROMOTER_BUYING": ("🟢 Promo Buy", "ins-bull"), "INSIDER_BUY": ("🟢 Insider Buy", "ins-bull"), "BULK_DEAL_BUY": ("🔵 Bulk Buy", "ins-info"), "PROMOTER_SELLING": ("🔴 Promo Sell", "ins-bear"), "INSIDER_SELL": ("🟠 Insider Sell", "ins-warn"), "BULK_DEAL_SELL": ("🟠 Bulk Sell", "ins-warn"), "PROMOTER_PLEDGE": ("⚠️ Pledge", "ins-warn")}
+                _ins_lbl, _ins_cls = _ins_lmap.get(_ins_at.upper(), (_ins_at.replace("_", " ").title(), "ins-neutral"))
+                _ins_det_html = f'<div class="ins-detail">{html_mod.escape(_ins_det[:80])}</div>' if _ins_det and _ins_det not in ("nan", "None") else ""
+                ins_html = f'<span class="ins {_ins_cls}">{_ins_lbl}</span>{_ins_det_html}'
+            else:
+                ins_html = '<span class="ins ins-na">—</span>'
 
             entry_low_str  = _price_fmt(r.get("ENTRY_LOW"))
             entry_high_str = _price_fmt(r.get("ENTRY_HIGH"))
@@ -2295,21 +2559,23 @@ def render_html_interactive(
                 f'<td>{st_html}</td>'
                 f'<td>{pat_html}</td>'
                 f'<td>{vol_html}</td>'
+                f'<td>{fno_html}</td>'
+                f'<td>{ins_html}</td>'
                 f'<td>{levels_html}</td>'
                 f'</tr>'
-                f'<tr><td colspan="13" style="padding:4px 12px 10px;background:#fafbff">{narr_details}</td></tr>'
+                f'<tr><td colspan="15" style="padding:4px 12px 10px;background:#fafbff">{narr_details}</td></tr>'
             )
 
         sec_table = (
             f'<div class="tbl-wrap"><table>'
             f'<colgroup>'
-            f'<col><col><col><col><col><col><col><col><col><col><col><col><col>'
+            f'<col><col><col><col><col><col><col><col><col><col><col><col><col><col><col>'
             f'</colgroup>'
             f'<thead><tr>'
             f'<th>Symbol</th><th>Company</th><th class="num">Price</th>'
-            f'<th>Signal / Setup / Action</th><th>Score</th><th>Tech</th><th>Fund</th>'
+            f'<th>Signal / Action</th><th>Score</th><th>Tech</th><th>Fund</th>'
             f'<th class="num">RS%</th><th class="num">RSI</th>'
-            f'<th>Supertrend</th><th>Pattern</th><th>Vol</th><th>Entry · Stop · Targets</th>'
+            f'<th>Supertrend</th><th>Pattern</th><th>Vol</th><th>F&O</th><th>Insider</th><th>Entry · Stop · Targets</th>'
             f'</tr></thead>'
             f'<tbody>{stock_rows_html}</tbody>'
             f'</table></div>'
@@ -2330,11 +2596,47 @@ def render_html_interactive(
             + f'</div>'
         )
 
+    # Build heatmap grid for quick visual scan (P1-5)
+    _hm_cells = ""
+    _total_cands = 0
+    for sname in sector_order:
+        part = _display_candidates_for_sector(candidates[candidates["SECTOR_NAME"] == sname])
+        for _, r in part.iterrows():
+            _total_cands += 1
+            _hm_sym = _h(r.get("SYMBOL", ""))
+            _hm_score = r.get("INVESTMENT_SCORE")
+            _hm_score_f = float(_hm_score) if _hm_score and not (isinstance(_hm_score, float) and math.isnan(_hm_score)) else 0
+            _hm_sig = str(r.get("SIGNAL", ""))
+            # Score → color mapping
+            if _hm_score_f >= 70: _hm_bg = "#15803d"
+            elif _hm_score_f >= 55: _hm_bg = "#22c55e"
+            elif _hm_score_f >= 40: _hm_bg = "#d97706"
+            elif _hm_score_f >= 25: _hm_bg = "#ea580c"
+            else: _hm_bg = "#dc2626"
+            _hm_cells += (
+                f'<div class="hm-cell" style="background:{_hm_bg}" '
+                f'title="{html_mod.escape(_hm_sym)} — Score: {_fmth(_hm_score)} | {html_mod.escape(_hm_sig)}">'
+                f'{html_mod.escape(_hm_sym)}<span class="hm-score">{_fmth(_hm_score)}</span></div>'
+            )
+    heatmap_html = f'<div class="hm-wrap"><div class="hm-grid">{_hm_cells}</div></div>'
+
+    # Dashboard toolbar: search, heatmap toggle, print (P1-5)
+    toolbar_html = (
+        '<div class="dash-toolbar">'
+        '<input type="text" id="narrSearch" class="dash-search" placeholder="Search stocks or narratives…" autocomplete="off">'
+        '<button id="hmToggle" class="dash-btn" title="Switch between table and heatmap view">Heatmap</button>'
+        '<button id="printReport" class="dash-btn" title="Print / export as PDF">🖨 Print</button>'
+        f'<span id="matchCount" class="dash-count">{_total_cands} stocks</span>'
+        '</div>'
+    )
+
     candidates_html = (
         f'<div class="sec-title">Investment Candidates by Sector</div>'
         f'<div class="sec-sub">Ranked within each sector by composite investment score. '
         f'Click any row\'s narrative arrow to expand the analysis.</div>'
+        + toolbar_html
         + pills_html
+        + heatmap_html
         + f'<div class="sblock-area">{sector_blocks_html}</div>'
     )
 
@@ -2474,7 +2776,7 @@ def render_html_interactive(
         '</header>',
         '<div class="disc">⚠ Research &amp; screening output only — not personal financial advice. '
         'Validate prices, liquidity, events, and risk before acting.</div>',
-        f'<div class="content" style="padding-top:12px;padding-bottom:0">{_regime_banner}</div>' if _regime_banner else '',
+        f'<div class="content" style="padding-top:12px;padding-bottom:0">{_regime_banner}{_flow_banner}</div>' if (_regime_banner or _flow_banner) else '',
         # Nav
         '<nav class="main-nav"><div class="nav-inner">',
         '<button class="nav-btn" data-tab="overview">Overview</button>',
@@ -2519,6 +2821,24 @@ def generate_report(top_n_sectors: int = 6, top_n_per_sector: int = 8) -> Report
         peak_resilience = enrich_with_peak_resilience(rotating_universe, history)
         peak_resilience = rank_peak_resilience_stocks(peak_resilience)
 
+    # Enrich with F&O derivative signals (P1-2)
+    try:
+        from fetch_fno_data import enrich_with_fno_signals
+        candidates = enrich_with_fno_signals(candidates)
+    except Exception as exc:
+        print(f"  F&O signal enrichment skipped ({exc}). Filling with None.")
+        for _fc in ["FNO_PCR", "FNO_OI_CHANGE_5D", "FNO_BUILDUP", "FNO_MAX_PAIN", "FNO_SIGNAL"]:
+            candidates[_fc] = None
+
+    # Enrich with insider/promoter alerts (P1-4)
+    try:
+        from fetch_insider_alerts import enrich_with_insider_alerts
+        candidates = enrich_with_insider_alerts(candidates)
+    except Exception as exc:
+        print(f"  Insider alert enrichment skipped ({exc}). Filling with None.")
+        for _ic in ["INSIDER_ALERT", "INSIDER_SCORE", "INSIDER_DETAIL"]:
+            candidates[_ic] = None
+
     generated_at = datetime.now()
     paths = report_output_paths(generated_at)
 
@@ -2533,6 +2853,19 @@ def generate_report(top_n_sectors: int = 6, top_n_per_sector: int = 8) -> Report
     except Exception as exc:
         print(f"  Regime detection skipped ({exc}); using ROTATION default.")
 
+    # Fetch FII/DII flow signals (P1-3)
+    flow_info: dict = {}
+    try:
+        from fetch_fii_dii_flows import load_flow_signals
+        flow_info = load_flow_signals()
+        _fsig = flow_info.get("flow_signal", "NO_DATA")
+        print(f"  FII/DII flow: {_fsig} (FII 5D: ₹{flow_info.get('fii_net_5d', 0):+,.0f} Cr)")
+        # Tag each candidate row with the market-wide flow signal for signal log
+        candidates["_FII_FLOW_SIGNAL"] = _fsig
+    except Exception as exc:
+        print(f"  FII/DII flow signals skipped ({exc}).")
+        candidates["_FII_FLOW_SIGNAL"] = ""
+
     # Log signals for outcome tracking (P0-1)
     _log_signals(candidates, generated_at, regime=regime_name)
 
@@ -2544,7 +2877,7 @@ def generate_report(top_n_sectors: int = 6, top_n_per_sector: int = 8) -> Report
     narratives = generate_narratives(sector_rank, candidates, fund_details=fund_details)
 
     md = render_markdown(sector_rank, candidates, peak_resilience, source_file, generated_at)
-    html_text = render_html_interactive(sector_rank, candidates, peak_resilience, source_file, generated_at, narratives, regime_info=regime_info)
+    html_text = render_html_interactive(sector_rank, candidates, peak_resilience, source_file, generated_at, narratives, regime_info=regime_info, flow_info=flow_info)
     for path, text in [
         (paths.markdown, md),
         (paths.html, html_text),
