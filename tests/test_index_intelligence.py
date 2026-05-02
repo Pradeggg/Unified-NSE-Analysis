@@ -10,6 +10,7 @@ from index_intelligence import (
     build_stock_metric_frame,
     breadth_context_html,
     cross_index_breadth,
+    infer_smallcap_250_constituents,
     render_breadth_html,
     report_output_paths,
 )
@@ -46,6 +47,7 @@ class IndexIntelligenceTests(unittest.TestCase):
                 "CLOSE": list(range(100, 305)),
                 "HIGH": list(range(101, 306)),
                 "LOW": list(range(99, 304)),
+                "TOTTRDQTY": list(range(1_000, 1_205)),
             }
         )
 
@@ -57,7 +59,27 @@ class IndexIntelligenceTests(unittest.TestCase):
         self.assertAlmostEqual(metrics.loc["AAA", "SMA_200"], sum(range(105, 305)) / 200)
         self.assertAlmostEqual(metrics.loc["AAA", "HIGH_52W"], 305.0)
         self.assertAlmostEqual(metrics.loc["AAA", "LOW_52W"], 99.0)
+        self.assertAlmostEqual(metrics.loc["AAA", "TOTTRDQTY"], 1204.0)
         self.assertGreater(metrics.loc["AAA", "RET_1D"], 0)
+
+    def test_infer_smallcap_250_constituents_ranks_liquid_non_largecap_symbols(self):
+        metrics = pd.DataFrame(
+            [
+                {"SYMBOL": "AAA", "TOTTRDQTY": 999, "CLOSE": 100},
+                {"SYMBOL": "BBB", "TOTTRDQTY": 40, "CLOSE": 100},
+                {"SYMBOL": "CCC", "TOTTRDQTY": 300, "CLOSE": 100},
+                {"SYMBOL": "DDD", "TOTTRDQTY": 200, "CLOSE": 100},
+                {"SYMBOL": "EEE", "TOTTRDQTY": 100, "CLOSE": 100},
+            ]
+        )
+        constituents = {
+            "NIFTY 50": ["AAA"],
+            "NIFTY MIDCAP 150": ["BBB"],
+        }
+
+        inferred = infer_smallcap_250_constituents(metrics, constituents, count=2)
+
+        self.assertEqual(inferred, ["CCC", "DDD"])
 
     def test_render_breadth_html_contains_dashboard_table_and_signal_badges(self):
         breadth = pd.DataFrame(
@@ -130,6 +152,18 @@ class IndexIntelligenceTests(unittest.TestCase):
         self.assertEqual(len(result["NIFTY 50"]), 1)
         self.assertIn("NIFTY SMALLCAP 250", result)
         self.assertTrue(result["NIFTY SMALLCAP 250"].empty)
+
+    def test_build_index_constituent_data_uses_smlcap_alias(self):
+        metrics = pd.DataFrame(
+            [
+                {"SYMBOL": "CCC", "CLOSE": 100, "SMA_50": 90, "SMA_200": 80, "HIGH_52W": 105, "LOW_52W": 60, "RET_1D": 1},
+            ]
+        )
+        constituents = {"NIFTY SMLCAP 250": ["CCC"]}
+
+        result = build_index_constituent_data(metrics, constituents, target_indices=["NIFTY SMALLCAP 250"])
+
+        self.assertEqual(result["NIFTY SMALLCAP 250"]["SYMBOL"].tolist(), ["CCC"])
 
     def test_report_output_paths_use_index_intelligence_year_folder_and_latest_aliases(self):
         with TemporaryDirectory() as tmp:
