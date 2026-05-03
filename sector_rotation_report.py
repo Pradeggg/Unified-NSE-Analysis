@@ -2935,7 +2935,18 @@ def render_html_interactive(
             from economic_cycle import cycle_badge_html as _cbh
             _cycle_banner = _cbh(cycle_info)
         except Exception:
-            pass
+            phase = html_mod.escape(str(cycle_info.get("cycle_phase", "UNKNOWN")))
+            confidence = float(cycle_info.get("confidence", 0) or 0)
+            aligned = html_mod.escape(str(cycle_info.get("regime_cycle_alignment", "MIXED")).replace("_", " ").title())
+            favours = ", ".join(cycle_info.get("preferred_sectors", [])[:3]) or "N/A"
+            avoids = ", ".join(cycle_info.get("avoid_sectors", [])[:3]) or "N/A"
+            _cycle_banner = (
+                '<div class="cycle-badge" style="margin:10px 0;padding:10px 12px;'
+                'border:1px solid #fecaca;background:#fff1f2;border-radius:8px;color:#b91c1c">'
+                f'<strong>Economic Cycle: {phase}</strong>&nbsp; '
+                f'{confidence:.0%} confidence&nbsp; {aligned}&nbsp; '
+                f'Favours: {html_mod.escape(favours)}&nbsp; Avoids: {html_mod.escape(avoids)}</div>'
+            )
 
     # Build FII/DII flow banner HTML (P1-3)
     _flow_banner = ""
