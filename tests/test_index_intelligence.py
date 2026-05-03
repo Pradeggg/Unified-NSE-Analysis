@@ -11,6 +11,7 @@ from index_intelligence import (
     build_stock_metric_frame,
     build_top5_index_stocks,
     breadth_context_html,
+    classify_breadth_signal,
     cross_index_breadth,
     infer_smallcap_250_constituents,
     render_breadth_html,
@@ -19,6 +20,23 @@ from index_intelligence import (
 
 
 class IndexIntelligenceTests(unittest.TestCase):
+    def test_classify_breadth_signal_all_buckets(self):
+        # STRONG: > 70% above 200DMA AND high A/D ratio
+        self.assertEqual(classify_breadth_signal(75.0, 2.0, 2.5), "STRONG")
+        # HEALTHY: > 70% above 200DMA but A/D ratio below threshold (was a bug: returned NEUTRAL)
+        self.assertEqual(classify_breadth_signal(100.0, 0.0, 1.67), "HEALTHY")
+        self.assertEqual(classify_breadth_signal(71.0, 0.0, 1.0), "HEALTHY")
+        # HEALTHY: 60–70% band
+        self.assertEqual(classify_breadth_signal(65.0, 0.0, 1.0), "HEALTHY")
+        # NEUTRAL: 45–59%
+        self.assertEqual(classify_breadth_signal(52.0, 0.0, 1.0), "NEUTRAL")
+        # WEAK: 30–44%
+        self.assertEqual(classify_breadth_signal(40.0, 0.0, 1.0), "WEAK")
+        # BEARISH: < 30%
+        self.assertEqual(classify_breadth_signal(25.0, 5.0, 0.5), "BEARISH")
+        # BEARISH: pct_near_52wl > 15 overrides
+        self.assertEqual(classify_breadth_signal(75.0, 20.0, 2.0), "BEARISH")
+
     def test_cross_index_breadth_scores_dma_proximity_and_ad_ratio(self):
         index_data = {
             "NIFTY 50": pd.DataFrame(
@@ -277,6 +295,49 @@ class IndexIntelligenceTests(unittest.TestCase):
             self.assertEqual(paths.latest_csv.relative_to(tmp).as_posix(), "reports/latest/index_intelligence.csv")
             self.assertEqual(paths.latest_coverage_csv.relative_to(tmp).as_posix(), "reports/latest/index_coverage.csv")
             self.assertEqual(paths.latest_top5_csv.relative_to(tmp).as_posix(), "reports/latest/index_top5_stocks.csv")
+
+    def test_breadth_regime_override_nifty_strong_smallcap_weak_yields_rotation(self):
+        from regime_detector import _breadth_regime_override
+        import tempfile, os
+
+        breadth_data = pd.DataFrame([
+            {"INDEX_NAME": "NIFTY 50",            "breadth_signal": "STRONG"},
+            {"INDEX_NAME": "NIFTY SMALLCAP 250",  "breadth_signal": "WEAK"},
+        ])
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
+            breadth_data.to_csv(f, index=False)
+            tmp_path = Path(f.name)
+        try:
+            # BULL_TREND + divergence → override to ROTATION (more defensive)
+            self.assertEqual(_breadth_regime_override("BULL_TREND", tmp_path), "ROTATION")
+            # ROTATION already → no upgrade needed
+            self.assertIsNone(_breadth_regime_override("ROTATION", tmp_path))
+            # BEAR_TREND → no upgrade to ROTATION
+            self.assertIsNone(_breadth_regime_override("BEAR_TREND", tmp_path))
+        finally:
+            os.unlink(tmp_path)
+
+    def test_breadth_regime_override_both_bearish_yields_bear_trend(self):
+        from regime_detector import _breadth_regime_override
+        import tempfile, os
+
+        breadth_data = pd.DataFrame([
+            {"INDEX_NAME": "NIFTY 50",            "breadth_signal": "BEARISH"},
+            {"INDEX_NAME": "NIFTY SMALLCAP 250",  "breadth_signal": "BEARISH"},
+        ])
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
+            breadth_data.to_csv(f, index=False)
+            tmp_path = Path(f.name)
+        try:
+            self.assertEqual(_breadth_regime_override("BULL_TREND", tmp_path), "BEAR_TREND")
+            self.assertEqual(_breadth_regime_override("ROTATION", tmp_path), "BEAR_TREND")
+            self.assertIsNone(_breadth_regime_override("BEAR_TREND", tmp_path))
+        finally:
+            os.unlink(tmp_path)
+
+    def test_breadth_regime_override_missing_file_returns_none(self):
+        from regime_detector import _breadth_regime_override
+        self.assertIsNone(_breadth_regime_override("BULL_TREND", Path("/nonexistent/file.csv")))
 
 
 if __name__ == "__main__":
