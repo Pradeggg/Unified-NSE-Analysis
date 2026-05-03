@@ -34,22 +34,24 @@ except ImportError:
     PORTFOLIO_SUMMARY_JSON = OUTPUT_DIR / "portfolio_summary.json"
     PNL_SUMMARY_MD = OUTPUT_DIR / "pnl_summary.md"
     RISK_METRICS_JSON = OUTPUT_DIR / "risk_metrics.json"
-    RISK_METRICS_CSV = OUTPUT_DIR / "risk_metrics.csv"
-    RISK_METRICS_PORTFOLIO_CSV = OUTPUT_DIR / "risk_metrics_portfolio.csv"
     SCENARIO_NARRATIVE_MD = OUTPUT_DIR / "scenario_narrative.md"
-    SCENARIO_PROJECTIONS_CSV = OUTPUT_DIR / "scenario_projections.csv"
     MARKET_SENTIMENT_MD = OUTPUT_DIR / "market_sentiment.md"
     SECTOR_ASSESSMENT_MD = OUTPUT_DIR / "sector_assessment.md"
     TECHNICAL_SUMMARY_MD = OUTPUT_DIR / "technical_summary.md"
     TECHNICAL_BY_STOCK_CSV = OUTPUT_DIR / "technical_by_stock.csv"
     FUNDAMENTAL_BY_STOCK_CSV = OUTPUT_DIR / "fundamental_by_stock.csv"
-    HOLDINGS_CSV = OUTPUT_DIR / "holdings.csv"
-    PNL_AGGREGATES_CSV = OUTPUT_DIR / "pnl_aggregates.csv"
-    CLOSED_PNL_CSV = OUTPUT_DIR / "closed_pnl.csv"
     STOCK_NARRATIVES_MD = OUTPUT_DIR / "stock_narratives.md"
     STOCK_NARRATIVES_JSON = OUTPUT_DIR / "stock_narratives.json"
     REPORT_MD = OUTPUT_DIR / "portfolio_comprehensive_report.md"
     REPORT_HTML = OUTPUT_DIR / "portfolio_comprehensive_report.html"
+
+# These new paths are always derived from OUTPUT_DIR (not in config.py)
+RISK_METRICS_CSV = OUTPUT_DIR / "risk_metrics.csv"
+RISK_METRICS_PORTFOLIO_CSV = OUTPUT_DIR / "risk_metrics_portfolio.csv"
+SCENARIO_PROJECTIONS_CSV = OUTPUT_DIR / "scenario_projections.csv"
+HOLDINGS_CSV = OUTPUT_DIR / "holdings.csv"
+PNL_AGGREGATES_CSV = OUTPUT_DIR / "pnl_aggregates.csv"
+CLOSED_PNL_CSV = OUTPUT_DIR / "closed_pnl.csv"
 
 # Same CSS as working-sector/output/auto_components_comprehensive_report.html
 REPORT_CSS = """
@@ -399,16 +401,24 @@ def _build_holdings_tab() -> str:
         t = tech[["symbol", "technical_score", "recommendation"]].copy()
         t.columns = ["symbol", "Tech Score", "Rec"]
         df = df.merge(t, on="symbol", how="left")
-    if not fund.empty and "SYMBOL" in fund.columns:
-        fund2 = fund.rename(columns={"SYMBOL": "symbol"})
-        keep = [c for c in ["symbol", "ENHANCED_FUND_SCORE", "EARNINGS_QUALITY", "FINANCIAL_STRENGTH"] if c in fund2.columns]
-        if keep:
-            f2 = fund2[keep].copy()
-            f2.columns = ["symbol"] + [c.replace("ENHANCED_FUND_SCORE", "Fund Score")
-                                        .replace("EARNINGS_QUALITY", "EQ")
-                                        .replace("FINANCIAL_STRENGTH", "Fin Str")
-                                        for c in f2.columns[1:]]
-            df = df.merge(f2, on="symbol", how="left")
+    if not fund.empty:
+        # File has both lowercase 'symbol' and uppercase 'SYMBOL' — use lowercase, drop the dup
+        fund_key = "symbol" if "symbol" in fund.columns else ("SYMBOL" if "SYMBOL" in fund.columns else None)
+        if fund_key:
+            fund2 = fund.copy()
+            if fund_key == "SYMBOL":
+                fund2 = fund2.rename(columns={"SYMBOL": "symbol"})
+            # Drop any remaining uppercase SYMBOL column to avoid duplicate merge key
+            if "SYMBOL" in fund2.columns:
+                fund2 = fund2.drop(columns=["SYMBOL"])
+            keep = [c for c in ["symbol", "ENHANCED_FUND_SCORE", "EARNINGS_QUALITY", "FINANCIAL_STRENGTH"] if c in fund2.columns]
+            if keep:
+                f2 = fund2[keep].copy()
+                f2.columns = ["symbol"] + [c.replace("ENHANCED_FUND_SCORE", "Fund Score")
+                                            .replace("EARNINGS_QUALITY", "EQ")
+                                            .replace("FINANCIAL_STRENGTH", "Fin Str")
+                                            for c in f2.columns[1:]]
+                df = df.merge(f2, on="symbol", how="left")
     if not risk_s.empty and "symbol" in risk_s.columns:
         r2 = risk_s[["symbol", "volatility_annual_pct"]].rename(columns={"volatility_annual_pct": "Volatility %"})
         df = df.merge(r2, on="symbol", how="left")
@@ -881,6 +891,9 @@ def build_report_html_structured() -> str:
     # Tab: Fundamental table
     try:
         fund_df = pd.read_csv(FUNDAMENTAL_BY_STOCK_CSV) if FUNDAMENTAL_BY_STOCK_CSV.exists() else pd.DataFrame()
+        # Drop duplicate uppercase SYMBOL column if both exist
+        if not fund_df.empty and "symbol" in fund_df.columns and "SYMBOL" in fund_df.columns:
+            fund_df = fund_df.drop(columns=["SYMBOL"])
     except Exception:
         fund_df = pd.DataFrame()
     if fund_df.empty:
