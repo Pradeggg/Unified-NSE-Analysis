@@ -6,11 +6,14 @@ from __future__ import annotations
 import base64
 from dataclasses import dataclass
 from datetime import datetime
+import hashlib
 from pathlib import Path
 import html as html_mod
 import json
 import math
 import re
+import socket
+import struct
 import subprocess
 import tempfile
 import time
@@ -2144,6 +2147,7 @@ a{color:var(--primary-alt);text-decoration:none}
 /* ---- DISCLAIMER ---- */
 .disc{background:#fff8e1;border-bottom:1px solid #ffe082;color:#5d4037;padding:7px 20px;font-size:11px;text-align:center;line-height:1.45}
 .disc strong{font-weight:800}
+.print-page-header,.print-page-footer{display:none}
 
 /* ---- NAV ---- */
 .main-nav{background:var(--card);border-bottom:2px solid var(--border);position:sticky;top:var(--hdr-h);z-index:190}
@@ -2500,6 +2504,10 @@ details.narr[open] summary::before{transform:rotate(90deg)}
 .meth-signal-row{display:flex;align-items:center;gap:6px;font-size:12px;margin:4px 0;color:var(--muted)}
 .meth-dot{display:inline-block;width:9px;height:9px;border-radius:50%;flex-shrink:0}
 .formula{background:#f8fafc;border:1px solid var(--border);border-radius:6px;padding:10px 14px;font-size:12px;font-family:monospace;margin-top:10px;color:var(--primary)}
+.legal-disclaimer{background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px;margin-top:16px}
+.legal-disclaimer h2{font-size:18px;color:var(--primary);margin-bottom:10px}
+.legal-disclaimer p{font-size:13px;line-height:1.75;color:var(--text);margin-bottom:10px}
+.legal-disclaimer .legal-alert{font-weight:800;color:#991b1b;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:10px 12px}
 
 /* ---- RANK BADGE ---- */
 .rank-num{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;background:var(--primary);color:#fff;border-radius:50%;font-size:11px;font-weight:700}
@@ -2511,6 +2519,8 @@ details.narr[open] summary::before{transform:rotate(90deg)}
 /* ---- PRINT (P1-5 enhanced) ---- */
 @media print{
   .main-nav,.pills-nav,.dash-toolbar,.disc,.hm-wrap,.pills-arrow{display:none!important}
+  .print-page-header{display:flex!important;position:fixed;top:0;left:0;right:0;height:11mm;align-items:center;justify-content:space-between;border-bottom:1px solid #cbd5e1;background:#fff;color:#1e3a5f;font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:0 7mm;z-index:9999;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .print-page-footer{display:block!important;position:fixed;bottom:0;left:0;right:0;min-height:12mm;border-top:1px solid #cbd5e1;background:#fff;color:#475569;font-size:7.5px;line-height:1.25;padding:2mm 7mm;z-index:9999;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .tab-pane{display:block!important;opacity:1!important}
   .site-hdr{position:static!important;height:auto!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .hdr-inner{height:auto!important;display:block!important;padding:8px 12px!important}
@@ -2520,7 +2530,7 @@ details.narr[open] summary::before{transform:rotate(90deg)}
   .hdr-title{white-space:normal!important;margin-bottom:4px}
   .hdr-meta{display:block!important}
   .chart-wrap{display:none!important}
-  @page{margin:10mm 7mm}
+  @page{margin:18mm 7mm 20mm}
   .content{max-width:none!important;padding:8px 0!important}
   body{background:#fff;font-size:10px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .tbl-wrap{box-shadow:none;border:1px solid #ccc;overflow:visible}
@@ -2533,6 +2543,7 @@ details.narr[open] summary::before{transform:rotate(90deg)}
   .card,.sec-narr-card{break-inside:avoid}
   .narr-body{break-inside:avoid}
   [data-sblock]{page-break-inside:avoid}
+  .legal-disclaimer{break-before:page;page-break-before:always;box-shadow:none;border:1px solid #cbd5e1}
 }
 @media(max-width:768px){
   .content{padding:12px}
@@ -3527,14 +3538,22 @@ def render_html_interactive(
             + resilience_table
         )
 
-    # ---- BUILD STAGE SCREENER TAB (A1) ----
+    # ---- BUILD STAGE SCREENER TAB (A1 + A3) ----
     def _build_screener_tab(cands: pd.DataFrame) -> str:
         try:
-            from screeners import run_stage_screener, build_stage_screener_tab_html
+            from screeners import (
+                run_stage_screener,
+                build_stage_screener_tab_html,
+                momentum_52w_high_screener,
+                build_momentum_screener_tab_html,
+            )
             screener_df = run_stage_screener(cands)
-            return build_stage_screener_tab_html(screener_df)
+            stage_html = build_stage_screener_tab_html(screener_df)
+            momentum_df = momentum_52w_high_screener(screener_df)
+            momentum_html = build_momentum_screener_tab_html(momentum_df)
+            return stage_html + momentum_html
         except Exception as exc:
-            return f'<div class="card"><p>Stage screener unavailable: {html_mod.escape(str(exc))}</p></div>'
+            return f'<div class="card"><p>Screener unavailable: {html_mod.escape(str(exc))}</p></div>'
 
     # ---- BUILD METHODOLOGY TAB ----
     methodology_html = (
@@ -3789,8 +3808,19 @@ def render_html_interactive(
         f'<div class="card-title">Disclaimer</div>'
         f'<p style="font-size:13px;color:var(--muted);line-height:1.7">'
         f'{html_mod.escape(REPORT_DISCLAIMER)} '
+        f'This material must not be replicated or used with any intent of trading or recommendation. '
         f'Narratives are AI-assisted analyses grounded in the displayed data and are subject to all limitations thereof.'
         f'</p></div>'
+    )
+
+    legal_disclaimer_html = (
+        '<div class="legal-disclaimer">'
+        '<h2>Full Disclaimer &amp; Use Restrictions</h2>'
+        f'<p class="legal-alert">{html_mod.escape(PRINT_FOOTER_DISCLAIMER)}</p>'
+        f'<p>{html_mod.escape(FULL_LEGAL_DISCLAIMER)}</p>'
+        '<p><strong>Do not replicate, redistribute, automate, or use this report for trading, recommendations, advisory, '
+        'portfolio management, or any financial decision-making workflow.</strong></p>'
+        '</div>'
     )
 
     # ---- ASSEMBLE FULL HTML ----
@@ -3812,6 +3842,8 @@ def render_html_interactive(
         f'<style>{_CSS}</style>',
         '</head>',
         '<body>',
+        f'<div class="print-page-header"><span>{html_mod.escape(AGENT_BRAND)}</span><span>NSE Sector Rotation Report</span></div>',
+        f'<div class="print-page-footer">{html_mod.escape(PRINT_FOOTER_DISCLAIMER)}</div>',
         # Header
         '<header class="site-hdr">',
         '<div class="hdr-inner">',
@@ -3837,10 +3869,11 @@ def render_html_interactive(
         '<button class="nav-btn" data-tab="overview">Overview</button>',
         '<button class="nav-btn" data-tab="rotation">Sector Rotation</button>',
         '<button class="nav-btn" data-tab="candidates">Investment Candidates</button>',
-        '<button class="nav-btn" data-tab="screeners">Stage Screener</button>',
+        '<button class="nav-btn" data-tab="screeners">Screeners</button>',
         '<button class="nav-btn" data-tab="resilience">Peak Resilience</button>',
         '<button class="nav-btn" data-tab="indices">All Indices</button>',
         '<button class="nav-btn" data-tab="methodology">Methodology</button>',
+        '<button class="nav-btn" data-tab="disclaimer">Disclaimer</button>',
         '</div></nav>',
         # Content
         '<main class="content">',
@@ -3851,6 +3884,7 @@ def render_html_interactive(
         f'<section id="tab-resilience" class="tab-pane">{resilience_html}</section>',
         f'<section id="tab-indices" class="tab-pane">{build_indices_tab_html(all_index_metrics)}</section>',
         f'<section id="tab-methodology" class="tab-pane">{methodology_html}</section>',
+        f'<section id="tab-disclaimer" class="tab-pane">{legal_disclaimer_html}</section>',
         '</main>',
         chart_data_script,
         f'<script>{_JS}</script>',
@@ -3869,11 +3903,29 @@ def export_pdf_from_html(html_path: Path, pdf_path: Path) -> bool:
         out.write_text(text, encoding="utf-8")
         return out
 
+    def _pdf_header_footer_templates() -> tuple[str, str]:
+        header_template = (
+            '<div style="font-family:Arial,sans-serif;font-size:8px;width:100%;'
+            'padding:0 8mm;color:#1e3a5f;font-weight:700;text-transform:uppercase;'
+            'display:flex;justify-content:space-between;border-bottom:1px solid #cbd5e1;">'
+            f'<span>{html_mod.escape(AGENT_BRAND)}</span>'
+            '<span>NSE Sector Rotation Report</span></div>'
+        )
+        footer_template = (
+            '<div style="font-family:Arial,sans-serif;font-size:6.5px;width:100%;'
+            'padding:0 8mm;color:#475569;line-height:1.25;display:flex;gap:8px;'
+            'border-top:1px solid #cbd5e1;">'
+            f'<span style="flex:1;">{html_mod.escape(PRINT_FOOTER_DISCLAIMER)}</span>'
+            '<span><span class="pageNumber"></span>/<span class="totalPages"></span></span></div>'
+        )
+        return header_template, footer_template
+
     playwright_error = ""
     with tempfile.TemporaryDirectory() as tmp_pdf_dir:
         pdf_html_path = _write_pdf_html_copy(html_path, Path(tmp_pdf_dir))
         try:
             from playwright.sync_api import sync_playwright
+            header_template, footer_template = _pdf_header_footer_templates()
             pdf_path.parent.mkdir(parents=True, exist_ok=True)
             with sync_playwright() as p:
                 browser = p.chromium.launch()
@@ -3883,9 +3935,12 @@ def export_pdf_from_html(html_path: Path, pdf_path: Path) -> bool:
                 page.pdf(
                     path=str(pdf_path),
                     format="A4",
+                    display_header_footer=True,
+                    header_template=header_template,
+                    footer_template=footer_template,
                     print_background=True,
                     prefer_css_page_size=True,
-                    margin={"top": "10mm", "right": "7mm", "bottom": "10mm", "left": "7mm"},
+                    margin={"top": "12mm", "right": "7mm", "bottom": "14mm", "left": "7mm"},
                 )
                 browser.close()
             return True
@@ -3913,6 +3968,7 @@ def export_pdf_from_html(html_path: Path, pdf_path: Path) -> bool:
                         "--disable-background-networking",
                         "--allow-file-access-from-files",
                         f"--user-data-dir={tmp_profile}",
+                        "--no-pdf-header-footer",
                         "--print-to-pdf-no-header",
                         f"--print-to-pdf={pdf_path}",
                         pdf_html_path.resolve().as_uri(),
