@@ -92,7 +92,7 @@ def classify_breadth_signal(pct_above_200: float, pct_near_52wl: float, ad_ratio
         return "BEARISH"
     if pct_above_200 > 70 and pd.notna(ad_ratio) and ad_ratio > 1.8:
         return "STRONG"
-    if 60 <= pct_above_200 <= 70:
+    if pct_above_200 >= 60:
         return "HEALTHY"
     if 45 <= pct_above_200 < 60:
         return "NEUTRAL"
