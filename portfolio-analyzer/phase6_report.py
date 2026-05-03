@@ -314,52 +314,228 @@ def _markdown_para_to_html(para: str) -> str:
 
 
 def _narratives_to_html(narratives: list[dict], escape_fn) -> str:
-    """Render narrative cards with fundamental breakdown and P&L/quarterly/BS/ratios (same structure as working-sector)."""
+    """Render searchable, filterable narrative cards with rich technical + fundamental data."""
     if not narratives:
         return "<p>No narratives.</p>"
-    fund_labels = {
-        "fund_earnings_quality": "Earnings quality",
-        "fund_sales_growth": "Sales growth",
-        "fund_financial_strength": "Financial strength",
-        "fund_institutional_backing": "Institutional backing",
-    }
-    out = []
+
+    # Sort by value descending by default
+    try:
+        narratives = sorted(narratives, key=lambda n: float(n.get("value_rs") or 0), reverse=True)
+    except Exception:
+        pass
+
+    # Decision counts for filter chips
+    from collections import Counter
+    dec_counts = Counter(str(n.get("recommendation", "HOLD")).upper() for n in narratives)
+    css_map = {"STRONG ADD": "rec-strong-add", "ADD": "rec-add", "HOLD": "rec-hold",
+               "REDUCE": "rec-reduce", "SELL": "rec-sell"}
+
+    filter_row = (
+        '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;align-items:center">'
+        '<span style="font-size:0.8rem;color:var(--md-text-secondary)">Filter:</span>'
+        '<button class="rec-badge rec-unknown" onclick="narrativeFilter(\'\')" '
+        'style="cursor:pointer;border:none">All (' + str(len(narratives)) + ')</button>'
+    )
+    for rec in ["STRONG ADD", "ADD", "HOLD", "REDUCE", "SELL"]:
+        n_count = dec_counts.get(rec, 0)
+        if n_count > 0:
+            cls = css_map.get(rec, "rec-unknown")
+            filter_row += (f'<button class="rec-badge {cls}" onclick="narrativeFilter(\'{rec}\')" '
+                           f'style="cursor:pointer;border:none">{rec} ({n_count})</button>')
+    filter_row += '</div>'
+
+    # Sort chips
+    sort_row = (
+        '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;align-items:center">'
+        '<span style="font-size:0.8rem;color:var(--md-text-secondary)">Sort:</span>'
+        '<button class="col-toggle-btn" onclick="narrativeSort(\'value\')">Value ↕</button>'
+        '<button class="col-toggle-btn" onclick="narrativeSort(\'tech\')">Tech Score ↕</button>'
+        '<button class="col-toggle-btn" onclick="narrativeSort(\'decision\')">Decision ↕</button>'
+        '<button class="col-toggle-btn" onclick="narrativeSort(\'alpha\')">A–Z ↕</button>'
+        '</div>'
+    )
+
+    # Search bar + export
+    toolbar = (
+        '<div class="table-toolbar" style="margin-bottom:14px">'
+        '<input class="search-bar" style="margin:0;flex:1;min-width:200px" type="search" '
+        'id="search-narratives" placeholder="🔍 Search symbol, trend, decision, signal…" '
+        'oninput="narrativeSearch(this.value)">'
+        '<button class="export-btn" onclick="exportNarratives()">⬇ Export CSV</button>'
+        '</div>'
+    )
+
+    # Build cards
+    cards = []
     for n in narratives:
-        sym = escape_fn(str(n.get("symbol", "")))
-        out.append('<div class="narrative-card">')
-        out.append(f'<h3 class="narrative-title">{sym}</h3>')
-        # Fundamental (0–100) breakdown
-        fund_parts = []
-        for key, label in fund_labels.items():
-            if n.get(key) is not None:
-                try:
-                    fund_parts.append(f"{label}: {float(n[key]):.1f}")
-                except (TypeError, ValueError):
-                    pass
-        if fund_parts:
-            out.append('<p class="narrative-fund-label"><em>Fundamental (0–100):</em> ' + " | ".join(fund_parts) + "</p>")
-        elif n.get("fund_score") is not None:
-            out.append(f'<p class="narrative-fund-label"><em>Fundamental score (0–100):</em> {float(n["fund_score"]):.1f}</p>')
-        # P&L, Quarterly, Balance sheet, Ratios (when available)
-        for key, label in [
-            ("pnl_summary", "P&L"),
-            ("quarterly_summary", "Quarterly"),
-            ("balance_sheet_summary", "Balance sheet"),
-            ("ratios_summary", "Ratios"),
-        ]:
+        sym     = escape_fn(str(n.get("symbol", "")))
+        rec     = str(n.get("recommendation") or "HOLD").upper()
+        ts      = n.get("technical_score")
+        fs      = n.get("fund_score")
+        rsi_v   = n.get("rsi")
+        trend   = str(n.get("trend_signal") or "")
+        val     = n.get("value_rs")
+        qty     = n.get("quantity")
+        price   = n.get("current_price")
+        chg_1d  = n.get("change_1d_pct")
+        chg_1w  = n.get("change_1w_pct")
+        chg_1m  = n.get("change_1m_pct")
+        trading_sig = str(n.get("trading_signal") or "")
+
+        badge = _rec_badge(rec)
+        rec_css = css_map.get(rec, "rec-unknown")
+
+        # Header row: symbol + badge + key metrics inline
+        price_str = f"₹{float(price):,.2f}" if price is not None else "—"
+        try: price_str = f"₹{float(price):,.2f}"
+        except (TypeError, ValueError): price_str = "—"
+        val_str = f"₹{float(val):,.0f}" if val is not None else "—"
+        try: val_str = f"₹{float(val):,.0f}"
+        except (TypeError, ValueError): val_str = "—"
+
+        header = (
+            f'<div class="nc-header">'
+            f'<span class="nc-sym">{sym}</span>'
+            f'{badge}'
+            f'<span class="nc-meta">Qty: {qty} &nbsp;·&nbsp; ₹{val_str} &nbsp;·&nbsp; {price_str}</span>'
+            f'</div>'
+        )
+
+        # Score row: tech bar + RSI heatmap + fund bar
+        rsi_tag = ""
+        rsi_bg = ""
+        try:
+            rv = float(rsi_v)
+            if rv < 30:   rsi_bg = "background:hsla(120,65%,90%,0.75);"; rsi_tag = '<span class="rsi-os">OS</span>'
+            elif rv > 70: rsi_bg = "background:hsla(0,65%,90%,0.75);"; rsi_tag = '<span class="rsi-ob">OB</span>'
+            rsi_display = f"{rv:.1f}"
+        except (TypeError, ValueError):
+            rsi_display = "—"
+
+        score_row = (
+            '<div class="nc-scores">'
+            f'<div class="nc-score-item"><span class="nc-slabel">Tech</span>{_score_bar(ts)}</div>'
+            f'<div class="nc-score-item"><span class="nc-slabel">RSI</span>'
+            f'<span style="{rsi_bg}padding:1px 5px;border-radius:3px">{rsi_display}{rsi_tag}</span></div>'
+            f'<div class="nc-score-item"><span class="nc-slabel">Fund</span>{_score_bar(fs)}</div>'
+        )
+
+        # Change chips
+        def _chg_chip(label, v):
+            try:
+                f = float(v)
+                sign = "+" if f >= 0 else ""
+                col = "#16a34a" if f >= 0 else "#dc2626"
+                return f'<span style="background:{col}22;color:{col};padding:1px 6px;border-radius:10px;font-size:0.72rem;font-weight:600">{label} {sign}{f:.1f}%</span>'
+            except (TypeError, ValueError):
+                return ""
+
+        chg_row = " ".join(filter(None, [_chg_chip("1D", chg_1d), _chg_chip("1W", chg_1w), _chg_chip("1M", chg_1m)]))
+        if chg_row:
+            score_row += f'<div class="nc-score-item" style="align-self:center;display:flex;gap:4px;flex-wrap:wrap">{chg_row}</div>'
+
+        if trend and trend not in ("UNKNOWN", ""):
+            trend_color = ("#15803d" if "BULL" in trend.upper() else
+                           "#dc2626" if "BEAR" in trend.upper() else "#64748b")
+            score_row += (f'<div class="nc-score-item"><span class="nc-slabel">Trend</span>'
+                          f'<span style="color:{trend_color};font-size:0.8rem;font-weight:500">{escape_fn(trend)}</span></div>')
+        if trading_sig and trading_sig not in ("UNKNOWN", ""):
+            score_row += (f'<div class="nc-score-item"><span class="nc-slabel">Signal</span>'
+                          f'<span style="font-size:0.8rem;font-weight:500">{escape_fn(trading_sig)}</span></div>')
+        score_row += '</div>'
+
+        # Fundamental breakdown
+        fund_html = ""
+        fund_keys = [("fund_earnings_quality", "EQ"), ("fund_sales_growth", "SG"),
+                     ("fund_financial_strength", "FS"), ("fund_institutional_backing", "IB")]
+        fund_vals = [(lbl, n.get(k)) for k, lbl in fund_keys if n.get(k) is not None]
+        if fund_vals:
+            fund_items = "".join(
+                f'<span class="nc-fund-item" title="{lbl}">'
+                f'<span class="nc-fund-label">{lbl}</span>'
+                f'<span class="nc-fund-bar">'
+                f'<span class="nc-fund-fill" style="width:{min(100,float(v)):.0f}%;'
+                f'background:{"#16a34a" if float(v)>=65 else "#f59e0b" if float(v)>=45 else "#dc2626"}"></span>'
+                f'</span>'
+                f'<span class="nc-fund-val">{float(v):.0f}</span>'
+                f'</span>'
+                for lbl, v in fund_vals
+            )
+            fund_html = f'<div class="nc-fund-row">{fund_items}</div>'
+
+        # Detailed summaries
+        details_html = ""
+        for key, label in [("pnl_summary", "P&L"), ("quarterly_summary", "Quarterly"),
+                            ("balance_sheet_summary", "Balance sheet"), ("ratios_summary", "Ratios")]:
             if n.get(key) and str(n[key]).strip():
-                out.append(f'<p class="narrative-fund-label"><em>{label}:</em> {escape_fn(str(n[key]).strip())}</p>')
+                details_html += (f'<p class="nc-detail"><span class="nc-detail-label">{label}:</span> '
+                                 f'{escape_fn(str(n[key]).strip())}</p>')
+
+        # Narrative body (strip the redundant technical line already shown in score row)
         narrative = (n.get("narrative") or "").strip()
+        body_html = ""
         if narrative:
             for para in narrative.split("\n\n"):
                 para = para.strip()
-                if para:
-                    out.append(f'<p class="narrative-para">{_markdown_para_to_html(para)}</p>')
-        if n.get("recommendation"):
-            rec = escape_fn(str(n["recommendation"]))
-            out.append(f'<p class="narrative-recommendation"><strong>Recommendation:</strong> {rec}</p>')
-        out.append("</div>")
-    return "\n".join(out)
+                if not para:
+                    continue
+                # Skip the raw *Technical:* and *Momentum:* lines (already shown visually)
+                if para.startswith("*Technical:*") or para.startswith("*Momentum:*"):
+                    continue
+                body_html += f'<p class="narrative-para">{_markdown_para_to_html(para)}</p>'
+
+        # Assemble card — data attrs for JS filtering/sorting
+        try: val_float = float(val or 0)
+        except (TypeError, ValueError): val_float = 0
+        try: ts_float = float(ts or 50)
+        except (TypeError, ValueError): ts_float = 50
+        dec_order = {"STRONG ADD": 0, "ADD": 1, "HOLD": 2, "REDUCE": 3, "SELL": 4}.get(rec, 5)
+
+        cards.append(
+            f'<div class="narrative-card" data-sym="{sym}" data-decision="{rec}" '
+            f'data-val="{val_float:.0f}" data-tech="{ts_float:.1f}" data-decord="{dec_order}">'
+            + header + score_row + fund_html + details_html + body_html
+            + '</div>'
+        )
+
+    # Export data as JSON for JS
+    export_data = [
+        {"Symbol": n.get("symbol",""), "Decision": n.get("recommendation",""),
+         "Tech": n.get("technical_score",""), "Fund": n.get("fund_score",""),
+         "RSI": n.get("rsi",""), "Trend": n.get("trend_signal",""),
+         "Value": n.get("value_rs",""), "1M%": n.get("change_1m_pct","")}
+        for n in narratives
+    ]
+    export_json = json.dumps(export_data, ensure_ascii=False).replace("</script>", "<\\/script>")
+
+    cards_container = (
+        '<div id="narratives-container">' + "\n".join(cards) + '</div>'
+        f'<div id="narratives-empty" style="display:none;padding:40px;text-align:center;color:var(--md-text-secondary)">No narratives match your filter.</div>'
+        f'<script type="application/json" id="narratives-export-data">{export_json}</script>'
+    )
+
+    return filter_row + sort_row + toolbar + cards_container
+
+
+def _narratives_css() -> str:
+    """Additional CSS for narrative cards."""
+    return """
+.nc-header { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+.nc-sym { font-size:1.1rem; font-weight:600; color:var(--md-primary-dark); min-width:80px; }
+.nc-meta { font-size:0.78rem; color:var(--md-text-secondary); margin-left:auto; }
+.nc-scores { display:flex; flex-wrap:wrap; gap:12px; padding:10px 12px; background:var(--md-bg); border-radius:var(--md-radius-sm); margin-bottom:10px; align-items:center; }
+.nc-score-item { display:flex; align-items:center; gap:6px; }
+.nc-slabel { font-size:0.7rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--md-text-secondary); min-width:28px; }
+.nc-fund-row { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:10px; }
+.nc-fund-item { display:flex; align-items:center; gap:4px; font-size:0.78rem; }
+.nc-fund-label { color:var(--md-text-secondary); min-width:22px; }
+.nc-fund-bar { width:60px; height:5px; background:#e2e8f0; border-radius:3px; }
+.nc-fund-fill { height:100%; border-radius:3px; display:block; }
+.nc-fund-val { font-weight:600; min-width:24px; font-size:0.78rem; }
+.nc-detail { font-size:0.8rem; margin:4px 0; color:var(--md-text); }
+.nc-detail-label { font-weight:500; color:var(--md-text-secondary); }
+.narrative-card { border-left:3px solid var(--md-primary-light); }
+"""
 
 
 def _guide_tab_html() -> str:
@@ -1214,7 +1390,7 @@ def build_report_html_structured() -> str:
     narratives = _load_json(STOCK_NARRATIVES_JSON)
     if not isinstance(narratives, list):
         narratives = []
-    narratives_html = _narratives_to_html(narratives, escape)
+    narratives_html = _narratives_to_html(narratives, escape) + _narratives_css()
 
     # Tab: Guide (updated text to reflect new tabs)
     guide_html = _guide_tab_html()
@@ -1358,15 +1534,93 @@ def build_report_html_structured() -> str:
     window.filterTable(tableId, undefined);
   }};
 
-  /* ── Global search → active tab's search bar ──────────────── */
+  /* ── Narrative search / filter / sort / export ────────────── */
+  var _narrDecFilter = '';
+  var _narrSearchQ   = '';
+  var _narrSortKey   = 'value';
+  var _narrSortAsc   = false;
+
+  function _applyNarratives() {{
+    var container = document.getElementById('narratives-container');
+    var empty     = document.getElementById('narratives-empty');
+    if (!container) return;
+    var cards = Array.from(container.querySelectorAll('.narrative-card'));
+    var q   = _narrSearchQ.toLowerCase();
+    var dec = _narrDecFilter.toLowerCase();
+    var visible = 0;
+    cards.forEach(function(c) {{
+      var text = c.textContent.toLowerCase();
+      var matchQ   = !q   || text.indexOf(q)   !== -1;
+      var matchDec = !dec || text.indexOf(dec)  !== -1;
+      c.style.display = (matchQ && matchDec) ? '' : 'none';
+      if (matchQ && matchDec) visible++;
+    }});
+    if (empty) empty.style.display = visible ? 'none' : 'block';
+    // Highlight matching cards
+    cards.forEach(function(c) {{
+      c.classList.toggle('row-match', !!(q && c.style.display !== 'none'));
+    }});
+  }}
+
+  window.narrativeSearch = function(q) {{
+    _narrSearchQ = q || '';
+    // Also try routing through global search bar of other tabs
+    _applyNarratives();
+  }};
+  window.narrativeFilter = function(dec) {{
+    _narrDecFilter = dec || '';
+    _applyNarratives();
+  }};
+  window.narrativeSort = function(key) {{
+    _narrSortAsc = (_narrSortKey === key) ? !_narrSortAsc : false;
+    _narrSortKey = key;
+    var container = document.getElementById('narratives-container');
+    if (!container) return;
+    var cards = Array.from(container.querySelectorAll('.narrative-card'));
+    var sortVal = function(c) {{
+      if (key === 'value')    return parseFloat(c.dataset.val  || 0);
+      if (key === 'tech')     return parseFloat(c.dataset.tech || 0);
+      if (key === 'decision') return parseInt(c.dataset.decord || 5);
+      if (key === 'alpha')    return c.dataset.sym || '';
+      return 0;
+    }};
+    cards.sort(function(a, b) {{
+      var va = sortVal(a), vb = sortVal(b);
+      if (typeof va === 'string') return _narrSortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+      return _narrSortAsc ? va - vb : vb - va;
+    }});
+    cards.forEach(function(c) {{ container.appendChild(c); }});
+  }};
+  window.exportNarratives = function() {{
+    var el = document.getElementById('narratives-export-data');
+    if (!el) return;
+    try {{
+      var rows = JSON.parse(el.textContent);
+      var headers = Object.keys(rows[0]);
+      var csv = [headers.map(function(h){{return '"'+h+'"';}}).join(',')];
+      rows.forEach(function(r) {{
+        csv.push(headers.map(function(h){{return '"'+String(r[h]||'').replace(/"/g,'""')+'"';}}).join(','));
+      }});
+      var a = document.createElement('a');
+      a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv.join('\\n'));
+      a.download = 'stock_narratives.csv'; a.click();
+    }} catch(e) {{}}
+  }};
+
+  /* ── Global search routes to active tab ───────────────────── */
   window.globalSearch = function(q) {{
     var activePanel = document.querySelector('.tab-panel.active');
     if(!activePanel) return;
+    // Narrative tab has its own search function
+    if(activePanel.id === 'panel-narratives') {{
+      var ns = document.getElementById('search-narratives');
+      if(ns) {{ ns.value = q; narrativeSearch(q); }}
+      return;
+    }}
     var bar = activePanel.querySelector('.search-bar');
     if(bar) {{
       bar.value = q;
-      var evt = new Event('input');
-      bar.dispatchEvent(evt);
+      bar.dispatchEvent(new Event('input'));
     }}
   }};
 
