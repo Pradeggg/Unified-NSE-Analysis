@@ -6,6 +6,7 @@ import pandas as pd
 
 import sector_rotation_report
 from sector_rotation_report import (
+    _generate_rule_based_market_brief,
     _log_signals,
     calculate_peak_resilience,
     classify_consolidation_breakout,
@@ -281,8 +282,10 @@ class SectorRotationReportTests(unittest.TestCase):
 
         self.assertEqual(paths.markdown.relative_to(root).as_posix(), "reports/sector_rotation/2026/Sector_Rotation_Report_20260502.md")
         self.assertEqual(paths.html.relative_to(root).as_posix(), "reports/sector_rotation/2026/Sector_Rotation_Report_20260502.html")
+        self.assertEqual(paths.pdf.relative_to(root).as_posix(), "reports/sector_rotation/2026/Sector_Rotation_Report_20260502.pdf")
         self.assertEqual(paths.latest_markdown.relative_to(root).as_posix(), "reports/latest/sector_rotation.md")
         self.assertEqual(paths.latest_html.relative_to(root).as_posix(), "reports/latest/sector_rotation.html")
+        self.assertEqual(paths.latest_pdf.relative_to(root).as_posix(), "reports/latest/sector_rotation.pdf")
 
     def test_log_signals_persists_insider_alert_context(self):
         candidates = pd.DataFrame(
@@ -377,6 +380,9 @@ class SectorRotationReportTests(unittest.TestCase):
                     "INSIDER_ALERT": "PROMOTER_BUYING",
                     "INSIDER_SCORE": 2,
                     "INSIDER_DETAIL": "Promoter Buying: Alert Promoter ₹5.0Cr",
+                    "NEXT_EVENT": "RESULT_ANNOUNCEMENT",
+                    "NEXT_EVENT_DAYS": 3,
+                    "EVENT_DETAIL": "Results in 3d (2026-05-05)",
                 }
             ]
         )
@@ -391,8 +397,192 @@ class SectorRotationReportTests(unittest.TestCase):
         )
 
         self.assertIn("<strong>ALERT</strong>", html)
-        self.assertIn("<th>Insider</th>", html)
+        self.assertIn("<th>Signals</th>", html)
         self.assertIn("Promo Buy", html)
+        self.assertIn("Agent Adda - Market Intelligence Agent", html)
+        self.assertIn("Agent adda logo", html)
+        self.assertIn("This report is not investment advice", html)
+        self.assertIn("learning journey demonstrating how AI and rules-based agents can be applied", html)
+        self.assertIn("print-page-header", html)
+        self.assertIn("print-page-footer", html)
+        self.assertIn("Full Disclaimer &amp; Use Restrictions", html)
+        self.assertIn("Agent Adda is not a SEBI-registered investment adviser", html)
+        self.assertIn("must not be replicated or used with any intent of trading or recommendation", html)
+        self.assertIn("toggleSignals(this,event)", html)
+        self.assertIn("<div class=\"sp-label\">Insider</div>", html)
+        self.assertIn("<div class=\"sp-label\">Events</div>", html)
+        self.assertIn('data-sector="Defence"', html)
+        self.assertIn("Results in 3d (2026-05-05)", html)
+
+    def test_html_includes_economic_cycle_banner_and_candidate_cycle_tag(self):
+        sector_rank = pd.DataFrame(
+            [
+                {
+                    "SYMBOL": "NIFTYFMCG",
+                    "SECTOR_NAME": "FMCG",
+                    "CLOSE": 1000,
+                    "RET_5D": 1,
+                    "RET_1M": 5,
+                    "RET_3M": 8,
+                    "RET_6M": 10,
+                    "RS_1M": 2,
+                    "ROTATION_SCORE": 16,
+                    "CYCLE_TAG": "CYCLE_FAVOURED",
+                    "CYCLE_ADJUSTMENT": 4,
+                }
+            ]
+        )
+        candidates = pd.DataFrame(
+            [
+                {
+                    "SYMBOL": "FMCG",
+                    "COMPANY_NAME": "FMCG Ltd",
+                    "SECTOR_NAME": "FMCG",
+                    "CURRENT_PRICE": 100,
+                    "TRADING_SIGNAL": "HOLD",
+                    "SETUP_CLASS": "NEUTRAL",
+                    "ACTION_BUCKET": "WATCHLIST",
+                    "INVESTMENT_SCORE": 73,
+                    "TECHNICAL_SCORE": 70,
+                    "ENHANCED_FUND_SCORE": 60,
+                    "RELATIVE_STRENGTH": 10,
+                    "RSI": 55,
+                    "SUPERTREND_STATE": "BULLISH",
+                    "PATTERN": "TRENDING_OR_CHOPPY",
+                    "VOLUME_RATIO": 1,
+                    "CYCLE_TAG": "CYCLE_FAVOURED",
+                    "CYCLE_ADJUSTMENT": 4,
+                }
+            ]
+        )
+
+        html = render_html_interactive(
+            sector_rank,
+            candidates,
+            pd.DataFrame(),
+            Path("source.csv"),
+            pd.Timestamp("2026-05-02"),
+            {"sectors": {}, "stocks": {}, "market_summary": ""},
+            cycle_info={
+                "cycle_phase": "SLOWDOWN",
+                "confidence": 0.72,
+                "regime_cycle_alignment": "ALIGNED_RISK_OFF",
+                "preferred_sectors": ["FMCG", "Pharma", "IT"],
+                "avoid_sectors": ["Metals", "Auto", "Real Estate"],
+                "definition": "Risk-off test cycle",
+            },
+        )
+
+        self.assertIn("Economic Cycle: SLOWDOWN", html)
+        self.assertIn("Cycle +4", html)
+        self.assertIn("CYCLE FAVOURED", html)
+
+    def test_rule_based_market_brief_captures_mixed_risk_context(self):
+        sector_rank = pd.DataFrame(
+            [
+                {"SECTOR_NAME": "FMCG & Consumer Goods", "ROTATION_SCORE": 6.5, "RET_1M": 9.6, "RS_1M": 1.3},
+                {"SECTOR_NAME": "Pharma & Healthcare", "ROTATION_SCORE": 5.0, "RET_1M": 2.6, "RS_1M": -5.7},
+            ]
+        )
+        candidates = pd.DataFrame(
+            [
+                {"SYMBOL": "AAA", "SECTOR_NAME": "FMCG & Consumer Goods", "TRADING_SIGNAL": "BUY"},
+                {"SYMBOL": "BBB", "SECTOR_NAME": "Pharma & Healthcare", "TRADING_SIGNAL": "HOLD"},
+            ]
+        )
+        breadth = pd.DataFrame(
+            [
+                {
+                    "date": "2026-04-28",
+                    "oscillator": 85.9,
+                    "signal": "OVERBOUGHT",
+                    "trin": 0.39,
+                    "trin_signal": "VERY_BULLISH",
+                    "divergence": "BULLISH_DIVERGENCE",
+                }
+            ]
+        )
+
+        brief = _generate_rule_based_market_brief(
+            sector_rank,
+            candidates,
+            regime_info={"current_regime": "BEAR_TREND", "confidence": 1.0},
+            cycle_info={
+                "cycle_phase": "SLOWDOWN",
+                "confidence": 0.67,
+                "preferred_sectors": ["FMCG", "Pharma", "IT"],
+                "avoid_sectors": ["Metals", "Auto", "Real Estate"],
+            },
+            flow_info={"flow_signal": "DII_ABSORBING", "fii_net_5d": -8048, "dii_net_5d": 3487},
+            macro_context="India VIX: 18.5 (rising, +5.9% today); Nifty 50: 23998 (falling, -0.7% today).",
+            breadth_history=breadth,
+        )
+
+        self.assertIn("market_read", brief)
+        self.assertIn("defensive", brief["risk_posture"].lower())
+        self.assertIn("BULLISH_DIVERGENCE", brief["market_read"])
+        self.assertIn("FMCG", brief["where_to_focus"])
+
+    def test_html_renders_market_brief_sections(self):
+        sector_rank = pd.DataFrame(
+            [
+                {
+                    "SYMBOL": "NIFTYFMCG",
+                    "SECTOR_NAME": "FMCG",
+                    "CLOSE": 1000,
+                    "RET_5D": 1,
+                    "RET_1M": 5,
+                    "RET_3M": 8,
+                    "RET_6M": 10,
+                    "RS_1M": 2,
+                    "ROTATION_SCORE": 16,
+                }
+            ]
+        )
+        candidates = pd.DataFrame(
+            [
+                {
+                    "SYMBOL": "AAA",
+                    "COMPANY_NAME": "AAA Ltd",
+                    "SECTOR_NAME": "FMCG",
+                    "CURRENT_PRICE": 100,
+                    "TRADING_SIGNAL": "HOLD",
+                    "SETUP_CLASS": "NEUTRAL",
+                    "ACTION_BUCKET": "WATCHLIST",
+                    "INVESTMENT_SCORE": 50,
+                    "TECHNICAL_SCORE": 50,
+                    "ENHANCED_FUND_SCORE": 50,
+                    "RELATIVE_STRENGTH": 0,
+                    "RSI": 50,
+                    "SUPERTREND_STATE": "BULLISH",
+                    "PATTERN": "TRENDING_OR_CHOPPY",
+                    "VOLUME_RATIO": 1,
+                }
+            ]
+        )
+
+        html = render_html_interactive(
+            sector_rank,
+            candidates,
+            pd.DataFrame(),
+            Path("source.csv"),
+            pd.Timestamp("2026-05-02"),
+            {
+                "sectors": {},
+                "stocks": {},
+                "market_summary": "",
+                "market_brief": {
+                    "market_read": "Bear trend with bullish divergence.",
+                    "risk_posture": "Defensive, add only on confirmation.",
+                    "where_to_focus": "FMCG and Pharma.",
+                    "what_would_change_the_view": "Breadth above 50% and regime improves.",
+                },
+            },
+        )
+
+        self.assertIn("Market Brief", html)
+        self.assertIn("Market Read", html)
+        self.assertIn("Defensive, add only on confirmation.", html)
 
 
 if __name__ == "__main__":

@@ -6,7 +6,6 @@ from __future__ import annotations
 import base64
 from dataclasses import dataclass
 from datetime import datetime
-import hashlib
 from pathlib import Path
 import html as html_mod
 import json
@@ -3538,7 +3537,7 @@ def render_html_interactive(
             + resilience_table
         )
 
-    # ---- BUILD STAGE SCREENER TAB (A1 + A3) ----
+    # ---- BUILD STAGE SCREENER TAB (A1 + A3 + A6) ----
     def _build_screener_tab(cands: pd.DataFrame) -> str:
         try:
             from screeners import (
@@ -3546,12 +3545,16 @@ def render_html_interactive(
                 build_stage_screener_tab_html,
                 momentum_52w_high_screener,
                 build_momentum_screener_tab_html,
+                turnaround_screener,
+                build_turnaround_tab_html,
             )
             screener_df = run_stage_screener(cands)
             stage_html = build_stage_screener_tab_html(screener_df)
             momentum_df = momentum_52w_high_screener(screener_df)
             momentum_html = build_momentum_screener_tab_html(momentum_df)
-            return stage_html + momentum_html
+            turnaround_df = turnaround_screener(screener_df)
+            turnaround_html = build_turnaround_tab_html(turnaround_df)
+            return stage_html + momentum_html + turnaround_html
         except Exception as exc:
             return f'<div class="card"><p>Screener unavailable: {html_mod.escape(str(exc))}</p></div>'
 
@@ -3899,6 +3902,12 @@ def export_pdf_from_html(html_path: Path, pdf_path: Path) -> bool:
     def _write_pdf_html_copy(src: Path, tmp_dir: Path) -> Path:
         text = src.read_text(encoding="utf-8")
         text = re.sub(r"<script\b[^>]*>.*?</script>", "", text, flags=re.IGNORECASE | re.DOTALL)
+        text = re.sub(
+            r'<div class="print-page-(?:header|footer)">.*?</div>',
+            "",
+            text,
+            flags=re.IGNORECASE | re.DOTALL,
+        )
         out = tmp_dir / src.name
         out.write_text(text, encoding="utf-8")
         return out
@@ -3919,6 +3928,210 @@ def export_pdf_from_html(html_path: Path, pdf_path: Path) -> bool:
             '<span><span class="pageNumber"></span>/<span class="totalPages"></span></span></div>'
         )
         return header_template, footer_template
+
+    def _read_exact(sock: socket.socket, nbytes: int) -> bytes:
+        chunks: list[bytes] = []
+        remaining = nbytes
+        while remaining:
+            chunk = sock.recv(remaining)
+            if not chunk:
+                raise RuntimeError("Chrome DevTools websocket closed unexpectedly")
+            chunks.append(chunk)
+            remaining -= len(chunk)
+        return b"".join(chunks)
+
+    def _ws_connect(ws_url: str) -> socket.socket:
+        import os
+        from urllib.parse import urlparse
+
+        parsed = urlparse(ws_url)
+        if parsed.scheme != "ws" or not parsed.hostname or not parsed.port:
+            raise RuntimeError(f"Unsupported DevTools websocket URL: {ws_url}")
+        key = base64.b64encode(os.urandom(16)).decode("ascii")
+        sock = socket.create_connection((parsed.hostname, parsed.port), timeout=20)
+        path = parsed.path or "/"
+        if parsed.query:
+            path += f"?{parsed.query}"
+        request = (
+            f"GET {path} HTTP/1.1\r\n"
+            f"Host: {parsed.hostname}:{parsed.port}\r\n"
+            "Upgrade: websocket\r\n"
+            "Connection: Upgrade\r\n"
+            f"Sec-WebSocket-Key: {key}\r\n"
+            "Sec-WebSocket-Version: 13\r\n\r\n"
+        )
+        sock.sendall(request.encode("ascii"))
+        response = b""
+        while b"\r\n\r\n" not in response:
+            response += sock.recv(4096)
+            if len(response) > 65536:
+                raise RuntimeError("Chrome DevTools websocket handshake response was too large")
+        if b" 101 " not in response.split(b"\r\n", 1)[0]:
+            raise RuntimeError(f"Chrome DevTools websocket handshake failed: {response[:200]!r}")
+        return sock
+
+    def _ws_send_json(sock: socket.socket, payload: dict) -> None:
+        data = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+        header = bytearray([0x81])
+        if len(data) < 126:
+            header.append(0x80 | len(data))
+        elif len(data) < 65536:
+            header.append(0x80 | 126)
+            header.extend(struct.pack("!H", len(data)))
+        else:
+            header.append(0x80 | 127)
+            header.extend(struct.pack("!Q", len(data)))
+        mask = struct.pack("!I", int(time.time() * 1000000) & 0xFFFFFFFF)
+        masked = bytes(byte ^ mask[idx % 4] for idx, byte in enumerate(data))
+        sock.sendall(bytes(header) + mask + masked)
+
+    def _ws_recv_json(sock: socket.socket) -> dict:
+        payload_parts: list[bytes] = []
+        while True:
+            first, second = _read_exact(sock, 2)
+            opcode = first & 0x0F
+            masked = bool(second & 0x80)
+            length = second & 0x7F
+            if length == 126:
+                length = struct.unpack("!H", _read_exact(sock, 2))[0]
+            elif length == 127:
+                length = struct.unpack("!Q", _read_exact(sock, 8))[0]
+            mask = _read_exact(sock, 4) if masked else b""
+            payload = _read_exact(sock, length) if length else b""
+            if masked:
+                payload = bytes(byte ^ mask[idx % 4] for idx, byte in enumerate(payload))
+            if opcode == 0x8:
+                raise RuntimeError("Chrome DevTools websocket closed")
+            if opcode == 0x9:
+                sock.sendall(b"\x8a\x00")
+                continue
+            if opcode in (0x1, 0x0):
+                payload_parts.append(payload)
+                if first & 0x80:
+                    return json.loads(b"".join(payload_parts).decode("utf-8"))
+
+    def _cdp_call(sock: socket.socket, msg_id: int, method: str, params: dict | None = None) -> dict:
+        _ws_send_json(sock, {"id": msg_id, "method": method, "params": params or {}})
+        while True:
+            message = _ws_recv_json(sock)
+            if message.get("id") != msg_id:
+                continue
+            if "error" in message:
+                raise RuntimeError(f"Chrome DevTools {method} failed: {message['error']}")
+            return message.get("result", {})
+
+    def _wait_for_cdp_event(sock: socket.socket, event_name: str, timeout_s: float) -> bool:
+        deadline = time.monotonic() + timeout_s
+        sock.settimeout(0.5)
+        try:
+            while time.monotonic() < deadline:
+                try:
+                    message = _ws_recv_json(sock)
+                except socket.timeout:
+                    continue
+                if message.get("method") == event_name:
+                    return True
+        finally:
+            sock.settimeout(None)
+        return False
+
+    def _chrome_print_to_pdf(chrome: Path, pdf_html_path: Path, output_path: Path, tmp_dir: Path) -> bool:
+        import urllib.parse
+        import urllib.request
+
+        tmp_profile = tmp_dir / "chrome-profile"
+        proc = subprocess.Popen(
+            [
+                str(chrome),
+                "--headless",
+                "--disable-gpu",
+                "--no-first-run",
+                "--no-default-browser-check",
+                "--disable-extensions",
+                "--disable-background-networking",
+                "--allow-file-access-from-files",
+                "--remote-debugging-port=0",
+                f"--user-data-dir={tmp_profile}",
+                "about:blank",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        sock: socket.socket | None = None
+        try:
+            active_port = tmp_profile / "DevToolsActivePort"
+            deadline = time.monotonic() + 20
+            while time.monotonic() < deadline and not active_port.exists():
+                if proc.poll() is not None:
+                    stdout, stderr = proc.communicate(timeout=2)
+                    raise RuntimeError((stderr or stdout or "Chrome exited before DevTools started").strip())
+                time.sleep(0.1)
+            if not active_port.exists():
+                raise RuntimeError("Chrome DevTools port was not published")
+
+            lines = active_port.read_text(encoding="utf-8").splitlines()
+            port = int(lines[0])
+            file_url = pdf_html_path.resolve().as_uri()
+            target_url = f"http://127.0.0.1:{port}/json/new?{urllib.parse.quote(file_url, safe=':/%')}"
+            request = urllib.request.Request(target_url, method="PUT")
+            try:
+                with urllib.request.urlopen(request, timeout=15) as response:
+                    target = json.loads(response.read().decode("utf-8"))
+            except Exception:
+                with urllib.request.urlopen(target_url, timeout=15) as response:
+                    target = json.loads(response.read().decode("utf-8"))
+            ws_url = target.get("webSocketDebuggerUrl")
+            if not ws_url:
+                raise RuntimeError("Chrome did not return a page websocket URL")
+
+            sock = _ws_connect(ws_url)
+            msg_id = 1
+            _cdp_call(sock, msg_id, "Page.enable")
+            msg_id += 1
+            _cdp_call(sock, msg_id, "Emulation.setEmulatedMedia", {"media": "print"})
+            msg_id += 1
+            _wait_for_cdp_event(sock, "Page.loadEventFired", 12)
+            time.sleep(0.8)
+
+            header_template, footer_template = _pdf_header_footer_templates()
+            result = _cdp_call(
+                sock,
+                msg_id,
+                "Page.printToPDF",
+                {
+                    "landscape": False,
+                    "displayHeaderFooter": True,
+                    "printBackground": True,
+                    "preferCSSPageSize": True,
+                    "paperWidth": 8.27,
+                    "paperHeight": 11.69,
+                    "marginTop": 0.45,
+                    "marginBottom": 0.55,
+                    "marginLeft": 0.28,
+                    "marginRight": 0.28,
+                    "headerTemplate": header_template,
+                    "footerTemplate": footer_template,
+                },
+            )
+            data = result.get("data")
+            if not data:
+                raise RuntimeError("Chrome DevTools returned no PDF data")
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_bytes(base64.b64decode(data))
+            return output_path.exists() and output_path.stat().st_size > 0
+        finally:
+            if sock is not None:
+                try:
+                    sock.close()
+                except OSError:
+                    pass
+            if proc.poll() is None:
+                proc.terminate()
+                try:
+                    proc.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
 
     playwright_error = ""
     with tempfile.TemporaryDirectory() as tmp_pdf_dir:
@@ -3955,63 +4168,7 @@ def export_pdf_from_html(html_path: Path, pdf_path: Path) -> bool:
         chrome = next((p for p in chrome_candidates if p.exists()), None)
         if chrome:
             try:
-                pdf_path.parent.mkdir(parents=True, exist_ok=True)
-                tmp_profile = Path(tmp_pdf_dir) / "chrome-profile"
-                proc = subprocess.Popen(
-                    [
-                        str(chrome),
-                        "--headless",
-                        "--disable-gpu",
-                        "--no-first-run",
-                        "--no-default-browser-check",
-                        "--disable-extensions",
-                        "--disable-background-networking",
-                        "--allow-file-access-from-files",
-                        f"--user-data-dir={tmp_profile}",
-                        "--no-pdf-header-footer",
-                        "--print-to-pdf-no-header",
-                        f"--print-to-pdf={pdf_path}",
-                        pdf_html_path.resolve().as_uri(),
-                    ],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                )
-                stable_count = 0
-                last_size = -1
-                deadline = time.monotonic() + 90
-                while time.monotonic() < deadline:
-                    if proc.poll() is not None:
-                        break
-                    if pdf_path.exists():
-                        size = pdf_path.stat().st_size
-                        if size > 0 and size == last_size:
-                            stable_count += 1
-                            if stable_count >= 3:
-                                proc.terminate()
-                                try:
-                                    proc.wait(timeout=5)
-                                except subprocess.TimeoutExpired:
-                                    proc.kill()
-                                return True
-                        else:
-                            stable_count = 0
-                            last_size = size
-                    time.sleep(1)
-                stdout, stderr = proc.communicate(timeout=5) if proc.poll() is not None else ("", "")
-                if pdf_path.exists() and pdf_path.stat().st_size > 0:
-                    if proc.poll() is None:
-                        proc.terminate()
-                        try:
-                            proc.wait(timeout=5)
-                        except subprocess.TimeoutExpired:
-                            proc.kill()
-                    return True
-                if proc.poll() is None:
-                    proc.kill()
-                chrome_error = (stderr or stdout or "").strip()
-                print(f"PDF export skipped: Chrome headless failed. {chrome_error}")
-                return False
+                return _chrome_print_to_pdf(chrome, pdf_html_path, pdf_path, Path(tmp_pdf_dir))
             except Exception as exc:
                 print(f"PDF export skipped ({type(exc).__name__}: {exc}).")
                 return False
@@ -4151,8 +4308,9 @@ def generate_report(top_n_sectors: int = 6, top_n_per_sector: int = 8) -> Report
         candidates = enrich_with_patterns(candidates, history)
         # A1: Stage analysis enrichment (must run before rank_stock_candidates)
         try:
-            from screeners import enrich_with_stage
+            from screeners import enrich_with_stage, compute_max_drawdown_column
             candidates = enrich_with_stage(candidates, history)
+            candidates = compute_max_drawdown_column(candidates, history)
             _stage_counts = candidates["STAGE"].value_counts().to_dict()
             print(f"  Stage analysis: S2={_stage_counts.get('STAGE_2',0)} S1={_stage_counts.get('STAGE_1',0)} S3={_stage_counts.get('STAGE_3',0)} S4={_stage_counts.get('STAGE_4',0)}")
         except Exception as exc:
@@ -4160,6 +4318,7 @@ def generate_report(top_n_sectors: int = 6, top_n_per_sector: int = 8) -> Report
             candidates["STAGE"] = "UNKNOWN"
             for _sc in ["SMA_50", "SMA_200", "SMA_50_SLOPE", "SMA_200_SLOPE", "DIST_FROM_52W_HIGH_PCT", "VOL_RATIO"]:
                 candidates[_sc] = None
+            candidates["MAX_DRAWDOWN_PCT"] = float("nan")
         candidates = rank_stock_candidates(candidates)
         peak_resilience = enrich_with_peak_resilience(rotating_universe, history)
         peak_resilience = rank_peak_resilience_stocks(peak_resilience)
