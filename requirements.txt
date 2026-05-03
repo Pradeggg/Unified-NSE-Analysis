@@ -26,17 +26,24 @@ pandas-ta>=0.3.14b
 # Reports: Excel export (working-sector comprehensive report)
 openpyxl>=3.1.0
 
+# Reports: optional PDF export for HTML reports
+# After installing Python package, run: python3 -m playwright install chromium
+playwright>=1.45.0
+
 # Agent (Ollama Granite4 + tool calling) - optional for pipeline-only use
 ollama>=0.4.0
 requests>=2.28.0
 python-dotenv>=1.0.0
+
+# Anthropic Claude API for LLM-based narratives in sector rotation reports
+# Set ANTHROPIC_API_KEY in .env to enable; falls back to rule-based narratives if missing
+anthropic>=0.40.0
 
 # Web search (working-sector): DuckDuckGo (default), Google, Yahoo
 ddgs>=9.0.0
 googlesearch-python>=1.2.3
 # Yahoo search via SerpAPI (optional): set SERPAPI_API_KEY to enable
 # pip install requests  # already present for agent
-
 
 
 

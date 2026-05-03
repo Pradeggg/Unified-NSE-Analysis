@@ -542,6 +542,170 @@ def build_momentum_screener_tab_html(screener_df: pd.DataFrame) -> str:
 
 
 # ---------------------------------------------------------------------------
+# A6: Turnaround Detector
+# ---------------------------------------------------------------------------
+
+def compute_max_drawdown_column(
+    candidates: pd.DataFrame,
+    history: pd.DataFrame | None,
+    lookback_days: int = 120,
+) -> pd.DataFrame:
+    """Enrich candidates with MAX_DRAWDOWN_PCT from price history.
+
+    MAX_DRAWDOWN_PCT is the worst peak-to-trough drop experienced over the
+    last ``lookback_days`` trading days.  Falls back to
+    ``(FIFTY_TWO_WEEK_LOW / FIFTY_TWO_WEEK_HIGH − 1) × 100`` when history
+    is unavailable.
+    """
+    df = candidates.copy()
+
+    if history is not None and not history.empty:
+        date_col = "TIMESTAMP" if "TIMESTAMP" in history.columns else "DATE"
+        hist = history.copy()
+        hist[date_col] = pd.to_datetime(hist[date_col], errors="coerce")
+        hist["CLOSE"] = pd.to_numeric(hist["CLOSE"], errors="coerce")
+        hist = hist.dropna(subset=[date_col, "SYMBOL", "CLOSE"]).sort_values([date_col])
+
+        drawdowns: dict[str, float] = {}
+        for sym, grp in hist.groupby("SYMBOL"):
+            closes = grp.tail(lookback_days)["CLOSE"]
+            if len(closes) < 20:
+                continue
+            rolling_max = closes.cummax()
+            dd = float((closes / rolling_max - 1).min() * 100)
+            drawdowns[sym] = round(dd, 1)
+
+        df["MAX_DRAWDOWN_PCT"] = df["SYMBOL"].map(drawdowns)
+    else:
+        # Fallback: use 52W high/low spread as proxy
+        high = pd.to_numeric(df.get("FIFTY_TWO_WEEK_HIGH", pd.Series(dtype=float)), errors="coerce")
+        low = pd.to_numeric(df.get("FIFTY_TWO_WEEK_LOW", pd.Series(dtype=float)), errors="coerce")
+        proxy = ((low / high) - 1) * 100
+        df["MAX_DRAWDOWN_PCT"] = proxy.where(high > 0, other=float("nan")).round(1)
+
+    return df
+
+
+def turnaround_screener(candidates: pd.DataFrame) -> pd.DataFrame:
+    """A6: Detect stocks in early recovery after a deep decline.
+
+    Criteria (all must be met):
+    1. MAX_DRAWDOWN_PCT < −30%  — experienced a significant downtrend
+    2. Current price > SMA_50   — has crossed back above 50-day average
+    3. 35 ≤ RSI ≤ 58            — recovering but not yet overbought
+    4. SUPERTREND_STATE in {BULLISH, NEUTRAL}
+
+    Ranked by RSI ascending (lower = earlier in recovery = higher opportunity).
+    """
+    df = candidates.copy()
+
+    close = pd.to_numeric(df.get("CURRENT_PRICE", df.get("CLOSE", pd.Series(dtype=float))), errors="coerce")
+    sma50 = pd.to_numeric(df.get("SMA_50", pd.Series(dtype=float)), errors="coerce")
+    rsi = pd.to_numeric(df.get("RSI", pd.Series(dtype=float)), errors="coerce").fillna(50.0)
+    dd = pd.to_numeric(df.get("MAX_DRAWDOWN_PCT", pd.Series(float("nan"), index=df.index)), errors="coerce")
+    st = df.get("SUPERTREND_STATE", pd.Series("UNKNOWN", index=df.index)).fillna("UNKNOWN")
+
+    mask = (
+        (dd < -30)
+        & (close > sma50)
+        & rsi.between(35, 58)
+        & st.isin(["BULLISH", "NEUTRAL"])
+    )
+
+    out = df[mask].copy()
+    if out.empty:
+        return out
+
+    out = out.sort_values("RSI", ascending=True).reset_index(drop=True)
+    out["TURNAROUND_SIGNAL"] = "EARLY_RECOVERY"
+    return out
+
+
+def build_turnaround_tab_html(screener_df: pd.DataFrame) -> str:
+    """Build HTML section for A6 Turnaround Detector."""
+    import html as html_mod
+
+    if screener_df is None or screener_df.empty:
+        return (
+            '<div class="card" style="margin-top:16px">'
+            '<div class="sec-title">Turnaround Detector — A6</div>'
+            '<p style="color:var(--muted)">No turnaround candidates today '
+            '(need: drawdown &lt;−30%, price above SMA50, RSI 35–58, Supertrend BULLISH/NEUTRAL).</p></div>'
+        )
+
+    def _h(v: object) -> str:
+        return html_mod.escape(str(v)) if v not in (None, "", float("nan")) else "—"
+
+    def _pct(v: object, decimals: int = 1, plus: bool = False) -> str:
+        try:
+            f = float(v)
+            return f"{f:+.{decimals}f}%" if plus else f"{f:.{decimals}f}%"
+        except (TypeError, ValueError):
+            return "—"
+
+    def _num(v: object, decimals: int = 2) -> str:
+        try:
+            return f"{float(v):.{decimals}f}"
+        except (TypeError, ValueError):
+            return "—"
+
+    rows_html = ""
+    for rank, (_, row) in enumerate(screener_df.iterrows(), start=1):
+        dd_val = row.get("MAX_DRAWDOWN_PCT", float("nan"))
+        try:
+            dd_f = float(dd_val)
+            dd_cls = "style=\"color:#dc2626;font-weight:700\""
+            dd_str = f"{dd_f:.1f}%"
+        except (TypeError, ValueError):
+            dd_cls = ""
+            dd_str = "—"
+
+        rsi_val = float(row.get("RSI", 50) or 50)
+        rsi_bar = int((rsi_val - 35) / (58 - 35) * 100)
+        rsi_html = (
+            f'<div style="display:flex;align-items:center;gap:6px">'
+            f'<span style="min-width:32px">{rsi_val:.1f}</span>'
+            f'<div style="flex:1;height:5px;background:#e2e8f0;border-radius:3px">'
+            f'<div style="width:{rsi_bar}%;height:100%;background:#f59e0b;border-radius:3px"></div></div>'
+            f'</div>'
+        )
+
+        st = str(row.get("SUPERTREND_STATE", "") or "")
+        st_cls = "color:#16a34a;font-weight:600" if st == "BULLISH" else "color:#64748b"
+
+        rows_html += (
+            f'<tr>'
+            f'<td class="num">{rank}</td>'
+            f'<td><strong>{_h(row.get("SYMBOL"))}</strong></td>'
+            f'<td>{_h(row.get("COMPANY_NAME", row.get("SYMBOL", "")))}</td>'
+            f'<td>{_h(row.get("SECTOR_NAME", ""))}</td>'
+            f'<td class="num">{_num(row.get("CURRENT_PRICE") or row.get("CLOSE"))}</td>'
+            f'<td class="num" {dd_cls}>{dd_str}</td>'
+            f'<td>{rsi_html}</td>'
+            f'<td style="{st_cls}">{_h(st)}</td>'
+            f'<td class="num">{_num(row.get("SMA_50"))}</td>'
+            f'<td>{stage_badge_html(str(row.get("STAGE", "UNKNOWN") or "UNKNOWN"))}</td>'
+            f'</tr>'
+        )
+
+    return (
+        '<div class="card" style="margin-top:16px">'
+        '<div class="sec-title">Turnaround Detector — A6</div>'
+        '<div class="sec-sub">Stocks that experienced a deep decline (&gt;30% drawdown) and are now showing '
+        'early recovery: price above SMA50, RSI 35–58, Supertrend turning bullish. '
+        'Sorted by RSI ascending — lower RSI = earlier in recovery.</div>'
+        f'<div class="tbl-wrap"><table><thead><tr>'
+        f'<th>#</th><th>Symbol</th><th>Company</th><th>Sector</th>'
+        f'<th class="num">Price</th><th class="num">Max Drawdown</th>'
+        f'<th>RSI</th><th>Supertrend</th><th class="num">SMA50</th><th>Stage</th>'
+        f'</tr></thead><tbody>{rows_html}</tbody></table></div>'
+        f'<div style="margin-top:8px;font-size:11px;color:var(--muted)">'
+        f'{len(screener_df)} turnaround candidates · Earlier recovery = better risk/reward entry</div>'
+        '</div>'
+    )
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":

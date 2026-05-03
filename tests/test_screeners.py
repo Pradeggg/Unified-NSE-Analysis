@@ -7,6 +7,8 @@ from screeners import (
     momentum_52w_high_screener,
     build_momentum_screener_tab_html,
     run_stage_screener,
+    turnaround_screener,
+    compute_max_drawdown_column,
 )
 
 
@@ -110,6 +112,121 @@ class MomentumScreenerTests(unittest.TestCase):
         html = build_momentum_screener_tab_html(pd.DataFrame())
         self.assertIn("No stocks matched", html)
         self.assertIn("52W High Momentum", html)
+
+
+if __name__ == "__main__":
+    unittest.main()
+
+
+class TurnaroundScreenerTests(unittest.TestCase):
+    def _make_candidates(self, **overrides) -> pd.DataFrame:
+        defaults = {
+            "SYMBOL": "TURN",
+            "COMPANY_NAME": "Turnaround Co",
+            "SECTOR_NAME": "Metal",
+            "CLOSE": 70.0,
+            "CURRENT_PRICE": 70.0,
+            "SMA_50": 65.0,           # price > SMA50 ✓
+            "RSI": 48.0,              # 35–58 ✓
+            "SUPERTREND_STATE": "BULLISH",
+            "STAGE": "STAGE_2",
+            "MAX_DRAWDOWN_PCT": -38.0,  # < -30 ✓
+            "FIFTY_TWO_WEEK_HIGH": 120.0,
+            "FIFTY_TWO_WEEK_LOW": 60.0,
+        }
+        defaults.update(overrides)
+        return pd.DataFrame([defaults])
+
+    def test_qualifying_stock_passes_all_criteria(self):
+        df = self._make_candidates()
+        result = turnaround_screener(df)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result.iloc[0]["TURNAROUND_SIGNAL"], "EARLY_RECOVERY")
+
+    def test_shallow_drawdown_excluded(self):
+        """-20% drawdown — not deep enough."""
+        df = self._make_candidates(MAX_DRAWDOWN_PCT=-20.0)
+        self.assertTrue(turnaround_screener(df).empty)
+
+    def test_price_below_sma50_excluded(self):
+        """Still below SMA50 → not in recovery yet."""
+        df = self._make_candidates(CLOSE=60.0, CURRENT_PRICE=60.0, SMA_50=65.0)
+        self.assertTrue(turnaround_screener(df).empty)
+
+    def test_rsi_too_high_excluded(self):
+        """RSI 65 → already in full upswing, not early turnaround."""
+        df = self._make_candidates(RSI=65.0)
+        self.assertTrue(turnaround_screener(df).empty)
+
+    def test_rsi_too_low_excluded(self):
+        """RSI 30 → still in downtrend."""
+        df = self._make_candidates(RSI=30.0)
+        self.assertTrue(turnaround_screener(df).empty)
+
+    def test_bearish_supertrend_excluded(self):
+        df = self._make_candidates(SUPERTREND_STATE="BEARISH")
+        self.assertTrue(turnaround_screener(df).empty)
+
+    def test_sorted_by_rsi_ascending(self):
+        """Lower RSI (earlier recovery) ranked first."""
+        rows = pd.concat([
+            self._make_candidates(SYMBOL="AA", RSI=55.0),
+            self._make_candidates(SYMBOL="BB", RSI=37.0),
+        ], ignore_index=True)
+        result = turnaround_screener(rows)
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result.iloc[0]["SYMBOL"], "BB")
+
+    def test_neutral_supertrend_qualifies(self):
+        df = self._make_candidates(SUPERTREND_STATE="NEUTRAL")
+        self.assertEqual(len(turnaround_screener(df)), 1)
+
+    def test_compute_max_drawdown_column_from_history(self):
+        """compute_max_drawdown_column fills MAX_DRAWDOWN_PCT from price history."""
+        from screeners import compute_max_drawdown_column
+        import pandas as pd
+
+        # Stock goes from 100 → 50 → 70 over 30 days (drawdown = -50%)
+        dates = pd.date_range("2026-01-01", periods=30)
+        closes = [100] * 10 + [50] * 10 + [70] * 10
+        history = pd.DataFrame({
+            "SYMBOL": ["S1"] * 30,
+            "TIMESTAMP": dates,
+            "CLOSE": closes,
+        })
+        candidates = pd.DataFrame([{
+            "SYMBOL": "S1",
+            "FIFTY_TWO_WEEK_HIGH": 100.0,
+            "FIFTY_TWO_WEEK_LOW": 50.0,
+        }])
+        result = compute_max_drawdown_column(candidates, history, lookback_days=30)
+        self.assertIn("MAX_DRAWDOWN_PCT", result.columns)
+        self.assertAlmostEqual(result.iloc[0]["MAX_DRAWDOWN_PCT"], -50.0, places=0)
+
+    def test_compute_max_drawdown_fallback_without_history(self):
+        """Without history, falls back to 52W low/high ratio."""
+        from screeners import compute_max_drawdown_column
+        candidates = pd.DataFrame([{
+            "SYMBOL": "S1",
+            "FIFTY_TWO_WEEK_HIGH": 100.0,
+            "FIFTY_TWO_WEEK_LOW": 60.0,
+        }])
+        result = compute_max_drawdown_column(candidates, history=None)
+        self.assertAlmostEqual(result.iloc[0]["MAX_DRAWDOWN_PCT"], -40.0, places=0)
+
+    def test_build_turnaround_tab_html_shows_candidates(self):
+        from screeners import build_turnaround_tab_html
+        df = self._make_candidates()
+        result = turnaround_screener(df)
+        html = build_turnaround_tab_html(result)
+        self.assertIn("TURN", html)
+        self.assertIn("Turnaround Detector", html)
+        self.assertIn("-38.0%", html)
+
+    def test_build_turnaround_tab_html_empty_shows_no_candidates(self):
+        from screeners import build_turnaround_tab_html
+        html = build_turnaround_tab_html(pd.DataFrame())
+        self.assertIn("No turnaround candidates", html)
 
 
 if __name__ == "__main__":
