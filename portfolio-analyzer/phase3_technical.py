@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 """
 Phase 3: Technical analysis per holding.
-Produces technical_by_stock.csv with real scores from nse_analysis.db;
-falls back to computing RSI/SMA from nse_universe_stock_data.csv for stocks
-not in the DB.
+
+Data source priority:
+  1. comprehensive_nse_enhanced_*.csv  — latest full-pipeline analysis
+     (sector_rotation_report.py output in reports/generated_csv/)
+  2. nse_analysis.db stocks_analysis   — pre-computed DB scores
+  3. nse_sec_full_data.csv             — raw OHLCV; RSI/SMA computed on the fly
 """
 from __future__ import annotations
 
+import glob
 from pathlib import Path
 
 try:
@@ -17,10 +21,10 @@ except ImportError:
     TECHNICAL_BY_STOCK_CSV = OUTPUT_DIR / "technical_by_stock.csv"
     TECHNICAL_SUMMARY_MD = OUTPUT_DIR / "technical_summary.md"
 
-# Path to the shared NSE analysis DB (sibling data/ directory)
 _HERE = Path(__file__).resolve().parent
-NSE_DB = _HERE.parent / "data" / "nse_analysis.db"
-NSE_UNIVERSE_CSV = _HERE.parent / "data" / "nse_universe_stock_data.csv"
+REPORTS_DIR    = _HERE.parent / "reports" / "generated_csv"
+NSE_DB         = _HERE.parent / "data" / "nse_analysis.db"
+NSE_SEC_FULL_CSV = _HERE.parent / "data" / "nse_sec_full_data.csv"
 
 # Map trading_signal → friendly recommendation
 _SIGNAL_MAP = {
@@ -88,6 +92,16 @@ def _tech_score_from_rsi_sma(closes: "pd.Series") -> dict:
     return result
 
 
+def _latest_comprehensive_csv() -> Path | None:
+    """Return the most recent comprehensive_nse_enhanced_*.csv from reports/generated_csv/."""
+    candidates = sorted(
+        REPORTS_DIR.rglob("comprehensive_nse_enhanced_*.csv"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+    return candidates[0] if candidates else None
+
+
 def run_phase3() -> dict:
     """Run Phase 3: technical by stock. Writes technical_by_stock.csv, technical_summary.md."""
     import pandas as pd
@@ -103,68 +117,110 @@ def run_phase3() -> dict:
     holdings = pd.read_csv(HOLDINGS_CSV_OUT)
     symbols = holdings["symbol"].str.upper().tolist()
 
-    # ── Pull latest row per symbol from nse_analysis.db ────────────────────
+    # ── Source 1: comprehensive_nse_enhanced_*.csv (full pipeline output) ──
+    comprehensive_data: dict = {}
+    comp_csv = _latest_comprehensive_csv()
+    if comp_csv:
+        try:
+            comp_df = pd.read_csv(comp_csv)
+            comp_df["SYMBOL"] = comp_df["SYMBOL"].str.upper()
+            comp_df = comp_df.drop_duplicates("SYMBOL")
+            for _, row in comp_df.iterrows():
+                comprehensive_data[row["SYMBOL"]] = {
+                    "current_price":    row.get("CURRENT_PRICE"),
+                    "technical_score":  row.get("TECHNICAL_SCORE"),
+                    "rsi":              row.get("RSI"),
+                    "trend_signal":     row.get("TREND_SIGNAL"),
+                    "trading_signal":   row.get("TRADING_SIGNAL"),
+                    "change_1d":        row.get("CHANGE_1D"),
+                    "change_1w":        row.get("CHANGE_1W"),
+                    "change_1m":        row.get("CHANGE_1M"),
+                    "relative_strength":row.get("RELATIVE_STRENGTH"),
+                    "enhanced_fund_score": row.get("ENHANCED_FUND_SCORE"),
+                    "earnings_quality": row.get("EARNINGS_QUALITY"),
+                    "financial_strength": row.get("FINANCIAL_STRENGTH"),
+                }
+            print(f"[phase3] Loaded {len(comprehensive_data)} symbols from {comp_csv.name}")
+        except Exception as e:
+            print(f"[phase3] Comprehensive CSV warning: {e}")
+
+    # ── Source 2: nse_analysis.db — for symbols not in comprehensive CSV ────
     db_data: dict = {}
-    if NSE_DB.exists():
+    missing_after_comp = [s for s in symbols if s not in comprehensive_data]
+    if missing_after_comp and NSE_DB.exists():
         try:
             con = sqlite3.connect(NSE_DB)
             df_db = pd.read_sql(
-                """
-                SELECT symbol, analysis_date, current_price, technical_score, rsi,
-                       trend_signal, trading_signal, change_1d, change_1w, change_1m,
-                       relative_strength
-                FROM stocks_analysis
-                WHERE (symbol, analysis_date) IN (
-                    SELECT symbol, MAX(analysis_date) FROM stocks_analysis GROUP BY symbol
-                )
-                """,
+                """SELECT symbol, current_price, technical_score, rsi,
+                          trend_signal, trading_signal, change_1d, change_1w, change_1m,
+                          relative_strength
+                   FROM stocks_analysis
+                   WHERE (symbol, analysis_date) IN (
+                       SELECT symbol, MAX(analysis_date) FROM stocks_analysis GROUP BY symbol
+                   )""",
                 con,
             )
             con.close()
             df_db["symbol"] = df_db["symbol"].str.upper()
             for _, row in df_db.iterrows():
-                db_data[row["symbol"]] = row.to_dict()
+                if row["symbol"] in missing_after_comp:
+                    db_data[row["symbol"]] = row.to_dict()
+            print(f"[phase3] DB covered {len(db_data)} additional symbols")
         except Exception as e:
             print(f"[phase3] DB read warning: {e}")
 
-    # ── Fall back: compute from price CSV for missing symbols ───────────────
-    csv_data: dict = {}
-    missing = [s for s in symbols if s not in db_data]
-    if missing and NSE_UNIVERSE_CSV.exists():
+    # ── Source 3: nse_sec_full_data.csv — compute RSI/SMA for remainder ────
+    raw_data: dict = {}
+    still_missing = [s for s in missing_after_comp if s not in db_data]
+    if still_missing and NSE_SEC_FULL_CSV.exists():
         try:
-            price_df = pd.read_csv(NSE_UNIVERSE_CSV, parse_dates=["TIMESTAMP"])
+            price_df = pd.read_csv(NSE_SEC_FULL_CSV, parse_dates=["TIMESTAMP"])
             price_df["SYMBOL"] = price_df["SYMBOL"].str.upper()
-            for sym in missing:
+            for sym in still_missing:
                 sub = price_df[price_df["SYMBOL"] == sym].sort_values("TIMESTAMP")
                 if len(sub) >= 20:
                     result = _tech_score_from_rsi_sma(sub["CLOSE"])
                     if result:
-                        csv_data[sym] = result
+                        raw_data[sym] = result
+            print(f"[phase3] Computed scores for {len(raw_data)} symbols from raw price CSV")
         except Exception as e:
-            print(f"[phase3] CSV fallback warning: {e}")
+            print(f"[phase3] Raw CSV fallback warning: {e}")
 
     # ── Build output DataFrame ─────────────────────────────────────────────
     rows = []
     for _, h in holdings.iterrows():
         sym = str(h["symbol"]).upper()
         base = {
-            "symbol": h["symbol"],
-            "quantity": h["quantity"],
-            "value_rs": h["value_rs"],
+            "symbol":    h["symbol"],
+            "quantity":  h["quantity"],
+            "value_rs":  h["value_rs"],
         }
-        d = db_data.get(sym) or csv_data.get(sym) or {}
-        base["current_price"] = d.get("current_price")
-        base["technical_score"] = d.get("technical_score", 50)
-        base["rsi"] = d.get("rsi")
-        base["trend_signal"] = d.get("trend_signal", "UNKNOWN")
-        trading = d.get("trading_signal", "HOLD") or "HOLD"
-        base["trading_signal"] = trading
-        base["recommendation"] = _SIGNAL_MAP.get(trading, trading)
-        base["change_1d_pct"] = d.get("change_1d")
-        base["change_1w_pct"] = d.get("change_1w")
-        base["change_1m_pct"] = d.get("change_1m")
-        base["relative_strength"] = d.get("relative_strength")
-        base["data_source"] = "db" if sym in db_data else ("csv_computed" if sym in csv_data else "none")
+        if sym in comprehensive_data:
+            d = comprehensive_data[sym]
+            src = "comprehensive_csv"
+        elif sym in db_data:
+            d = db_data[sym]
+            src = "db"
+        elif sym in raw_data:
+            d = raw_data[sym]
+            src = "computed"
+        else:
+            d = {}
+            src = "none"
+
+        base["current_price"]    = d.get("current_price")
+        base["technical_score"]  = d.get("technical_score", 50)
+        base["rsi"]              = d.get("rsi")
+        base["trend_signal"]     = d.get("trend_signal", "UNKNOWN")
+        trading = d.get("trading_signal") or "HOLD"
+        base["trading_signal"]   = trading
+        base["recommendation"]   = _SIGNAL_MAP.get(str(trading).upper(), trading)
+        base["change_1d_pct"]    = d.get("change_1d")
+        base["change_1w_pct"]    = d.get("change_1w")
+        base["change_1m_pct"]    = d.get("change_1m")
+        base["relative_strength"]= d.get("relative_strength")
+        base["enhanced_fund_score"] = d.get("enhanced_fund_score")
+        base["data_source"]      = src
         rows.append(base)
 
     tech = pd.DataFrame(rows)
@@ -172,8 +228,9 @@ def run_phase3() -> dict:
     tech.to_csv(TECHNICAL_BY_STOCK_CSV, index=False)
 
     # ── Summary markdown ────────────────────────────────────────────────────
-    n_db = (tech["data_source"] == "db").sum()
-    n_csv = (tech["data_source"] == "csv_computed").sum()
+    n_comp = (tech["data_source"] == "comprehensive_csv").sum()
+    n_db   = (tech["data_source"] == "db").sum()
+    n_raw  = (tech["data_source"] == "computed").sum()
     n_none = (tech["data_source"] == "none").sum()
     rec_counts = tech["recommendation"].value_counts().to_dict()
 
@@ -181,7 +238,7 @@ def run_phase3() -> dict:
         "# Technical summary",
         "",
         f"**{len(tech)}** holdings analysed.  "
-        f"DB coverage: **{n_db}** | Computed from price CSV: **{n_csv}** | No data: **{n_none}**",
+        f"Comprehensive CSV: **{n_comp}** | DB: **{n_db}** | Computed: **{n_raw}** | No data: **{n_none}**",
         "",
         "## Recommendation breakdown",
         "",
@@ -194,7 +251,7 @@ def run_phase3() -> dict:
     return {
         "n_stocks": len(tech),
         "db_coverage": int(n_db),
-        "csv_coverage": int(n_csv),
+        "csv_coverage": int(n_raw),
         "no_data": int(n_none),
         "output": str(TECHNICAL_BY_STOCK_CSV),
     }
