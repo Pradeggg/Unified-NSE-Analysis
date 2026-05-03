@@ -450,16 +450,17 @@ def _build_holdings_tab() -> str:
         for sym, grp in pnl_agg.groupby("symbol"):
             sym_pnl[str(sym)] = float(grp["pnl"].sum())
 
-    # Merge tech (rich columns)
+    # Merge tech (rich columns — now includes enhanced_fund_score from comprehensive CSV)
     df = hold.copy()
     df["symbol"] = df["symbol"].astype(str)
     tech_cols = ["symbol", "current_price", "technical_score", "rsi", "recommendation",
-                 "trend_signal", "change_1d_pct", "change_1w_pct", "change_1m_pct", "relative_strength"]
+                 "trend_signal", "change_1d_pct", "change_1w_pct", "change_1m_pct",
+                 "relative_strength", "enhanced_fund_score"]
     if not tech.empty and "symbol" in tech.columns:
         tc = tech[[c for c in tech_cols if c in tech.columns]].copy()
         df = df.merge(tc, on="symbol", how="left")
 
-    # Merge fund
+    # Merge fund — only fill fund_score where not already provided by tech CSV
     if not fund.empty:
         fund2 = fund.copy()
         if "SYMBOL" in fund2.columns and "symbol" in fund2.columns:
@@ -468,8 +469,16 @@ def _build_holdings_tab() -> str:
             fund2 = fund2.rename(columns={"SYMBOL": "symbol"})
         keep = [c for c in ["symbol", "ENHANCED_FUND_SCORE"] if c in fund2.columns]
         if keep:
-            f2 = fund2[keep].rename(columns={"ENHANCED_FUND_SCORE": "fund_score"})
+            f2 = fund2[keep].rename(columns={"ENHANCED_FUND_SCORE": "fund_score_fb"})
             df = df.merge(f2, on="symbol", how="left")
+            # Prefer comprehensive CSV score; fall back to fundamental_by_stock.csv
+            if "enhanced_fund_score" in df.columns:
+                df["fund_score"] = df["enhanced_fund_score"].combine_first(df.get("fund_score_fb", pd.Series(dtype=float)))
+            else:
+                df["fund_score"] = df.get("fund_score_fb", pd.Series(dtype=float))
+            df = df.drop(columns=["fund_score_fb"], errors="ignore")
+    elif "enhanced_fund_score" in df.columns:
+        df["fund_score"] = df["enhanced_fund_score"]
 
     # Merge per-stock volatility
     if not risk_s.empty and "symbol" in risk_s.columns and "volatility_annual_pct" in risk_s.columns:
