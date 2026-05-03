@@ -167,6 +167,19 @@ tbody tr:hover { background: rgba(0, 137, 123, 0.08); }
 .risk-label-table tr:last-child td { border-bottom: none; }
 .risk-label-table td:first-child { color: var(--md-text-secondary); width: 55%; }
 .risk-label-table td:last-child { font-weight: 500; }
+.rec-badge { display:inline-block; padding:2px 9px; border-radius:12px; font-size:0.75rem; font-weight:600; letter-spacing:0.03em; white-space:nowrap; }
+.rec-strong-add { background:#dcfce7; color:#15803d; }
+.rec-add        { background:#d1fae5; color:#059669; }
+.rec-hold       { background:#fef9c3; color:#854d0e; }
+.rec-reduce     { background:#ffedd5; color:#c2410c; }
+.rec-sell       { background:#fee2e2; color:#b91c1c; }
+.rec-unknown    { background:#f1f5f9; color:#64748b; }
+.score-bar { display:inline-flex; align-items:center; gap:6px; width:100%; }
+.score-bar .sb-val { min-width:34px; font-size:0.8rem; font-weight:500; }
+.score-bar .sb-track { flex:1; height:6px; background:#e2e8f0; border-radius:3px; }
+.score-bar .sb-fill { height:100%; border-radius:3px; }
+.change-pos { color:#16a34a; }
+.change-neg { color:#dc2626; }
 """
 
 
@@ -359,8 +372,52 @@ def _pnl_class(v) -> str:
         return ""
 
 
+def _rec_badge(rec: str) -> str:
+    """Return an HTML badge for a recommendation string."""
+    cls_map = {
+        "STRONG ADD": "rec-strong-add",
+        "ADD": "rec-add",
+        "HOLD": "rec-hold",
+        "REDUCE": "rec-reduce",
+        "SELL": "rec-sell",
+    }
+    cls = cls_map.get(str(rec).upper().strip(), "rec-unknown")
+    return f'<span class="rec-badge {cls}">{html_module.escape(str(rec))}</span>'
+
+
+def _score_bar(score, max_val: float = 100) -> str:
+    """Return a mini progress-bar cell for a 0–100 score."""
+    try:
+        v = float(score)
+        pct = int(v / max_val * 100)
+        if v >= 65:
+            colour = "#16a34a"
+        elif v >= 45:
+            colour = "#f59e0b"
+        else:
+            colour = "#dc2626"
+        return (
+            f'<div class="score-bar">'
+            f'<span class="sb-val">{v:.0f}</span>'
+            f'<div class="sb-track"><div class="sb-fill" style="width:{pct}%;background:{colour}"></div></div>'
+            f'</div>'
+        )
+    except (TypeError, ValueError):
+        return "—"
+
+
+def _chg_cell(v) -> str:
+    try:
+        f = float(v)
+        cls = "change-pos" if f >= 0 else "change-neg"
+        sign = "+" if f >= 0 else ""
+        return f'<span class="{cls}">{sign}{f:.1f}%</span>'
+    except (TypeError, ValueError):
+        return "—"
+
+
 def _build_holdings_tab() -> str:
-    """Merged holdings: holdings + technical + fundamental + per-stock risk + per-symbol realized PnL."""
+    """Merged holdings: holdings + technical (real scores) + fundamental + risk + realized PnL."""
     import pandas as pd
 
     try:
@@ -393,85 +450,122 @@ def _build_holdings_tab() -> str:
         for sym, grp in pnl_agg.groupby("symbol"):
             sym_pnl[str(sym)] = float(grp["pnl"].sum())
 
-    # Merge
-    df = hold.rename(columns={"quantity": "Qty", "value_rs": "Value (₹)"}).copy()
+    # Merge tech (rich columns)
+    df = hold.copy()
     df["symbol"] = df["symbol"].astype(str)
-
+    tech_cols = ["symbol", "current_price", "technical_score", "rsi", "recommendation",
+                 "trend_signal", "change_1d_pct", "change_1w_pct", "change_1m_pct", "relative_strength"]
     if not tech.empty and "symbol" in tech.columns:
-        t = tech[["symbol", "technical_score", "recommendation"]].copy()
-        t.columns = ["symbol", "Tech Score", "Rec"]
-        df = df.merge(t, on="symbol", how="left")
+        tc = tech[[c for c in tech_cols if c in tech.columns]].copy()
+        df = df.merge(tc, on="symbol", how="left")
+
+    # Merge fund
     if not fund.empty:
-        # File has both lowercase 'symbol' and uppercase 'SYMBOL' — use lowercase, drop the dup
-        fund_key = "symbol" if "symbol" in fund.columns else ("SYMBOL" if "SYMBOL" in fund.columns else None)
-        if fund_key:
-            fund2 = fund.copy()
-            if fund_key == "SYMBOL":
-                fund2 = fund2.rename(columns={"SYMBOL": "symbol"})
-            # Drop any remaining uppercase SYMBOL column to avoid duplicate merge key
-            if "SYMBOL" in fund2.columns:
-                fund2 = fund2.drop(columns=["SYMBOL"])
-            keep = [c for c in ["symbol", "ENHANCED_FUND_SCORE", "EARNINGS_QUALITY", "FINANCIAL_STRENGTH"] if c in fund2.columns]
-            if keep:
-                f2 = fund2[keep].copy()
-                f2.columns = ["symbol"] + [c.replace("ENHANCED_FUND_SCORE", "Fund Score")
-                                            .replace("EARNINGS_QUALITY", "EQ")
-                                            .replace("FINANCIAL_STRENGTH", "Fin Str")
-                                            for c in f2.columns[1:]]
-                df = df.merge(f2, on="symbol", how="left")
-    if not risk_s.empty and "symbol" in risk_s.columns:
-        r2 = risk_s[["symbol", "volatility_annual_pct"]].rename(columns={"volatility_annual_pct": "Volatility %"})
-        df = df.merge(r2, on="symbol", how="left")
+        fund2 = fund.copy()
+        if "SYMBOL" in fund2.columns and "symbol" in fund2.columns:
+            fund2 = fund2.drop(columns=["SYMBOL"])
+        elif "SYMBOL" in fund2.columns:
+            fund2 = fund2.rename(columns={"SYMBOL": "symbol"})
+        keep = [c for c in ["symbol", "ENHANCED_FUND_SCORE"] if c in fund2.columns]
+        if keep:
+            f2 = fund2[keep].rename(columns={"ENHANCED_FUND_SCORE": "fund_score"})
+            df = df.merge(f2, on="symbol", how="left")
 
-    df["Realized PnL"] = df["symbol"].map(sym_pnl)
-    df = df.rename(columns={"symbol": "Symbol", "isin": "ISIN"})
+    # Merge per-stock volatility
+    if not risk_s.empty and "symbol" in risk_s.columns and "volatility_annual_pct" in risk_s.columns:
+        df = df.merge(risk_s[["symbol", "volatility_annual_pct"]], on="symbol", how="left")
 
-    # Sort by Value descending
-    if "Value (₹)" in df.columns:
-        df = df.sort_values("Value (₹)", ascending=False)
+    df["realized_pnl"] = df["symbol"].map(sym_pnl)
 
-    # Build HTML table with colour-coded PnL
-    highlight_cols = [c for c in ["Value (₹)", "Tech Score", "Fund Score"] if c in df.columns]
-    cols = [c for c in df.columns if c not in ("ISIN",)]
-    df_disp = df[cols].copy()
+    # Composite decision (tech + fund)
+    def _decision(row) -> str:
+        ts = float(row.get("technical_score") or 50)
+        fs = float(row.get("fund_score") or 50)
+        combined = ts * 0.6 + fs * 0.4
+        if combined >= 70:
+            return "STRONG ADD"
+        elif combined >= 58:
+            return "ADD"
+        elif combined >= 42:
+            return "HOLD"
+        elif combined >= 28:
+            return "REDUCE"
+        else:
+            return "SELL"
 
-    # Numeric formatting
-    for c in ["Value (₹)", "Volatility %"]:
-        if c in df_disp.columns:
-            df_disp[c] = df_disp[c].apply(lambda v: f"{float(v):,.2f}" if pd.notna(v) else "—")
-    for c in ["Tech Score", "Fund Score", "EQ", "Fin Str"]:
-        if c in df_disp.columns:
-            df_disp[c] = df_disp[c].apply(lambda v: f"{float(v):.1f}" if pd.notna(v) else "—")
+    df["Decision"] = df.apply(_decision, axis=1)
 
-    # Build table manually for PnL colouring
+    # Sort by value descending
+    df = df.sort_values("value_rs", ascending=False)
+
+    # Build filter tabs (decision counts)
+    dec_counts = df["Decision"].value_counts()
+    filter_btns = '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:center">'
+    filter_btns += '<span style="font-size:0.8rem;color:var(--md-text-secondary);margin-right:4px">Filter:</span>'
+    filter_btns += '<button class="rec-badge rec-unknown" onclick="filterTable(\'table-holdings\',\'\')" style="cursor:pointer;border:none">All</button>'
+    for rec in ["STRONG ADD", "ADD", "HOLD", "REDUCE", "SELL"]:
+        n = dec_counts.get(rec, 0)
+        if n > 0:
+            cls_map = {"STRONG ADD": "rec-strong-add", "ADD": "rec-add", "HOLD": "rec-hold",
+                       "REDUCE": "rec-reduce", "SELL": "rec-sell"}
+            cls = cls_map[rec]
+            filter_btns += f'<button class="rec-badge {cls}" onclick="filterTable(\'table-holdings\',\'{rec}\')" style="cursor:pointer;border:none">{rec} ({n})</button>'
+    filter_btns += '</div>'
+
+    # Build HTML table manually for rich cells
+    headers = ["Symbol", "Qty", "Value (₹)", "Price", "Tech Score", "RSI",
+               "1M %", "Fund Score", "Volatility %", "Decision", "Tech Signal", "Realized PnL"]
     tbl = ['<table id="table-holdings" class="sortable"><thead><tr>']
-    for c in df_disp.columns:
-        tbl.append(f'<th>{html_module.escape(str(c))}</th>')
+    for h in headers:
+        tbl.append(f'<th>{h}</th>')
     tbl.append("</tr></thead><tbody>")
-    for _, row in df_disp.iterrows():
+
+    for _, row in df.iterrows():
         tbl.append("<tr>")
-        for c in df_disp.columns:
-            v = row.get(c, "")
-            if pd.isna(v):
-                v = ""
-            v_str = str(v)
-            if c == "Realized PnL":
-                try:
-                    fv = float(v_str.replace(",", "")) if v_str else float("nan")
-                    cls = _pnl_class(fv)
-                    v_str = _fmt_inr(fv) if v_str else "—"
-                    tbl.append(f'<td class="{cls}">{html_module.escape(v_str)}</td>')
-                    continue
-                except (TypeError, ValueError):
-                    pass
-            tbl.append(f'<td>{html_module.escape(v_str[:120])}</td>')
+        # Symbol
+        tbl.append(f'<td><strong>{html_module.escape(str(row.get("symbol", "")))}</strong></td>')
+        # Qty
+        qty = row.get("quantity", "")
+        tbl.append(f'<td>{html_module.escape(str(qty) if pd.notna(qty) else "—")}</td>')
+        # Value
+        val = row.get("value_rs")
+        tbl.append(f'<td>{"₹{:,.0f}".format(float(val)) if pd.notna(val) else "—"}</td>')
+        # Price
+        price = row.get("current_price")
+        tbl.append(f'<td>{"₹{:,.2f}".format(float(price)) if pd.notna(price) else "—"}</td>')
+        # Tech Score (bar)
+        tbl.append(f'<td>{_score_bar(row.get("technical_score"))}</td>')
+        # RSI
+        rsi = row.get("rsi")
+        tbl.append(f'<td>{f"{float(rsi):.1f}" if pd.notna(rsi) else "—"}</td>')
+        # 1M %
+        tbl.append(f'<td>{_chg_cell(row.get("change_1m_pct"))}</td>')
+        # Fund Score (bar)
+        tbl.append(f'<td>{_score_bar(row.get("fund_score"))}</td>')
+        # Volatility
+        vol = row.get("volatility_annual_pct")
+        tbl.append(f'<td>{"{}%".format(float(vol)) if pd.notna(vol) else "—"}</td>')
+        # Decision badge
+        dec = str(row.get("Decision", "HOLD"))
+        tbl.append(f'<td>{_rec_badge(dec)}</td>')
+        # Trend signal
+        trend = str(row.get("trend_signal", "") or "")
+        tbl.append(f'<td><span style="font-size:0.75rem">{html_module.escape(trend)}</span></td>')
+        # Realized PnL
+        rpnl = row.get("realized_pnl")
+        if pd.notna(rpnl):
+            cls = _pnl_class(rpnl)
+            tbl.append(f'<td class="{cls}">{_fmt_inr(rpnl)}</td>')
+        else:
+            tbl.append("<td>—</td>")
         tbl.append("</tr>")
     tbl.append("</tbody></table>")
 
     return (
-        f'<input class="search-bar" type="search" placeholder="Filter by symbol or recommendation…" '
+        filter_btns
+        + f'<input class="search-bar" type="search" placeholder="Search symbol, signal…" '
         f'oninput="filterTable(\'table-holdings\',this.value)">'
-        '<div class="table-scroll">' + "\n".join(tbl) + "</div>"
+        + '<div class="table-scroll">' + "\n".join(tbl) + "</div>"
     )
 
 
