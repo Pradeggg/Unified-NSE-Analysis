@@ -180,6 +180,50 @@ tbody tr:hover { background: rgba(0, 137, 123, 0.08); }
 .score-bar .sb-fill { height:100%; border-radius:3px; }
 .change-pos { color:#16a34a; }
 .change-neg { color:#dc2626; }
+/* Sticky table headers */
+.sticky-hdr thead th { position: sticky; top: 0; z-index: 2; box-shadow: 0 1px 0 var(--md-divider); }
+/* Row match highlight when searching */
+tbody tr.row-match { outline: 2px solid #fef08a; outline-offset: -2px; }
+/* Heat tiles – portfolio overview */
+.heat-tiles-wrap { margin-top: 4px; padding: 4px 0 8px; }
+.heat-tiles-wrap .ht-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--md-text-secondary); margin: 0 0 8px; }
+.heat-tiles { display: flex; flex-wrap: wrap; gap: 3px; }
+.heat-tile { border-radius: 3px; padding: 3px 6px; font-size: 0.65rem; font-weight: 600; cursor: default; transition: transform 0.1s; line-height: 1.3; text-align: center; white-space: nowrap; }
+.heat-tile:hover { transform: scale(1.12); z-index: 5; position: relative; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+.ht-strong-add { background:#15803d; color:#fff; }
+.ht-add        { background:#22c55e; color:#fff; }
+.ht-hold       { background:#ca8a04; color:#fff; }
+.ht-reduce     { background:#ea580c; color:#fff; }
+.ht-sell       { background:#dc2626; color:#fff; }
+.ht-unknown    { background:#94a3b8; color:#fff; }
+/* Pagination */
+.pager { display: flex; align-items: center; gap: 5px; margin-top: 10px; font-size: 0.8rem; flex-wrap: wrap; }
+.pager button { padding: 3px 8px; border: 1px solid var(--md-divider); border-radius: 4px; cursor: pointer; background: #fff; font-size: 0.8rem; transition: background 0.15s; }
+.pager button:hover { background: var(--md-bg); }
+.pager button.pg-active { background: var(--md-primary); color: #fff; border-color: var(--md-primary); }
+.pager .pg-info { color: var(--md-text-secondary); margin: 0 4px; white-space: nowrap; }
+/* Table toolbar */
+.table-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.export-btn { padding: 5px 12px; border: 1px solid var(--md-primary); border-radius: var(--md-radius-sm); cursor: pointer; background: transparent; color: var(--md-primary); font-size: 0.8rem; font-weight: 500; transition: all 0.15s; }
+.export-btn:hover { background: var(--md-primary); color: #fff; }
+.col-toggle-wrap { position: relative; display: inline-block; }
+.col-toggle-btn { padding: 5px 12px; border: 1px solid var(--md-divider); border-radius: var(--md-radius-sm); cursor: pointer; background: transparent; color: var(--md-text-secondary); font-size: 0.8rem; }
+.col-toggle-btn:hover { background: var(--md-bg); }
+.col-toggle-panel { display: none; position: absolute; top: calc(100% + 4px); left: 0; background: #fff; border: 1px solid var(--md-divider); border-radius: var(--md-radius); padding: 10px 14px; z-index: 20; box-shadow: var(--md-elevation-2); min-width: 160px; }
+.col-toggle-panel.visible { display: block; }
+.col-toggle-panel label { display: flex; align-items: center; gap: 6px; font-size: 0.82rem; margin-bottom: 6px; cursor: pointer; user-select: none; }
+.col-toggle-panel label:last-child { margin-bottom: 0; }
+/* Global search in app-bar */
+.app-bar-row { display: flex; align-items: center; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
+.global-search-wrap { position: relative; display: flex; align-items: center; }
+.global-search-wrap svg { position: absolute; left: 8px; pointer-events: none; opacity: 0.65; }
+#global-search { padding: 6px 10px 6px 28px; border: 1px solid rgba(255,255,255,0.35); border-radius: var(--md-radius-sm); background: rgba(255,255,255,0.15); color: #fff; font-family: inherit; font-size: 0.875rem; width: 230px; outline: none; transition: background 0.2s, border-color 0.2s; }
+#global-search::placeholder { color: rgba(255,255,255,0.65); }
+#global-search:focus { background: rgba(255,255,255,0.25); border-color: rgba(255,255,255,0.75); }
+.kbd-hint { font-size: 0.7rem; color: rgba(255,255,255,0.55); white-space: nowrap; }
+/* RSI overbought / oversold tags */
+.rsi-os { font-size:0.65rem; color:#15803d; font-weight:700; margin-left:3px; }
+.rsi-ob { font-size:0.65rem; color:#b91c1c; font-weight:700; margin-left:3px; }
 """
 
 
@@ -416,6 +460,139 @@ def _chg_cell(v) -> str:
         return "—"
 
 
+def _heat_bg(val, lo: float, hi: float, good_hue: int = 120, bad_hue: int = 0, alpha: float = 0.25) -> str:
+    """Inline HSL background style; green = good, red = bad."""
+    try:
+        v = float(val)
+        frac = max(0.0, min(1.0, (v - lo) / (hi - lo))) if hi != lo else 0.5
+        hue = bad_hue + frac * (good_hue - bad_hue)
+        return f"background:hsla({hue:.0f},75%,92%,{alpha});"
+    except (TypeError, ValueError):
+        return ""
+
+
+def _rsi_cell(val) -> str:
+    """RSI table cell with heatmap background: green=oversold(<30), red=overbought(>70)."""
+    try:
+        v = float(val)
+        if v < 30:
+            bg = "background:hsla(120,65%,90%,0.75);"
+            tag = '<span class="rsi-os">OS</span>'
+        elif v > 70:
+            bg = "background:hsla(0,65%,90%,0.75);"
+            tag = '<span class="rsi-ob">OB</span>'
+        elif v > 60:
+            bg = "background:hsla(35,70%,92%,0.55);"
+            tag = ""
+        else:
+            bg, tag = "", ""
+        return f'<td style="{bg}">{v:.1f}{tag}</td>'
+    except (TypeError, ValueError):
+        return "<td>—</td>"
+
+
+def _heat_chg_cell(val, scale: float = 8.0) -> str:
+    """Change % cell with heatmap background intensity proportional to magnitude."""
+    try:
+        f = float(val)
+        sign = "+" if f >= 0 else ""
+        intensity = min(abs(f) / scale, 1.0)
+        if f >= 0:
+            lightness = int(95 - intensity * 18)
+            bg = f"background:hsla(120,70%,{lightness}%,0.65);"
+        else:
+            lightness = int(95 - intensity * 18)
+            bg = f"background:hsla(0,70%,{lightness}%,0.65);"
+        return f'<td style="{bg};font-weight:500">{sign}{f:.1f}%</td>'
+    except (TypeError, ValueError):
+        return "<td>—</td>"
+
+
+def _heat_vol_cell(val) -> str:
+    """Volatility % cell: low=green, medium=yellow, high=red background."""
+    try:
+        v = float(val)
+        if v < 25:
+            bg = "background:hsla(120,60%,91%,0.65);"
+        elif v < 45:
+            bg = "background:hsla(45,80%,91%,0.65);"
+        else:
+            bg = "background:hsla(0,65%,91%,0.65);"
+        return f'<td style="{bg}">{v:.1f}%</td>'
+    except (TypeError, ValueError):
+        return "<td>—</td>"
+
+
+def _build_heat_tiles_from_csvs() -> str:
+    """Build portfolio heat-tile grid from holdings + technical CSVs for Overview tab."""
+    import math
+    import pandas as pd
+
+    try:
+        hold = pd.read_csv(HOLDINGS_CSV) if HOLDINGS_CSV.exists() else pd.DataFrame()
+        tech = pd.read_csv(TECHNICAL_BY_STOCK_CSV) if TECHNICAL_BY_STOCK_CSV.exists() else pd.DataFrame()
+    except Exception:
+        return ""
+    if hold.empty:
+        return ""
+
+    df = hold.copy()
+    df["symbol"] = df["symbol"].astype(str)
+    if not tech.empty and "symbol" in tech.columns:
+        merge_cols = [c for c in ["symbol", "technical_score", "fund_score",
+                                   "enhanced_fund_score", "recommendation", "trading_signal"] if c in tech.columns]
+        df = df.merge(tech[merge_cols], on="symbol", how="left")
+
+    # Compute Decision
+    def _dec(row) -> str:
+        ts = float(row.get("technical_score") or 50)
+        fs = float(row.get("enhanced_fund_score") or row.get("fund_score") or 50)
+        combined = ts * 0.6 + fs * 0.4
+        if combined >= 70: return "STRONG ADD"
+        elif combined >= 58: return "ADD"
+        elif combined >= 42: return "HOLD"
+        elif combined >= 28: return "REDUCE"
+        else: return "SELL"
+
+    df["Decision"] = df.apply(_dec, axis=1)
+
+    total_val = float(df["value_rs"].sum() or 1)
+    dec_cls = {
+        "STRONG ADD": "ht-strong-add", "ADD": "ht-add", "HOLD": "ht-hold",
+        "REDUCE": "ht-reduce", "SELL": "ht-sell",
+    }
+    tiles = []
+    for _, row in df.sort_values("value_rs", ascending=False).iterrows():
+        sym = html_module.escape(str(row.get("symbol", "")))
+        val = float(row.get("value_rs") or 0)
+        dec = str(row.get("Decision", ""))
+        ts = row.get("technical_score", "")
+        cls = dec_cls.get(dec, "ht-unknown")
+        # Width: log-scaled between 36–90px
+        w = max(36, min(90, int(36 + 54 * math.log1p(val / total_val * 100) / math.log1p(100))))
+        title = f"{sym} | ₹{val:,.0f} | {dec} | Tech: {ts}"
+        tiles.append(f'<div class="heat-tile {cls}" style="min-width:{w}px" title="{html_module.escape(title)}">{sym}</div>')
+
+    dec_counts = df["Decision"].value_counts()
+    legend_parts = []
+    for rec in ["STRONG ADD", "ADD", "HOLD", "REDUCE", "SELL"]:
+        n = dec_counts.get(rec, 0)
+        if n > 0:
+            css_map = {"STRONG ADD": "rec-strong-add", "ADD": "rec-add", "HOLD": "rec-hold",
+                       "REDUCE": "rec-reduce", "SELL": "rec-sell"}
+            legend_parts.append(f'<span class="rec-badge {css_map[rec]}">{rec} {n}</span>')
+    legend = " &nbsp; ".join(legend_parts)
+
+    return (
+        '<div class="card-section" style="margin-top:16px">'
+        '<h3 class="card-title">Holdings heatmap <span style="font-size:0.75rem;font-weight:400;color:var(--md-text-secondary)">'
+        '— tile size = portfolio value · colour = decision · hover for details</span></h3>'
+        f'<div style="margin-bottom:10px;display:flex;flex-wrap:wrap;gap:6px">{legend}</div>'
+        f'<div class="heat-tiles">{"".join(tiles)}</div>'
+        '</div>'
+    )
+
+
 def _build_holdings_tab() -> str:
     """Merged holdings: holdings + technical (real scores) + fundamental + risk + realized PnL."""
     import pandas as pd
@@ -511,25 +688,45 @@ def _build_holdings_tab() -> str:
     dec_counts = df["Decision"].value_counts()
     filter_btns = '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:center">'
     filter_btns += '<span style="font-size:0.8rem;color:var(--md-text-secondary);margin-right:4px">Filter:</span>'
-    filter_btns += '<button class="rec-badge rec-unknown" onclick="filterTable(\'table-holdings\',\'\')" style="cursor:pointer;border:none">All</button>'
+    filter_btns += '<button class="rec-badge rec-unknown" onclick="setDecFilter(\'table-holdings\',\'\')" style="cursor:pointer;border:none">All</button>'
     for rec in ["STRONG ADD", "ADD", "HOLD", "REDUCE", "SELL"]:
         n = dec_counts.get(rec, 0)
         if n > 0:
             cls_map = {"STRONG ADD": "rec-strong-add", "ADD": "rec-add", "HOLD": "rec-hold",
                        "REDUCE": "rec-reduce", "SELL": "rec-sell"}
             cls = cls_map[rec]
-            filter_btns += f'<button class="rec-badge {cls}" onclick="filterTable(\'table-holdings\',\'{rec}\')" style="cursor:pointer;border:none">{rec} ({n})</button>'
+            filter_btns += (f'<button class="rec-badge {cls}" onclick="setDecFilter(\'table-holdings\',\'{rec}\')" '
+                            f'style="cursor:pointer;border:none">{rec} ({n})</button>')
     filter_btns += '</div>'
 
-    # Build HTML table manually for rich cells
+    # Toolbar: search + export + column toggle
     headers = ["Symbol", "Qty", "Value (₹)", "Price", "Tech Score", "RSI",
-               "1M %", "Fund Score", "Volatility %", "Decision", "Tech Signal", "Realized PnL"]
-    tbl = ['<table id="table-holdings" class="sortable"><thead><tr>']
+               "1D %", "1W %", "1M %", "Fund Score", "Vol %", "Decision", "Trend", "Realized PnL"]
+    toggle_checks = "".join(
+        f'<label><input type="checkbox" checked onchange="toggleCol(\'table-holdings\',{i},this.checked)"> {h}</label>'
+        for i, h in enumerate(headers)
+    )
+    toolbar = (
+        '<div class="table-toolbar">'
+        '<input class="search-bar" style="margin:0;flex:1;min-width:180px" type="search" '
+        'id="search-holdings" placeholder="🔍 Search symbol, signal, decision…" '
+        'oninput="filterTable(\'table-holdings\',this.value)">'
+        '<button class="export-btn" onclick="exportCSV(\'table-holdings\',\'holdings\')">⬇ Export CSV</button>'
+        '<div class="col-toggle-wrap">'
+        '<button class="col-toggle-btn" onclick="toggleColPanel(\'col-panel-holdings\')">Columns ▾</button>'
+        f'<div id="col-panel-holdings" class="col-toggle-panel">{toggle_checks}</div>'
+        '</div>'
+        '</div>'
+    )
+
+    # Build HTML table with heatmap cells
+    tbl = ['<table id="table-holdings" class="sortable sticky-hdr"><thead><tr>']
     for h in headers:
         tbl.append(f'<th>{h}</th>')
     tbl.append("</tr></thead><tbody>")
 
     for _, row in df.iterrows():
+        dec = str(row.get("Decision", "HOLD"))
         tbl.append("<tr>")
         # Symbol
         tbl.append(f'<td><strong>{html_module.escape(str(row.get("symbol", "")))}</strong></td>')
@@ -544,18 +741,19 @@ def _build_holdings_tab() -> str:
         tbl.append(f'<td>{"₹{:,.2f}".format(float(price)) if pd.notna(price) else "—"}</td>')
         # Tech Score (bar)
         tbl.append(f'<td>{_score_bar(row.get("technical_score"))}</td>')
-        # RSI
-        rsi = row.get("rsi")
-        tbl.append(f'<td>{f"{float(rsi):.1f}" if pd.notna(rsi) else "—"}</td>')
-        # 1M %
-        tbl.append(f'<td>{_chg_cell(row.get("change_1m_pct"))}</td>')
+        # RSI (heatmap)
+        tbl.append(_rsi_cell(row.get("rsi")))
+        # 1D % (heatmap)
+        tbl.append(_heat_chg_cell(row.get("change_1d_pct"), scale=3.0))
+        # 1W % (heatmap)
+        tbl.append(_heat_chg_cell(row.get("change_1w_pct"), scale=6.0))
+        # 1M % (heatmap)
+        tbl.append(_heat_chg_cell(row.get("change_1m_pct"), scale=12.0))
         # Fund Score (bar)
         tbl.append(f'<td>{_score_bar(row.get("fund_score"))}</td>')
-        # Volatility
-        vol = row.get("volatility_annual_pct")
-        tbl.append(f'<td>{"{}%".format(float(vol)) if pd.notna(vol) else "—"}</td>')
+        # Volatility (heatmap)
+        tbl.append(_heat_vol_cell(row.get("volatility_annual_pct")))
         # Decision badge
-        dec = str(row.get("Decision", "HOLD"))
         tbl.append(f'<td>{_rec_badge(dec)}</td>')
         # Trend signal
         trend = str(row.get("trend_signal", "") or "")
@@ -572,8 +770,7 @@ def _build_holdings_tab() -> str:
 
     return (
         filter_btns
-        + f'<input class="search-bar" type="search" placeholder="Search symbol, signal…" '
-        f'oninput="filterTable(\'table-holdings\',this.value)">'
+        + toolbar
         + '<div class="table-scroll">' + "\n".join(tbl) + "</div>"
     )
 
@@ -933,6 +1130,7 @@ def build_report_html_structured() -> str:
 
     pnl_summary_md = _read(PNL_SUMMARY_MD) or "*Run Phase 1 for PnL summary.*"
     pnl_summary_json = json.dumps(pnl_summary_md, ensure_ascii=False).replace("</script>", "<\\/script>")
+    heat_tiles_html = _build_heat_tiles_from_csvs()
     overview_html = (
         '<div class="summary-grid">'
         + ov_card("Holdings", summary.get("holdings_count", "—"))
@@ -942,6 +1140,7 @@ def build_report_html_structured() -> str:
         + ov_card("STCG", tenure.get("STCG", 0), "₹")
         + ov_card("Intraday", tenure.get("intraday", 0), "₹")
         + "</div>"
+        + heat_tiles_html
         + '<div class="card-section"><h3 class="card-title">PnL summary</h3>'
         + '<div id="overview-pnl-md" class="md-rendered"></div></div>'
         + f'<script type="application/json" id="overview-pnl-json">{pnl_summary_json}</script>'
@@ -1046,98 +1245,229 @@ def build_report_html_structured() -> str:
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
 (function() {{
+  /* ── Markdown renderer ─────────────────────────────────────── */
   function renderMd(elId, jsonId) {{
-    var j = document.getElementById(jsonId);
-    var d = document.getElementById(elId);
+    var j = document.getElementById(jsonId), d = document.getElementById(elId);
     if (!j || !d) return;
     try {{
       var md = JSON.parse(j.textContent);
       if (typeof marked !== 'undefined' && marked.parse) d.innerHTML = marked.parse(md);
       else {{ d.textContent = md; d.classList.add('md-fallback'); }}
-    }} catch (e) {{}}
+    }} catch(e) {{}}
   }}
   function initMd() {{
-    renderMd('overview-pnl-md', 'overview-pnl-json');
-    renderMd('risk-scenario-md', 'scenario-md');
-    renderMd('sentiment-md', 'sentiment-md-json');
-    renderMd('sector-md', 'sector-md-json');
+    renderMd('overview-pnl-md','overview-pnl-json');
+    renderMd('risk-scenario-md','scenario-md');
+    renderMd('sentiment-md','sentiment-md-json');
+    renderMd('sector-md','sector-md-json');
   }}
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initMd);
+  if (document.readyState==='loading') document.addEventListener('DOMContentLoaded',initMd);
   else initMd();
 
+  /* ── Tab switching + URL hash persistence ──────────────────── */
   var panels = document.querySelectorAll('.tab-panel');
   var buttons = document.querySelectorAll('.tab-btn');
   function show(id) {{
-    panels.forEach(function(p) {{ p.classList.remove('active'); }});
-    buttons.forEach(function(b) {{ b.classList.remove('active'); }});
-    var p = document.getElementById('panel-' + id);
-    var b = document.querySelector('[data-tab="' + id + '"]');
+    panels.forEach(function(p){{ p.classList.remove('active'); }});
+    buttons.forEach(function(b){{ b.classList.remove('active'); }});
+    var p = document.getElementById('panel-'+id);
+    var b = document.querySelector('[data-tab="'+id+'"]');
     if (p) p.classList.add('active');
     if (b) b.classList.add('active');
+    // Clear global search when switching tabs
+    var gs = document.getElementById('global-search');
+    if (gs && gs.value) {{ gs.value = ''; globalSearch(''); }}
   }}
-  buttons.forEach(function(b) {{
-    b.addEventListener('click', function() {{ show(b.getAttribute('data-tab')); }});
+  buttons.forEach(function(b){{
+    b.addEventListener('click', function(){{
+      var id = b.getAttribute('data-tab');
+      show(id);
+      history.replaceState(null,'','#'+id);
+    }});
   }});
-  if (buttons.length) show(buttons[0].getAttribute('data-tab'));
+  var hash = location.hash.replace('#','');
+  if (hash && document.querySelector('[data-tab="'+hash+'"]')) show(hash);
+  else if (buttons.length) show(buttons[0].getAttribute('data-tab'));
 
+  /* ── Numeric cell parser ───────────────────────────────────── */
   function parseCellNum(txt) {{
     if (!txt) return NaN;
-    // Strip ₹, +, %, commas
-    var s = String(txt).replace(/[₹%,+]/g, '').trim();
-    var n = parseFloat(s);
-    return isNaN(n) ? NaN : n;
+    var s = String(txt).replace(/[₹%,+↑↓]/g,'').trim();
+    return isNaN(parseFloat(s)) ? NaN : parseFloat(s);
   }}
+
+  /* ── Column sort ───────────────────────────────────────────── */
   function sortTable(tableId) {{
     var table = document.getElementById(tableId);
     if (!table) return;
     var headers = table.querySelectorAll('thead th');
     var body = table.querySelector('tbody');
-    var sortState = {{ colIndex: -1, asc: true }};
-    headers.forEach(function(th, colIndex) {{
-      th.addEventListener('click', function() {{
+    var sortState = {{colIndex:-1,asc:true}};
+    headers.forEach(function(th, colIndex){{
+      th.addEventListener('click', function(){{
         var rows = Array.from(body.querySelectorAll('tr'));
         if (!rows.length) return;
-        var asc = (sortState.colIndex === colIndex) ? !sortState.asc : true;
-        sortState.colIndex = colIndex;
-        sortState.asc = asc;
-        headers.forEach(function(h, i) {{
-          h.classList.remove('sort-asc', 'sort-desc');
-          if (i === colIndex) h.classList.add(asc ? 'sort-asc' : 'sort-desc');
+        var asc = (sortState.colIndex===colIndex) ? !sortState.asc : true;
+        sortState.colIndex=colIndex; sortState.asc=asc;
+        headers.forEach(function(h,i){{
+          h.classList.remove('sort-asc','sort-desc');
+          if(i===colIndex) h.classList.add(asc?'sort-asc':'sort-desc');
         }});
-        var cellVal = function(row, ci) {{ var c = row.cells[ci]; return c ? c.textContent.trim() : ''; }};
-        var isNum = false;
-        for (var r = 0; r < rows.length; r++) {{
-          var n = parseCellNum(cellVal(rows[r], colIndex));
-          if (!isNaN(n)) {{ isNum = true; break; }}
-        }}
-        rows.sort(function(a, b) {{
-          var va = cellVal(a, colIndex);
-          var vb = cellVal(b, colIndex);
-          if (isNum) {{
-            var na = parseCellNum(va);
-            var nb = parseCellNum(vb);
-            if (isNaN(na)) na = -Infinity;
-            if (isNaN(nb)) nb = -Infinity;
-            return asc ? na - nb : nb - na;
+        var cellVal = function(row,ci){{ var c=row.cells[ci]; return c?c.textContent.trim():''; }};
+        var isNum = rows.some(function(r){{ return !isNaN(parseCellNum(cellVal(r,colIndex))); }});
+        rows.sort(function(a,b){{
+          var va=cellVal(a,colIndex), vb=cellVal(b,colIndex);
+          if(isNum){{
+            var na=parseCellNum(va), nb=parseCellNum(vb);
+            if(isNaN(na)) na=-Infinity; if(isNaN(nb)) nb=-Infinity;
+            return asc?na-nb:nb-na;
           }}
-          return asc ? (va < vb ? -1 : va > vb ? 1 : 0) : (vb < va ? -1 : vb > va ? 1 : 0);
+          return asc?(va<vb?-1:va>vb?1:0):(vb<va?-1:vb>va?1:0);
         }});
-        rows.forEach(function(r) {{ body.appendChild(r); }});
+        rows.forEach(function(r){{ body.appendChild(r); }});
+        // refresh pagination after sort
+        if(window._pagers&&window._pagers[tableId]) window._pagers[tableId].refresh();
       }});
     }});
   }}
   {sortable_js}
 
+  /* ── Filter + decision filter ──────────────────────────────── */
+  window._searchFilters = {{}};
+  window._decFilters = {{}};
+
   window.filterTable = function(tableId, query) {{
+    if(query!==undefined) window._searchFilters[tableId] = (query||'').toLowerCase().trim();
+    var q = window._searchFilters[tableId]||'';
+    var dec = (window._decFilters[tableId]||'').toLowerCase();
     var table = document.getElementById(tableId);
-    if (!table) return;
-    var q = query.toLowerCase();
+    if(!table) return;
     var rows = table.querySelectorAll('tbody tr');
-    rows.forEach(function(row) {{
+    rows.forEach(function(row){{
       var text = row.textContent.toLowerCase();
-      row.style.display = (!q || text.indexOf(q) !== -1) ? '' : 'none';
+      var matchQ = !q || text.indexOf(q)!==-1;
+      var matchDec = !dec || text.indexOf(dec)!==-1;
+      row.style.display = (matchQ&&matchDec)?'':'none';
+      row.classList.toggle('row-match', !!(q&&matchQ&&matchDec));
+    }});
+    if(window._pagers&&window._pagers[tableId]) window._pagers[tableId].refresh();
+  }};
+
+  window.setDecFilter = function(tableId, dec) {{
+    window._decFilters[tableId] = (dec||'').toLowerCase();
+    window.filterTable(tableId, undefined);
+  }};
+
+  /* ── Global search → active tab's search bar ──────────────── */
+  window.globalSearch = function(q) {{
+    var activePanel = document.querySelector('.tab-panel.active');
+    if(!activePanel) return;
+    var bar = activePanel.querySelector('.search-bar');
+    if(bar) {{
+      bar.value = q;
+      var evt = new Event('input');
+      bar.dispatchEvent(evt);
+    }}
+  }};
+
+  /* ── Keyboard shortcut ─────────────────────────────────────── */
+  document.addEventListener('keydown', function(e){{
+    if((e.ctrlKey||e.metaKey)&&e.key==='k'){{
+      e.preventDefault();
+      var gs = document.getElementById('global-search');
+      if(gs) gs.focus();
+    }}
+  }});
+
+  /* ── Pagination ────────────────────────────────────────────── */
+  window._pagers = {{}};
+  window.initPagination = function(tableId, pageSize) {{
+    var table = document.getElementById(tableId);
+    if(!table) return;
+    var container = table.closest('.table-scroll') || table.parentNode;
+    var pagerEl = document.createElement('div');
+    pagerEl.className = 'pager'; pagerEl.id = 'pager-'+tableId;
+    container.parentNode.insertBefore(pagerEl, container.nextSibling);
+    var state = {{page:0, pageSize:pageSize}};
+    function visibleRows(){{ return Array.from(table.querySelectorAll('tbody tr')).filter(function(r){{ return r.style.display!=='none'; }}); }}
+    function render(){{
+      var rows = visibleRows();
+      var total = rows.length;
+      var pages = Math.ceil(total/state.pageSize)||1;
+      state.page = Math.min(state.page, pages-1);
+      rows.forEach(function(r,i){{ r.style.display = (Math.floor(i/state.pageSize)===state.page)?'':'none'; }});
+      pagerEl.innerHTML='';
+      if(pages<=1) return;
+      var info=document.createElement('span'); info.className='pg-info';
+      info.textContent=(state.page*state.pageSize+1)+'–'+Math.min((state.page+1)*state.pageSize,total)+' of '+total;
+      pagerEl.appendChild(info);
+      function mkBtn(label, disabled, onClick){{
+        var btn=document.createElement('button'); btn.textContent=label; btn.disabled=disabled;
+        btn.addEventListener('click',onClick); return btn;
+      }}
+      pagerEl.appendChild(mkBtn('‹',state.page===0,function(){{state.page--;render();}}));
+      var sp=Math.max(0,state.page-3), ep=Math.min(pages-1,sp+6);
+      for(var p=sp;p<=ep;p++){{
+        (function(pg){{
+          var btn=mkBtn(pg+1,false,function(){{state.page=pg;render();}});
+          if(pg===state.page) btn.classList.add('pg-active');
+          pagerEl.appendChild(btn);
+        }})(p);
+      }}
+      pagerEl.appendChild(mkBtn('›',state.page>=pages-1,function(){{state.page++;render();}}));
+    }}
+    window._pagers[tableId]={{refresh:function(){{state.page=0;render();}}}};
+    render();
+  }};
+
+  /* ── Export CSV ────────────────────────────────────────────── */
+  window.exportCSV = function(tableId, filename) {{
+    var table = document.getElementById(tableId);
+    if(!table) return;
+    var rows = [];
+    var headers = Array.from(table.querySelectorAll('thead th')).map(function(th){{
+      return '"'+th.textContent.trim().replace(/"/g,'""')+'"';
+    }});
+    rows.push(headers.join(','));
+    table.querySelectorAll('tbody tr').forEach(function(tr){{
+      if(tr.style.display==='none') return;
+      var cells = Array.from(tr.querySelectorAll('td')).map(function(td){{
+        return '"'+td.textContent.trim().replace(/"/g,'""')+'"';
+      }});
+      rows.push(cells.join(','));
+    }});
+    var a=document.createElement('a');
+    a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(rows.join('\\n'));
+    a.download=(filename||tableId)+'.csv'; a.click();
+  }};
+
+  /* ── Column toggle ─────────────────────────────────────────── */
+  window.toggleColPanel = function(panelId) {{
+    var p=document.getElementById(panelId);
+    if(p) p.classList.toggle('visible');
+    document.addEventListener('click',function handler(e){{
+      if(!p||!p.contains(e.target)&&!e.target.closest('.col-toggle-btn')){{
+        p&&p.classList.remove('visible');
+        document.removeEventListener('click',handler);
+      }}
     }});
   }};
+  window.toggleCol = function(tableId, colIdx, visible) {{
+    var table = document.getElementById(tableId);
+    if(!table) return;
+    table.querySelectorAll('tr').forEach(function(row){{
+      var cell = row.cells[colIdx];
+      if(cell) cell.style.display = visible?'':'none';
+    }});
+  }};
+
+  /* ── Init pagination for large tables ─────────────────────── */
+  document.addEventListener('DOMContentLoaded', function(){{
+    initPagination('table-holdings', 50);
+    initPagination('table-closed-pnl', 30);
+    initPagination('table-fundamental', 50);
+    initPagination('table-technical', 50);
+  }});
 }})();
 </script>
 """
@@ -1155,8 +1485,20 @@ def build_report_html_structured() -> str:
 </head>
 <body>
 <header class="app-bar">
-  <h1>Portfolio – Comprehensive Report</h1>
-  <p class="meta">Report date: {today} &nbsp;·&nbsp; Account: {html_module.escape(account)} &nbsp;·&nbsp; Data as of: {data_as_of}</p>
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <div>
+      <h1>Portfolio – Comprehensive Report</h1>
+      <p class="meta">Report date: {today} &nbsp;·&nbsp; Account: {html_module.escape(account)} &nbsp;·&nbsp; Data as of: {data_as_of}</p>
+    </div>
+    <div class="app-bar-row">
+      <div class="global-search-wrap">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input id="global-search" type="search" class="global-search" placeholder="Search all… (⌘K)"
+          oninput="globalSearch(this.value)" onkeydown="if(event.key==='Escape'){{this.value='';globalSearch('');}}">
+      </div>
+      <span class="kbd-hint">⌘K to focus</span>
+    </div>
+  </div>
 </header>
 <main class="main-content">
   <div class="tabs" role="tablist">{tab_buttons}</div>
