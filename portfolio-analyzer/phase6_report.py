@@ -34,12 +34,18 @@ except ImportError:
     PORTFOLIO_SUMMARY_JSON = OUTPUT_DIR / "portfolio_summary.json"
     PNL_SUMMARY_MD = OUTPUT_DIR / "pnl_summary.md"
     RISK_METRICS_JSON = OUTPUT_DIR / "risk_metrics.json"
+    RISK_METRICS_CSV = OUTPUT_DIR / "risk_metrics.csv"
+    RISK_METRICS_PORTFOLIO_CSV = OUTPUT_DIR / "risk_metrics_portfolio.csv"
     SCENARIO_NARRATIVE_MD = OUTPUT_DIR / "scenario_narrative.md"
+    SCENARIO_PROJECTIONS_CSV = OUTPUT_DIR / "scenario_projections.csv"
     MARKET_SENTIMENT_MD = OUTPUT_DIR / "market_sentiment.md"
     SECTOR_ASSESSMENT_MD = OUTPUT_DIR / "sector_assessment.md"
     TECHNICAL_SUMMARY_MD = OUTPUT_DIR / "technical_summary.md"
     TECHNICAL_BY_STOCK_CSV = OUTPUT_DIR / "technical_by_stock.csv"
     FUNDAMENTAL_BY_STOCK_CSV = OUTPUT_DIR / "fundamental_by_stock.csv"
+    HOLDINGS_CSV = OUTPUT_DIR / "holdings.csv"
+    PNL_AGGREGATES_CSV = OUTPUT_DIR / "pnl_aggregates.csv"
+    CLOSED_PNL_CSV = OUTPUT_DIR / "closed_pnl.csv"
     STOCK_NARRATIVES_MD = OUTPUT_DIR / "stock_narratives.md"
     STOCK_NARRATIVES_JSON = OUTPUT_DIR / "stock_narratives.json"
     REPORT_MD = OUTPUT_DIR / "portfolio_comprehensive_report.md"
@@ -146,6 +152,19 @@ tbody tr:hover { background: rgba(0, 137, 123, 0.08); }
 .guide-table { width: 100%; margin-top: 8px; margin-bottom: 16px; font-size: 0.875rem; }
 .guide-table th { background: var(--md-primary-light); color: var(--md-text); }
 @media (max-width: 600px) { .app-bar { padding: 12px 16px; } .main-content { padding: 16px; } .tab-btn { padding: 12px 14px; font-size: 0.75rem; } .tab-panel { padding: 16px; } }
+.search-bar { width: 100%; max-width: 360px; padding: 8px 12px; border: 1px solid var(--md-divider); border-radius: var(--md-radius-sm); font-family: inherit; font-size: 0.875rem; color: var(--md-text); background: #fff; margin-bottom: 12px; outline: none; transition: border-color 0.2s; }
+.search-bar:focus { border-color: var(--md-primary); box-shadow: 0 0 0 2px rgba(0,137,123,0.15); }
+.pnl-pos { color: #16a34a; font-weight: 600; }
+.pnl-neg { color: #dc2626; font-weight: 600; }
+.summary-grid { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 20px; }
+.summary-card { background: var(--md-surface); border: 1px solid var(--md-divider); border-radius: var(--md-radius); padding: 14px 20px; min-width: 160px; box-shadow: var(--md-elevation-1); }
+.summary-card .s-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--md-text-secondary); margin-bottom: 4px; }
+.summary-card .s-value { font-size: 1.25rem; font-weight: 500; }
+.risk-label-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; margin-bottom: 0; }
+.risk-label-table td { padding: 8px 12px; border-bottom: 1px solid var(--md-divider); }
+.risk-label-table tr:last-child td { border-bottom: none; }
+.risk-label-table td:first-child { color: var(--md-text-secondary); width: 55%; }
+.risk-label-table td:last-child { font-weight: 500; }
 """
 
 
@@ -322,6 +341,359 @@ def _guide_tab_html() -> str:
 """
 
 
+def _fmt_inr(v, decimals: int = 2) -> str:
+    try:
+        f = float(v)
+        sign = "+" if f > 0 else ""
+        return f"{sign}₹{f:,.{decimals}f}"
+    except (TypeError, ValueError):
+        return "—"
+
+
+def _pnl_class(v) -> str:
+    try:
+        return "pnl-pos" if float(v) > 0 else "pnl-neg"
+    except (TypeError, ValueError):
+        return ""
+
+
+def _build_holdings_tab() -> str:
+    """Merged holdings: holdings + technical + fundamental + per-stock risk + per-symbol realized PnL."""
+    import pandas as pd
+
+    try:
+        hold = pd.read_csv(HOLDINGS_CSV) if HOLDINGS_CSV.exists() else pd.DataFrame()
+    except Exception:
+        hold = pd.DataFrame()
+    try:
+        tech = pd.read_csv(TECHNICAL_BY_STOCK_CSV) if TECHNICAL_BY_STOCK_CSV.exists() else pd.DataFrame()
+    except Exception:
+        tech = pd.DataFrame()
+    try:
+        fund = pd.read_csv(FUNDAMENTAL_BY_STOCK_CSV) if FUNDAMENTAL_BY_STOCK_CSV.exists() else pd.DataFrame()
+    except Exception:
+        fund = pd.DataFrame()
+    try:
+        risk_s = pd.read_csv(RISK_METRICS_CSV) if RISK_METRICS_CSV.exists() else pd.DataFrame()
+    except Exception:
+        risk_s = pd.DataFrame()
+    try:
+        pnl_agg = pd.read_csv(PNL_AGGREGATES_CSV) if PNL_AGGREGATES_CSV.exists() else pd.DataFrame()
+    except Exception:
+        pnl_agg = pd.DataFrame()
+
+    if hold.empty:
+        return "<p>No holdings data. Ensure holdings.csv exists in output/.</p>"
+
+    # Aggregate per-symbol PnL
+    sym_pnl: dict = {}
+    if not pnl_agg.empty and "symbol" in pnl_agg.columns and "pnl" in pnl_agg.columns:
+        for sym, grp in pnl_agg.groupby("symbol"):
+            sym_pnl[str(sym)] = float(grp["pnl"].sum())
+
+    # Merge
+    df = hold.rename(columns={"quantity": "Qty", "value_rs": "Value (₹)"}).copy()
+    df["symbol"] = df["symbol"].astype(str)
+
+    if not tech.empty and "symbol" in tech.columns:
+        t = tech[["symbol", "technical_score", "recommendation"]].copy()
+        t.columns = ["symbol", "Tech Score", "Rec"]
+        df = df.merge(t, on="symbol", how="left")
+    if not fund.empty and "SYMBOL" in fund.columns:
+        fund2 = fund.rename(columns={"SYMBOL": "symbol"})
+        keep = [c for c in ["symbol", "ENHANCED_FUND_SCORE", "EARNINGS_QUALITY", "FINANCIAL_STRENGTH"] if c in fund2.columns]
+        if keep:
+            f2 = fund2[keep].copy()
+            f2.columns = ["symbol"] + [c.replace("ENHANCED_FUND_SCORE", "Fund Score")
+                                        .replace("EARNINGS_QUALITY", "EQ")
+                                        .replace("FINANCIAL_STRENGTH", "Fin Str")
+                                        for c in f2.columns[1:]]
+            df = df.merge(f2, on="symbol", how="left")
+    if not risk_s.empty and "symbol" in risk_s.columns:
+        r2 = risk_s[["symbol", "volatility_annual_pct"]].rename(columns={"volatility_annual_pct": "Volatility %"})
+        df = df.merge(r2, on="symbol", how="left")
+
+    df["Realized PnL"] = df["symbol"].map(sym_pnl)
+    df = df.rename(columns={"symbol": "Symbol", "isin": "ISIN"})
+
+    # Sort by Value descending
+    if "Value (₹)" in df.columns:
+        df = df.sort_values("Value (₹)", ascending=False)
+
+    # Build HTML table with colour-coded PnL
+    highlight_cols = [c for c in ["Value (₹)", "Tech Score", "Fund Score"] if c in df.columns]
+    cols = [c for c in df.columns if c not in ("ISIN",)]
+    df_disp = df[cols].copy()
+
+    # Numeric formatting
+    for c in ["Value (₹)", "Volatility %"]:
+        if c in df_disp.columns:
+            df_disp[c] = df_disp[c].apply(lambda v: f"{float(v):,.2f}" if pd.notna(v) else "—")
+    for c in ["Tech Score", "Fund Score", "EQ", "Fin Str"]:
+        if c in df_disp.columns:
+            df_disp[c] = df_disp[c].apply(lambda v: f"{float(v):.1f}" if pd.notna(v) else "—")
+
+    # Build table manually for PnL colouring
+    tbl = ['<table id="table-holdings" class="sortable"><thead><tr>']
+    for c in df_disp.columns:
+        tbl.append(f'<th>{html_module.escape(str(c))}</th>')
+    tbl.append("</tr></thead><tbody>")
+    for _, row in df_disp.iterrows():
+        tbl.append("<tr>")
+        for c in df_disp.columns:
+            v = row.get(c, "")
+            if pd.isna(v):
+                v = ""
+            v_str = str(v)
+            if c == "Realized PnL":
+                try:
+                    fv = float(v_str.replace(",", "")) if v_str else float("nan")
+                    cls = _pnl_class(fv)
+                    v_str = _fmt_inr(fv) if v_str else "—"
+                    tbl.append(f'<td class="{cls}">{html_module.escape(v_str)}</td>')
+                    continue
+                except (TypeError, ValueError):
+                    pass
+            tbl.append(f'<td>{html_module.escape(v_str[:120])}</td>')
+        tbl.append("</tr>")
+    tbl.append("</tbody></table>")
+
+    return (
+        f'<input class="search-bar" type="search" placeholder="Filter by symbol or recommendation…" '
+        f'oninput="filterTable(\'table-holdings\',this.value)">'
+        '<div class="table-scroll">' + "\n".join(tbl) + "</div>"
+    )
+
+
+def _build_pnl_tab() -> str:
+    """P&L analysis: summary cards + per-symbol totals + full closed-trade table."""
+    import pandas as pd
+
+    try:
+        pnl_agg = pd.read_csv(PNL_AGGREGATES_CSV) if PNL_AGGREGATES_CSV.exists() else pd.DataFrame()
+    except Exception:
+        pnl_agg = pd.DataFrame()
+    try:
+        closed = pd.read_csv(CLOSED_PNL_CSV) if CLOSED_PNL_CSV.exists() else pd.DataFrame()
+    except Exception:
+        closed = pd.DataFrame()
+
+    summary = _load_json(PORTFOLIO_SUMMARY_JSON)
+
+    # Summary cards
+    total_pnl = summary.get("total_realized_pnl", 0)
+    tenure = summary.get("pnl_by_tenure", {})
+    ltcg = tenure.get("LTCG", 0)
+    stcg = tenure.get("STCG", 0)
+    intra = tenure.get("intraday", 0)
+
+    def card(label: str, value: float) -> str:
+        cls = _pnl_class(value)
+        return (
+            f'<div class="summary-card"><div class="s-label">{label}</div>'
+            f'<div class="s-value {cls}">{_fmt_inr(value)}</div></div>'
+        )
+
+    cards_html = (
+        '<div class="summary-grid">'
+        + card("Total Realized PnL", total_pnl)
+        + card("LTCG", ltcg)
+        + card("STCG", stcg)
+        + card("Intraday", intra)
+        + "</div>"
+    )
+
+    # Per-symbol totals table
+    sym_html = "<p>No aggregated PnL data.</p>"
+    if not pnl_agg.empty and "symbol" in pnl_agg.columns:
+        sym_tot = (
+            pnl_agg.groupby("symbol")["pnl"]
+            .sum()
+            .reset_index()
+            .rename(columns={"symbol": "Symbol", "pnl": "Realized PnL"})
+            .sort_values("Realized PnL")
+        )
+        sym_tot["Realized PnL (₹)"] = sym_tot["Realized PnL"].apply(_fmt_inr)
+        tbl = ['<table id="table-pnl-sym" class="sortable"><thead><tr>']
+        for c in ["Symbol", "Realized PnL (₹)"]:
+            tbl.append(f'<th>{c}</th>')
+        tbl.append("</tr></thead><tbody>")
+        for _, r in sym_tot.iterrows():
+            fv = float(r["Realized PnL"])
+            cls = _pnl_class(fv)
+            tbl.append(f'<tr><td>{html_module.escape(str(r["Symbol"]))}</td>'
+                       f'<td class="{cls}">{html_module.escape(r["Realized PnL (₹)"])}</td></tr>')
+        tbl.append("</tbody></table>")
+        sym_html = (
+            f'<input class="search-bar" type="search" placeholder="Filter symbols…" '
+            f'oninput="filterTable(\'table-pnl-sym\',this.value)">'
+            + '<div class="table-scroll">' + "\n".join(tbl) + "</div>"
+        )
+
+    # Full closed trades table
+    closed_html = "<p>No closed trade data.</p>"
+    if not closed.empty:
+        disp_cols = [c for c in ["symbol", "qty", "purchase_date", "purchase_rate",
+                                  "sale_date", "sale_rate", "pnl", "tenure_bucket"]
+                     if c in closed.columns]
+        disp = closed[disp_cols].copy()
+        disp = disp.sort_values("pnl") if "pnl" in disp.columns else disp
+        tbl2 = ['<table id="table-closed-pnl" class="sortable"><thead><tr>']
+        pretty = {"symbol": "Symbol", "qty": "Qty", "purchase_date": "Buy Date",
+                  "purchase_rate": "Buy Rate", "sale_date": "Sell Date",
+                  "sale_rate": "Sell Rate", "pnl": "PnL (₹)", "tenure_bucket": "Bucket"}
+        for c in disp_cols:
+            tbl2.append(f'<th>{pretty.get(c, c)}</th>')
+        tbl2.append("</tr></thead><tbody>")
+        for _, r in disp.iterrows():
+            tbl2.append("<tr>")
+            for c in disp_cols:
+                v = r.get(c, "")
+                v_str = "" if pd.isna(v) else str(v)
+                if c == "pnl":
+                    try:
+                        fv = float(v_str)
+                        cls = _pnl_class(fv)
+                        tbl2.append(f'<td class="{cls}">{_fmt_inr(fv)}</td>')
+                        continue
+                    except (TypeError, ValueError):
+                        pass
+                tbl2.append(f'<td>{html_module.escape(v_str)}</td>')
+            tbl2.append("</tr>")
+        tbl2.append("</tbody></table>")
+        closed_html = (
+            f'<input class="search-bar" type="search" placeholder="Filter closed trades…" '
+            f'oninput="filterTable(\'table-closed-pnl\',this.value)">'
+            + '<div class="table-scroll">' + "\n".join(tbl2) + "</div>"
+        )
+
+    return (
+        cards_html
+        + '<div class="card-section"><h3 class="card-title">Realized PnL by symbol</h3>' + sym_html + "</div>"
+        + '<div class="card-section" style="margin-top:16px"><h3 class="card-title">All closed trades</h3>' + closed_html + "</div>"
+    )
+
+
+def _build_risk_tab() -> str:
+    """Risk metrics with human-readable labels + per-stock volatility + scenario projections table."""
+    import pandas as pd
+
+    risk = _load_json(RISK_METRICS_JSON)
+
+    LABELS = {
+        "portfolio_volatility_annual_pct": ("Portfolio volatility (annual)", "%"),
+        "var_95_1d_pct": ("VaR 95% (1-day)", "%"),
+        "cvar_95_1d_pct": ("CVaR / Expected Shortfall (1-day)", "%"),
+        "sharpe_ratio": ("Sharpe ratio", ""),
+        "beta_nifty": ("Beta vs Nifty", ""),
+        "max_drawdown_pct": ("Max drawdown", "%"),
+        "concentration_herfindahl": ("Concentration (Herfindahl)", ""),
+        "risk_free_rate_annual": ("Risk-free rate (annual)", "%"),
+        "n_constituents": ("Holdings count", ""),
+    }
+
+    risk_rows = ""
+    for k, (label, unit) in LABELS.items():
+        v = risk.get(k)
+        if v is None:
+            # try CSV fallback
+            try:
+                port_csv = pd.read_csv(RISK_METRICS_PORTFOLIO_CSV) if RISK_METRICS_PORTFOLIO_CSV.exists() else pd.DataFrame()
+                if not port_csv.empty and k in port_csv.columns:
+                    v = port_csv[k].iloc[0]
+            except Exception:
+                pass
+        if v is None or (isinstance(v, float) and pd.isna(v)):
+            display = "—"
+        else:
+            try:
+                fv = float(v)
+                display = f"{fv:.4f}{unit}" if abs(fv) < 0.01 and unit == "" else f"{fv:.2f}{unit}"
+            except (TypeError, ValueError):
+                display = str(v) + unit
+        risk_rows += f'<tr><td>{html_module.escape(label)}</td><td>{html_module.escape(display)}</td></tr>'
+
+    risk_metrics_html = (
+        '<div class="card-section"><h3 class="card-title">Portfolio risk metrics</h3>'
+        '<table class="risk-label-table"><tbody>' + risk_rows + '</tbody></table></div>'
+    )
+
+    # Per-stock volatility table
+    vol_html = ""
+    try:
+        risk_s = pd.read_csv(RISK_METRICS_CSV) if RISK_METRICS_CSV.exists() else pd.DataFrame()
+        if not risk_s.empty:
+            risk_s = risk_s.sort_values("volatility_annual_pct", ascending=False)
+            risk_s.columns = [c.replace("symbol", "Symbol").replace("weight_pct", "Weight %")
+                               .replace("volatility_annual_pct", "Volatility % (ann)") for c in risk_s.columns]
+            hcols = [c for c in ["Volatility % (ann)"] if c in risk_s.columns]
+            vol_html = (
+                '<div class="card-section" style="margin-top:16px"><h3 class="card-title">Per-stock volatility</h3>'
+                f'<input class="search-bar" type="search" placeholder="Filter symbols…" '
+                f'oninput="filterTable(\'table-risk-stock\',this.value)">'
+                '<div class="table-scroll">'
+                + _df_to_html_table(risk_s, "table-risk-stock", highlight_cols=hcols)
+                + '</div></div>'
+            )
+    except Exception:
+        pass
+
+    # Scenario projections table
+    scen_html = ""
+    try:
+        scen = pd.read_csv(SCENARIO_PROJECTIONS_CSV) if SCENARIO_PROJECTIONS_CSV.exists() else pd.DataFrame()
+        if not scen.empty:
+            disp = scen.rename(columns={
+                "scenario_name": "Scenario",
+                "index_return_pct": "Index Return %",
+                "portfolio_projected_return_pct": "Portfolio Return %",
+                "description": "Description",
+            })
+            keep = [c for c in ["Scenario", "Index Return %", "Portfolio Return %", "Description"] if c in disp.columns]
+            disp = disp[keep]
+
+            tbl = ['<table id="table-scenarios" class="sortable"><thead><tr>']
+            for c in disp.columns:
+                tbl.append(f'<th>{html_module.escape(str(c))}</th>')
+            tbl.append("</tr></thead><tbody>")
+            for _, r in disp.iterrows():
+                tbl.append("<tr>")
+                for c in disp.columns:
+                    v = r.get(c, "")
+                    if pd.isna(v):
+                        v = ""
+                    v_str = str(v)
+                    if c in ("Index Return %", "Portfolio Return %"):
+                        try:
+                            fv = float(v_str)
+                            cls = "pnl-pos" if fv > 0 else ("pnl-neg" if fv < 0 else "")
+                            tbl.append(f'<td class="{cls}">{fv:+.1f}%</td>')
+                            continue
+                        except (TypeError, ValueError):
+                            pass
+                    tbl.append(f'<td>{html_module.escape(v_str)}</td>')
+                tbl.append("</tr>")
+            tbl.append("</tbody></table>")
+
+            scen_html = (
+                '<div class="card-section" style="margin-top:16px"><h3 class="card-title">Scenario projections</h3>'
+                '<div class="table-scroll">' + "\n".join(tbl) + '</div></div>'
+            )
+    except Exception:
+        pass
+
+    scenario_md = _read(SCENARIO_NARRATIVE_MD) or ""
+    scenario_json = json.dumps(scenario_md, ensure_ascii=False).replace("</script>", "<\\/script>")
+    scen_narrative_html = (
+        f'<div class="card-section" style="margin-top:16px">'
+        f'<h3 class="card-title">Scenario narrative</h3>'
+        f'<div id="risk-scenario-md" class="md-rendered"></div></div>'
+        f'<script type="application/json" id="scenario-md">{scenario_json}</script>'
+    )
+
+    return risk_metrics_html + vol_html + scen_html + scen_narrative_html
+
+
 def build_report_md() -> str:
     """Build full markdown report from all phase outputs."""
     summary = _load_json(PORTFOLIO_SUMMARY_JSON)
@@ -421,58 +793,73 @@ def build_report_html_structured() -> str:
     data_as_of = summary.get("data_as_of", "")
     today = date.today().isoformat()
 
-    # Overview content for marked.js
-    portfolio_summary_md = "## Portfolio summary\n\n"
-    if summary:
-        portfolio_summary_md += f"- **Holdings:** {summary.get('holdings_count', 0)} positions (source: {summary.get('holdings_source', 'N/A')})\n"
-        portfolio_summary_md += f"- **Closed trades:** {summary.get('closed_trades_count', 0)}\n"
-        portfolio_summary_md += f"- **Total realized PnL:** Rs {summary.get('total_realized_pnl', 0):,.2f}\n"
-        portfolio_summary_md += f"- **PnL by tenure:** {summary.get('pnl_by_tenure', {})}\n"
-    pnl_summary_md = _read(PNL_SUMMARY_MD) or "*Run Phase 1 for PnL summary.*"
-    overview_json = json.dumps(
-        {"portfolio_summary": portfolio_summary_md, "pnl_summary": pnl_summary_md},
-        ensure_ascii=False,
-    ).replace("</script>", "<\\/script>")
-
     def escape(s: str) -> str:
         if not s:
             return ""
         return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
 
-    # Tab: Overview
+    # Tab: Overview — summary cards + PnL snippet
+    total_pnl = summary.get("total_realized_pnl", 0)
+    tenure = summary.get("pnl_by_tenure", {})
+
+    def ov_card(label: str, value: object, unit: str = "") -> str:
+        cls = ""
+        try:
+            fv = float(value)
+            if unit == "₹":
+                display = f"{'+'if fv>0 else ''}₹{fv:,.2f}"
+                cls = "pnl-pos" if fv > 0 else "pnl-neg"
+            else:
+                display = f"{fv}{unit}"
+        except (TypeError, ValueError):
+            display = str(value) + unit
+        return (
+            f'<div class="summary-card"><div class="s-label">{html_module.escape(label)}</div>'
+            f'<div class="s-value {cls}">{html_module.escape(display)}</div></div>'
+        )
+
+    pnl_summary_md = _read(PNL_SUMMARY_MD) or "*Run Phase 1 for PnL summary.*"
+    pnl_summary_json = json.dumps(pnl_summary_md, ensure_ascii=False).replace("</script>", "<\\/script>")
     overview_html = (
-        "<div class='overview-cards'>"
-        "<div class='card-section'><h3 class='card-title'>Portfolio summary</h3>"
-        "<div id='overview-portfolio-summary' class='md-rendered'></div></div>"
-        "<div class='card-section'><h3 class='card-title'>PnL summary</h3>"
-        "<div id='overview-pnl-summary' class='md-rendered'></div></div>"
-        "</div>"
-        f"<script type='application/json' id='overview-md'>{overview_json}</script>"
+        '<div class="summary-grid">'
+        + ov_card("Holdings", summary.get("holdings_count", "—"))
+        + ov_card("Closed trades", summary.get("closed_trades_count", "—"))
+        + ov_card("Total realized PnL", total_pnl, "₹")
+        + ov_card("LTCG", tenure.get("LTCG", 0), "₹")
+        + ov_card("STCG", tenure.get("STCG", 0), "₹")
+        + ov_card("Intraday", tenure.get("intraday", 0), "₹")
+        + "</div>"
+        + '<div class="card-section"><h3 class="card-title">PnL summary</h3>'
+        + '<div id="overview-pnl-md" class="md-rendered"></div></div>'
+        + f'<script type="application/json" id="overview-pnl-json">{pnl_summary_json}</script>'
     )
 
-    # Tab: Risk & scenarios
-    risk = _load_json(RISK_METRICS_JSON)
-    scenario_md = _read(SCENARIO_NARRATIVE_MD) or ""
-    risk_html_parts = []
-    if risk:
-        risk_html_parts.append("<div class='card-section'><h3 class='card-title'>Risk metrics</h3><ul>")
-        for k in ("portfolio_volatility_annual_pct", "var_95_1d_pct", "sharpe_ratio", "beta_nifty", "max_drawdown_pct"):
-            if k in risk and risk[k] is not None:
-                risk_html_parts.append(f"<li><strong>{k}</strong>: {risk[k]}</li>")
-        risk_html_parts.append("</ul></div>")
-    risk_html_parts.append("<div class='card-section'><h3 class='card-title'>Scenario narrative</h3><div id='risk-scenario-md' class='md-rendered'></div></div>")
-    scenario_json = json.dumps(scenario_md, ensure_ascii=False).replace("</script>", "<\\/script>")
-    risk_html = "\n".join(risk_html_parts) + f"<script type='application/json' id='scenario-md'>{scenario_json}</script>"
+    # Tab: Holdings (new comprehensive merged table)
+    holdings_html = _build_holdings_tab()
+
+    # Tab: P&L analysis (new)
+    pnl_html = _build_pnl_tab()
+
+    # Tab: Risk & scenarios (enhanced)
+    risk_html = _build_risk_tab()
 
     # Tab: Market sentiment (markdown in card)
     sentiment_md = _read(MARKET_SENTIMENT_MD) or ""
     sentiment_json = json.dumps(sentiment_md, ensure_ascii=False).replace("</script>", "<\\/script>")
-    sentiment_html = f"<div class='card-section'><h3 class='card-title'>Market sentiment</h3><div id='sentiment-md' class='md-rendered'></div></div><script type='application/json' id='sentiment-md-json'>{sentiment_json}</script>"
+    sentiment_html = (
+        f"<div class='card-section'><h3 class='card-title'>Market sentiment</h3>"
+        f"<div id='sentiment-md' class='md-rendered'></div></div>"
+        f"<script type='application/json' id='sentiment-md-json'>{sentiment_json}</script>"
+    )
 
     # Tab: Sector assessment
     sector_md = _read(SECTOR_ASSESSMENT_MD) or ""
     sector_json = json.dumps(sector_md, ensure_ascii=False).replace("</script>", "<\\/script>")
-    sector_html = f"<div class='card-section'><h3 class='card-title'>Sector assessment</h3><div id='sector-md' class='md-rendered'></div></div><script type='application/json' id='sector-md-json'>{sector_json}</script>"
+    sector_html = (
+        f"<div class='card-section'><h3 class='card-title'>Sector assessment</h3>"
+        f"<div id='sector-md' class='md-rendered'></div></div>"
+        f"<script type='application/json' id='sector-md-json'>{sector_json}</script>"
+    )
 
     # Tab: Technical table
     try:
@@ -483,7 +870,13 @@ def build_report_html_structured() -> str:
         technical_html = "<p>No technical data. Run Phase 3.</p>"
     else:
         hcols = [c for c in ["value_rs", "technical_score"] if c in tech_df.columns]
-        technical_html = '<div class="table-scroll">' + _df_to_html_table(tech_df, "table-technical", highlight_cols=hcols or None) + '</div>'
+        technical_html = (
+            f'<input class="search-bar" type="search" placeholder="Filter symbols…" '
+            f'oninput="filterTable(\'table-technical\',this.value)">'
+            + '<div class="table-scroll">'
+            + _df_to_html_table(tech_df, "table-technical", highlight_cols=hcols or None)
+            + "</div>"
+        )
 
     # Tab: Fundamental table
     try:
@@ -494,7 +887,13 @@ def build_report_html_structured() -> str:
         fundamental_html = "<p>No fundamental data. Run Phase 4.</p>"
     else:
         hcols = [c for c in ["ENHANCED_FUND_SCORE", "EARNINGS_QUALITY", "FINANCIAL_STRENGTH"] if c in fund_df.columns]
-        fundamental_html = '<div class="table-scroll">' + _df_to_html_table(fund_df, "table-fundamental", highlight_cols=hcols or None) + '</div>'
+        fundamental_html = (
+            f'<input class="search-bar" type="search" placeholder="Filter symbols…" '
+            f'oninput="filterTable(\'table-fundamental\',this.value)">'
+            + '<div class="table-scroll">'
+            + _df_to_html_table(fund_df, "table-fundamental", highlight_cols=hcols or None)
+            + "</div>"
+        )
 
     # Tab: Stock narratives
     narratives = _load_json(STOCK_NARRATIVES_JSON)
@@ -502,10 +901,15 @@ def build_report_html_structured() -> str:
         narratives = []
     narratives_html = _narratives_to_html(narratives, escape)
 
+    # Tab: Guide (updated text to reflect new tabs)
+    guide_html = _guide_tab_html()
+
     tabs = [
         ("overview", "Overview", overview_html),
-        ("guide", "How to read", _guide_tab_html()),
-        ("risk", "Risk & scenarios", risk_html),
+        ("holdings", "Holdings", holdings_html),
+        ("pnl", "P&amp;L", pnl_html),
+        ("risk", "Risk &amp; scenarios", risk_html),
+        ("guide", "How to read", guide_html),
         ("sentiment", "Market sentiment", sentiment_html),
         ("sector", "Sector assessment", sector_html),
         ("technical", "Technical", technical_html),
@@ -515,105 +919,110 @@ def build_report_html_structured() -> str:
     tab_buttons = "".join(f'<button class="tab-btn" data-tab="{tid}">{label}</button>' for tid, label, _ in tabs)
     tab_panels = "".join(f'<div id="panel-{tid}" class="tab-panel" role="tabpanel">{content}</div>' for tid, _, content in tabs)
 
-    script = """
+    sortable_ids = [
+        "table-holdings", "table-pnl-sym", "table-closed-pnl",
+        "table-scenarios", "table-risk-stock",
+        "table-technical", "table-fundamental",
+    ]
+    sortable_js = "[" + ",".join(f"'{t}'" for t in sortable_ids) + "].forEach(sortTable);"
+
+    script = f"""
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
-(function() {
-  function renderOverviewMd() {
-    var el = document.getElementById('overview-md');
-    if (!el) return;
-    try {
-      var data = JSON.parse(el.textContent);
-      var ids = ['portfolio_summary', 'pnl_summary'];
-      ids.forEach(function(key) {
-        var div = document.getElementById('overview-' + key.replace('_', '-'));
-        if (!div) return;
-        var md = data[key] || '';
-        if (typeof marked !== 'undefined' && marked.parse) div.innerHTML = marked.parse(md);
-        else { div.textContent = md; div.classList.add('md-fallback'); }
-      });
-    } catch (e) {}
-  }
-  function renderMd(id, jsonId) {
+(function() {{
+  function renderMd(elId, jsonId) {{
     var j = document.getElementById(jsonId);
-    var d = document.getElementById(id);
+    var d = document.getElementById(elId);
     if (!j || !d) return;
-    try {
+    try {{
       var md = JSON.parse(j.textContent);
       if (typeof marked !== 'undefined' && marked.parse) d.innerHTML = marked.parse(md);
-      else { d.textContent = md; d.classList.add('md-fallback'); }
-    } catch (e) {}
-  }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function() {
-    renderOverviewMd();
+      else {{ d.textContent = md; d.classList.add('md-fallback'); }}
+    }} catch (e) {{}}
+  }}
+  function initMd() {{
+    renderMd('overview-pnl-md', 'overview-pnl-json');
     renderMd('risk-scenario-md', 'scenario-md');
     renderMd('sentiment-md', 'sentiment-md-json');
     renderMd('sector-md', 'sector-md-json');
-  });
-  else { renderOverviewMd(); renderMd('risk-scenario-md', 'scenario-md'); renderMd('sentiment-md', 'sentiment-md-json'); renderMd('sector-md', 'sector-md-json'); }
+  }}
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initMd);
+  else initMd();
 
   var panels = document.querySelectorAll('.tab-panel');
   var buttons = document.querySelectorAll('.tab-btn');
-  function show(id) {
-    panels.forEach(function(p) { p.classList.remove('active'); });
-    buttons.forEach(function(b) { b.classList.remove('active'); });
+  function show(id) {{
+    panels.forEach(function(p) {{ p.classList.remove('active'); }});
+    buttons.forEach(function(b) {{ b.classList.remove('active'); }});
     var p = document.getElementById('panel-' + id);
     var b = document.querySelector('[data-tab="' + id + '"]');
     if (p) p.classList.add('active');
     if (b) b.classList.add('active');
-  }
-  buttons.forEach(function(b) {
-    b.addEventListener('click', function() { show(b.getAttribute('data-tab')); });
-  });
+  }}
+  buttons.forEach(function(b) {{
+    b.addEventListener('click', function() {{ show(b.getAttribute('data-tab')); }});
+  }});
   if (buttons.length) show(buttons[0].getAttribute('data-tab'));
 
-  function parseCellNum(txt) {
+  function parseCellNum(txt) {{
     if (!txt) return NaN;
-    var s = String(txt).replace(/%|,/g, '').trim();
+    // Strip ₹, +, %, commas
+    var s = String(txt).replace(/[₹%,+]/g, '').trim();
     var n = parseFloat(s);
     return isNaN(n) ? NaN : n;
-  }
-  function sortTable(tableId) {
+  }}
+  function sortTable(tableId) {{
     var table = document.getElementById(tableId);
     if (!table) return;
     var headers = table.querySelectorAll('thead th');
     var body = table.querySelector('tbody');
-    var sortState = { colIndex: -1, asc: true };
-    headers.forEach(function(th, colIndex) {
-      th.addEventListener('click', function() {
+    var sortState = {{ colIndex: -1, asc: true }};
+    headers.forEach(function(th, colIndex) {{
+      th.addEventListener('click', function() {{
         var rows = Array.from(body.querySelectorAll('tr'));
         if (!rows.length) return;
         var asc = (sortState.colIndex === colIndex) ? !sortState.asc : true;
         sortState.colIndex = colIndex;
         sortState.asc = asc;
-        headers.forEach(function(h, i) {
+        headers.forEach(function(h, i) {{
           h.classList.remove('sort-asc', 'sort-desc');
           if (i === colIndex) h.classList.add(asc ? 'sort-asc' : 'sort-desc');
-        });
-        var cellVal = function(row, ci) { var c = row.cells[ci]; return c ? c.textContent.trim() : ''; };
+        }});
+        var cellVal = function(row, ci) {{ var c = row.cells[ci]; return c ? c.textContent.trim() : ''; }};
         var isNum = false;
-        for (var r = 0; r < rows.length; r++) {
+        for (var r = 0; r < rows.length; r++) {{
           var n = parseCellNum(cellVal(rows[r], colIndex));
-          if (!isNaN(n)) { isNum = true; break; }
-        }
-        rows.sort(function(a, b) {
+          if (!isNaN(n)) {{ isNum = true; break; }}
+        }}
+        rows.sort(function(a, b) {{
           var va = cellVal(a, colIndex);
           var vb = cellVal(b, colIndex);
-          if (isNum) {
+          if (isNum) {{
             var na = parseCellNum(va);
             var nb = parseCellNum(vb);
             if (isNaN(na)) na = -Infinity;
             if (isNaN(nb)) nb = -Infinity;
             return asc ? na - nb : nb - na;
-          }
+          }}
           return asc ? (va < vb ? -1 : va > vb ? 1 : 0) : (vb < va ? -1 : vb > va ? 1 : 0);
-        });
-        rows.forEach(function(r) { body.appendChild(r); });
-      });
-    });
-  }
-  ['table-technical','table-fundamental'].forEach(sortTable);
-})();
+        }});
+        rows.forEach(function(r) {{ body.appendChild(r); }});
+      }});
+    }});
+  }}
+  {sortable_js}
+
+  window.filterTable = function(tableId, query) {{
+    var table = document.getElementById(tableId);
+    if (!table) return;
+    var q = query.toLowerCase();
+    var rows = table.querySelectorAll('tbody tr');
+    rows.forEach(function(row) {{
+      var text = row.textContent.toLowerCase();
+      row.style.display = (!q || text.indexOf(q) !== -1) ? '' : 'none';
+    }});
+  }};
+}})();
 </script>
 """
 

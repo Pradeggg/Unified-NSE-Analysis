@@ -292,6 +292,20 @@ def build_stage_screener_tab_html(
         except (TypeError, ValueError):
             return "—"
 
+    def _price_col(row) -> object:
+        """Return first non-None, non-NaN price from CURRENT_PRICE or CLOSE."""
+        for col in ("CURRENT_PRICE", "CLOSE"):
+            v = row.get(col)
+            if v is None:
+                continue
+            try:
+                f = float(v)
+                if not math.isnan(f) and f > 0:
+                    return f
+            except (TypeError, ValueError):
+                pass
+        return None
+
     rows_html = ""
     for _, row in screener_df.iterrows():
         sym = str(row.get("SYMBOL", ""))
@@ -299,7 +313,7 @@ def build_stage_screener_tab_html(
         badge = stage_badge_html(stage)
         co = html_mod.escape(str(row.get("COMPANY_NAME", sym))[:30])
         sec = html_mod.escape(str(row.get("SECTOR_NAME", "")))
-        price = _fmt(row.get("CLOSE"), digits=2)
+        price = _fmt(_price_col(row), digits=2)
         sma50 = _fmt(row.get("SMA_50"), digits=2)
         sma200 = _fmt(row.get("SMA_200"), digits=2)
         sl50 = _rc(row.get("SMA_50_SLOPE"))
@@ -489,9 +503,25 @@ def build_momentum_screener_tab_html(screener_df: pd.DataFrame) -> str:
 
     def _num(v: object, decimals: int = 2) -> str:
         try:
-            return f"{float(v):.{decimals}f}"
+            f = float(v)
+            if math.isnan(f):
+                return "—"
+            return f"{f:.{decimals}f}"
         except (TypeError, ValueError):
             return "—"
+
+    def _price(row) -> str:
+        for col in ("CURRENT_PRICE", "CLOSE"):
+            v = row.get(col)
+            if v is None:
+                continue
+            try:
+                f = float(v)
+                if not math.isnan(f) and f > 0:
+                    return f"{f:.2f}"
+            except (TypeError, ValueError):
+                pass
+        return "—"
 
     rows_html = ""
     for rank, (_, row) in enumerate(screener_df.iterrows(), start=1):
@@ -514,7 +544,7 @@ def build_momentum_screener_tab_html(screener_df: pd.DataFrame) -> str:
             f'<td><strong>{_h(row.get("SYMBOL"))}</strong></td>'
             f'<td>{_h(row.get("COMPANY_NAME", row.get("SYMBOL", "")))}</td>'
             f'<td>{_h(row.get("SECTOR_NAME", ""))}</td>'
-            f'<td class="num">{_num(row.get("CURRENT_PRICE") or row.get("CLOSE"))}</td>'
+            f'<td class="num">{_price(row)}</td>'
             f'<td class="num {dist_cls}">{_pct(dist)}</td>'
             f'<td class="num">{_pct(row.get("RS_RANK_PCT", float("nan")) * 100 if row.get("RS_RANK_PCT") is not None else float("nan"), 0)}</td>'
             f'<td class="num">{_num(row.get("VOL_RATIO") or row.get("VOLUME_RATIO"), 2)}×</td>'
@@ -645,9 +675,25 @@ def build_turnaround_tab_html(screener_df: pd.DataFrame) -> str:
 
     def _num(v: object, decimals: int = 2) -> str:
         try:
-            return f"{float(v):.{decimals}f}"
+            f = float(v)
+            if math.isnan(f):
+                return "—"
+            return f"{f:.{decimals}f}"
         except (TypeError, ValueError):
             return "—"
+
+    def _price(row) -> str:
+        for col in ("CURRENT_PRICE", "CLOSE"):
+            v = row.get(col)
+            if v is None:
+                continue
+            try:
+                f = float(v)
+                if not math.isnan(f) and f > 0:
+                    return f"{f:.2f}"
+            except (TypeError, ValueError):
+                pass
+        return "—"
 
     rows_html = ""
     for rank, (_, row) in enumerate(screener_df.iterrows(), start=1):
@@ -679,7 +725,7 @@ def build_turnaround_tab_html(screener_df: pd.DataFrame) -> str:
             f'<td><strong>{_h(row.get("SYMBOL"))}</strong></td>'
             f'<td>{_h(row.get("COMPANY_NAME", row.get("SYMBOL", "")))}</td>'
             f'<td>{_h(row.get("SECTOR_NAME", ""))}</td>'
-            f'<td class="num">{_num(row.get("CURRENT_PRICE") or row.get("CLOSE"))}</td>'
+            f'<td class="num">{_price(row)}</td>'
             f'<td class="num" {dd_cls}>{dd_str}</td>'
             f'<td>{rsi_html}</td>'
             f'<td style="{st_cls}">{_h(st)}</td>'
@@ -852,7 +898,10 @@ def build_darvas_tab_html(screener_df: "pd.DataFrame | None") -> str:
 
     def _num(v: object, d: int = 2) -> str:
         try:
-            return f"{float(v):.{d}f}"
+            f = float(v)
+            if math.isnan(f):
+                return "—"
+            return f"{f:.{d}f}"
         except (TypeError, ValueError):
             return "—"
 
