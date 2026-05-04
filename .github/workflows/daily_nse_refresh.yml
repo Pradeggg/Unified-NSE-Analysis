@@ -59,7 +59,7 @@ jobs:
             pandas-ta scipy statsmodels \
             jugaad-data pyreadr || true
           # Install optional packages (don't fail if unavailable)
-          pip install anthropic ollama || true
+          pip install openai ollama || true
 
       - name: Restore cached SQLite DB & data
         uses: actions/cache@v4
@@ -83,7 +83,7 @@ jobs:
             python daily_refresh.py
           fi
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
       - name: Check for report changes
         id: changes
