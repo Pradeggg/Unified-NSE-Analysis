@@ -612,8 +612,10 @@ def _scores_from_fund_details(fd: dict) -> dict:
     """
     import re
 
-    def _extract_num(text: str, pattern: str) -> float | None:
-        m = re.search(pattern, text or "", re.IGNORECASE)
+    def _extract_num(text, pattern: str) -> float | None:
+        if not isinstance(text, str):
+            return None
+        m = re.search(pattern, text, re.IGNORECASE)
         if m:
             try:
                 return float(m.group(1).replace(",", ""))
@@ -621,9 +623,12 @@ def _scores_from_fund_details(fd: dict) -> dict:
                 pass
         return None
 
-    pnl = fd.get("pnl_summary", "") or ""
-    ratios = fd.get("ratios_summary", "") or ""
-    bs = fd.get("balance_sheet_summary", "") or ""
+    pnl    = fd.get("pnl_summary", "")           if fd else ""
+    ratios = fd.get("ratios_summary", "")         if fd else ""
+    bs     = fd.get("balance_sheet_summary", "")  if fd else ""
+    pnl    = pnl    if isinstance(pnl, str)    else ""
+    ratios = ratios if isinstance(ratios, str) else ""
+    bs     = bs     if isinstance(bs, str)     else ""
 
     # Sales YoY → sales_growth score (0-100)
     sales_yoy = _extract_num(pnl, r"Sales.*?YoY\s*([+\-]?\d+\.?\d*)%")
