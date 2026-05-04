@@ -461,6 +461,69 @@ def _is_etf(sym: str) -> bool:
     return any(kw in s for kw in _ETF_KEYWORDS) or s.endswith("ETF") or s.endswith("FUND")
 
 
+def compute_adx(grp: pd.DataFrame, period: int = 14) -> float:
+    """Average Directional Index — trend strength 0–100."""
+    grp = grp.sort_values("TIMESTAMP").tail(60)
+    if len(grp) < period + 2:
+        return 0.0
+    try:
+        h = grp["HIGH"].values
+        l = grp["LOW"].values
+        c = grp["CLOSE"].values
+        tr  = [max(h[i]-l[i], abs(h[i]-c[i-1]), abs(l[i]-c[i-1])) for i in range(1, len(c))]
+        pdm = [max(h[i]-h[i-1], 0) if (h[i]-h[i-1]) > (l[i-1]-l[i]) else 0 for i in range(1, len(h))]
+        ndm = [max(l[i-1]-l[i], 0) if (l[i-1]-l[i]) > (h[i]-h[i-1]) else 0 for i in range(1, len(l))]
+        atr  = pd.Series(tr).ewm(span=period, adjust=False).mean()
+        pdi  = 100 * pd.Series(pdm).ewm(span=period, adjust=False).mean() / atr.replace(0, 1e-9)
+        ndi  = 100 * pd.Series(ndm).ewm(span=period, adjust=False).mean() / atr.replace(0, 1e-9)
+        dsum = (pdi + ndi).replace(0, 1e-9)
+        dx   = 100 * abs(pdi - ndi) / dsum
+        adx  = dx.ewm(span=period, adjust=False).mean()
+        return round(float(adx.iloc[-1]), 1)
+    except Exception:
+        return 0.0
+
+
+def compute_macd_hist(closes: pd.Series) -> float:
+    """MACD histogram value (positive = bullish momentum, negative = bearish)."""
+    if len(closes) < 26:
+        return 0.0
+    try:
+        ema12  = closes.ewm(span=12, adjust=False).mean()
+        ema26  = closes.ewm(span=26, adjust=False).mean()
+        macd   = ema12 - ema26
+        signal = macd.ewm(span=9, adjust=False).mean()
+        return round(float(macd.iloc[-1] - signal.iloc[-1]), 4)
+    except Exception:
+        return 0.0
+
+
+def load_rs_from_db() -> dict[str, dict]:
+    """Load relative_strength, change_1w_pct, change_1m_pct, supertrend_state
+    for all symbols from the latest DB snapshot."""
+    if not DB_PATH.exists():
+        return {}
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        rows = conn.execute(
+            "SELECT symbol, relative_strength, change_1w_pct, change_1m_pct, supertrend_state "
+            "FROM stage_snapshots "
+            "WHERE snapshot_date=(SELECT MAX(snapshot_date) FROM stage_snapshots)"
+        ).fetchall()
+        conn.close()
+        return {
+            r[0]: {
+                "rs":       float(r[1]) if r[1] is not None else None,
+                "chg_1w":   float(r[2]) if r[2] is not None else None,
+                "chg_1m":   float(r[3]) if r[3] is not None else None,
+                "st_state": r[4] or None,
+            }
+            for r in rows
+        }
+    except Exception:
+        return {}
+
+
 def run_screener(hist: pd.DataFrame, live_prices: dict, top_n: int = 20) -> dict:
     """
     Run all technical screens. Returns dict of signal → list of stock dicts.
@@ -473,9 +536,10 @@ def run_screener(hist: pd.DataFrame, live_prices: dict, top_n: int = 20) -> dict
         "stage2_leaders":  [],
     }
 
-    # Load Stage 2 stocks from DB
+    # Load Stage 2 stocks + RS + extended data from DB
     stage2_syms: set[str] = set()
     stage2_info: dict[str, dict] = {}
+    db_data = load_rs_from_db()   # rs, chg_1w, chg_1m, st_state for all universe stocks
     if DB_PATH.exists():
         conn = sqlite3.connect(DB_PATH)
         rows = conn.execute(
@@ -498,14 +562,21 @@ def run_screener(hist: pd.DataFrame, live_prices: dict, top_n: int = 20) -> dict
         if len(grp) < 20:
             continue
 
-        live = live_prices.get(sym.upper())
+        live    = live_prices.get(sym.upper())
         current = live or float(grp["CLOSE"].iloc[-1])
         prev_c  = float(grp["CLOSE"].iloc[-2]) if len(grp) > 1 else current
         chg_pct = round((current / prev_c - 1) * 100, 2) if prev_c else 0
 
-        rsi   = compute_rsi(grp["CLOSE"])
-        mas   = is_above_key_mas(grp)
-        st    = compute_supertrend(grp)
+        rsi  = compute_rsi(grp["CLOSE"])
+        mas  = is_above_key_mas(grp)
+        st   = compute_supertrend(grp)
+        adx  = compute_adx(grp)
+        macd = compute_macd_hist(grp["CLOSE"])
+
+        # RS: from DB (decimal × 100 → show as %) or None
+        db_extra = db_data.get(sym, {})
+        rs_raw   = db_extra.get("rs")
+        rs_pct   = round(rs_raw * 100, 1) if rs_raw is not None else None
 
         base = {
             "symbol":  sym,
@@ -513,6 +584,11 @@ def run_screener(hist: pd.DataFrame, live_prices: dict, top_n: int = 20) -> dict
             "chg_pct": chg_pct,
             "rsi":     round(rsi, 1),
             "st":      st,
+            "adx":     adx,
+            "macd":    macd,
+            "rs":      rs_pct,
+            "chg_1w":  db_extra.get("chg_1w"),
+            "chg_1m":  db_extra.get("chg_1m"),
             **mas,
         }
 
@@ -537,16 +613,22 @@ def run_screener(hist: pd.DataFrame, live_prices: dict, top_n: int = 20) -> dict
         grp = hist[hist["SYMBOL"] == sym]
         if grp.empty:
             continue
-        grp = grp.sort_values("TIMESTAMP")
-        live  = live_prices.get(sym.upper())
+        grp     = grp.sort_values("TIMESTAMP")
+        live    = live_prices.get(sym.upper())
         current = live or float(grp["CLOSE"].iloc[-1])
         prev_c  = float(grp["CLOSE"].iloc[-2]) if len(grp) > 1 else current
         chg_pct = round((current / prev_c - 1) * 100, 2) if prev_c else 0
-        rsi   = compute_rsi(grp["CLOSE"])
-        mas   = is_above_key_mas(grp)
+        rsi     = compute_rsi(grp["CLOSE"])
+        mas     = is_above_key_mas(grp)
+        db_extra = db_data.get(sym, {})
+        rs_raw   = db_extra.get("rs")
         results["stage2_leaders"].append({
             "symbol": sym, "price": current, "chg_pct": chg_pct,
-            "rsi": round(rsi, 1), **mas, **info,
+            "rsi": round(rsi, 1),
+            "rs":  round(rs_raw * 100, 1) if rs_raw is not None else None,
+            "chg_1w": db_extra.get("chg_1w"),
+            "chg_1m": db_extra.get("chg_1m"),
+            **mas, **info,
         })
 
     # Sort and trim
@@ -822,6 +904,45 @@ def _build_row(item: dict, columns: list) -> list:
             v   = float(item.get("rsi", 50) or 50)
             row.append(Text(f"{v:.0f}", style=_rsi_color(v), no_wrap=True))
 
+        elif col_name == "ADX":
+            v   = float(item.get("adx", 0) or 0)
+            clr = "bold green" if v >= 40 else ("green" if v >= 25 else ("yellow" if v >= 20 else "dim"))
+            row.append(Text(f"{v:.0f}", style=clr, no_wrap=True) if v else Text("—", style="dim"))
+
+        elif col_name == "RS":
+            v = item.get("rs")
+            if v is not None:
+                fv  = float(v)
+                clr = "bold green" if fv >= 20 else ("green" if fv >= 5 else ("red" if fv <= -5 else "yellow"))
+                row.append(Text(f"{fv:+.0f}", style=clr, no_wrap=True))
+            else:
+                row.append(Text("—", style="dim"))
+
+        elif col_name == "MACD":
+            v = item.get("macd", 0) or 0
+            if float(v) > 0:
+                row.append(Text("▲", style="green", no_wrap=True))
+            elif float(v) < 0:
+                row.append(Text("▼", style="red", no_wrap=True))
+            else:
+                row.append(Text("─", style="dim", no_wrap=True))
+
+        elif col_name == "1W%":
+            v = item.get("chg_1w")
+            if v is not None:
+                fv  = float(v)
+                row.append(Text(f"{fv:+.1f}%", style=_chg_color(fv), no_wrap=True))
+            else:
+                row.append(Text("—", style="dim"))
+
+        elif col_name == "1M%":
+            v = item.get("chg_1m")
+            if v is not None:
+                fv  = float(v)
+                row.append(Text(f"{fv:+.1f}%", style=_chg_color(fv), no_wrap=True))
+            else:
+                row.append(Text("—", style="dim"))
+
         elif col_name == "ST":
             s   = item.get("st") or "—"
             row.append(Text(s, style=_st_color(s), no_wrap=True))
@@ -869,33 +990,35 @@ def _build_row(item: dict, columns: list) -> list:
 
 
 def build_supertrend_panel(items: list) -> Panel:
+    # ST col removed (all are BUY); MA replaced by ADX + RS
     cols = [
-        ("SYMBOL", "left",  11), ("PRICE", "right",  9), ("CHG%", "right", 8),
-        ("RSI",    "right",  5), ("ST",    "center",  6), ("MA",  "center", 5),
+        ("SYMBOL", "left",  11), ("PRICE", "right",  9), ("CHG%", "right", 7),
+        ("RSI",    "right",   4), ("ADX",   "right",   4), ("RS",  "right", 5),
     ]
     return build_signal_table("SUPERTREND BUY", "🟢", items, cols, "green")
 
 
 def build_breakout_panel(items: list, label: str = "52W BREAKOUT") -> Panel:
     cols = [
-        ("SYMBOL", "left",  10), ("PRICE", "right",  9), ("CHG%", "right", 9),
-        ("W52H",   "right",  9), ("RSI",   "right",  5), ("VOL✓", "center", 4),
+        ("SYMBOL", "left",  10), ("PRICE", "right",  9), ("CHG%", "right", 8),
+        ("RS",     "right",   5), ("RSI",  "right",  4), ("VOL✓", "center", 4),
     ]
     return build_signal_table(label, "🚀", items, cols, "yellow")
 
 
 def build_vcp_panel(items: list) -> Panel:
     cols = [
-        ("SYMBOL",    "left",  10), ("PRICE", "right",  9), ("CHG%",  "right", 8),
-        ("TIGHTNESS", "right", 10), ("RSI",   "right",  5), ("MA",   "center", 5),
+        ("SYMBOL",    "left",  10), ("PRICE", "right",  9), ("CHG%",  "right", 7),
+        ("TIGHTNESS", "right",  9), ("RSI",   "right",  4), ("RS",  "right", 5),
     ]
     return build_signal_table("VCP SETUPS (Volatility Contraction)", "🎯", items, cols, "cyan")
 
 
 def build_stage2_panel(items: list) -> Panel:
+    # Show 1M% change (from DB) instead of 1D chg; RS from DB
     cols = [
-        ("SYMBOL", "left",  10), ("PRICE",  "right",  9), ("CHG%",   "right",  9),
-        ("RSI",    "right",  5), ("INV",    "right",   5), ("SIGNAL", "center", 10),
+        ("SYMBOL", "left",  10), ("PRICE",  "right",  9), ("1M%",    "right",  8),
+        ("RS",     "right",   5), ("RSI",   "right",   4), ("SIGNAL", "center", 9),
     ]
     return build_signal_table("STAGE 2 LEADERS (Weinstein Advancing)", "⭐", items, cols, "gold1")
 
