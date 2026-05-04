@@ -5,6 +5,7 @@ Daily NSE Data Refresh Orchestrator
 Runs the full pipeline after NSE market close (3:30 PM IST / 10:00 UTC).
 
 Pipeline stages:
+  0. Download missing NSE bhavcopy data → updates nse_sec_full_data.csv + nse_index_data.csv
   1. Fetch auxiliary data: FII/DII flows, F&O signals, corporate events,
      insider alerts, macro proxies
   2. Run comprehensive NSE universe analysis → generates comprehensive_nse_enhanced_*.csv
@@ -12,9 +13,10 @@ Pipeline stages:
   4. Generate HTML report
 
 Usage:
-  python daily_refresh.py               # full pipeline
+  python daily_refresh.py               # full pipeline (download + analysis + report)
   python daily_refresh.py --live-only   # just update live prices (fast, ~1 min)
   python daily_refresh.py --skip-analysis  # skip heavy analysis, just tracker
+  python daily_refresh.py --skip-download  # skip data download, use existing CSVs
   python daily_refresh.py --dry-run     # print plan without executing
 """
 from __future__ import annotations
@@ -73,6 +75,17 @@ def _section(title: str) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 # Pipeline steps
 # ─────────────────────────────────────────────────────────────────────────────
+
+# PG: Step 0 — Download missing NSE bhavcopy data (stock + index)
+def step_download_data(dry_run: bool) -> bool:
+    """Download missing NSE bhavcopy archives to update stock + index CSVs."""
+    _section("STEP 0 — Download NSE Bhavcopy Data")
+    return _run(
+        "NSE Bhavcopy (stocks + indices)",
+        ["python", "scripts/fetch_nse_data.py"],
+        dry_run=dry_run,
+    )
+
 
 def step_fetch_auxiliary(dry_run: bool) -> dict[str, bool]:
     """Fetch FII/DII, F&O, corporate events, insider alerts, macro proxies."""
@@ -158,6 +171,8 @@ def main() -> int:
                         help="Skip heavy comprehensive analysis (use existing CSV)")
     parser.add_argument("--skip-aux",        action="store_true",
                         help="Skip auxiliary data fetch (FII/DII, F&O, events)")
+    parser.add_argument("--skip-download",   action="store_true",
+                        help="Skip NSE bhavcopy data download (use existing CSVs)")
     parser.add_argument("--full-report",     action="store_true",
                         help="Also regenerate full sector rotation report")
     parser.add_argument("--dry-run",         action="store_true",
@@ -185,6 +200,12 @@ def main() -> int:
 
     # ── Full pipeline ────────────────────────────────────────────────────────
 
+    # 0. Download missing NSE bhavcopy data (stock + index CSVs)
+    if not args.skip_download:
+        if not step_download_data(args.dry_run):
+            failed.append("Data download")
+            print("\n  ⚠️  Download failed — continuing with existing data")
+
     # 1. Auxiliary data
     if not args.skip_aux:
         aux_results = step_fetch_auxiliary(args.dry_run)
@@ -196,18 +217,25 @@ def main() -> int:
             failed.append("Comprehensive analysis")
             print("\n  ⚠️  Analysis failed — will use latest existing CSV for tracker")
 
-    # 3. Tracker snapshot (full: screener + live prices)
+    # 3. Fetch screener.in fundamentals (after analysis, before snapshot)
+    _run(
+        "Screener.in Fundamentals",
+        ["python", "fetch_screener_fundamentals.py", "--all"],
+        dry_run=args.dry_run,
+    )
+
+    # 4. Tracker snapshot (full: screener + live prices)
     if not step_tracker_snapshot(args.dry_run, live_only=False):
         # Fallback: try live-only update if screener failed
         print("  Snapshot failed — trying live-price update only …")
         if not step_tracker_snapshot(args.dry_run, live_only=True):
             failed.append("Tracker snapshot")
 
-    # 4. HTML report
+    # 5. HTML report
     if not step_generate_report(args.dry_run):
         failed.append("HTML report")
 
-    # 5. Optional full sector rotation report
+    # 6. Optional full sector rotation report
     if args.full_report:
         if not step_sector_rotation_report(args.dry_run):
             failed.append("Sector rotation report")
