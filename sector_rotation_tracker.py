@@ -185,6 +185,16 @@ def _fetch_live_prices(symbols: list[str]) -> dict[str, float]:
 # Snapshot writer
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _closest_snapshot(dates: list[str], target: date, max_gap_days: int = 10) -> Optional[str]:
+    """Return the snapshot date closest to `target` (within max_gap_days), excluding today."""
+    best, best_delta = None, max_gap_days + 1
+    for d in dates:
+        delta = abs((date.fromisoformat(d) - target).days)
+        if delta < best_delta:
+            best, best_delta = d, delta
+    return best
+
+
 def write_snapshot(
     snap_date: Optional[str] = None,
     fetch_live: bool = True,
@@ -258,9 +268,9 @@ def write_snapshot(
     dates = list_snapshot_dates(conn)
     if len(dates) >= 2:
         _compute_changes(conn, dates[0], dates[1])   # today vs yesterday
-    # Also vs ~7 days ago
-    week_ago = (datetime.fromisoformat(today) - timedelta(days=7)).date().isoformat()
-    week_snap = next((d for d in dates if d <= week_ago), None)
+    # Also vs ~7 days ago — find closest snapshot within ±3 days of a week ago
+    week_target = datetime.fromisoformat(today).date() - timedelta(days=7)
+    week_snap = _closest_snapshot(dates, week_target)
     if week_snap and week_snap != dates[1]:
         _compute_changes(conn, today, week_snap)
 
@@ -410,8 +420,8 @@ def build_change_report(
 
         # Week comparison too
         if also_vs_week:
-            week_ago = (datetime.fromisoformat(today_snap) - timedelta(days=7)).date().isoformat()
-            week_snap = next((d for d in dates if d <= week_ago), None)
+            week_target = datetime.fromisoformat(today_snap).date() - timedelta(days=7)
+            week_snap = _closest_snapshot(dates, week_target)
             if week_snap:
                 ex2 = conn.execute(
                     "SELECT COUNT(*) FROM stage_changes WHERE change_date=? AND compare_date=?",
@@ -426,7 +436,7 @@ def build_change_report(
                 result["week_snap"] = week_snap
                 result["week_new_stage2"]  = chg_w[chg_w.change_type == "NEW_STAGE2"].to_dict("records")
                 result["week_exit_stage2"] = chg_w[chg_w.change_type == "EXIT_STAGE2"].to_dict("records")
-                result["week_price_changes"] = chg_w[chg_w.stage == "STAGE_2"].to_dict("records")
+                result["week_price_changes"] = chg_w[chg_w.stage_now == "STAGE_2"].to_dict("records")
 
     result["summary"] = {
         "total_stage2": len(s2_now),
