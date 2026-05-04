@@ -171,6 +171,7 @@ Every external and internal data source the platform uses or will use. Items mar
 | P3-1 Causal Inference Model | ⏳ BLOCKED | — | Needs 6+ months of P0-1 signal data |
 | P3-2 Voice Briefing | 🔜 READY | — | `generate_voice_briefing.py`. Needs OpenAI TTS key. |
 | P3-3 Real-Time Mode | 💤 DEFERRED | — | Needs live NSE data subscription |
+| P3-4 Agent Adda Market Terminal | 🔜 READY | — | Terminal-first Indian markets cockpit. Spec: `docs/superpowers/specs/2026-05-05-agent-adda-market-terminal-design.md` |
 | **Phase 4 — Branch A: Advanced Screeners** | | | |
 | A1 Stage Analysis Screener | 🔜 READY | — | William O'Neil 4-stage classification; Stage 2 only buy zone |
 | A2 Darvas Box Breakout | 🔜 READY | — | Box top/bottom detection; breakout + volume confirmation |
@@ -1009,6 +1010,66 @@ Replace batch daily run with a streaming mode:
 - Push alert to terminal / desktop notification when actionable signal fires
 
 **Note:** Yahoo Finance 15-min data is free but rate-limited. NSE's official EODS data subscription (~₹2,000/month) needed for production intraday.
+
+---
+
+### P3-4 — Agent Adda Market Terminal
+**Size:** XL  
+**Priority:** High (product shell for daily research workflow)
+
+**Design spec:** `docs/superpowers/specs/2026-05-05-agent-adda-market-terminal-design.md`
+
+**What exists:**
+- `nse_terminal.py` exists as an early terminal surface.
+- `download_nse_bhavcopy.py`, `daily_refresh.py`, `sector_rotation_tracker.py`, `market_breadth.py`, `index_intelligence.py`, `sector_rotation_report.py`, and `portfolio-analyzer/` already produce most of the underlying intelligence.
+- Current outputs are useful but distributed across scripts, generated files, and reports rather than a unified terminal operating system.
+
+**What to build:**  
+Create a terminal-first Indian markets cockpit for research and learning, branded as **Agent Adda - Market Intelligence Agent**. The terminal should combine market scanner, keyboard command workflow, symbol drilldown, portfolio awareness, report shortcuts, and data-health monitoring.
+
+**Core commands:**
+```text
+STAGE2        Show Stage 2 / leadership setups
+BREAKOUTS     Show breakout candidates
+VCP           Show volatility contraction candidates
+SUPERTREND    Show bullish/bearish supertrend flips
+SECTOR <name> Drill into sector leadership and constituents
+<SYMBOL>      Open symbol drilldown
+PORT          Open portfolio cockpit
+HEALTH        Show source freshness and failures
+REPORT        Open latest HTML/PDF/MD report outputs
+REFRESH       Refresh market snapshots
+EOD           Run daily EOD refresh
+```
+
+**Screens to build:**
+- **Scanner Home:** market regime, top sectors, top setups, risk flags, data-health strip.
+- **Symbol Drilldown:** `Setup | Fundamentals | Catalysts | Narrative | History`.
+- **Portfolio Cockpit:** held symbols, sector concentration, candidate overlap, watchlist badges.
+- **Data Health:** source freshness, last successful fetch, stale/missing/failed status.
+- **Reports:** open/copy latest sector rotation report, tracker report, generated CSVs, and PDF/HTML/MD artifacts.
+
+**Files to create / modify:**
+- Create `terminal/app.py` as the main TUI entry point.
+- Create `terminal/screens/` for scanner, symbol, portfolio, health, and reports screens.
+- Create `terminal/services/` for scanner snapshot, symbol profile, portfolio state, report discovery, and data-health services.
+- Create `terminal/adapters/` for NSE/Yahoo/public-data providers so broker or paid-feed adapters can be added later.
+- Keep `nse_terminal.py` as a thin launcher or compatibility wrapper.
+- Reuse existing engines instead of duplicating analytics logic.
+
+**Dependencies:**
+- Existing CSV/data outputs from daily refresh.
+- Existing report generation pipeline.
+- Public/free data first; broker/API live-feed integration deferred behind adapter interfaces.
+
+**Acceptance criteria:**
+- `python nse_terminal.py` opens the terminal cockpit without requiring paid data.
+- Scanner home renders from cached data even if one external data source is stale or unavailable.
+- `STAGE2`, `BREAKOUTS`, `SECTOR <name>`, `<SYMBOL>`, `PORT`, `HEALTH`, `REPORT`, `REFRESH`, and `EOD` commands execute without crashing.
+- Symbol drilldown shows setup, fundamentals, catalysts, narrative, and history sections for a valid NSE symbol.
+- Data Health screen marks sources as `fresh`, `stale`, `missing`, or `failed`.
+- Report screen can locate latest `reports/latest/sector_rotation.html`, `.pdf`, and `.md`.
+- Terminal copy avoids buy/sell recommendation language and clearly positions output as research/learning, not investment advice.
 
 ---
 
@@ -2219,6 +2280,7 @@ SPRINT 7: Synthesis + Flow Intelligence
 
 SPRINT 8: Learning + Futuristic
   P2-3  Learning Loop                    [L] — 90 days signal data accumulated by now
+  P3-4  Agent Adda Market Terminal       [XL] — terminal cockpit over existing engines
   P3-2  Voice Briefing                   [M] — OpenAI TTS
   P3-1  Causal Inference Model           [XL] — 6+ months signal data required
   P3-3  Real-Time Mode                   [XL]
