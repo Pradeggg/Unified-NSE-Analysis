@@ -34,12 +34,15 @@ except ImportError:
 # Configuration
 # =============================================================================
 
-# Set paths
-BASE_DIR = Path('/Users/pgorai/Library/CloudStorage/OneDrive-Deloitte(O365D)/Documents/Data Visualization/Analytics/Financial Markets/Unified-NSE-Analysis')
-NSE_DATA_DIR = Path('/Users/pgorai/Library/CloudStorage/OneDrive-Deloitte(O365D)/Documents/Data Visualization/Analytics/Financial Markets/NSE-index')
+# Set paths — use script location so this works from any directory
+BASE_DIR = Path(__file__).resolve().parent
+NSE_DATA_DIR = BASE_DIR / 'data'   # nse_sec_full_data.csv and nse_index_data.csv live here
 DATA_DIR = BASE_DIR / 'data'
 REPORTS_DIR = BASE_DIR / 'reports'
 REPORTS_DIR.mkdir(exist_ok=True, parents=True)
+
+# Legacy fallback: OneDrive location for nse_sec_full_data.csv
+_ONEDRIVE_NSE = Path('/Users/pgorai/Library/CloudStorage/OneDrive-Deloitte(O365D)/Documents/Data Visualization/Analytics/Financial Markets/NSE-index')
 
 # Database path
 DB_PATH = BASE_DIR / 'nse_analysis.db'
@@ -131,12 +134,14 @@ def load_stock_data():
     """Load NSE stock data from CSV"""
     print("Loading NSE stock data with enhanced error handling...")
     
-    stock_file = DATA_DIR / 'nse_sec_full_data.csv'
-    if not stock_file.exists():
-        # Try alternative location
-        stock_file = NSE_DATA_DIR / 'nse_sec_full_data.csv'
-        if not stock_file.exists():
-            raise FileNotFoundError(f"Stock data file not found: {stock_file}")
+    # Search order: local data/, then OneDrive legacy location
+    candidates = [
+        DATA_DIR / 'nse_sec_full_data.csv',
+        _ONEDRIVE_NSE / 'nse_sec_full_data.csv',
+    ]
+    stock_file = next((p for p in candidates if p.exists()), None)
+    if stock_file is None:
+        raise FileNotFoundError(f"nse_sec_full_data.csv not found in {DATA_DIR} or OneDrive fallback")
     
     try:
         # Read CSV
@@ -178,11 +183,13 @@ def load_index_data():
     """Load NSE index data from CSV"""
     print("Loading comprehensive NSE index data...")
     
-    index_file = DATA_DIR / 'nse_index_data.csv'
-    if not index_file.exists():
-        index_file = NSE_DATA_DIR / 'nse_index_data.csv'
-        if not index_file.exists():
-            raise FileNotFoundError(f"Index data file not found: {index_file}")
+    candidates = [
+        DATA_DIR / 'nse_index_data.csv',
+        _ONEDRIVE_NSE / 'nse_index_data.csv',
+    ]
+    index_file = next((p for p in candidates if p.exists()), None)
+    if index_file is None:
+        raise FileNotFoundError(f"nse_index_data.csv not found in {DATA_DIR} or OneDrive fallback")
     
     try:
         df = pd.read_csv(index_file, encoding='utf-8', low_memory=False)
@@ -200,6 +207,8 @@ def load_fundamental_data():
     print("Loading fundamental scores database...")
     
     fund_file = DATA_DIR / 'fundamental_scores_database.csv'
+    if not fund_file.exists():
+        fund_file = _ONEDRIVE_NSE / 'fundamental_scores_database.csv'
     if not fund_file.exists():
         print("Fundamental scores file not found, continuing without fundamental data")
         return None
@@ -219,7 +228,8 @@ def load_company_names():
     # Try multiple possible locations
     possible_files = [
         DATA_DIR / 'company_names_mapping.csv',
-        BASE_DIR / 'archive' / 'company_names_mapping.csv'
+        BASE_DIR / 'archive' / 'company_names_mapping.csv',
+        _ONEDRIVE_NSE / 'company_names_mapping.csv',
     ]
     
     for file_path in possible_files:

@@ -486,6 +486,21 @@ def write_snapshot(
                 "ratios_summary": fc_row.get("ratios_summary"),
             }
         base["fund_details"] = json.dumps(fund_details_dict) if fund_details_dict else None
+
+        # Fill missing enhanced fund scores from scraped fund_details
+        needs_scores = (
+            fund_details_dict
+            and (
+                base.get("enhanced_fund_score") is None
+                or (isinstance(base.get("enhanced_fund_score"), float) and base["enhanced_fund_score"] != base["enhanced_fund_score"])  # NaN
+            )
+        )
+        if needs_scores:
+            computed = _scores_from_fund_details(fund_details_dict)
+            for k, v in computed.items():
+                if base.get(k) is None or (isinstance(base.get(k), float) and base[k] != base[k]):
+                    base[k] = v
+
         base["investment_score"] = _investment_score(base)
         narrative_text, stance_val = _generate_narrative(base, fund_details_dict)
         base["narrative"] = narrative_text
@@ -587,6 +602,80 @@ def _build_sector_map() -> dict[str, str]:
         pass
     _SECTOR_MAP_CACHE = result
     return result
+
+
+def _scores_from_fund_details(fd: dict) -> dict:
+    """
+    Derive enhanced_fund_score, earnings_quality, sales_growth,
+    financial_strength, institutional_backing from scraped fund_details.
+    Returns dict with those keys (0-100 scale).
+    """
+    import re
+
+    def _extract_num(text: str, pattern: str) -> float | None:
+        m = re.search(pattern, text or "", re.IGNORECASE)
+        if m:
+            try:
+                return float(m.group(1).replace(",", ""))
+            except Exception:
+                pass
+        return None
+
+    pnl = fd.get("pnl_summary", "") or ""
+    ratios = fd.get("ratios_summary", "") or ""
+    bs = fd.get("balance_sheet_summary", "") or ""
+
+    # Sales YoY → sales_growth score (0-100)
+    sales_yoy = _extract_num(pnl, r"Sales.*?YoY\s*([+\-]?\d+\.?\d*)%")
+    if sales_yoy is None:
+        sales_growth_score = 50.0
+    else:
+        # +30% → 100, 0% → 60, -20% → 20
+        sales_growth_score = max(0.0, min(100.0, 60 + sales_yoy * 1.3))
+
+    # Net Profit YoY → earnings_quality score
+    np_yoy = _extract_num(pnl, r"NetProfit.*?YoY\s*([+\-]?\d+\.?\d*)%")
+    if np_yoy is None:
+        earnings_quality = 50.0
+    else:
+        earnings_quality = max(0.0, min(100.0, 60 + np_yoy * 0.8))
+
+    # ROCE → financial_strength
+    roce = _extract_num(ratios, r"ROCE[:\s]*([0-9.]+)")
+    npm = _extract_num(ratios, r"NPM[:\s]*([0-9.]+)")
+    debt_cr = _extract_num(bs, r"Debt[:\s]*([\d,]+)")
+    assets_cr = _extract_num(bs, r"Assets[:\s]*([\d,]+)")
+    if roce is not None:
+        fs = max(0.0, min(100.0, roce * 2.5))   # ROCE 20% → 50, 40% → 100
+    elif npm is not None:
+        fs = max(0.0, min(100.0, npm * 5))
+    else:
+        fs = 50.0
+    # Penalise high debt/assets ratio
+    if debt_cr and assets_cr and assets_cr > 0:
+        debt_ratio = debt_cr / assets_cr
+        fs = max(0.0, fs - debt_ratio * 30)
+    financial_strength = fs
+
+    # institutional_backing: no per-stock data from screener; use moderate default
+    institutional_backing = 50.0
+
+    # Composite enhanced_fund_score
+    enhanced_fund_score = round(
+        sales_growth_score * 0.30
+        + earnings_quality * 0.35
+        + financial_strength * 0.25
+        + institutional_backing * 0.10,
+        1,
+    )
+
+    return {
+        "enhanced_fund_score": enhanced_fund_score,
+        "earnings_quality": round(earnings_quality, 1),
+        "sales_growth": round(sales_growth_score, 1),
+        "financial_strength": round(financial_strength, 1),
+        "institutional_backing": round(institutional_backing, 1),
+    }
 
 
 def _investment_score(r: dict) -> float:
@@ -1118,6 +1207,8 @@ def build_html_report(report: dict) -> str:
     def score_bar(v, max_v: float = 100, color: str = "#059669") -> str:
         try:
             fv = float(v)
+            if fv != fv:  # NaN check
+                return "—"
             w = min(100, max(0, fv / max_v * 100))
             return (f'<div class="score-bar"><span class="sb-num">{fv:.0f}</span>'
                     f'<div class="sb-track"><div class="sb-fill" style="width:{w}%;background:{color}"></div></div></div>')
@@ -1160,6 +1251,8 @@ def build_html_report(report: dict) -> str:
         def _sb(v, color="#059669"):
             try:
                 fv = float(v)
+                if fv != fv:  # NaN check
+                    return "—"
                 w = min(100, max(0, fv))
                 return (f'<div class="score-bar"><span class="sb-num">{fv:.0f}</span>'
                         f'<div class="sb-track"><div class="sb-fill" style="width:{w}%;background:{color}"></div></div></div>')
@@ -1891,6 +1984,12 @@ function showPickModal(idx) {
   var liveStr     = pk.live_price ? '₹' + pk.live_price.toLocaleString('en-IN', {maximumFractionDigits:2}) : '—';
 
   function mbar(lbl, val, color) {
+    if (val === null || val === undefined || isNaN(val)) {
+      return '<div class="mfund-row">'
+        + '<span class="mfund-lbl">'+lbl+'</span>'
+        + '<span class="mfund-num" style="color:#9ca3af">—</span>'
+        + '</div>';
+    }
     var w = Math.min(100, Math.max(0, val));
     return '<div class="mfund-row">'
       + '<span class="mfund-lbl">'+lbl+'</span>'
