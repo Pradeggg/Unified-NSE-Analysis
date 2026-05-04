@@ -68,7 +68,7 @@ WATCHLIST_INDICES = [
     ("NIFTY AUTO",        "Nifty Auto"),
     ("NIFTY FMCG",        "Nifty FMCG"),
     ("NIFTY MIDCAP 100",  "Midcap 100"),
-    ("NIFTY SMLCAP 100",  "Smallcap 100"),
+    ("NIFTY SMLCAP 100",  "Smlcap 100"),
     ("INDIA VIX",         "India VIX"),
 ]
 
@@ -136,35 +136,52 @@ def fetch_all_indices() -> dict[str, dict]:
 
 
 def load_eod_indices() -> dict[str, dict]:
-    """Load last EOD close for all indices from nse_index_data.csv."""
+    """Load last EOD close for all indices from nse_index_data.csv.
+    Computes change vs prior day's close since PREVCLOSE column is 0."""
     out: dict[str, dict] = {}
     if not INDEX_CSV.exists():
         return out
     try:
         df = pd.read_csv(INDEX_CSV, usecols=["SYMBOL", "OPEN", "HIGH", "LOW", "CLOSE",
-                                              "PREVCLOSE", "TIMESTAMP", "HI_52_WK", "LO_52_WK"],
+                                              "TOTTRDQTY", "TIMESTAMP", "HI_52_WK", "LO_52_WK"],
                          low_memory=False)
         df["TIMESTAMP"] = pd.to_datetime(df["TIMESTAMP"], errors="coerce")
-        df = df.dropna(subset=["TIMESTAMP"])
-        # Latest row per index
-        latest = df.sort_values("TIMESTAMP").groupby("SYMBOL").last().reset_index()
-        last_date = latest["TIMESTAMP"].max()
-        for _, row in latest.iterrows():
-            close   = float(row["CLOSE"]   or 0)
-            prev    = float(row["PREVCLOSE"] or 0)
-            hi52    = float(row.get("HI_52_WK", 0) or 0)
-            lo52    = float(row.get("LO_52_WK", 0) or 0)
-            chg     = round(close - prev, 2) if prev > 0 else 0.0
-            pchg    = round((chg / prev * 100) if prev > 0 else 0, 2)
-            key     = str(row["SYMBOL"]).upper()
+        for c in ["OPEN", "HIGH", "LOW", "CLOSE", "TOTTRDQTY", "HI_52_WK", "LO_52_WK"]:
+            df[c] = pd.to_numeric(df[c], errors="coerce")
+        df = df.dropna(subset=["TIMESTAMP", "CLOSE"])
+        df = df.sort_values(["SYMBOL", "TIMESTAMP"])
+
+        last_date = df["TIMESTAMP"].max()
+        eod_tag   = last_date.strftime("%d %b") if pd.notna(last_date) else "EOD"
+
+        for sym, grp in df.groupby("SYMBOL"):
+            grp   = grp.sort_values("TIMESTAMP")
+            today = grp.iloc[-1]
+            prev  = grp.iloc[-2] if len(grp) >= 2 else None
+
+            close  = float(today["CLOSE"])
+            open_  = float(today["OPEN"]  or 0)
+            high   = float(today["HIGH"]  or 0)
+            low    = float(today["LOW"]   or 0)
+            vol    = float(today["TOTTRDQTY"] or 0)
+            hi52   = float(today.get("HI_52_WK", 0) or 0)
+            lo52   = float(today.get("LO_52_WK", 0) or 0)
+            prev_c = float(prev["CLOSE"]) if prev is not None else 0.0
+            chg    = round(close - prev_c, 2) if prev_c > 0 else 0.0
+            pchg   = round(chg / prev_c * 100, 2) if prev_c > 0 else 0.0
+            key    = str(sym).upper()
             out[key] = {
                 "index":     key,
                 "lastPrice": close,
+                "open":      open_,
+                "dayHigh":   high,
+                "dayLow":    low,
+                "volume":    vol,
                 "change":    chg,
                 "pChange":   pchg,
                 "yearHigh":  hi52,
                 "yearLow":   lo52,
-                "_eod_date": last_date.strftime("%d %b") if pd.notna(last_date) else "EOD",
+                "_eod_date": eod_tag,
             }
     except Exception:
         pass
@@ -545,81 +562,80 @@ def _parse_price(v) -> float:
         return 0.0
 
 
-def build_indices_table(indices: dict) -> Panel:
-    tbl = Table(box=box.SIMPLE_HEAD, header_style="bold cyan", show_footer=False,
-                expand=True, padding=(0, 1))
-    tbl.add_column("INDEX",    style="bold white", no_wrap=True, width=14)
-    tbl.add_column("PRICE",    justify="right", width=11)
-    tbl.add_column("CHG",      justify="right", width=9)
-    tbl.add_column("%",        justify="right", width=8)
-    tbl.add_column("52W POS",  justify="center", width=7)
+def build_indices_bar(indices: dict) -> Panel:
+    """Full-width horizontal indices ticker showing OHLC + CHG% for all watchlist indices."""
+    tbl = Table(box=None, padding=(0, 2), expand=True, show_header=False)
+    tbl.add_column("data", no_wrap=True)
 
+    cells: list[Text] = []
     for key, label in WATCHLIST_INDICES:
         d = indices.get(key.upper(), {})
         if not d:
-            tbl.add_row(label, "—", "—", "—", "—")
             continue
         price = _parse_price(d.get("lastPrice", 0))
-        chg   = _parse_price(d.get("change",   0))
-        pchg  = _parse_price(d.get("pChange",  0))
-        hi52  = _parse_price(d.get("yearHigh", 0))
-        lo52  = _parse_price(d.get("yearLow",  0))
+        pchg  = _parse_price(d.get("pChange",   0))
+        high  = _parse_price(d.get("dayHigh",  d.get("highPrice",  0)))
+        low   = _parse_price(d.get("dayLow",   d.get("lowPrice",   0)))
         clr   = _chg_color(pchg)
-        arrow = "▲" if chg >= 0 else "▼"
+        arrow = "▲" if pchg >= 0 else "▼"
 
-        # 52w position bar
-        if hi52 > lo52 and price > 0:
-            pct52  = min(100, max(0, (price - lo52) / (hi52 - lo52) * 100))
-            filled = int(pct52 / 20)
-            bar    = "█" * filled + "░" * (5 - filled)
-            pos52  = f"[dim]{bar}[/dim]"
-        else:
-            pos52 = "—"
+        cell = Text()
+        cell.append(f"{label.strip()} ", style="bold white")
+        cell.append(f"{price:,.0f}", style=f"bold {clr}") if price else cell.append("—", style="dim")
+        if pchg != 0:
+            cell.append(f"  {arrow}{abs(pchg):.2f}%", style=clr)
+        if high and low:
+            cell.append(f"  H:{high:,.0f} L:{low:,.0f}", style="dim")
+        cells.append(cell)
 
-        tbl.add_row(
-            label,
-            Text(f"{price:,.0f}", style=clr, no_wrap=True) if price else Text("—", style="dim"),
-            Text(f"{arrow} {abs(chg):,.0f}", style=clr, no_wrap=True) if chg != 0 else Text("—", style="dim"),
-            Text(f"{pchg:+.2f}%", style=clr, no_wrap=True) if pchg != 0 else Text("—", style="dim"),
-            pos52,
-        )
+    # Lay cells out in a single row separated by dim │
+    row_text = Text()
+    for i, cell in enumerate(cells):
+        row_text.append_text(cell)
+        if i < len(cells) - 1:
+            row_text.append("  │  ", style="dim")
 
-    return Panel(tbl, title="[bold cyan]■ INDICES[/bold cyan]", border_style="cyan",
-                 subtitle="[dim]Live NSE[/dim]")
+    tbl.add_row(row_text)
+    is_eod   = any(v.get("_eod_date") for v in indices.values())
+    subtitle = (f"[dim]EOD {next((v['_eod_date'] for v in indices.values() if v.get('_eod_date')), '')}[/dim]"
+                if is_eod else "[dim]Live NSE[/dim]")
+    return Panel(tbl, title="[bold cyan]■ INDICES  O/H/L/C[/bold cyan]", border_style="cyan",
+                 height=4, subtitle=subtitle)
+
 
 
 def build_sector_table(indices: dict) -> Panel:
-    tbl = Table(box=box.SIMPLE_HEAD, header_style="bold magenta", expand=True, padding=(0, 1))
-    tbl.add_column("SECTOR",   style="bold white", no_wrap=True)
-    tbl.add_column("INDEX",    style="dim", no_wrap=True, width=12)
-    tbl.add_column("PRICE",    justify="right", width=9)
-    tbl.add_column("CHG%",     justify="right", width=8)
-    tbl.add_column("SIGNAL",   justify="center", width=10)
-
+    """Full-width horizontal sector bar sorted by performance."""
     sector_perf: list[tuple] = []
     for sector, idx_name in SECTOR_INDEX_MAP.items():
         d     = indices.get(idx_name.upper(), {})
         pchg  = _parse_price(d.get("pChange",   0)) if d else 0
         price = _parse_price(d.get("lastPrice", 0)) if d else 0
         sector_perf.append((sector, idx_name, pchg, price))
-
     sector_perf.sort(key=lambda x: x[2], reverse=True)
 
-    for sector, idx_name, pchg, price in sector_perf:
-        clr     = _chg_color(pchg)
-        arrow   = "▲" if pchg >= 0 else "▼"
-        signal  = "LEADING" if pchg > 1 else ("LAGGING" if pchg < -1 else "NEUTRAL")
+    row_text = Text()
+    for i, (sector, idx_name, pchg, price) in enumerate(sector_perf):
+        clr    = _chg_color(pchg)
+        arrow  = "▲" if pchg >= 0 else "▼"
+        signal = "LEADING" if pchg > 1 else ("LAGGING" if pchg < -1 else "NEUTRAL")
         sig_clr = "bold green" if signal == "LEADING" else ("bold red" if signal == "LAGGING" else "yellow")
-        tbl.add_row(
-            Text(sector, style="bold white", no_wrap=True),
-            Text(idx_name, style="dim", no_wrap=True),
-            Text(f"{price:,.0f}", style=clr, no_wrap=True) if price else Text("—", style="dim"),
-            Text(f"{arrow} {pchg:+.2f}%", style=clr, no_wrap=True) if pchg != 0 else Text("—", style="dim"),
-            Text(signal, style=sig_clr, no_wrap=True),
-        )
+
+        row_text.append(f"{sector} ", style="bold white")
+        if price:
+            row_text.append(f"{price:,.0f}", style=f"bold {clr}")
+        if pchg != 0:
+            row_text.append(f" {arrow}{abs(pchg):.2f}%", style=clr)
+        row_text.append(f" [{signal}]", style=sig_clr)
+        if i < len(sector_perf) - 1:
+            row_text.append("  │  ", style="dim")
+
+    tbl = Table(box=None, padding=(0, 1), expand=True, show_header=False)
+    tbl.add_column("data", no_wrap=True)
+    tbl.add_row(row_text)
 
     return Panel(tbl, title="[bold magenta]■ SECTOR ROTATION[/bold magenta]",
-                 border_style="magenta", subtitle="[dim]Intraday Performance[/dim]")
+                 border_style="magenta", height=4, subtitle="[dim]sorted by performance[/dim]")
 
 
 def build_signal_table(title: str, icon: str, items: list, columns: list,
@@ -766,17 +782,13 @@ def build_full_layout(indices: dict, signals: dict, last_update: str,
     # Header
     grid.add_row(build_header(indices, refresh_mins))
 
-    # Row 1: Indices + Sector
-    row1 = Table.grid(expand=True)
-    row1.add_column(ratio=2)
-    row1.add_column(ratio=3)
-    row1.add_row(
-        build_indices_table(indices),
-        build_sector_table(indices),
-    )
-    grid.add_row(row1)
+    # Row 1: Full-width indices OHLC bar
+    grid.add_row(build_indices_bar(indices))
 
-    # Row 2: Supertrend + Breakout
+    # Row 2: Sector rotation (full width, compact)
+    grid.add_row(build_sector_table(indices))
+
+    # Row 3: Supertrend + Breakout
     row2 = Table.grid(expand=True)
     row2.add_column(ratio=1)
     row2.add_column(ratio=1)
@@ -788,7 +800,7 @@ def build_full_layout(indices: dict, signals: dict, last_update: str,
     )
     grid.add_row(row2)
 
-    # Row 3: VCP + Stage 2
+    # Row 4: VCP + Stage 2
     row3 = Table.grid(expand=True)
     row3.add_column(ratio=1)
     row3.add_column(ratio=1)
