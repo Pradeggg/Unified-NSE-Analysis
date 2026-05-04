@@ -113,6 +113,8 @@ MIGRATION_SQL: list[str] = [
     "ALTER TABLE stage_snapshots ADD COLUMN fund_details TEXT",
     "ALTER TABLE stage_snapshots ADD COLUMN narrative TEXT",
     "ALTER TABLE stage_snapshots ADD COLUMN stance TEXT",
+    "ALTER TABLE stage_snapshots ADD COLUMN supertrend_state TEXT",
+    "ALTER TABLE stage_snapshots ADD COLUMN supertrend_value REAL",
 ]
 
 
@@ -148,6 +150,13 @@ def load_snapshot(conn: sqlite3.Connection, snap_date: str) -> pd.DataFrame:
     )
 
 
+try:
+    from sector_rotation_report import compute_supertrend as _compute_supertrend  # type: ignore
+    HAS_SUPERTREND = True
+except ImportError:
+    HAS_SUPERTREND = False
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Data helpers
 # ─────────────────────────────────────────────────────────────────────────────
@@ -166,6 +175,30 @@ def _load_price_history() -> pd.DataFrame:
     return df
 
 
+def _compute_supertrend_for_symbols(hist: pd.DataFrame, symbols: list) -> dict:
+    """Returns {symbol: {state: str, value: float}} using price history."""
+    if hist.empty or not HAS_SUPERTREND:
+        return {}
+    results: dict = {}
+    hist_all = hist.copy()
+    hist_all["TIMESTAMP"] = pd.to_datetime(hist_all["TIMESTAMP"])
+    for sym in symbols:
+        try:
+            sym_hist = hist_all[hist_all["SYMBOL"] == sym].sort_values("TIMESTAMP").tail(60)
+            if len(sym_hist) < 20:
+                continue
+            # compute_supertrend expects uppercase HIGH/LOW/CLOSE columns (already present)
+            st = _compute_supertrend(sym_hist)
+            if st is not None and not st.empty:
+                results[sym] = {
+                    "state": str(st["SUPERTREND_STATE"].iloc[-1]),
+                    "value": float(st["SUPERTREND"].iloc[-1]),
+                }
+        except Exception:
+            pass
+    return results
+
+
 def _run_screener(analysis: pd.DataFrame, hist: pd.DataFrame) -> pd.DataFrame:
     import sys
     sys.path.insert(0, str(ROOT))
@@ -174,38 +207,172 @@ def _run_screener(analysis: pd.DataFrame, hist: pd.DataFrame) -> pd.DataFrame:
     return run_stage_screener(df, history=hist if not hist.empty else None)
 
 
-def _fetch_live_prices(symbols: list[str]) -> dict[str, float]:
-    """Fetch latest prices from Yahoo Finance (.NS suffix). Returns {symbol: price}."""
-    try:
-        import yfinance as yf
-    except ImportError:
-        print("  yfinance not available – skipping live prices.")
-        return {}
+# NSE indices to sweep for live prices — covers large/mid/small/micro cap universe
+_NSE_LIVE_INDICES = [
+    "NIFTY 500",
+    "NIFTY SMALLCAP 250",
+    "NIFTY MICROCAP 250",
+    "NIFTY MIDSMALLCAP 400",
+    "NIFTY TOTAL MARKET",
+]
 
-    skip = {"LIQUID", "CASHIETF", "CPSEETF", "COMMOIETF", "GROWWLIQID", "LIQUIDPLUS",
-            "LIQUIDADD", "LIQUIDCASE", "LIQUIDBETF", "LIQUID1", "LIQUIDBEES"}
-    valid = [s for s in symbols if not any(k in s for k in skip)]
+_NSE_UA = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+)
+_NSE_COOKIE_JAR = ROOT / "data" / "_nse_cookies.txt"
+
+
+def _ensure_nse_session() -> bool:
+    """Warm up NSE session cookie via curl. Returns True if cookie jar exists."""
+    import subprocess, time
+    age_ok = (
+        _NSE_COOKIE_JAR.exists()
+        and (time.time() - _NSE_COOKIE_JAR.stat().st_mtime) < 600
+    )
+    if age_ok:
+        return True
+    _NSE_COOKIE_JAR.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        subprocess.run(
+            ["curl", "-sS", "-L", "--http1.1",
+             "-c", str(_NSE_COOKIE_JAR), "-o", "/dev/null", "--max-time", "30",
+             "-H", f"User-Agent: {_NSE_UA}",
+             "-H", "Accept: text/html,application/xhtml+xml",
+             "https://www.nseindia.com"],
+            capture_output=True, timeout=40,
+        )
+        return _NSE_COOKIE_JAR.exists() and _NSE_COOKIE_JAR.stat().st_size > 0
+    except Exception:
+        return False
+
+
+def _nse_index_prices(index_name: str) -> dict[str, float]:
+    """Fetch lastPrice for all stocks in an NSE index. Returns {symbol: price}."""
+    import subprocess, json as _json, tempfile
+    tmp = Path(tempfile.mktemp(suffix=".json"))
+    url = f"https://www.nseindia.com/api/equity-stockIndices?index={index_name.replace(' ', '%20')}"
+    try:
+        r = subprocess.run(
+            ["curl", "-sS", "-L", "--http1.1",
+             "-o", str(tmp), "-w", "%{http_code}", "--max-time", "25",
+             "-H", f"User-Agent: {_NSE_UA}",
+             "-H", "Accept: application/json, text/plain, */*",
+             "-H", "Referer: https://www.nseindia.com/",
+             "-b", str(_NSE_COOKIE_JAR),
+             url],
+            capture_output=True, text=True, timeout=35,
+        )
+        if r.stdout.strip() != "200" or not tmp.exists():
+            return {}
+        with open(tmp) as f:
+            data = _json.load(f)
+        result = {}
+        for item in data.get("data", []):
+            sym = item.get("symbol", "")
+            price = item.get("lastPrice")
+            # skip the index row itself (no series field)
+            if sym and price is not None and item.get("series"):
+                try:
+                    result[sym] = round(float(price), 2)
+                except (TypeError, ValueError):
+                    pass
+        return result
+    except Exception:
+        return {}
+    finally:
+        if tmp.exists():
+            try:
+                tmp.unlink()
+            except OSError:
+                pass
+
+
+def _fetch_live_prices(symbols: list[str]) -> dict[str, float]:
+    """
+    Fetch latest prices from NSE India (primary) with Yahoo Finance fallback.
+    Returns {symbol: price}.
+    """
     results: dict[str, float] = {}
 
-    print(f"  Fetching live prices for {len(valid)} symbols via Yahoo Finance …")
-    for i in range(0, len(valid), 50):
-        chunk = valid[i:i + 50]
-        tickers = [f"{s}.NS" for s in chunk]
-        try:
-            data = yf.download(tickers, period="2d", progress=False, auto_adjust=True)
-            close = data.get("Close", pd.DataFrame())
-            if not close.empty:
-                last = close.iloc[-1]
-                for t in tickers:
-                    sym = t.replace(".NS", "")
-                    val = last.get(t)
-                    if val is not None and pd.notna(val):
-                        results[sym] = round(float(val), 2)
-        except Exception as e:
-            print(f"    Chunk {i}–{i+50} error: {e}")
+    # ── 1. NSE India bulk fetch ──────────────────────────────────────────────
+    print("  Fetching live prices from NSE India …")
+    if _ensure_nse_session():
+        for idx in _NSE_LIVE_INDICES:
+            batch = _nse_index_prices(idx)
+            results.update(batch)
+            print(f"    {idx}: {len(batch)} prices")
+            # stop only once we've covered all requested symbols
+            if all(s in results for s in symbols):
+                break
+    else:
+        print("  NSE session could not be established.")
 
-    print(f"  Got live prices for {len(results)}/{len(valid)} symbols.")
+    covered = {s for s in symbols if s in results}
+    missing = [s for s in symbols if s not in results]
+    print(f"  NSE India: {len(covered)}/{len(symbols)} covered. Missing: {len(missing)}")
+
+    # ── 2. Yahoo Finance fallback for any remaining symbols ──────────────────
+    if missing:
+        print(f"  Falling back to Yahoo Finance for {len(missing)} symbols …")
+        try:
+            import yfinance as yf
+            skip = {"LIQUID", "CASHIETF", "CPSEETF", "COMMOIETF", "GROWWLIQID",
+                    "LIQUIDPLUS", "LIQUIDADD", "LIQUIDCASE", "LIQUIDBETF",
+                    "LIQUID1", "LIQUIDBEES"}
+            yf_syms = [s for s in missing if not any(k in s for k in skip)]
+            for i in range(0, len(yf_syms), 50):
+                chunk = yf_syms[i:i + 50]
+                tickers = [f"{s}.NS" for s in chunk]
+                try:
+                    data = yf.download(tickers, period="2d", progress=False, auto_adjust=True)
+                    close = data.get("Close", pd.DataFrame())
+                    if not close.empty:
+                        last = close.iloc[-1]
+                        for t in tickers:
+                            sym = t.replace(".NS", "")
+                            val = last.get(t)
+                            if val is not None and pd.notna(val):
+                                results[sym] = round(float(val), 2)
+                except Exception as e:
+                    print(f"    YF chunk {i}–{i+50} error: {e}")
+        except ImportError:
+            print("  yfinance not available – skipping fallback.")
+
+    total_covered = sum(1 for s in symbols if s in results)
+    print(f"  Total live prices: {total_covered}/{len(symbols)} symbols.")
     return results
+
+
+def update_live_prices(snap_date: Optional[str] = None) -> int:
+    """Update live_price column for all symbols in the given (or latest) snapshot."""
+    conn = get_conn()
+    dates = list_snapshot_dates(conn)
+    if not dates:
+        print("  No snapshots available.")
+        conn.close()
+        return 0
+    target = snap_date or dates[0]
+    print(f"  Updating live prices for snapshot: {target}")
+    symbols = [r[0] for r in conn.execute(
+        "SELECT symbol FROM stage_snapshots WHERE snapshot_date=?", (target,)
+    ).fetchall()]
+    if not symbols:
+        print("  No symbols found for this snapshot date.")
+        conn.close()
+        return 0
+    live_prices = _fetch_live_prices(symbols)
+    updated = 0
+    for sym, price in live_prices.items():
+        conn.execute(
+            "UPDATE stage_snapshots SET live_price=? WHERE snapshot_date=? AND symbol=?",
+            (price, target, sym),
+        )
+        updated += 1
+    conn.commit()
+    print(f"  Updated {updated} live prices for {target}.")
+    conn.close()
+    return updated
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -328,6 +495,13 @@ def write_snapshot(
     if existing and force:
         conn.execute("DELETE FROM stage_snapshots WHERE snapshot_date=?", (today,))
 
+    print("  Computing supertrend …")
+    st_map = _compute_supertrend_for_symbols(hist, [r["symbol"] for r in rows])
+    for row in rows:
+        st_info = st_map.get(row["symbol"], {})
+        row["supertrend_state"] = st_info.get("state")
+        row["supertrend_value"] = _f(st_info.get("value"))
+
     conn.executemany(
         """INSERT OR REPLACE INTO stage_snapshots
             (snapshot_date, symbol, company_name, stage, stage_score, price, live_price,
@@ -335,14 +509,14 @@ def write_snapshot(
              change_1d_pct, change_1w_pct, change_1m_pct, market_cap_cat, source_csv,
              sector, fundamental_score, enhanced_fund_score, earnings_quality, sales_growth,
              financial_strength, institutional_backing, can_slim_score, minervini_score,
-             investment_score, fund_details, narrative, stance)
+             investment_score, fund_details, narrative, stance, supertrend_state, supertrend_value)
            VALUES
             (:snapshot_date,:symbol,:company_name,:stage,:stage_score,:price,:live_price,
              :technical_score,:rsi,:trading_signal,:trend_signal,:relative_strength,
              :change_1d_pct,:change_1w_pct,:change_1m_pct,:market_cap_cat,:source_csv,
              :sector,:fundamental_score,:enhanced_fund_score,:earnings_quality,:sales_growth,
              :financial_strength,:institutional_backing,:can_slim_score,:minervini_score,
-             :investment_score,:fund_details,:narrative,:stance)""",
+             :investment_score,:fund_details,:narrative,:stance,:supertrend_state,:supertrend_value)""",
         rows,
     )
     conn.commit()
@@ -878,6 +1052,21 @@ tr.row-sell{background:rgba(220,38,38,.03)}
 .pick-card .pk-sector{font-size:.75rem;background:#e0f2fe;color:#0369a1;padding:1px 6px;border-radius:4px;display:inline-block;margin-bottom:6px}
 .pick-card .pk-inv{font-size:1.4rem;font-weight:700;color:#059669}
 .pick-card .pk-meta{font-size:.75rem;color:#64748b;margin-top:4px}
+/* ── Modal overlay ── */
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:100;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal-box{background:#fff;border-radius:12px;padding:24px;max-width:640px;width:90%;max-height:85vh;overflow-y:auto;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal-close{position:absolute;top:12px;right:16px;font-size:1.4rem;cursor:pointer;color:#64748b;border:none;background:none;line-height:1}
+.modal-title{font-size:1.1rem;font-weight:700;margin-bottom:4px}
+.modal-sector{font-size:.8rem;color:#0369a1;background:#e0f2fe;padding:2px 8px;border-radius:4px;display:inline-block;margin-bottom:12px}
+.mfund-bars{display:flex;flex-direction:column;gap:8px;margin:12px 0}
+.mfund-row{display:flex;align-items:center;gap:8px}
+.mfund-lbl{font-size:.78rem;color:#475569;min-width:140px}
+.mfund-track{flex:1;height:7px;background:#e2e8f0;border-radius:4px}
+.mfund-fill{height:100%;border-radius:4px}
+.mfund-num{font-size:.78rem;font-weight:600;min-width:28px;text-align:right}
+.mnarr{font-size:.85rem;color:#334155;line-height:1.6;margin:10px 0;padding:10px 14px;background:#f8fafc;border-radius:6px;border-left:3px solid #059669}
+.mfund-txt{font-size:.78rem;color:#475569;margin-top:6px;line-height:1.5;padding:8px 12px;background:#f1f5f9;border-radius:6px}
 /* ── Transition section ── */
 .trans-section{background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.08);padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;flex-wrap:wrap;gap:12px}
 .trans-label{font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
@@ -1039,24 +1228,25 @@ def build_html_report(report: dict) -> str:
             ]
         else:
             col_defs = [
-                {"key": "rank",        "label": "#",          "toggleable": False},
-                {"key": "symbol",      "label": "Symbol",     "toggleable": False},
-                {"key": "company",     "label": "Company",    "toggleable": True, "default": True},
-                {"key": "sector",      "label": "Sector",     "toggleable": True, "default": True},
-                {"key": "stage",       "label": "Stage",      "toggleable": True, "default": True},
-                {"key": "signal",      "label": "Signal",     "toggleable": True, "default": True},
-                {"key": "live_price",  "label": "Live ₹",     "toggleable": True, "default": True},
-                {"key": "csv_price",   "label": "CSV ₹",      "toggleable": True, "default": True},
-                {"key": "live_pct",    "label": "Live Chg%",  "toggleable": True, "default": True},
-                {"key": "tech_score",  "label": "Tech Score", "toggleable": True, "default": True},
-                {"key": "rsi",         "label": "RSI",        "toggleable": True, "default": True},
-                {"key": "trend",       "label": "Trend",      "toggleable": True, "default": False},
-                {"key": "rs",          "label": "RS",         "toggleable": True, "default": True},
-                {"key": "chg1d",       "label": "1D%",        "toggleable": True, "default": True},
-                {"key": "chg1w",       "label": "1W%",        "toggleable": True, "default": True},
-                {"key": "chg1m",       "label": "1M%",        "toggleable": True, "default": False},
-                {"key": "cap",         "label": "Cap",        "toggleable": True, "default": False},
-                {"key": "stage_score", "label": "Score",      "toggleable": True, "default": True},
+                {"key": "rank",        "label": "#",                     "toggleable": False},
+                {"key": "symbol",      "label": "Symbol",                "toggleable": False},
+                {"key": "company",     "label": "Company",               "toggleable": True, "default": True},
+                {"key": "sector",      "label": "Sector",                "toggleable": True, "default": True},
+                {"key": "stage",       "label": "Stage",                 "toggleable": True, "default": True},
+                {"key": "signal",      "label": "Signal",                "toggleable": True, "default": True},
+                {"key": "live_price",  "label": "Live ₹",                "toggleable": True, "default": True},
+                {"key": "csv_price",   "label": f"Close {snap[:10]}",    "toggleable": True, "default": True},
+                {"key": "live_pct",    "label": "Live Chg%",             "toggleable": True, "default": True},
+                {"key": "tech_score",  "label": "Tech Score",            "toggleable": True, "default": True},
+                {"key": "rsi",         "label": "RSI",                   "toggleable": True, "default": True},
+                {"key": "supertrend",  "label": "Supertrend",            "toggleable": True, "default": True},
+                {"key": "trend",       "label": "Trend",                 "toggleable": True, "default": False},
+                {"key": "rs",          "label": "RS",                    "toggleable": True, "default": True},
+                {"key": "chg1d",       "label": "1D%",                   "toggleable": True, "default": True},
+                {"key": "chg1w",       "label": "1W%",                   "toggleable": True, "default": True},
+                {"key": "chg1m",       "label": "1M%",                   "toggleable": True, "default": False},
+                {"key": "cap",         "label": "Cap",                   "toggleable": True, "default": False},
+                {"key": "stage_score", "label": "Score",                 "toggleable": True, "default": True},
             ]
 
         # ── column toggle panel ──
@@ -1138,6 +1328,20 @@ def build_html_report(report: dict) -> str:
                 ]
             else:
                 rs_val = r.get("relative_strength")
+                st_state = r.get("supertrend_state")
+                st_value = r.get("supertrend_value")
+
+                def _supertrend_cell(state, value, col_idx):
+                    if not state or state == "UNKNOWN":
+                        return f'<td{td_style(col_idx)} style="color:#94a3b8">—</td>'
+                    color = "#16a34a" if state == "BULLISH" else "#dc2626"
+                    arrow = "↑" if state == "BULLISH" else "↓"
+                    val_str = f"₹{float(value):,.0f}" if value else ""
+                    return (f'<td{td_style(col_idx)}>'
+                            f'<span style="color:{color};font-weight:600;font-size:.82rem">{arrow} {state}</span>'
+                            f'<br><span style="font-size:.72rem;color:#64748b">{val_str}</span>'
+                            f'</td>')
+
                 cells = [
                     f'<td{td_style(0)}>{ri}</td>',
                     f'<td{td_style(1)} class="sym">{_H(str(r.get("symbol",""))[:14])}</td>',
@@ -1150,13 +1354,14 @@ def build_html_report(report: dict) -> str:
                     _pct_cell(lp_vs_csv).replace("<td", f'<td{td_style(8)}', 1),
                     f'<td{td_style(9)}>{score_bar(r.get("technical_score"))}</td>',
                     rsi_cell(r.get("rsi")).replace("<td", f'<td{td_style(10)}', 1),
-                    f'<td{td_style(11)} style="font-size:.75rem">{_H(str(r.get("trend_signal","") or ""))}</td>',
-                    _pct_cell(rs_val).replace("<td", f'<td{td_style(12)}', 1),
-                    _pct_cell(r.get("change_1d_pct")).replace("<td", f'<td{td_style(13)}', 1),
-                    _pct_cell(r.get("change_1w_pct")).replace("<td", f'<td{td_style(14)}', 1),
-                    _pct_cell(r.get("change_1m_pct")).replace("<td", f'<td{td_style(15)}', 1),
-                    f'<td{td_style(16)} style="font-size:.75rem">{_H(str(r.get("market_cap_cat","") or ""))}</td>',
-                    f'<td{td_style(17)} style="text-align:right">{r.get("stage_score") or "—"}</td>',
+                    _supertrend_cell(st_state, st_value, 11),
+                    f'<td{td_style(12)} style="font-size:.75rem">{_H(str(r.get("trend_signal","") or ""))}</td>',
+                    _pct_cell(rs_val).replace("<td", f'<td{td_style(13)}', 1),
+                    _pct_cell(r.get("change_1d_pct")).replace("<td", f'<td{td_style(14)}', 1),
+                    _pct_cell(r.get("change_1w_pct")).replace("<td", f'<td{td_style(15)}', 1),
+                    _pct_cell(r.get("change_1m_pct")).replace("<td", f'<td{td_style(16)}', 1),
+                    f'<td{td_style(17)} style="font-size:.75rem">{_H(str(r.get("market_cap_cat","") or ""))}</td>',
+                    f'<td{td_style(18)} style="text-align:right">{r.get("stage_score") or "—"}</td>',
                 ]
 
             data_sig = f' data-sig="{sig_key}"' if not show_prev else ''
@@ -1574,7 +1779,12 @@ def main() -> None:
     parser.add_argument("--force",    action="store_true", help="Overwrite existing snapshot")
     parser.add_argument("--list",     action="store_true", help="List available snapshot dates")
     parser.add_argument("--no-live",  action="store_true", help="Skip Yahoo Finance live prices")
+    parser.add_argument("--update-live", action="store_true", help="Update live prices for latest snapshot without re-running screener")
     args = parser.parse_args()
+
+    if args.update_live:
+        update_live_prices(snap_date=args.date)
+        return
 
     if args.list:
         conn = get_conn()
