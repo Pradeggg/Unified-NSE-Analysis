@@ -219,7 +219,7 @@ def load_nifty_trend(days: int = 10) -> list[dict]:
 
 
 def compute_breadth(hist: pd.DataFrame) -> dict:
-    """Compute NSE market breadth: Advance/Decline, 52w-high proximity, % above 200MA."""
+    """Compute NSE market breadth: A/D, 52w-high, %>200MA, McClellan Oscillator, TRIN."""
     if hist.empty:
         return {}
     try:
@@ -231,8 +231,10 @@ def compute_breadth(hist: pd.DataFrame) -> dict:
             return {}
         d1, d0 = dates[-1], dates[-2]
 
-        today = df[df["TIMESTAMP"].dt.date == d1].groupby("SYMBOL")["CLOSE"].last()
-        prev  = df[df["TIMESTAMP"].dt.date == d0].groupby("SYMBOL")["CLOSE"].last()
+        today_df = df[df["TIMESTAMP"].dt.date == d1]
+        prev_df  = df[df["TIMESTAMP"].dt.date == d0]
+        today = today_df.groupby("SYMBOL")["CLOSE"].last()
+        prev  = prev_df.groupby("SYMBOL")["CLOSE"].last()
         common = today.index.intersection(prev.index)
         chgs = today[common] / prev[common] - 1
 
@@ -259,14 +261,90 @@ def compute_breadth(hist: pd.DataFrame) -> dict:
         total200 = len(valid)
         pct200   = round(above200 / total200 * 100, 1) if total200 > 0 else 0.0
 
+        # ── McClellan Oscillator: EMA19 - EMA39 of daily (Advances - Declines) ──
+        mco = None
+        try:
+            daily_ad: list[float] = []
+            for d in sorted(dates[-60:]):      # last 60 trading days
+                tod  = df[df["TIMESTAMP"].dt.date == d].groupby("SYMBOL")["CLOSE"].last()
+                prv_d_idx = dates.index(d) - 1
+                if prv_d_idx < 0:
+                    continue
+                prv  = df[df["TIMESTAMP"].dt.date == dates[prv_d_idx]].groupby("SYMBOL")["CLOSE"].last()
+                com  = tod.index.intersection(prv.index)
+                ch   = tod[com] / prv[com] - 1
+                daily_ad.append(float((ch > 0).sum() - (ch < 0).sum()))
+            if len(daily_ad) >= 39:
+                s = pd.Series(daily_ad)
+                ema19 = s.ewm(span=19, adjust=False).mean().iloc[-1]
+                ema39 = s.ewm(span=39, adjust=False).mean().iloc[-1]
+                mco = round(ema19 - ema39, 1)
+        except Exception:
+            pass
+
+        # ── TRIN (Arms Index): (Adv/Dec) / (AdvVol/DecVol) ──
+        trin = None
+        try:
+            adv_vol = today_df[today_df["SYMBOL"].isin(common[chgs > 0])]["TOTTRDQTY"].sum()
+            dec_vol = today_df[today_df["SYMBOL"].isin(common[chgs < 0])]["TOTTRDQTY"].sum()
+            if declines > 0 and dec_vol > 0:
+                trin = round((advances / declines) / (adv_vol / dec_vol), 2)
+        except Exception:
+            pass
+
         return {
             "advances": advances, "declines": declines, "unchanged": unchanged,
             "total": total, "ad_ratio": ad_ratio, "near_52w_high": near52,
             "above_200ma": above200, "total_200ma": total200,
             "pct_above_200ma": pct200, "date": str(d1),
+            "mco": mco, "trin": trin,
         }
     except Exception:
         return {}
+
+
+def compute_sector_breadth(hist: pd.DataFrame) -> dict[str, dict]:
+    """Compute %stocks above 50DMA and 200DMA per sector, using DB sector mapping."""
+    result: dict[str, dict] = {}
+    if not DB_PATH.exists() or hist.empty:
+        return result
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        rows = conn.execute(
+            "SELECT symbol, sector FROM stage_snapshots "
+            "WHERE snapshot_date=(SELECT MAX(snapshot_date) FROM stage_snapshots) "
+            "AND sector IS NOT NULL"
+        ).fetchall()
+        conn.close()
+        sector_map = {r[0]: r[1] for r in rows}
+
+        df = hist.copy().sort_values(["SYMBOL", "TIMESTAMP"])
+        for sector in set(sector_map.values()):
+            syms = [s for s, sec in sector_map.items() if sec == sector]
+            d = df[df["SYMBOL"].isin(syms)]
+            if d.empty:
+                continue
+            above50, above200, total = 0, 0, 0
+            for sym, grp in d.groupby("SYMBOL"):
+                c = grp["CLOSE"].values
+                if len(c) < 5:
+                    continue
+                total += 1
+                if len(c) >= 50  and c[-1] > c[-50:].mean():
+                    above50  += 1
+                if len(c) >= 200 and c[-1] > c[-200:].mean():
+                    above200 += 1
+            if total:
+                result[sector] = {
+                    "pct_above_50":  round(above50  / total * 100),
+                    "pct_above_200": round(above200 / total * 100),
+                    "count": total,
+                }
+    except Exception:
+        pass
+    return result
+
+
 
 
     """Fetch top gainers and losers from NSE."""
@@ -324,6 +402,71 @@ def load_price_history(days: int = 260) -> pd.DataFrame:
     for c in ["OPEN", "HIGH", "LOW", "CLOSE", "TOTTRDQTY"]:
         df[c] = pd.to_numeric(df[c], errors="coerce")
     return df
+
+
+def detect_darvas(grp: pd.DataFrame, box_days: int = 20) -> dict:
+    """Darvas Box: find recent consolidation box and detect breakout above box top."""
+    grp = grp.sort_values("TIMESTAMP")
+    if len(grp) < box_days + 5:
+        return {"is_darvas": False}
+    try:
+        h = grp["HIGH"].values
+        l = grp["LOW"].values
+        c = grp["CLOSE"].values
+        v = grp["TOTTRDQTY"].values
+
+        # Box defined by last box_days bars (excluding today)
+        box_h  = h[-(box_days+1):-1].max()
+        box_l  = l[-(box_days+1):-1].min()
+        today  = c[-1]
+        prev_c = c[-2]
+
+        # Breakout above box top with volume confirmation
+        avg_vol = v[-(box_days+1):-1].mean() if len(v) > box_days else v[-1]
+        vol_ok  = v[-1] > avg_vol * 1.3
+        is_darvas = (today > box_h) and (prev_c <= box_h) and vol_ok
+
+        # Box tightness: smaller box = better setup
+        box_range_pct = round((box_h - box_l) / box_l * 100, 1) if box_l > 0 else 0
+
+        return {
+            "is_darvas":     is_darvas,
+            "box_top":       round(box_h, 2),
+            "box_bottom":    round(box_l, 2),
+            "box_range_pct": box_range_pct,
+            "vol_confirmed": vol_ok,
+            "current":       today,
+        }
+    except Exception:
+        return {"is_darvas": False}
+
+
+def is_52w_momentum(grp: pd.DataFrame) -> dict:
+    """52-Week High Momentum: close within 5% of 52w high AND rising RS proxy."""
+    grp = grp.sort_values("TIMESTAMP")
+    if len(grp) < 50:
+        return {"is_52w_mom": False}
+    try:
+        c   = grp["CLOSE"].values
+        h   = grp["HIGH"].values
+        w52 = h[:-1].max()
+        cur = c[-1]
+
+        near_high = cur >= w52 * 0.95          # within 5% of 52w high
+        # Rising RS proxy: 20d return > 50d return (momentum accelerating)
+        ret_20 = (c[-1] / c[-20] - 1) if len(c) >= 20 else 0
+        ret_50 = (c[-1] / c[-50] - 1) if len(c) >= 50 else 0
+        rising_rs = ret_20 > ret_50 * 0.5     # 20d stronger than half of 50d
+
+        return {
+            "is_52w_mom": near_high and rising_rs,
+            "w52_high":   round(w52, 2),
+            "pct_from_52h": round((cur / w52 - 1) * 100, 1) if w52 > 0 else 0,
+            "ret_20d":    round(ret_20 * 100, 1),
+            "current":    cur,
+        }
+    except Exception:
+        return {"is_52w_mom": False}
 
 
 def detect_breakout(grp: pd.DataFrame, lookback: int = 52) -> dict:
@@ -534,6 +677,8 @@ def run_screener(hist: pd.DataFrame, live_prices: dict, top_n: int = 20) -> dict
         "breakouts_20d":   [],
         "vcp_setups":      [],
         "stage2_leaders":  [],
+        "darvas_setups":   [],
+        "momentum_52w":    [],
     }
 
     # Load Stage 2 stocks + RS + extended data from DB
@@ -608,7 +753,17 @@ def run_screener(hist: pd.DataFrame, live_prices: dict, top_n: int = 20) -> dict
         if vcp.get("is_vcp"):
             results["vcp_setups"].append({**base, **vcp, **stage2_info.get(sym, {})})
 
-    # 4. Stage 2 leaders (from DB, sorted by investment score)
+        # 4. Darvas Box Breakout
+        darvas = detect_darvas(grp)
+        if darvas.get("is_darvas"):
+            results["darvas_setups"].append({**base, **darvas, **stage2_info.get(sym, {})})
+
+        # 5. 52-Week High Momentum
+        mom = is_52w_momentum(grp)
+        if mom.get("is_52w_mom") and (rs_pct is None or rs_pct >= 0):
+            results["momentum_52w"].append({**base, **mom, **stage2_info.get(sym, {})})
+
+    # 6. Stage 2 leaders (from DB, sorted by investment score)
     for sym, info in stage2_info.items():
         grp = hist[hist["SYMBOL"] == sym]
         if grp.empty:
@@ -637,6 +792,8 @@ def run_screener(hist: pd.DataFrame, live_prices: dict, top_n: int = 20) -> dict
     results["breakouts_20d"].sort(key=lambda x: x.get("chg_pct", 0), reverse=True)
     results["vcp_setups"].sort(key=lambda x: x.get("tightness", 99))
     results["stage2_leaders"].sort(key=lambda x: float(x.get("investment_score") or 0), reverse=True)
+    results["darvas_setups"].sort(key=lambda x: x.get("chg_pct", 0), reverse=True)
+    results["momentum_52w"].sort(key=lambda x: x.get("pct_from_52h", -99), reverse=True)
 
     for k in results:
         results[k] = results[k][:top_n]
@@ -755,8 +912,8 @@ def build_indices_bar(indices: dict) -> Panel:
 
 
 
-def build_sector_table(indices: dict) -> Panel:
-    """Full-width horizontal sector bar sorted by performance."""
+def build_sector_table(indices: dict, sector_breadth: dict | None = None) -> Panel:
+    """Full-width horizontal sector bar sorted by performance, with breadth %50DMA."""
     sector_perf: list[tuple] = []
     for sector, idx_name in SECTOR_INDEX_MAP.items():
         d     = indices.get(idx_name.upper(), {})
@@ -766,11 +923,12 @@ def build_sector_table(indices: dict) -> Panel:
     sector_perf.sort(key=lambda x: x[2], reverse=True)
 
     row_text = Text()
+    sb = sector_breadth or {}
     for i, (sector, idx_name, pchg, price) in enumerate(sector_perf):
-        clr    = _chg_color(pchg)
-        arrow  = "▲" if pchg >= 0 else "▼"
-        signal = "LEADING" if pchg > 1 else ("LAGGING" if pchg < -1 else "NEUTRAL")
-        sig_clr = "bold green" if signal == "LEADING" else ("bold red" if signal == "LAGGING" else "yellow")
+        clr     = _chg_color(pchg)
+        arrow   = "▲" if pchg >= 0 else "▼"
+        signal  = "LEAD" if pchg > 1 else ("LAG" if pchg < -1 else "NEUT")
+        sig_clr = "bold green" if signal == "LEAD" else ("bold red" if signal == "LAG" else "yellow")
 
         row_text.append(f"{sector} ", style="bold white")
         if price:
@@ -778,15 +936,20 @@ def build_sector_table(indices: dict) -> Panel:
         if pchg != 0:
             row_text.append(f" {arrow}{abs(pchg):.2f}%", style=clr)
         row_text.append(f" [{signal}]", style=sig_clr)
+        # Sector breadth: % above 50DMA
+        bd = sb.get(idx_name) or sb.get(sector)
+        if bd:
+            p50 = bd.get("pct_above_50", 0)
+            b_clr = "green" if p50 >= 60 else ("yellow" if p50 >= 40 else "red")
+            row_text.append(f" {p50}%>50d", style=b_clr)
         if i < len(sector_perf) - 1:
             row_text.append("  │  ", style="dim")
 
     tbl = Table(box=None, padding=(0, 1), expand=True, show_header=False)
     tbl.add_column("data", no_wrap=True)
     tbl.add_row(row_text)
-
     return Panel(tbl, title="[bold magenta]■ SECTOR ROTATION[/bold magenta]",
-                 border_style="magenta", height=4, subtitle="[dim]sorted by performance[/dim]")
+                 border_style="magenta", height=4, subtitle="[dim]sorted by CHG%  │  %>50DMA breadth[/dim]")
 
 
 def _sparkline(values: list[float]) -> Text:
@@ -806,18 +969,20 @@ def _sparkline(values: list[float]) -> Text:
 
 
 def build_breadth_bar(breadth: dict, trend: list[dict]) -> Panel:
-    """Full-width market breadth + Nifty trend sparkline row."""
+    """Full-width market breadth + McClellan Oscillator + TRIN + Nifty sparkline."""
     row = Text()
 
     if breadth:
-        adv  = breadth.get("advances",  0)
-        dec  = breadth.get("declines",  0)
-        unch = breadth.get("unchanged", 0)
-        adr  = breadth.get("ad_ratio",  0.0)
-        n52  = breadth.get("near_52w_high", 0)
-        p200 = breadth.get("pct_above_200ma", 0.0)
-        ab200 = breadth.get("above_200ma", 0)
+        adv    = breadth.get("advances",  0)
+        dec    = breadth.get("declines",  0)
+        unch   = breadth.get("unchanged", 0)
+        adr    = breadth.get("ad_ratio",  0.0)
+        n52    = breadth.get("near_52w_high", 0)
+        p200   = breadth.get("pct_above_200ma", 0.0)
+        ab200  = breadth.get("above_200ma", 0)
         tot200 = breadth.get("total_200ma", 0)
+        mco    = breadth.get("mco")
+        trin   = breadth.get("trin")
 
         row.append("A/D  ", style="bold white")
         row.append(f"{adv}▲", style="bold green")
@@ -829,22 +994,36 @@ def build_breadth_bar(breadth: dict, trend: list[dict]) -> Panel:
         row.append("  ratio ", style="dim")
         row.append(f"{adr:.2f}", style=adr_clr)
 
-        row.append("  │  52W-High: ", style="dim")
+        row.append("  │  52W-Hi: ", style="dim")
         row.append(f"{n52}", style="bold yellow")
 
         row.append("  │  >200MA: ", style="dim")
-        p200_clr = ("bold green" if p200 >= 60 else
-                    "green"      if p200 >= 50 else
-                    "yellow"     if p200 >= 40 else "red")
-        row.append(f"{p200:.1f}%", style=p200_clr)
+        p200_clr = ("bold green" if p200 >= 60 else "green" if p200 >= 50 else
+                    "yellow" if p200 >= 40 else "red")
+        row.append(f"{p200:.0f}%", style=p200_clr)
         row.append(f" ({ab200}/{tot200})", style="dim")
+
+        # McClellan Oscillator
+        if mco is not None:
+            row.append("  │  MCO: ", style="dim")
+            mco_clr = "bold green" if mco > 50 else ("green" if mco > 0 else ("red" if mco > -50 else "bold red"))
+            row.append(f"{mco:+.0f}", style=mco_clr)
+
+        # TRIN (Arms Index): <0.85 overbought/bull, >1.15 oversold/bear
+        if trin is not None:
+            row.append("  │  TRIN: ", style="dim")
+            trin_clr = "bold green" if trin < 0.7 else ("green" if trin < 0.9 else
+                       "yellow" if trin < 1.1 else ("red" if trin < 1.3 else "bold red"))
+            trin_lbl = " (bull)" if trin < 0.9 else (" (bear)" if trin > 1.1 else "")
+            row.append(f"{trin:.2f}", style=trin_clr)
+            row.append(trin_lbl, style="dim")
 
     if trend:
         closes = [float(r["CLOSE"]) for r in trend]
         dates  = [r["TIMESTAMP"]    for r in trend]
         d0 = dates[0].strftime("%d%b")  if hasattr(dates[0],  "strftime") else str(dates[0])[:5]
         d1 = dates[-1].strftime("%d%b") if hasattr(dates[-1], "strftime") else str(dates[-1])[:5]
-        chg   = round((closes[-1] / closes[0] - 1) * 100, 2) if closes[0] > 0 else 0
+        chg    = round((closes[-1] / closes[0] - 1) * 100, 2) if closes[0] > 0 else 0
         updays = sum(1 for i in range(1, len(closes)) if closes[i] >= closes[i - 1])
         chg_clr = "green" if chg >= 0 else "red"
 
@@ -858,7 +1037,7 @@ def build_breadth_bar(breadth: dict, trend: list[dict]) -> Panel:
     tbl = Table(box=None, padding=(0, 1), expand=True, show_header=False)
     tbl.add_column("data", no_wrap=True)
     tbl.add_row(row)
-    return Panel(tbl, title="[bold blue]■ MARKET BREADTH & TREND[/bold blue]",
+    return Panel(tbl, title="[bold blue]■ MARKET BREADTH  MCO  TRIN[/bold blue]",
                  border_style="blue", height=4, subtitle="[dim]NSE universe[/dim]")
 
 
@@ -984,6 +1163,23 @@ def _build_row(item: dict, columns: list) -> list:
             else:
                 row.append(Text("—", style="dim"))
 
+        elif col_name == "BOX TOP":
+            v = item.get("box_top")
+            row.append(Text(f"{v:,.0f}" if v else "—", no_wrap=True))
+
+        elif col_name == "BOX RNG":
+            v = item.get("box_range_pct")
+            row.append(Text(f"{v:.1f}%" if v is not None else "—", no_wrap=True))
+
+        elif col_name == "52H%":
+            v = item.get("pct_from_52h")
+            if v is not None:
+                fv  = float(v)
+                clr = "bold green" if fv >= -1 else ("green" if fv >= -3 else "yellow")
+                row.append(Text(f"{fv:.1f}%", style=clr, no_wrap=True))
+            else:
+                row.append(Text("—", style="dim"))
+
         else:
             row.append(Text(str(val or "—"), no_wrap=True))
     return row
@@ -1023,12 +1219,66 @@ def build_stage2_panel(items: list) -> Panel:
     return build_signal_table("STAGE 2 LEADERS (Weinstein Advancing)", "⭐", items, cols, "gold1")
 
 
+def build_darvas_panel(items: list) -> Panel:
+    cols = [
+        ("SYMBOL",  "left",  10), ("PRICE",   "right",  9), ("CHG%",    "right", 7),
+        ("BOX TOP", "right",  9), ("BOX RNG", "right",  7), ("VOL✓", "center", 4),
+    ]
+    return build_signal_table("DARVAS BOX BREAKOUT", "📦", items, cols, "magenta")
+
+
+def build_momentum52w_panel(items: list) -> Panel:
+    cols = [
+        ("SYMBOL", "left",  10), ("PRICE", "right",  9), ("CHG%", "right", 7),
+        ("52H%",   "right",   6), ("RS",   "right",  5), ("RSI",  "right", 4),
+    ]
+    return build_signal_table("52W HIGH MOMENTUM", "🏔", items, cols, "bright_cyan")
+
+
+def build_watchlist_panel(syms: list[str], live_prices: dict,
+                           hist: pd.DataFrame, db_data: dict) -> Panel:
+    """Personal watchlist — one row per symbol with price, RSI, ADX, RS, signal."""
+    cols = [
+        ("SYMBOL", "left",  11), ("PRICE", "right",  9), ("CHG%",   "right", 8),
+        ("RSI",    "right",   4), ("ADX",  "right",  4), ("RS",     "right", 5),
+        ("SIGNAL", "center",  9),
+    ]
+    items: list[dict] = []
+    for sym in syms:
+        grp = hist[hist["SYMBOL"] == sym.upper()] if not hist.empty else pd.DataFrame()
+        grp = grp.sort_values("TIMESTAMP") if not grp.empty else grp
+        live    = live_prices.get(sym.upper())
+        current = live or (float(grp["CLOSE"].iloc[-1]) if not grp.empty else 0)
+        prev_c  = float(grp["CLOSE"].iloc[-2]) if len(grp) > 1 else current
+        chg_pct = round((current / prev_c - 1) * 100, 2) if prev_c else 0
+
+        rsi = compute_rsi(grp["CLOSE"]) if not grp.empty else 0
+        adx = compute_adx(grp) if not grp.empty else 0
+        db  = db_data.get(sym.upper(), {})
+        rs_raw = db.get("rs")
+        rs_pct = round(rs_raw * 100, 1) if rs_raw is not None else None
+        signal = db.get("st_state") or "—"
+
+        items.append({
+            "symbol":   sym.upper(),
+            "price":    current,
+            "chg_pct":  chg_pct,
+            "rsi":      round(rsi, 1),
+            "adx":      adx,
+            "rs":       rs_pct,
+            "trading_signal": signal,
+        })
+    return build_signal_table("WATCHLIST", "👁", items, cols, "white")
+
+
 def build_status_bar(last_update: str, hist_rows: int, signals: dict) -> Panel:
     counts = "  ".join([
         f"[green]ST:{len(signals.get('supertrend_buy',[]))}[/green]",
         f"[yellow]BO52:{len(signals.get('breakouts_52w',[]))}[/yellow]",
         f"[cyan]VCP:{len(signals.get('vcp_setups',[]))}[/cyan]",
         f"[gold1]S2:{len(signals.get('stage2_leaders',[]))}[/gold1]",
+        f"[magenta]DARVAS:{len(signals.get('darvas_setups',[]))}[/magenta]",
+        f"[bright_cyan]52MOM:{len(signals.get('momentum_52w',[]))}[/bright_cyan]",
     ])
     txt = f"[dim]Last update:[/dim] [white]{last_update}[/white]  │  {counts}  │  [dim]Price history: {hist_rows:,} rows[/dim]"
     return Panel(txt, height=3, style="on grey15")
@@ -1039,7 +1289,12 @@ def build_status_bar(last_update: str, hist_rows: int, signals: dict) -> Panel:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def build_full_layout(indices: dict, signals: dict, last_update: str,
-                       hist_rows: int, top_n: int, refresh_mins: int = 5) -> Table:
+                       hist_rows: int, top_n: int, refresh_mins: int = 5,
+                       watchlist: list[str] | None = None,
+                       hist: "pd.DataFrame | None" = None,
+                       live_prices: dict | None = None,
+                       db_data: dict | None = None,
+                       sector_breadth: dict | None = None) -> Table:
     """Compose the full terminal layout as a Rich renderable."""
     grid = Table.grid(expand=True)
     grid.add_column()
@@ -1050,33 +1305,47 @@ def build_full_layout(indices: dict, signals: dict, last_update: str,
     # Row 1: Full-width indices OHLC bar
     grid.add_row(build_indices_bar(indices))
 
-    # Row 2: Sector rotation (full width, compact)
-    grid.add_row(build_sector_table(indices))
+    # Row 2: Sector rotation (full width, compact) + breadth %50DMA
+    grid.add_row(build_sector_table(indices, sector_breadth))
 
-    # Row 3: Market breadth + Nifty trend
+    # Row 3: Market breadth + McClellan + TRIN + Nifty trend
     grid.add_row(build_breadth_bar(signals.get("breadth", {}), signals.get("nifty_trend", [])))
 
     # Row 4: Supertrend + Breakout
-    row2 = Table.grid(expand=True)
-    row2.add_column(ratio=1)
-    row2.add_column(ratio=1)
+    row4 = Table.grid(expand=True)
+    row4.add_column(ratio=1)
+    row4.add_column(ratio=1)
     st_items = signals.get("supertrend_buy", [])[:top_n]
     bo_items = (signals.get("breakouts_52w", []) + signals.get("breakouts_20d", []))[:top_n]
-    row2.add_row(
+    row4.add_row(
         build_supertrend_panel(st_items),
         build_breakout_panel(bo_items, "52W / 20D BREAKOUTS"),
     )
-    grid.add_row(row2)
+    grid.add_row(row4)
 
-    # Row 4: VCP + Stage 2
-    row3 = Table.grid(expand=True)
-    row3.add_column(ratio=1)
-    row3.add_column(ratio=1)
-    row3.add_row(
+    # Row 5: VCP + Stage 2
+    row5 = Table.grid(expand=True)
+    row5.add_column(ratio=1)
+    row5.add_column(ratio=1)
+    row5.add_row(
         build_vcp_panel(signals.get("vcp_setups", [])[:top_n]),
         build_stage2_panel(signals.get("stage2_leaders", [])[:top_n]),
     )
-    grid.add_row(row3)
+    grid.add_row(row5)
+
+    # Row 6: Darvas + 52W Momentum
+    row6 = Table.grid(expand=True)
+    row6.add_column(ratio=1)
+    row6.add_column(ratio=1)
+    row6.add_row(
+        build_darvas_panel(signals.get("darvas_setups", [])[:top_n]),
+        build_momentum52w_panel(signals.get("momentum_52w", [])[:top_n]),
+    )
+    grid.add_row(row6)
+
+    # Row 7: Watchlist (optional — only if watchlist provided and non-empty)
+    if watchlist and hist is not None and live_prices is not None and db_data is not None:
+        grid.add_row(build_watchlist_panel(watchlist, live_prices, hist, db_data))
 
     # Status bar
     grid.add_row(build_status_bar(last_update, hist_rows, signals))
@@ -1089,8 +1358,9 @@ def _market_is_open() -> bool:
     return now.weekday() < 5 and 9 <= now.hour < 16
 
 
-def refresh_data(top_n: int) -> tuple[dict, dict, str, int]:
-    """Fetch all live data and compute signals. Returns (indices, signals, timestamp, hist_rows)."""
+def refresh_data(top_n: int) -> tuple[dict, dict, str, int, pd.DataFrame, dict, dict, dict]:
+    """Fetch all live data and compute signals.
+    Returns (indices, signals, last_update, hist_rows, hist, live_prices, db_data, sector_breadth)."""
     market_open = _market_is_open()
 
     console.log("[dim]Fetching index data…[/dim]")
@@ -1122,14 +1392,17 @@ def refresh_data(top_n: int) -> tuple[dict, dict, str, int]:
         live_prices = load_eod_stock_prices()
 
     console.log("[dim]Running technical screener…[/dim]")
-    signals = run_screener(hist, live_prices, top_n=top_n)
+    signals  = run_screener(hist, live_prices, top_n=top_n)
+    db_data  = load_rs_from_db()
     signals["nifty_trend"] = load_nifty_trend(10)
+
+    console.log("[dim]Computing sector breadth…[/dim]")
+    sector_breadth = compute_sector_breadth(hist)
 
     ts = datetime.now().strftime("%H:%M:%S")
     if not market_open:
         ts = f"{ts}  [dim](EOD {eod_date_tag})[/dim]"
-    last_update = ts
-    return indices, signals, last_update, hist_rows
+    return indices, signals, ts, hist_rows, hist, live_prices, db_data, sector_breadth
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1138,32 +1411,62 @@ def refresh_data(top_n: int) -> tuple[dict, dict, str, int]:
 
 def main():
     parser = argparse.ArgumentParser(description="NSE Bloomberg Terminal")
-    parser.add_argument("--once",    action="store_true", help="Run once, no live refresh")
-    parser.add_argument("--refresh", type=int, default=5, metavar="MIN",
+    parser.add_argument("--once",      action="store_true", help="Run once, no live refresh")
+    parser.add_argument("--refresh",   type=int, default=5, metavar="MIN",
                         help="Refresh interval in minutes (default: 5)")
-    parser.add_argument("--top",     type=int, default=15, metavar="N",
+    parser.add_argument("--top",       type=int, default=15, metavar="N",
                         help="Max stocks per signal panel (default: 15)")
+    parser.add_argument("--watchlist", type=str, default="", metavar="SYMS",
+                        help="Comma-separated watchlist symbols, e.g. RELIANCE,TCS,INFY")
     args = parser.parse_args()
+
+    # Watchlist: CLI flag overrides watchlist.txt
+    watchlist: list[str] = []
+    if args.watchlist:
+        watchlist = [s.strip().upper() for s in args.watchlist.split(",") if s.strip()]
+    else:
+        wl_file = ROOT / "watchlist.txt"
+        if wl_file.exists():
+            watchlist = [l.strip().upper() for l in wl_file.read_text().splitlines()
+                         if l.strip() and not l.startswith("#")]
 
     refresh_secs = args.refresh * 60
 
+    def _build(indices, signals, label, hist_rows, hist, live_prices, db_data, sector_breadth):
+        return build_full_layout(
+            indices, signals, label, hist_rows, args.top, args.refresh,
+            watchlist=watchlist or None,
+            hist=hist if watchlist else None,
+            live_prices=live_prices if watchlist else None,
+            db_data=db_data if watchlist else None,
+            sector_breadth=sector_breadth,
+        )
+
     if args.once:
         with console.status("[bold cyan]Loading NSE Terminal…"):
-            indices, signals, last_update, hist_rows = refresh_data(args.top)
-        layout = build_full_layout(indices, signals, last_update, hist_rows, args.top, args.refresh)
+            res = refresh_data(args.top)
+        indices, signals, last_update, hist_rows, hist, live_prices, db_data, sb = res
+        layout = _build(indices, signals, last_update, hist_rows, hist, live_prices, db_data, sb)
         console.print(layout)
         return
 
     # Live refresh mode
     with Live(console=console, screen=True, refresh_per_second=1) as live:
-        indices, signals, last_update, hist_rows = {}, {}, "loading…", 0
-        next_refresh = 0.0
+        indices, signals = {}, {}
+        last_update      = "loading…"
+        hist_rows        = 0
+        hist             = pd.DataFrame()
+        live_prices: dict = {}
+        db_data: dict    = {}
+        sector_breadth: dict = {}
+        next_refresh     = 0.0
 
         while True:
             now = time.time()
             if now >= next_refresh:
                 try:
-                    indices, signals, last_update, hist_rows = refresh_data(args.top)
+                    res = refresh_data(args.top)
+                    indices, signals, last_update, hist_rows, hist, live_prices, db_data, sector_breadth = res
                 except Exception as e:
                     last_update = f"ERROR: {e}"
                 next_refresh = time.time() + refresh_secs
@@ -1173,7 +1476,7 @@ def main():
             mins, secs_r = divmod(secs_left, 60)
             countdown = f"{last_update}  │  Next refresh in {mins:02d}:{secs_r:02d}"
 
-            layout = build_full_layout(indices, signals, countdown, hist_rows, args.top, args.refresh)
+            layout = _build(indices, signals, countdown, hist_rows, hist, live_prices, db_data, sector_breadth)
             live.update(layout)
             time.sleep(1)
 
