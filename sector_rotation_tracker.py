@@ -175,6 +175,44 @@ def _load_price_history() -> pd.DataFrame:
     return df
 
 
+def _compute_rs_map(hist: pd.DataFrame) -> dict[str, float]:
+    """Compute RS (stock return - Nifty 500 return) over last 50 trading days for all symbols."""
+    if hist.empty:
+        return {}
+
+    INDEX_CSV = ROOT / "data" / "nse_index_data.csv"
+    if not INDEX_CSV.exists():
+        return {}
+    try:
+        idx_df = pd.read_csv(INDEX_CSV, usecols=["SYMBOL", "TIMESTAMP", "CLOSE"])
+        idx_df["TIMESTAMP"] = pd.to_datetime(idx_df["TIMESTAMP"])
+        nifty500 = idx_df[idx_df["SYMBOL"].str.strip().str.lower() == "nifty 500"].sort_values("TIMESTAMP")
+        if len(nifty500) < 50:
+            return {}
+        n500_now  = float(nifty500["CLOSE"].iloc[-1])
+        n500_old  = float(nifty500["CLOSE"].iloc[-50])
+        if n500_old == 0:
+            return {}
+        idx_ret = (n500_now / n500_old) - 1.0
+    except Exception:
+        return {}
+
+    rs_map: dict[str, float] = {}
+    for sym, grp in hist.groupby("SYMBOL"):
+        grp = grp.sort_values("TIMESTAMP")
+        if len(grp) < 50:
+            continue
+        try:
+            s_now = float(grp["CLOSE"].iloc[-1])
+            s_old = float(grp["CLOSE"].iloc[-50])
+            if s_old == 0:
+                continue
+            rs_map[sym] = round((s_now / s_old - 1.0) - idx_ret, 4)
+        except Exception:
+            pass
+    return rs_map
+
+
 def _compute_supertrend_for_symbols(hist: pd.DataFrame, symbols: list) -> dict:
     """Returns {symbol: {state: str, value: float}} using price history."""
     if hist.empty or not HAS_SUPERTREND:
@@ -418,6 +456,10 @@ def write_snapshot(
     hist = _load_price_history()
     screener_df = _run_screener(analysis, hist)
 
+    # Pre-compute RS from price history as fallback for when CSV has NULLs
+    rs_map = _compute_rs_map(hist)
+    print(f"  RS computed from price history: {len(rs_map)} symbols")
+
     live_prices: dict[str, float] = {}
     if fetch_live:
         live_prices = _fetch_live_prices(screener_df["SYMBOL"].tolist())
@@ -461,7 +503,7 @@ def write_snapshot(
             "rsi": _f(r.get("RSI")),
             "trading_signal": str(r.get("TRADING_SIGNAL", "") or ""),
             "trend_signal": str(r.get("TREND_SIGNAL", "") or ""),
-            "relative_strength": _f(r.get("RELATIVE_STRENGTH")),
+            "relative_strength": _f(r.get("RELATIVE_STRENGTH")) or rs_map.get(sym),
             "change_1d_pct": _f(r.get("CHANGE_1D")),
             "change_1w_pct": _f(r.get("CHANGE_1W")),
             "change_1m_pct": _f(r.get("CHANGE_1M")),

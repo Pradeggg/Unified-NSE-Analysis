@@ -47,7 +47,9 @@ _ONEDRIVE_NSE = Path('/Users/pgorai/Library/CloudStorage/OneDrive-Deloitte(O365D
 # Database path
 DB_PATH = BASE_DIR / 'nse_analysis.db'
 
-print("Starting ENHANCED NSE Universe Analysis (Python)...")
+# PG: Guard print so it only fires when run directly, not on import
+if __name__ == "__main__":
+    print("Starting ENHANCED NSE Universe Analysis (Python)...")
 
 # =============================================================================
 # Database Functions
@@ -614,7 +616,11 @@ def analyze_stocks(stock_data, index_data, fundamental_data, company_names, late
     error_count = 0
     
     # Get NIFTY500 index data for relative strength calculation
-    nifty500_data = index_data[index_data['SYMBOL'] == 'NIFTY 500'].copy() if 'SYMBOL' in index_data.columns else None
+    # Index CSV uses 'Nifty 500' (mixed case) — match case-insensitively
+    nifty500_data = None
+    if 'SYMBOL' in index_data.columns:
+        mask = index_data['SYMBOL'].str.strip().str.lower() == 'nifty 500'
+        nifty500_data = index_data[mask].copy() if mask.any() else None
     
     for idx, stock_row in filtered_stocks.iterrows():
         symbol = stock_row['SYMBOL']
