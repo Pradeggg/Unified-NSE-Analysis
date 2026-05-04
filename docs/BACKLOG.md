@@ -171,7 +171,7 @@ Every external and internal data source the platform uses or will use. Items mar
 | P3-1 Causal Inference Model | ⏳ BLOCKED | — | Needs 6+ months of P0-1 signal data |
 | P3-2 Voice Briefing | 🔜 READY | — | `generate_voice_briefing.py`. Needs OpenAI TTS key. |
 | P3-3 Real-Time Mode | 💤 DEFERRED | — | Needs live NSE data subscription |
-| P3-4 Agent Adda Market Terminal | 🔜 READY | — | Terminal-first Indian markets cockpit. Spec: `docs/superpowers/specs/2026-05-05-agent-adda-market-terminal-design.md` |
+| P3-4 Agent Adda Market Terminal | 🔜 READY | — | Terminal cockpit + controlled NLP query agent. Spec: `docs/superpowers/specs/2026-05-05-agent-adda-market-terminal-design.md` |
 | **Phase 4 — Branch A: Advanced Screeners** | | | |
 | A1 Stage Analysis Screener | 🔜 READY | — | William O'Neil 4-stage classification; Stage 2 only buy zone |
 | A2 Darvas Box Breakout | 🔜 READY | — | Box top/bottom detection; breakout + volume confirmation |
@@ -1025,7 +1025,7 @@ Replace batch daily run with a streaming mode:
 - Current outputs are useful but distributed across scripts, generated files, and reports rather than a unified terminal operating system.
 
 **What to build:**  
-Create a terminal-first Indian markets cockpit for research and learning, branded as **Agent Adda - Market Intelligence Agent**. The terminal should combine market scanner, keyboard command workflow, symbol drilldown, portfolio awareness, report shortcuts, and data-health monitoring.
+Create a terminal-first Indian markets cockpit for research and learning, branded as **Agent Adda - Market Intelligence Agent**. The terminal should combine market scanner, keyboard command workflow, natural-language query agent, symbol drilldown, portfolio awareness, report shortcuts, and data-health monitoring.
 
 **Core commands:**
 ```text
@@ -1040,7 +1040,46 @@ HEALTH        Show source freshness and failures
 REPORT        Open latest HTML/PDF/MD report outputs
 REFRESH       Refresh market snapshots
 EOD           Run daily EOD refresh
+ASK <query>   Run natural-language market research query
 ```
+
+**NLP query agent:**
+- Add an **Agent Adda Query Agent** below the terminal input bar.
+- Support read-only research plus controlled safe tools.
+- Flow: situation assessment → intent detection → entity resolution → tool plan → allowlisted tool execution → balanced response synthesis.
+- Use approved tools first; generated code is allowed only for read-only dataframe analysis against approved local files when deterministic tools cannot answer the request.
+- Standard response for stock questions: snapshot, technical setup, sector/index context, latest catalysts, risks/watch items, source trail, and no-investment-advice framing.
+
+**V1 intent types:**
+```text
+stock_latest_brief
+stock_technical_setup
+sector_scan
+index_status
+portfolio_question
+report_lookup
+data_health
+web_catalyst_search
+custom_readonly_analysis
+```
+
+**Allowlisted tool categories:**
+- Entity tools: `resolve_symbol`, `resolve_index`, `resolve_sector`.
+- Market data tools: `get_symbol_snapshot`, `get_index_snapshot`, `get_sector_context`.
+- Technical tools: `get_technical_setup`, `run_screener_query`, `explain_setup_score`.
+- Report tools: `find_latest_report`, `read_report_summary`, `open_report_artifact`.
+- Portfolio tools: `get_portfolio_exposure`, `find_portfolio_overlap`.
+- Health tools: `get_data_health`, `refresh_market_snapshot`.
+- Research tools: `search_latest_catalysts`, `summarize_sources`.
+- Fallback analysis: `run_readonly_dataframe_analysis`.
+
+**Agent safety rules:**
+- No order placement or trading execution tools.
+- No arbitrary shell execution.
+- No write operations except logs/cache for query results.
+- Generated analysis code cannot import network, subprocess, filesystem mutation, or secrets.
+- Every tool call is logged with timestamp, intent, inputs, output summary, and source freshness.
+- Response copy must avoid buy/sell recommendation language.
 
 **Screens to build:**
 - **Scanner Home:** market regime, top sectors, top setups, risk flags, data-health strip.
@@ -1054,6 +1093,8 @@ EOD           Run daily EOD refresh
 - Create `terminal/screens/` for scanner, symbol, portfolio, health, and reports screens.
 - Create `terminal/services/` for scanner snapshot, symbol profile, portfolio state, report discovery, and data-health services.
 - Create `terminal/adapters/` for NSE/Yahoo/public-data providers so broker or paid-feed adapters can be added later.
+- Create `terminal/agent/` for intent detection, entity resolution, tool planning, safe execution, and response synthesis.
+- Create `terminal/tools/` for typed allowlisted tools shared by deterministic commands and NLP queries.
 - Keep `nse_terminal.py` as a thin launcher or compatibility wrapper.
 - Reuse existing engines instead of duplicating analytics logic.
 
@@ -1069,6 +1110,10 @@ EOD           Run daily EOD refresh
 - Symbol drilldown shows setup, fundamentals, catalysts, narrative, and history sections for a valid NSE symbol.
 - Data Health screen marks sources as `fresh`, `stale`, `missing`, or `failed`.
 - Report screen can locate latest `reports/latest/sector_rotation.html`, `.pdf`, and `.md`.
+- `ASK show me the latest on Reliance` resolves `RELIANCE`, runs the approved tool plan, and returns a balanced market brief.
+- `python nse_terminal.py --ask "show me the latest on Reliance" --once` runs as a smoke test.
+- Intent detection, entity resolution, tool planning, generated-code safety, and synthesis format have fixture tests.
+- Every NLP response includes data freshness, source trail, and no-investment-advice framing.
 - Terminal copy avoids buy/sell recommendation language and clearly positions output as research/learning, not investment advice.
 
 ---
