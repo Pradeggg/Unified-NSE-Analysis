@@ -135,7 +135,57 @@ def fetch_all_indices() -> dict[str, dict]:
     return out
 
 
-def fetch_nse_gainers_losers() -> dict:
+def load_eod_indices() -> dict[str, dict]:
+    """Load last EOD close for all indices from nse_index_data.csv."""
+    out: dict[str, dict] = {}
+    if not INDEX_CSV.exists():
+        return out
+    try:
+        df = pd.read_csv(INDEX_CSV, usecols=["SYMBOL", "OPEN", "HIGH", "LOW", "CLOSE",
+                                              "PREVCLOSE", "TIMESTAMP", "HI_52_WK", "LO_52_WK"],
+                         low_memory=False)
+        df["TIMESTAMP"] = pd.to_datetime(df["TIMESTAMP"], errors="coerce")
+        df = df.dropna(subset=["TIMESTAMP"])
+        # Latest row per index
+        latest = df.sort_values("TIMESTAMP").groupby("SYMBOL").last().reset_index()
+        last_date = latest["TIMESTAMP"].max()
+        for _, row in latest.iterrows():
+            close   = float(row["CLOSE"]   or 0)
+            prev    = float(row["PREVCLOSE"] or 0)
+            hi52    = float(row.get("HI_52_WK", 0) or 0)
+            lo52    = float(row.get("LO_52_WK", 0) or 0)
+            chg     = round(close - prev, 2) if prev > 0 else 0.0
+            pchg    = round((chg / prev * 100) if prev > 0 else 0, 2)
+            key     = str(row["SYMBOL"]).upper()
+            out[key] = {
+                "index":     key,
+                "lastPrice": close,
+                "change":    chg,
+                "pChange":   pchg,
+                "yearHigh":  hi52,
+                "yearLow":   lo52,
+                "_eod_date": last_date.strftime("%d %b") if pd.notna(last_date) else "EOD",
+            }
+    except Exception:
+        pass
+    return out
+
+
+def load_eod_stock_prices() -> dict[str, float]:
+    """Load last EOD close for all stocks from nse_sec_full_data.csv."""
+    if not STOCK_CSV.exists():
+        return {}
+    try:
+        df = pd.read_csv(STOCK_CSV, usecols=["SYMBOL", "TIMESTAMP", "CLOSE"], low_memory=False)
+        df["TIMESTAMP"] = pd.to_datetime(df["TIMESTAMP"], errors="coerce")
+        df = df.dropna(subset=["TIMESTAMP", "CLOSE"])
+        df["CLOSE"] = pd.to_numeric(df["CLOSE"], errors="coerce")
+        latest = df.sort_values("TIMESTAMP").groupby("SYMBOL")["CLOSE"].last()
+        return latest.to_dict()
+    except Exception:
+        return {}
+
+
     """Fetch top gainers and losers from NSE."""
     result = {"gainers": [], "losers": []}
     try:
@@ -458,7 +508,8 @@ def build_header(indices: dict, refresh_mins: int = 5) -> Panel:
     nv      = _parse_price(nifty.get("lastPrice", 0))
     nc      = _parse_price(nifty.get("change",    0))
     np_     = _parse_price(nifty.get("pChange",   0))
-    market_open = 9 <= datetime.now().hour < 16
+    is_eod  = bool(nifty.get("_eod_date"))
+    market_open = _market_is_open()
 
     arrow = "▲" if nc >= 0 else "▼"
     clr   = "green" if nc >= 0 else "red"
@@ -470,12 +521,16 @@ def build_header(indices: dict, refresh_mins: int = 5) -> Panel:
     txt.append("    ")
     if market_open:
         txt.append("● MARKET OPEN", style="bold green")
+    elif is_eod:
+        eod_date = nifty.get("_eod_date", "EOD")
+        txt.append(f"● CLOSED  │  EOD {eod_date}", style="bold yellow")
     else:
         txt.append("● MARKET CLOSED", style="bold red")
     txt.append("    NIFTY 50  ", style="bold white")
     txt.append(f"{nv:,.0f}" if nv else "—", style=f"bold {clr}")
-    txt.append(f"  {arrow} {abs(nc):,.0f}  ({np_:+.2f}%)", style=clr)
-    txt.append(f"  │  🔄 Refresh /{refresh_mins}min  │  Ctrl+C to exit", style="dim")
+    if nc != 0:
+        txt.append(f"  {arrow} {abs(nc):,.0f}  ({np_:+.2f}%)", style=clr)
+    txt.append(f"  │  🔄 /{refresh_mins}min  │  Ctrl+C to exit", style="dim")
 
     return Panel(txt, style="on dark_blue", height=3)
 
@@ -524,8 +579,8 @@ def build_indices_table(indices: dict) -> Panel:
         tbl.add_row(
             label,
             Text(f"{price:,.0f}", style=clr, no_wrap=True) if price else Text("—", style="dim"),
-            Text(f"{arrow} {abs(chg):,.0f}", style=clr, no_wrap=True),
-            Text(f"{pchg:+.2f}%", style=clr, no_wrap=True),
+            Text(f"{arrow} {abs(chg):,.0f}", style=clr, no_wrap=True) if chg != 0 else Text("—", style="dim"),
+            Text(f"{pchg:+.2f}%", style=clr, no_wrap=True) if pchg != 0 else Text("—", style="dim"),
             pos52,
         )
 
@@ -559,7 +614,7 @@ def build_sector_table(indices: dict) -> Panel:
             Text(sector, style="bold white", no_wrap=True),
             Text(idx_name, style="dim", no_wrap=True),
             Text(f"{price:,.0f}", style=clr, no_wrap=True) if price else Text("—", style="dim"),
-            Text(f"{arrow} {pchg:+.2f}%", style=clr, no_wrap=True),
+            Text(f"{arrow} {pchg:+.2f}%", style=clr, no_wrap=True) if pchg != 0 else Text("—", style="dim"),
             Text(signal, style=sig_clr, no_wrap=True),
         )
 
@@ -749,23 +804,50 @@ def build_full_layout(indices: dict, signals: dict, last_update: str,
     return grid
 
 
+def _market_is_open() -> bool:
+    now = datetime.now()
+    return now.weekday() < 5 and 9 <= now.hour < 16
+
+
 def refresh_data(top_n: int) -> tuple[dict, dict, str, int]:
     """Fetch all live data and compute signals. Returns (indices, signals, timestamp, hist_rows)."""
-    console.log("[dim]Fetching live index data…[/dim]")
-    indices = fetch_all_indices()
+    market_open = _market_is_open()
+
+    console.log("[dim]Fetching index data…[/dim]")
+    indices = fetch_all_indices() if market_open else {}
+
+    # Always load EOD for fallback; fill any missing/zero indices
+    eod_indices  = load_eod_indices()
+    eod_date_tag = ""
+    if eod_indices:
+        sample = next(iter(eod_indices.values()), {})
+        eod_date_tag = sample.get("_eod_date", "EOD")
+
+    for key, eod in eod_indices.items():
+        live = indices.get(key, {})
+        if not live or _parse_price(live.get("lastPrice", 0)) == 0:
+            indices[key] = eod   # use EOD when live is absent/zero
 
     console.log("[dim]Loading price history…[/dim]")
     hist = load_price_history(days=260)
     hist_rows = len(hist)
 
-    console.log("[dim]Fetching live stock prices…[/dim]")
-    symbols = hist["SYMBOL"].unique().tolist() if not hist.empty else []
-    live_prices = fetch_live_prices(symbols[:200])  # top 200 most active
+    # Live stock prices only during market hours; else fall back to EOD closes
+    if market_open:
+        console.log("[dim]Fetching live stock prices…[/dim]")
+        symbols     = hist["SYMBOL"].unique().tolist() if not hist.empty else []
+        live_prices = fetch_live_prices(symbols[:200])
+    else:
+        console.log("[dim]Loading EOD stock prices…[/dim]")
+        live_prices = load_eod_stock_prices()
 
     console.log("[dim]Running technical screener…[/dim]")
     signals = run_screener(hist, live_prices, top_n=top_n)
 
-    last_update = datetime.now().strftime("%H:%M:%S")
+    ts = datetime.now().strftime("%H:%M:%S")
+    if not market_open:
+        ts = f"{ts}  [dim](EOD {eod_date_tag})[/dim]"
+    last_update = ts
     return indices, signals, last_update, hist_rows
 
 
