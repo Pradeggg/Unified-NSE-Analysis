@@ -2,12 +2,12 @@
 
 ## Risk metrics (rule-based)
 
-- **Volatility (annualised):** 5.15%
-- **VaR (95%, 1-day):** 0.56%
-- **CVaR (95%, 1-day):** 0.85%
-- **Sharpe ratio:** -0.5
+- **Volatility (annualised):** 13.97%
+- **VaR (95%, 1-day):** 1.48%
+- **CVaR (95%, 1-day):** 2.37%
+- **Sharpe ratio:** 0.36
 - **Beta vs Nifty:** None
-- **Max drawdown:** -6.65%
+- **Max drawdown:** -19.74%
 - **Concentration (Herfindahl):** 0.0045
 
 ## Scenario projections

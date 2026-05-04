@@ -163,10 +163,11 @@ Every external and internal data source the platform uses or will use. Items mar
 | P1-3 FII/DII Flow Signals | ✅ DONE | Optimus | `fetch_fii_dii_flows.py`; flow banner in HTML; LLM narrative context; signal log |
 | P1-4 Promoter/Insider Alerts | ✅ DONE | Optimus | `fetch_insider_alerts.py`; bulk/block/PIT/pledge alerts; insider badge in HTML; LLM narrative context; signal log |
 | P1-5 Enhanced HTML Dashboard | ✅ DONE | Optimus | Paired-row sort, localStorage state, narrative search, heatmap toggle, print/PDF, 15-col mobile responsive |
-| P2-1 NSE Knowledge Graph | 🔜 READY | — | P1-2 + P1-3 now complete; can proceed |
+| P1-6 Macro-Economic Proxy Signals | ✅ DONE | Optimus | `fetch_macro_proxies.py`; FRED+NSE data (9 indicators); z-score signals; 23-sector tailwind scoring; macro banner + rotation table Macro column in HTML; LLM narrative context |
+| P2-1 NSE Knowledge Graph | ✅ DONE | Optimus | `knowledge_graph.py`; 1574 nodes, 8.4K edges; promoter groups (23), sector peers, supply chain; BFS shock propagation; GRAPH_SIGNAL column (BENEFICIARY/AT_RISK/WATCH); graph badge in signals popup; LLM cross-impact context |
 | P2-2 Counterfactual Scenarios | 🔜 READY | — | Independent. `scenario_engine.py`. |
 | P2-3 Learning Loop | ⏳ BLOCKED | — | Needs P0-1 signal log to accumulate 90+ days of data |
-| P2-4 Portfolio-Aware Narratives | 🔜 READY | — | Needs `portfolio-analyzer/output/holdings.csv` to exist |
+| P2-4 Portfolio-Aware Narratives | ✅ DONE | Optimus | `_load_portfolio()` from CAS holdings; Portfolio tab (sector concentration, held-in-rotation table); "📁 Held" badge on candidates; LLM prompt enriched with holdings context + portfolio-specific instructions |
 | P3-1 Causal Inference Model | ⏳ BLOCKED | — | Needs 6+ months of P0-1 signal data |
 | P3-2 Voice Briefing | 🔜 READY | — | `generate_voice_briefing.py`. Needs OpenAI TTS key. |
 | P3-3 Real-Time Mode | 💤 DEFERRED | — | Needs live NSE data subscription |
@@ -184,7 +185,7 @@ Every external and internal data source the platform uses or will use. Items mar
 | B2 Global Correlation Monitor | 🔜 READY | — | yfinance for SPX/HSI/Gold/Oil; rolling 30d correlation |
 | B3 Sectoral Heat Calendar | 🔜 READY | — | 12×N_sectors heatmap of avg monthly returns |
 | B4 FII/DII Flow Battle Tracker | ⏳ BLOCKED | — | Needs P1-3 (FII/DII flows) fully running |
-| B5 Economic Cycle Tracker | ⏳ BLOCKED | — | Needs P1-6 macro proxies + P1-1 regime detector |
+| B5 Economic Cycle Tracker | 🔜 READY | — | P1-6 macro proxies ✅ + P1-1 regime detector ✅ |
 | **Phase 4 — Branch C: Market Breadth** | | | |
 | C1 McClellan Oscillator | 🔜 READY | — | Derives from Nifty500 constituent advance/decline data |
 | C2 TRIN / Arms Index | 🔜 READY | — | Volume-weighted breadth; derives from existing OHLCV |
@@ -193,7 +194,7 @@ Every external and internal data source the platform uses or will use. Items mar
 | **Phase 4 — Branch D: Deep Fundamentals** | | | |
 | D1 DuPont Decomposition Engine | ⏳ BLOCKED | — | Needs 5-year P&L + balance sheet from Screener.in |
 | D2 Earnings Quality Score | ⏳ BLOCKED | — | Needs CFO data from Screener.in cash flow scrape |
-| D3 Business Cycle Positioning | ⏳ BLOCKED | — | Needs P1-6 macro proxies |
+| D3 Business Cycle Positioning | 🔜 READY | — | P1-6 macro proxies ✅ |
 | D4 Concall Sentiment NLP | 🔜 READY | — | Same as P2-5; BSE filings + LLM extraction |
 | D5 Forensic Accounting Suite | ⏳ BLOCKED | — | Needs Screener.in 5-year P&L + balance sheet (source N) |
 | D6 Competitive Moat Score | ⏳ BLOCKED | — | Needs D1 + D2 data; peer comparison data (source N) |

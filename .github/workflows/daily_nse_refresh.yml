@@ -2,22 +2,34 @@ name: Daily NSE Data Refresh
 
 on:
   schedule:
-    # Run at 11:00 UTC (4:30 PM IST) Mon-Fri — after NSE market close (3:30 PM IST)
-    - cron: '0 11 * * 1-5'
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/daily_nse_refresh.yml'
+    # Full pipeline: Mon–Fri at 10:30 UTC (4:00 PM IST) — 30 min after NSE close
+    - cron: '30 10 * * 1-5'
+    # Live-price refresh: Mon–Fri at 13:00 UTC (6:30 PM IST) — end-of-day settle
+    - cron: '0 13 * * 1-5'
   workflow_dispatch:
     inputs:
-      from_date:
-        description: 'Fetch from date (YYYY-MM-DD). Leave empty for auto (since last update).'
+      mode:
+        description: 'Refresh mode'
         required: false
-        default: ''
+        default: 'full'
+        type: choice
+        options:
+          - full          # comprehensive analysis + tracker snapshot + report
+          - live-only     # update live prices only (fast, ~2 min)
+          - skip-analysis # tracker snapshot without re-running analysis
+
+env:
+  PYTHON_VERSION: '3.11'
 
 jobs:
-  refresh-data:
+  # ── Job 1: Full pipeline (runs at 10:30 UTC or manual "full") ─────────────
+  full-refresh:
+    name: Full Pipeline Refresh
     runs-on: ubuntu-latest
+    # Run on schedule at 10:30 UTC, OR manual dispatch with mode=full/skip-analysis
+    if: |
+      (github.event_name == 'schedule' && github.event.schedule == '30 10 * * 1-5') ||
+      (github.event_name == 'workflow_dispatch' && (inputs.mode == 'full' || inputs.mode == 'skip-analysis'))
     permissions:
       contents: write
 
@@ -27,45 +39,153 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Set up Python
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ env.PYTHON_VERSION }}-${{ hashFiles('requirements.txt') }}
+          restore-keys: pip-${{ env.PYTHON_VERSION }}-
 
       - name: Install dependencies
         run: |
-          pip install pandas requests jugaad-data pyreadr openpyxl numpy
+          pip install --upgrade pip
+          pip install \
+            pandas numpy requests openpyxl yfinance \
+            pandas-ta scipy statsmodels \
+            jugaad-data pyreadr || true
+          # Install optional packages (don't fail if unavailable)
+          pip install openai ollama || true
 
-      - name: Fetch latest NSE data
+      - name: Restore cached SQLite DB & data
+        uses: actions/cache@v4
+        with:
+          path: |
+            data/sector_rotation_tracker.db
+            data/fii_dii_flows.csv
+            data/fno_signals.csv
+            data/corporate_events.csv
+            data/insider_alerts.csv
+            data/macro_sector_tailwind.csv
+            data/_nse_cookies.txt
+          key: nse-data-cache-${{ github.run_id }}
+          restore-keys: nse-data-cache-
+
+      - name: Run full pipeline
         run: |
-          if [ -n "${{ github.event.inputs.from_date }}" ]; then
-            python scripts/fetch_nse_data.py --from "${{ github.event.inputs.from_date }}"
+          if [ "${{ inputs.mode }}" = "skip-analysis" ]; then
+            python daily_refresh.py --skip-analysis
           else
-            python scripts/fetch_nse_data.py
+            python daily_refresh.py
           fi
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
-      - name: Run analysis pipeline (Phases 2-5)
+      - name: Check for report changes
+        id: changes
         run: |
-          python working-sector/phase2_data.py
-          python working-sector/phase3_screens.py
-          python working-sector/phase4_backtest.py
-          python working-sector/phase5_report.py
-          python working-sector/build_comprehensive_report.py
+          git diff --quiet && echo "changed=false" >> $GITHUB_OUTPUT \
+            || echo "changed=true" >> $GITHUB_OUTPUT
+
+      - name: Commit updated reports and data
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          TODAY=$(date -u +"%Y-%m-%d")
+
+          # Stage reports and data (not huge history CSVs)
+          git add reports/sector_rotation/stage2_tracker_*.html || true
+          git add data/sector_rotation_tracker.db              || true
+          git add data/fii_dii_flows.csv                       || true
+          git add data/fno_signals.csv                         || true
+          git add data/corporate_events.csv                    || true
+          git add data/insider_alerts.csv                      || true
+          git add data/macro_sector_tailwind.csv               || true
+          git add reports/generated_csv/                       || true
+
+          git commit -m "chore(auto): daily NSE refresh ${TODAY} [skip ci]"
+          git pull --rebase origin main
+          git push origin main
+
+      - name: Upload HTML report as artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: stage2-tracker-${{ github.run_id }}
+          path: reports/sector_rotation/stage2_tracker_*.html
+          retention-days: 30
+
+  # ── Job 2: Live price update only (runs at 13:00 UTC or manual "live-only") ─
+  live-price-refresh:
+    name: Live Price Refresh
+    runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'schedule' && github.event.schedule == '0 13 * * 1-5') ||
+      (github.event_name == 'workflow_dispatch' && inputs.mode == 'live-only')
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ env.PYTHON_VERSION }}-lite
+          restore-keys: pip-${{ env.PYTHON_VERSION }}-
+
+      - name: Install dependencies (minimal)
+        run: |
+          pip install pandas numpy requests yfinance openpyxl
+
+      - name: Restore cached DB
+        uses: actions/cache@v4
+        with:
+          path: |
+            data/sector_rotation_tracker.db
+            data/_nse_cookies.txt
+          key: nse-data-cache-${{ github.run_id }}
+          restore-keys: nse-data-cache-
+
+      - name: Update live prices + regenerate report
+        run: python daily_refresh.py --live-only
 
       - name: Check for changes
         id: changes
         run: |
-          git diff --quiet && echo "changed=false" >> $GITHUB_OUTPUT || echo "changed=true" >> $GITHUB_OUTPUT
+          git diff --quiet && echo "changed=false" >> $GITHUB_OUTPUT \
+            || echo "changed=true" >> $GITHUB_OUTPUT
 
-      - name: Commit and push updated data + reports
+      - name: Commit updated report
         if: steps.changes.outputs.changed == 'true'
         run: |
-          git config user.name "github-actions[bot]"
+          git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/nse_universe_stock_data.csv
-          git add data/nse_index_data.csv
-          git add working-sector/output/
           TODAY=$(date -u +"%Y-%m-%d")
-          git commit -m "chore: auto-refresh NSE data and pipeline outputs (${TODAY})"
+          git add reports/sector_rotation/stage2_tracker_*.html || true
+          git add data/sector_rotation_tracker.db               || true
+          git commit -m "chore(auto): live price refresh ${TODAY} [skip ci]"
           git pull --rebase origin main
           git push origin main
+
+      - name: Upload HTML report as artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: stage2-live-${{ github.run_id }}
+          path: reports/sector_rotation/stage2_tracker_*.html
+          retention-days: 7

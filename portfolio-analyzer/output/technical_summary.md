@@ -1,3 +1,10 @@
 # Technical summary
 
-**224** holdings. Technical scores and buy/sell recommendations will appear when price and RSI data are available. Per-stock quantity and value are in the Technical table.
+**224** holdings analysed.  Comprehensive CSV: **178** | DB: **33** | Computed: **4** | No data: **9**
+
+## Recommendation breakdown
+
+- **ADD**: 15 stocks
+- **HOLD**: 66 stocks
+- **REDUCE**: 71 stocks
+- **SELL**: 72 stocks

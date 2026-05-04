@@ -2913,6 +2913,7 @@ def render_html_interactive(
     cycle_info: dict | None = None,
     macro_context: str = "",
     seasonal_calendar_html: str = "",
+    global_corr_table_html: str = "",
     all_index_metrics: pd.DataFrame | None = None,
 ) -> str:
     gen_date = generated_at.strftime("%Y-%m-%d")
@@ -2972,6 +2973,16 @@ def render_html_interactive(
     try:
         from market_breadth import load_breadth_history, mcclellan_context_html
         _mcclellan_strip = mcclellan_context_html(load_breadth_history())
+    except Exception:
+        pass
+
+    # PG: Build global correlation context strip (B2)
+    _global_corr_strip = ""
+    try:
+        from global_correlation import load_global_correlations, correlation_context_html
+        _gcorr = load_global_correlations()
+        if _gcorr is not None and not _gcorr.empty:
+            _global_corr_strip = correlation_context_html(_gcorr)
     except Exception:
         pass
 
@@ -3166,6 +3177,7 @@ def render_html_interactive(
         f'<div class="sec-sub">Ranked by composite rotation score vs Nifty 500. Click column headers to sort.</div>'
         + rotation_table
         + (f'<div class="card" style="margin:12px 0">{seasonal_calendar_html}</div>' if seasonal_calendar_html else "")
+        + (f'<div class="card" style="margin:12px 0">{global_corr_table_html}</div>' if global_corr_table_html else "")
         + sec_narr_html
     )
 
@@ -3874,7 +3886,7 @@ def render_html_interactive(
         '</div></div>',
         '</header>',
         f'<div class="disc"><strong>Disclaimer:</strong> {html_mod.escape(REPORT_DISCLAIMER)}</div>',
-        f'<div class="content" style="padding-top:12px;padding-bottom:0">{_regime_banner}{_cycle_banner}{_flow_banner}{_breadth_strip}{_mcclellan_strip}</div>' if (_regime_banner or _cycle_banner or _flow_banner or _breadth_strip or _mcclellan_strip) else '',
+        f'<div class="content" style="padding-top:12px;padding-bottom:0">{_regime_banner}{_cycle_banner}{_flow_banner}{_breadth_strip}{_mcclellan_strip}{_global_corr_strip}</div>' if (_regime_banner or _cycle_banner or _flow_banner or _breadth_strip or _mcclellan_strip or _global_corr_strip) else '',
         # PG: macro context banner (P1-6)
         f'<div class="content" style="padding:6px 20px;font-size:11px;color:#6c6f85;background:#f8f9fa;border-bottom:1px solid #e9ecef">🌐 {html_mod.escape(macro_context)}</div>' if macro_context else '',
         brief_html,
@@ -4305,6 +4317,16 @@ def generate_report(top_n_sectors: int = 6, top_n_per_sector: int = 8) -> Report
         sector_rank["BREADTH_SIGNAL"] = "NO_DATA"
         sector_rank["BREADTH_DIVERGENCE"] = "NONE"
 
+    # PG: Global Correlation Monitor (B2) — fetch and compute correlations
+    try:
+        from global_correlation import generate_global_correlations
+        _, _global_corr = generate_global_correlations()
+        if not _global_corr.empty:
+            n_decouple = int((_global_corr["alert"] == "DECOUPLING").sum())
+            print(f"  Global correlations: {len(_global_corr)} assets, {n_decouple} decoupling alert(s).")
+    except Exception as exc:
+        print(f"  Global correlation skipped ({exc}).")
+
     sector_rank = sector_rank.head(top_n_sectors)
     rotating_sectors = list(sector_rank["SECTOR_NAME"].drop_duplicates())
     rotating_universe = build_rotating_sector_universe(analysis, rotating_sectors)
@@ -4410,7 +4432,16 @@ def generate_report(top_n_sectors: int = 6, top_n_per_sector: int = 8) -> Report
     )
 
     md = render_markdown(sector_rank, candidates, peak_resilience, source_file, generated_at, narratives=narratives)
-    html_text = render_html_interactive(sector_rank, candidates, peak_resilience, source_file, generated_at, narratives, regime_info=regime_info, flow_info=flow_info, cycle_info=cycle_info, macro_context=_macro_ctx, seasonal_calendar_html=_seasonal_calendar_html, all_index_metrics=all_index_metrics)
+    # PG: Build global correlation table HTML (B2) for the Sector Rotation tab
+    _global_corr_table_html = ""
+    try:
+        from global_correlation import load_global_correlations, render_correlation_table_html
+        _gcorr = load_global_correlations()
+        if _gcorr is not None and not _gcorr.empty:
+            _global_corr_table_html = render_correlation_table_html(_gcorr)
+    except Exception:
+        pass
+    html_text = render_html_interactive(sector_rank, candidates, peak_resilience, source_file, generated_at, narratives, regime_info=regime_info, flow_info=flow_info, cycle_info=cycle_info, macro_context=_macro_ctx, seasonal_calendar_html=_seasonal_calendar_html, global_corr_table_html=_global_corr_table_html, all_index_metrics=all_index_metrics)
     for path, text in [
         (paths.markdown, md),
         (paths.html, html_text),

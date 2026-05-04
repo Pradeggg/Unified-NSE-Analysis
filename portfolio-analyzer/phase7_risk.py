@@ -106,7 +106,7 @@ def load_returns(symbols: list[str], index_name: str = "Nifty 50", lookback_days
     """
     if not STOCK_CSV.exists():
         return pd.DataFrame(), pd.Series(dtype=float)
-    symbols_upper = [s.strip().upper() for s in symbols[:80]]
+    symbols_upper = [s.strip().upper() for s in symbols]
     try:
         # Single read: filter by symbol then take last lookback_days per symbol
         df = pd.read_csv(

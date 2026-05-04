@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 Phase 5: Stock narratives.
-Combines holdings, fundamental_by_stock, and market_sentiment into stock_narratives.json and stock_narratives.md.
+Combines holdings, technical_by_stock, fundamental_by_stock, and market_sentiment
+into rich per-stock narrative cards in stock_narratives.json and stock_narratives.md.
 """
 from __future__ import annotations
 
@@ -15,6 +16,7 @@ try:
         HOLDINGS_CSV_OUT,
         FUNDAMENTAL_BY_STOCK_CSV,
         FUNDAMENTAL_DETAILS_CSV,
+        TECHNICAL_BY_STOCK_CSV,
         MARKET_SENTIMENT_MD,
         STOCK_NARRATIVES_JSON,
         STOCK_NARRATIVES_MD,
@@ -25,6 +27,7 @@ except ImportError:
     HOLDINGS_CSV_OUT = OUTPUT_DIR / "holdings.csv"
     FUNDAMENTAL_BY_STOCK_CSV = OUTPUT_DIR / "fundamental_by_stock.csv"
     FUNDAMENTAL_DETAILS_CSV = OUTPUT_DIR / "fundamental_details.csv"
+    TECHNICAL_BY_STOCK_CSV = OUTPUT_DIR / "technical_by_stock.csv"
     MARKET_SENTIMENT_MD = OUTPUT_DIR / "market_sentiment.md"
     STOCK_NARRATIVES_JSON = OUTPUT_DIR / "stock_narratives.json"
     STOCK_NARRATIVES_MD = OUTPUT_DIR / "stock_narratives.md"
@@ -44,13 +47,12 @@ def _parse_sentiment_by_stock(md_path: Path) -> dict[str, str]:
     return out
 
 
-def _load_fundamental_details() -> dict[str, dict] | None:
-    """Load P&L, quarterly, balance sheet, ratios by symbol. Tries portfolio output then working-sector/output/fundamental_details.csv."""
+def _load_fundamental_details() -> dict[str, dict]:
+    """Load P&L, quarterly, balance sheet, ratios by symbol."""
     import pandas as pd
     candidates = [Path(FUNDAMENTAL_DETAILS_CSV)]
     try:
-        ws = Path(WORKING_SECTOR) / "output" / "fundamental_details.csv"
-        candidates.append(ws)
+        candidates.append(Path(WORKING_SECTOR) / "output" / "fundamental_details.csv")
     except Exception:
         pass
     for path in candidates:
@@ -68,21 +70,16 @@ def _load_fundamental_details() -> dict[str, dict] | None:
                     for k in ("pnl_summary", "quarterly_summary", "balance_sheet_summary", "ratios_summary")
                     if k in r.index and pd.notna(r.get(k)) and str(r.get(k)).strip()
                 }
-            return out if out else None
+            return out if out else {}
         except Exception:
             continue
-    return None
+    return {}
 
 
-def _sentiment_to_one_line(sent_block: str, max_chars: int = 120) -> str | None:
-    """
-    Extract a single clean sentence from a sentiment block for use in narratives.
-    Strips out 'Sources (retrieved...)', '1. Title:', 'URL:', 'Excerpt:' and similar.
-    Returns None if only structured source list (no prose).
-    """
+def _sentiment_to_one_line(sent_block: str, max_chars: int = 150) -> str | None:
+    """Extract a single clean sentence from a sentiment block."""
     if not sent_block or not sent_block.strip():
         return None
-    # Take only content before structured source list
     for sep in ("Sources (retrieved", "1. Title:", "2. Title:", "URL: http", "Excerpt:", "\n1. "):
         idx = sent_block.find(sep)
         if idx != -1:
@@ -90,7 +87,6 @@ def _sentiment_to_one_line(sent_block: str, max_chars: int = 120) -> str | None:
     sent_block = sent_block.strip()
     if not sent_block:
         return None
-    # Take first sentence or first max_chars of prose
     first_line = sent_block.split("\n")[0].strip()
     for end in (". ", ".\n", "? ", "! "):
         i = first_line.find(end)
@@ -101,7 +97,6 @@ def _sentiment_to_one_line(sent_block: str, max_chars: int = 120) -> str | None:
         first_line = first_line[: max_chars - 1].rstrip()
         if not first_line.endswith("."):
             first_line += "…"
-    # Skip if it looks like a source header or URL
     if re.match(r"^(Sources|Title:|URL:|Excerpt:|Retrieved:|\d+\.)\s*", first_line, re.I):
         return None
     if first_line.startswith("http") or "http" in first_line[:50]:
@@ -109,128 +104,229 @@ def _sentiment_to_one_line(sent_block: str, max_chars: int = 120) -> str | None:
     return first_line if len(first_line) > 20 else None
 
 
-def _format_fundamental_line(fund_row) -> str | None:
-    """Format *Fundamental (0–100):* **Earnings Quality:** x | ... like working-sector."""
-    if fund_row is None:
-        return None
-    labels = [
-        ("EARNINGS_QUALITY", "Earnings Quality"),
-        ("SALES_GROWTH", "Sales Growth"),
-        ("FINANCIAL_STRENGTH", "Financial Strength"),
-        ("INSTITUTIONAL_BACKING", "Institutional Backing"),
-    ]
-    parts = []
-    for col, label in labels:
-        if col in fund_row.index and fund_row.get(col) is not None:
-            try:
-                v = float(fund_row[col])
-                parts.append(f"**{label}:** {v:.1f}")
-            except (TypeError, ValueError):
-                pass
-    if not parts:
-        return None
-    return "*Fundamental (0–100):* " + " | ".join(parts)
+def _composite_decision(tech_score: float, fund_score: float) -> str:
+    combined = tech_score * 0.6 + fund_score * 0.4
+    if combined >= 70:   return "STRONG ADD"
+    elif combined >= 58: return "ADD"
+    elif combined >= 42: return "HOLD"
+    elif combined >= 28: return "REDUCE"
+    else:                return "SELL"
+
+
+def _trend_emoji(trend: str) -> str:
+    t = (trend or "").upper()
+    if "STRONG_BULL" in t or "STRONG BULL" in t: return "🚀"
+    if "BULL" in t:  return "📈"
+    if "BEAR" in t:  return "📉"
+    if "NEUTRAL" in t: return "➡"
+    return ""
+
+
+def _chg_arrow(val) -> str:
+    try:
+        f = float(val)
+        return f"{'▲' if f >= 0 else '▼'}{abs(f):.1f}%"
+    except (TypeError, ValueError):
+        return "—"
 
 
 def run_phase5() -> dict:
-    """Run Phase 5: stock narratives. Writes stock_narratives.json, stock_narratives.md. Structure matches working-sector (fundamental breakdown, P&L, quarterly, balance sheet, ratios)."""
+    """Run Phase 5: stock narratives. Writes stock_narratives.json, stock_narratives.md."""
     OUTPUT_DIR.mkdir(exist_ok=True, parents=True)
     if not HOLDINGS_CSV_OUT.exists():
         STOCK_NARRATIVES_MD.write_text("# Stock narratives\n\nRun Phase 0 first.\n", encoding="utf-8")
         return {"n_stocks": 0, "note": "No holdings; run Phase 0 first."}
 
     import pandas as pd
+
     holdings = pd.read_csv(HOLDINGS_CSV_OUT)
-    fund = pd.read_csv(FUNDAMENTAL_BY_STOCK_CSV) if FUNDAMENTAL_BY_STOCK_CSV.exists() else None
-    details_by_sym = _load_fundamental_details() or {}
+
+    # Technical data — primary source for scores, rec, RSI, changes
+    tech_dict: dict[str, dict] = {}
+    if TECHNICAL_BY_STOCK_CSV.exists():
+        tech_df = pd.read_csv(TECHNICAL_BY_STOCK_CSV)
+        tech_df["symbol"] = tech_df["symbol"].astype(str).str.strip().str.upper()
+        for _, r in tech_df.iterrows():
+            tech_dict[r["symbol"]] = r.to_dict()
+
+    # Fundamental breakdown (earnings quality etc.) — 64 symbols
+    fund_dict: dict[str, dict] = {}
+    if FUNDAMENTAL_BY_STOCK_CSV.exists():
+        fund_df = pd.read_csv(FUNDAMENTAL_BY_STOCK_CSV)
+        sym_col = "symbol" if "symbol" in fund_df.columns else "SYMBOL"
+        fund_df[sym_col] = fund_df[sym_col].astype(str).str.strip().str.upper()
+        for _, r in fund_df.iterrows():
+            fund_dict[r[sym_col]] = r.to_dict()
+
+    details_by_sym = _load_fundamental_details()
     sentiment_by_stock = _parse_sentiment_by_stock(MARKET_SENTIMENT_MD)
 
     narratives = []
-    md_lines = ["# Stock narratives (with fundamental details)", ""]
-    md_lines.append("Per-stock narratives, fundamental scores (0–100), and when available: P&L (Sales, Net Profit, EPS, YoY), quarterly results, balance sheet (Equity, Debt, Cash, D/E), and ratios (ROCE, ROE, EPS, PE, PB, OPM, NPM, etc.).")
-    md_lines.append("")
+    md_lines = ["# Stock narratives", "", "Per-stock narratives with technical analysis, fundamental scores (0–100), and market context.", ""]
 
     for _, row in holdings.iterrows():
         sym = str(row.get("symbol", "")).strip().upper()
         if not sym:
             continue
-        qty = row.get("quantity", 0)
-        val = row.get("value_rs", 0)
-        rec = "HOLD"
 
-        fund_row = None
-        if fund is not None and not fund.empty and "symbol" in fund.columns:
-            match = fund[fund["symbol"].astype(str).str.strip().str.upper() == sym]
-            if not match.empty:
-                fund_row = match.iloc[0]
+        qty   = int(row.get("quantity") or 0)
+        val   = float(row.get("value_rs") or 0)
 
-        fund_score = None
-        if fund_row is not None and "ENHANCED_FUND_SCORE" in fund_row.index:
-            try:
-                fund_score = float(fund_row["ENHANCED_FUND_SCORE"])
-            except (TypeError, ValueError):
-                pass
+        # ── Technical data ───────────────────────────────────────────────
+        td = tech_dict.get(sym, {})
+        tech_score   = float(td.get("technical_score") or 50)
+        rsi          = td.get("rsi")
+        trend        = str(td.get("trend_signal") or "UNKNOWN")
+        trading_sig  = str(td.get("trading_signal") or "HOLD")
+        tech_rec     = str(td.get("recommendation") or "HOLD")
+        chg_1d       = td.get("change_1d_pct")
+        chg_1w       = td.get("change_1w_pct")
+        chg_1m       = td.get("change_1m_pct")
+        rel_str      = td.get("relative_strength")
+        current_price = td.get("current_price")
+        data_src     = str(td.get("data_source") or "none")
+
+        # ── Fundamental data ─────────────────────────────────────────────
+        fd = fund_dict.get(sym, {})
+        # Prefer enhanced_fund_score from tech CSV (comprehensive pipeline); fallback to fund CSV
+        enh_fund = td.get("enhanced_fund_score")
+        import math
+        if enh_fund is None or (isinstance(enh_fund, float) and math.isnan(enh_fund)):
+            enh_fund = None
+            if "ENHANCED_FUND_SCORE" in fd:
+                try:
+                    v = float(fd["ENHANCED_FUND_SCORE"])
+                    if not math.isnan(v):
+                        enh_fund = v
+                except (TypeError, ValueError):
+                    pass
+        fund_score = float(enh_fund) if enh_fund is not None else 50.0
+
+        eq  = fd.get("EARNINGS_QUALITY")
+        sg  = fd.get("SALES_GROWTH")
+        fs_ = fd.get("FINANCIAL_STRENGTH")
+        ib  = fd.get("INSTITUTIONAL_BACKING")
+        has_fund_breakdown = any(v is not None for v in [eq, sg, fs_, ib])
+        # Treat placeholder 10.0 as no data
+        if has_fund_breakdown and all(float(v or 0) <= 10.0 for v in [eq, sg, fs_, ib] if v is not None):
+            has_fund_breakdown = False
+
+        # ── Composite decision ───────────────────────────────────────────
+        decision = _composite_decision(tech_score, fund_score)
 
         extra = details_by_sym.get(sym, {})
-        sent_text = sentiment_by_stock.get(sym, "")
-        sentiment_line = _sentiment_to_one_line(sent_text)
+        sentiment_line = _sentiment_to_one_line(sentiment_by_stock.get(sym, ""))
 
-        # Build structured narrative (same format as working-sector auto_components_comprehensive_report)
+        # ── Build narrative text ─────────────────────────────────────────
         block = []
-        fund_line = _format_fundamental_line(fund_row)
-        if fund_line:
-            block.append(fund_line)
+
+        # 1. Technical snapshot
+        trend_em = _trend_emoji(trend)
+        tech_parts = [f"Technical score: **{tech_score:.0f}/100**"]
+        if rsi is not None:
+            try:
+                rv = float(rsi)
+                rsi_note = " *(oversold)*" if rv < 30 else (" *(overbought)*" if rv > 70 else "")
+                tech_parts.append(f"RSI: {rv:.1f}{rsi_note}")
+            except (TypeError, ValueError):
+                pass
+        if trend and trend != "UNKNOWN":
+            tech_parts.append(f"Trend: {trend_em}{trend}")
+        if trading_sig and trading_sig != "UNKNOWN":
+            tech_parts.append(f"Signal: **{trading_sig}**")
+        block.append("*Technical:* " + " | ".join(tech_parts))
+        block.append("")
+
+        # 2. Price momentum
+        momentum_parts = []
+        for label, chg in [("1D", chg_1d), ("1W", chg_1w), ("1M", chg_1m)]:
+            if chg is not None:
+                try:
+                    momentum_parts.append(f"{label}: {_chg_arrow(chg)}")
+                except (TypeError, ValueError):
+                    pass
+        if rel_str is not None:
+            try: momentum_parts.append(f"Rel. Strength: {float(rel_str):.1f}")
+            except (TypeError, ValueError): pass
+        if momentum_parts:
+            block.append("*Momentum:* " + " | ".join(momentum_parts))
             block.append("")
-        if extra.get("pnl_summary"):
-            block.append(f"*P&L:* {extra['pnl_summary']}")
+
+        # 3. Fundamental breakdown (if real data available)
+        if has_fund_breakdown:
+            fund_parts = []
+            for col_key, label in [("EARNINGS_QUALITY", "Earnings Quality"), ("SALES_GROWTH", "Sales Growth"),
+                                    ("FINANCIAL_STRENGTH", "Financial Strength"), ("INSTITUTIONAL_BACKING", "Institutional Backing")]:
+                v = fd.get(col_key)
+                if v is not None:
+                    try: fund_parts.append(f"**{label}:** {float(v):.1f}")
+                    except (TypeError, ValueError): pass
+            if fund_parts:
+                block.append("*Fundamental (0–100):* " + " | ".join(fund_parts))
+                block.append("")
+        elif enh_fund is not None:
+            block.append(f"*Fundamental score:* **{fund_score:.0f}/100** (composite enhanced score)")
             block.append("")
-        if extra.get("quarterly_summary"):
-            block.append(f"*Quarterly:* {extra['quarterly_summary']}")
-            block.append("")
-        if extra.get("balance_sheet_summary"):
-            block.append(f"*Balance sheet:* {extra['balance_sheet_summary']}")
-            block.append("")
-        if extra.get("ratios_summary"):
-            block.append(f"*Ratios:* {extra['ratios_summary']}")
-            block.append("")
-        # Closing line: position, optional sentiment, recommendation
-        closing = [f"Holdings: {qty} shares, value Rs {val:,.0f}."]
+
+        # 4. P&L / quarterly / balance sheet / ratios (when available)
+        for key, label in [("pnl_summary", "P&L"), ("quarterly_summary", "Quarterly"),
+                            ("balance_sheet_summary", "Balance sheet"), ("ratios_summary", "Ratios")]:
+            if extra.get(key):
+                block.append(f"*{label}:* {extra[key]}")
+                block.append("")
+
+        # 5. Closing: position + sentiment + decision
+        closing = [f"Holdings: **{qty} shares**, value ₹{val:,.0f}."]
+        if current_price:
+            try: closing.append(f" Current price: ₹{float(current_price):,.2f}.")
+            except (TypeError, ValueError): pass
         if sentiment_line:
             closing.append(f" {sentiment_line}")
-        else:
-            closing.append(" News and sentiment: see Market sentiment tab.")
-        closing.append(f" Recommendation: {rec}.")
-        block.append(" ".join(closing))
+        closing.append(f" **Decision: {decision}**")
+        if data_src and data_src != "none":
+            closing.append(f" *(data: {data_src})*")
+        block.append("".join(closing))
 
         narrative = "\n".join(block)
-        entry = {
+
+        entry: dict = {
             "symbol": sym,
-            "quantity": int(qty),
-            "value_rs": float(val) if isinstance(val, (int, float)) else None,
+            "quantity": qty,
+            "value_rs": val,
+            "current_price": current_price,
+            "technical_score": tech_score,
+            "rsi": rsi,
+            "trend_signal": trend,
+            "trading_signal": trading_sig,
+            "change_1d_pct": chg_1d,
+            "change_1w_pct": chg_1w,
+            "change_1m_pct": chg_1m,
+            "relative_strength": rel_str,
             "fund_score": fund_score,
-            "recommendation": rec,
+            "recommendation": decision,   # composite decision
+            "tech_recommendation": tech_rec,
             "narrative": narrative,
+            "data_source": data_src,
         }
-        if fund_row is not None:
-            for col in ("EARNINGS_QUALITY", "SALES_GROWTH", "FINANCIAL_STRENGTH", "INSTITUTIONAL_BACKING"):
-                if col in fund_row.index and pd.notna(fund_row.get(col)):
-                    try:
-                        entry[f"fund_{col.lower()}"] = float(fund_row[col])
-                    except (TypeError, ValueError):
-                        pass
+        # Fundamental breakdown fields
+        if has_fund_breakdown:
+            for col_key in ("EARNINGS_QUALITY", "SALES_GROWTH", "FINANCIAL_STRENGTH", "INSTITUTIONAL_BACKING"):
+                v = fd.get(col_key)
+                if v is not None:
+                    try: entry[f"fund_{col_key.lower()}"] = float(v)
+                    except (TypeError, ValueError): pass
         for k in ("pnl_summary", "quarterly_summary", "balance_sheet_summary", "ratios_summary"):
             if extra.get(k):
                 entry[k] = extra[k]
         narratives.append(entry)
 
-        md_lines.append(f"### {sym}")
+        md_lines.append(f"### {sym}  [{decision}]  score: {tech_score:.0f}")
         md_lines.append("")
         md_lines.append(narrative)
         md_lines.append("")
 
     with open(STOCK_NARRATIVES_JSON, "w", encoding="utf-8") as f:
         json.dump(narratives, f, indent=2)
-
     STOCK_NARRATIVES_MD.write_text("\n".join(md_lines), encoding="utf-8")
     return {"n_stocks": len(narratives), "output_json": str(STOCK_NARRATIVES_JSON), "output_md": str(STOCK_NARRATIVES_MD)}
 
