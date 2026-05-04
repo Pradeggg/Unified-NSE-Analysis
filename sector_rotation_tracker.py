@@ -1488,13 +1488,48 @@ def build_html_report(report: dict) -> str:
     def top_picks_html(picks):
         if not picks:
             return ""
-        pick_cards = []
+        import json as _json
+
+        # Build JSON data for all picks (for the modal)
+        picks_data = []
         for pk in picks:
+            fd = {}
+            try:
+                fd = _json.loads(pk.get("fund_details") or "{}")
+            except Exception:
+                pass
+            picks_data.append({
+                "symbol": str(pk.get("symbol", "")),
+                "company": str(pk.get("company_name", ""))[:60],
+                "sector": str(pk.get("sector", "Other")),
+                "investment_score": float(pk.get("investment_score") or 0),
+                "stance": str(pk.get("stance") or "NEUTRAL"),
+                "narrative": str(pk.get("narrative") or ""),
+                "technical_score": float(pk.get("technical_score") or 0),
+                "rsi": float(pk.get("rsi") or 0),
+                "enhanced_fund_score": float(pk.get("enhanced_fund_score") or 0),
+                "earnings_quality": float(pk.get("earnings_quality") or 0),
+                "sales_growth": float(pk.get("sales_growth") or 0),
+                "financial_strength": float(pk.get("financial_strength") or 0),
+                "institutional_backing": float(pk.get("institutional_backing") or 0),
+                "can_slim_score": float(pk.get("can_slim_score") or 0),
+                "minervini_score": float(pk.get("minervini_score") or 0),
+                "pnl_summary": str(fd.get("pnl_summary") or ""),
+                "quarterly_summary": str(fd.get("quarterly_summary") or ""),
+                "ratios_summary": str(fd.get("ratios_summary") or ""),
+                "trend_signal": str(pk.get("trend_signal") or ""),
+                "live_price": float(pk.get("live_price") or pk.get("price") or 0),
+                "stage_score": float(pk.get("stage_score") or 0),
+            })
+        picks_json = _json.dumps(picks_data)
+
+        pick_cards = []
+        for i, pk in enumerate(picks):
             inv = pk.get("investment_score") or 0
             stance = str(pk.get("stance") or "NEUTRAL").upper()
             stance_cls = {"BULLISH": "stance-bull", "BEARISH": "stance-bear"}.get(stance, "stance-neut")
             pick_cards.append(
-                f'<div class="pick-card">'
+                f'<div class="pick-card" data-idx="{i}" onclick="showPickModal({i})">'
                 f'<div class="pk-sym">{_H(str(pk.get("symbol","")))}</div>'
                 f'<div class="pk-co">{_H(str(pk.get("company_name",""))[:40])}</div>'
                 f'<span class="pk-sector">{_H(str(pk.get("sector","Other")))}</span>'
@@ -1502,11 +1537,23 @@ def build_html_report(report: dict) -> str:
                 f'<div class="pk-meta">Tech {pk.get("technical_score") or "—"} · RSI {pk.get("rsi") or "—"} · <span class="{stance_cls}">{stance}</span></div>'
                 f'</div>'
             )
+
+        modal_html = (
+            '<div id="pick-modal" class="modal-overlay" onclick="if(event.target===this)closePickModal()">'
+            '<div class="modal-box" id="pick-modal-box">'
+            '<button class="modal-close" onclick="closePickModal()">×</button>'
+            '<div id="pick-modal-content"></div>'
+            '</div></div>'
+        )
+
         return (
-            '<div class="section" style="margin-bottom:20px">'
+            f'<script>var PICKS_DATA={picks_json};</script>'
+            + modal_html
+            + '<div class="section" style="margin-bottom:20px">'
             '<div class="sec-hdr" style="border-left:4px solid #059669">'
             '<h2>🏆 Top Investment Picks (Stage 2)</h2>'
             f'<span class="badge-count">{len(picks)}</span>'
+            '<span style="font-size:.75rem;color:#64748b;margin-left:8px">Click any card for details</span>'
             '</div>'
             f'<div class="picks-grid">{"".join(pick_cards)}</div>'
             '</div>'
@@ -1514,6 +1561,99 @@ def build_html_report(report: dict) -> str:
     picks_section = top_picks_html(top_picks)
 
     # ── Tabs ─────────────────────────────────────────────────────────────────
+    help_tab_content = """
+<div style="padding:24px 28px;max-width:900px;font-size:.88rem;line-height:1.7;color:#334155">
+
+  <h2 style="font-size:1.1rem;font-weight:700;color:#065f46;margin-bottom:16px">📖 How to Read This Report</h2>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
+
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:16px">
+      <h3 style="font-size:.9rem;font-weight:700;color:#15803d;margin-bottom:10px">🏗 Weinstein Stage Method</h3>
+      <p style="margin-bottom:8px"><span style="background:#fef9c3;color:#854d0e;font-weight:700;padding:1px 7px;border-radius:4px;font-size:.8rem">Stage 1 – Basing</span><br>
+      Price moves sideways, SMA50 flattening. Stock consolidating after decline. <em>Watch for breakout.</em></p>
+      <p style="margin-bottom:8px"><span style="background:#dcfce7;color:#166534;font-weight:700;padding:1px 7px;border-radius:4px;font-size:.8rem">Stage 2 ✅ – Advancing</span><br>
+      Price above SMA50 &amp; SMA200, both rising. <strong>Best risk/reward for new positions.</strong></p>
+      <p style="margin-bottom:8px"><span style="background:#ffedd5;color:#9a3412;font-weight:700;padding:1px 7px;border-radius:4px;font-size:.8rem">Stage 3 – Topping</span><br>
+      Price stalls near highs, SMA50 flattening. <em>Tighten stops or exit.</em></p>
+      <p><span style="background:#fee2e2;color:#991b1b;font-weight:700;padding:1px 7px;border-radius:4px;font-size:.8rem">Stage 4 ❌ – Declining</span><br>
+      Price below SMA50 &amp; SMA200, both falling. <em>Avoid.</em></p>
+    </div>
+
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:16px">
+      <h3 style="font-size:.9rem;font-weight:700;color:#1d4ed8;margin-bottom:10px">📊 RSI (Relative Strength Index)</h3>
+      <p style="margin-bottom:6px"><span style="color:#1e40af;font-weight:700">&lt; 30</span> — Oversold (potential reversal up)</p>
+      <p style="margin-bottom:6px"><span style="color:#475569;font-weight:700">30–50</span> — Weak / recovering</p>
+      <p style="margin-bottom:6px"><span style="color:#166534;font-weight:700">50–70 ✅</span> — Bullish momentum</p>
+      <p style="margin-bottom:12px"><span style="color:#991b1b;font-weight:700">&gt; 70</span> — Overbought (watch for pullback)</p>
+
+      <h3 style="font-size:.9rem;font-weight:700;color:#1d4ed8;margin-bottom:8px">📈 Relative Strength (RS)</h3>
+      <p>Price performance vs Nifty 500 over 12 months. <strong>Positive RS</strong> = outperforming the index.</p>
+    </div>
+
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
+
+    <div style="background:#fdf4ff;border:1px solid #e9d5ff;border-radius:10px;padding:16px">
+      <h3 style="font-size:.9rem;font-weight:700;color:#7e22ce;margin-bottom:10px">⚡ Supertrend (ATR-based)</h3>
+      <p style="margin-bottom:8px">Period = 10, Multiplier = 3. Uses Average True Range (ATR) to set dynamic support/resistance bands.</p>
+      <p style="margin-bottom:6px"><span style="color:#16a34a;font-weight:700">↑ BULLISH</span> — Price above supertrend band (green support). Trend is up — trailing stop holds.</p>
+      <p><span style="color:#dc2626;font-weight:700">↓ BEARISH</span> — Price below supertrend band (red resistance). Trend has reversed down.</p>
+    </div>
+
+    <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:16px">
+      <h3 style="font-size:.9rem;font-weight:700;color:#c2410c;margin-bottom:10px">📡 Trend Signal</h3>
+      <p style="margin-bottom:6px"><strong>STRONG_BULLISH</strong> — Both SMA50 &amp; SMA200 rising, price above both.</p>
+      <p style="margin-bottom:6px"><strong>BULLISH</strong> — Price above SMA50.</p>
+      <p style="margin-bottom:6px"><strong>NEUTRAL</strong> — Mixed signals.</p>
+      <p><strong>BEARISH</strong> — Price below SMA50 and/or SMA200.</p>
+    </div>
+
+  </div>
+
+  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:20px">
+    <h3 style="font-size:.9rem;font-weight:700;color:#0f172a;margin-bottom:10px">🏆 Investment Score (0–100)</h3>
+    <p style="margin-bottom:8px">Composite metric combining:</p>
+    <div style="display:flex;flex-wrap:wrap;gap:8px">
+      <span style="background:#dcfce7;color:#166534;padding:3px 10px;border-radius:6px;font-size:.8rem;font-weight:600">Technical Score 30%</span>
+      <span style="background:#ede9fe;color:#6d28d9;padding:3px 10px;border-radius:6px;font-size:.8rem;font-weight:600">Fund Score 25%</span>
+      <span style="background:#dbeafe;color:#1e40af;padding:3px 10px;border-radius:6px;font-size:.8rem;font-weight:600">Relative Strength 15%</span>
+      <span style="background:#fef9c3;color:#854d0e;padding:3px 10px;border-radius:6px;font-size:.8rem;font-weight:600">Stage Score 15%</span>
+      <span style="background:#fce7f3;color:#9d174d;padding:3px 10px;border-radius:6px;font-size:.8rem;font-weight:600">RSI Optimality 15%</span>
+    </div>
+  </div>
+
+  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:20px">
+    <h3 style="font-size:.9rem;font-weight:700;color:#0f172a;margin-bottom:10px">🔬 Technical Score (0–100)</h3>
+    <p>Composite of: RSI momentum · Supertrend direction · SMA trend alignment · 1W/1M price momentum · Distance from 52-week high · Relative Strength vs index.</p>
+  </div>
+
+  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:20px">
+    <h3 style="font-size:.9rem;font-weight:700;color:#0f172a;margin-bottom:10px">📋 Fundamental Metrics</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:.82rem">
+      <p><strong>Enhanced Fund Score</strong> — Quality-adjusted earnings + growth composite.</p>
+      <p><strong>Earnings Quality</strong> — Consistency and reliability of profits.</p>
+      <p><strong>Sales Growth</strong> — Revenue growth trajectory.</p>
+      <p><strong>Financial Strength</strong> — Debt/equity, interest coverage, cash flow.</p>
+      <p><strong>Institutional Backing</strong> — FII/DII ownership trend.</p>
+      <p><strong>CAN SLIM Score</strong> — O'Neil's criteria: EPS growth, RS, New highs, etc.</p>
+      <p><strong>Minervini Score</strong> — Trend template: price &gt; SMA50 &gt; SMA150 &gt; SMA200.</p>
+    </div>
+  </div>
+
+  <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:16px">
+    <h3 style="font-size:.9rem;font-weight:700;color:#065f46;margin-bottom:10px">🔄 Stage Transitions</h3>
+    <p style="margin-bottom:8px">
+      <span style="background:#dcfce7;color:#166534;font-weight:700;padding:2px 8px;border-radius:4px;font-size:.8rem">S1 → S2 ↑</span>
+      &nbsp;Stock just entered uptrend — high-priority watchlist entry.</p>
+    <p>
+      <span style="background:#fee2e2;color:#991b1b;font-weight:700;padding:2px 8px;border-radius:4px;font-size:.8rem">S2 → S3 ↓</span>
+      &nbsp;Stage 2 stock showing topping signs — consider tightening stops or exiting.</p>
+  </div>
+
+</div>"""
+
     tabs_html = (
         '<div class="tabs">'
         '<button class="tab-btn active" data-tab="t-s2" onclick="showTab(\'t-s2\',this)">Stage 2 Now</button>'
@@ -1521,6 +1661,7 @@ def build_html_report(report: dict) -> str:
         '<button class="tab-btn" data-tab="t-exit" onclick="showTab(\'t-exit\',this)">Exits (Day)</button>'
         '<button class="tab-btn" data-tab="t-all" onclick="showTab(\'t-all\',this)">All Stage Changes (Day)</button>'
         f'<button class="tab-btn" data-tab="t-week" onclick="showTab(\'t-week\',this)">Weekly View ({week})</button>'
+        '<button class="tab-btn" data-tab="t-help" onclick="showTab(\'t-help\',this)">📖 How to Read</button>'
         '</div>'
         f'<div class="tab-panel active" id="t-s2">{s2_table(s2_list)}</div>'
         f'<div class="tab-panel" id="t-new">{s2_table(new_s2, show_prev=True)}</div>'
@@ -1534,6 +1675,7 @@ def build_html_report(report: dict) -> str:
         f'<h3 style="font-size:.9rem;font-weight:600;padding:14px 18px 6px;color:#2563eb">Stage 2 price changes this week ({len(w_price)})</h3>'
         f'{s2_table(w_price)}'
         f'</div>'
+        f'<div class="tab-panel" id="t-help">{help_tab_content}</div>'
     )
 
     js = r"""
@@ -1738,6 +1880,60 @@ document.addEventListener('DOMContentLoaded', function() {
   });
   // init all sig-filter sets to "all active" = empty set (show all)
 });
+
+/* ── Pick modal ── */
+function showPickModal(idx) {
+  var pk = (typeof PICKS_DATA !== 'undefined') ? PICKS_DATA[idx] : null;
+  if (!pk) return;
+  var stanceColor = pk.stance === 'BULLISH' ? '#166534' : (pk.stance === 'BEARISH' ? '#991b1b' : '#854d0e');
+  var stanceBg    = pk.stance === 'BULLISH' ? '#dcfce7' : (pk.stance === 'BEARISH' ? '#fee2e2' : '#fef9c3');
+  var invColor    = pk.investment_score >= 65 ? '#16a34a' : (pk.investment_score <= 40 ? '#dc2626' : '#d97706');
+  var liveStr     = pk.live_price ? '₹' + pk.live_price.toLocaleString('en-IN', {maximumFractionDigits:2}) : '—';
+
+  function mbar(lbl, val, color) {
+    var w = Math.min(100, Math.max(0, val));
+    return '<div class="mfund-row">'
+      + '<span class="mfund-lbl">'+lbl+'</span>'
+      + '<div class="mfund-track"><div class="mfund-fill" style="width:'+w+'%;background:'+color+'"></div></div>'
+      + '<span class="mfund-num">'+val.toFixed(0)+'</span>'
+      + '</div>';
+  }
+
+  var bars = '<div class="mfund-bars">'
+    + mbar('Enhanced Fund Score', pk.enhanced_fund_score, '#7c3aed')
+    + mbar('Earnings Quality',    pk.earnings_quality,    '#0891b2')
+    + mbar('Sales Growth',        pk.sales_growth,        '#059669')
+    + mbar('Financial Strength',  pk.financial_strength,  '#d97706')
+    + mbar('Institutional Backing',pk.institutional_backing,'#db2777')
+    + mbar('CAN SLIM Score',      pk.can_slim_score,      '#0284c7')
+    + mbar('Minervini Score',     pk.minervini_score,     '#7c3aed')
+    + '</div>';
+
+  var pnlHtml = pk.pnl_summary
+    ? '<div class="mfund-txt"><strong>P&amp;L:</strong> ' + pk.pnl_summary + '</div>' : '';
+  var ratHtml = pk.ratios_summary
+    ? '<div class="mfund-txt" style="margin-top:6px"><strong>Ratios:</strong> ' + pk.ratios_summary + '</div>' : '';
+
+  var content = '<div class="modal-title">' + pk.symbol + ' &nbsp;<span style="font-size:.85rem;font-weight:400;color:#64748b">' + pk.company + '</span></div>'
+    + '<span class="modal-sector">' + pk.sector + '</span>'
+    + '<div style="display:flex;align-items:center;gap:14px;margin-bottom:12px">'
+    + '<span style="font-size:2.4rem;font-weight:800;color:'+invColor+';line-height:1">' + pk.investment_score.toFixed(0) + '</span>'
+    + '<div><div style="font-size:.75rem;color:#64748b">Investment Score / 100</div>'
+    + '<span style="font-size:.82rem;font-weight:700;padding:2px 9px;border-radius:4px;background:'+stanceBg+';color:'+stanceColor+'">' + pk.stance + '</span></div>'
+    + '<div style="margin-left:auto;text-align:right;font-size:.8rem;color:#64748b">Live price<br><strong style="font-size:1rem;color:#0f172a">' + liveStr + '</strong></div>'
+    + '</div>'
+    + (pk.narrative ? '<div class="mnarr">' + pk.narrative + '</div>' : '')
+    + '<h4 style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#64748b;margin:14px 0 4px">Fundamental Scores</h4>'
+    + bars
+    + pnlHtml + ratHtml;
+
+  document.getElementById('pick-modal-content').innerHTML = content;
+  document.getElementById('pick-modal').classList.add('open');
+}
+function closePickModal() {
+  var m = document.getElementById('pick-modal');
+  if (m) m.classList.remove('open');
+}
 </script>"""
 
     return f"""<!DOCTYPE html>
