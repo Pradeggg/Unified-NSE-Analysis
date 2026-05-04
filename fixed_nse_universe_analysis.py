@@ -40,6 +40,8 @@ NSE_DATA_DIR = BASE_DIR / 'data'   # nse_sec_full_data.csv and nse_index_data.cs
 DATA_DIR = BASE_DIR / 'data'
 REPORTS_DIR = BASE_DIR / 'reports'
 REPORTS_DIR.mkdir(exist_ok=True, parents=True)
+GENERATED_CSV_DIR = BASE_DIR / 'reports' / 'generated_csv'
+GENERATED_CSV_DIR.mkdir(exist_ok=True, parents=True)
 
 # Legacy fallback: OneDrive location for nse_sec_full_data.csv
 _ONEDRIVE_NSE = Path('/Users/pgorai/Library/CloudStorage/OneDrive-Deloitte(O365D)/Documents/Data Visualization/Analytics/Financial Markets/NSE-index')
@@ -1171,7 +1173,7 @@ if __name__ == "__main__":
         # Save results to CSV
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         date_str = latest_date.strftime("%d%m%Y")
-        output_file = REPORTS_DIR / f"comprehensive_nse_enhanced_{date_str}_{timestamp}.csv"
+        output_file = GENERATED_CSV_DIR / f"comprehensive_nse_enhanced_{date_str}_{timestamp}.csv"
         results.to_csv(output_file, index=False)
         print(f"\nResults saved to: {output_file}")
         

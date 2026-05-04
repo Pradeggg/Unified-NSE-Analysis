@@ -203,6 +203,72 @@ def load_eod_stock_prices() -> dict[str, float]:
         return {}
 
 
+def load_nifty_trend(days: int = 10) -> list[dict]:
+    """Return last N NIFTY 50 closes from nse_index_data.csv for sparkline display."""
+    if not INDEX_CSV.exists():
+        return []
+    try:
+        df = pd.read_csv(INDEX_CSV, usecols=["SYMBOL", "CLOSE", "TIMESTAMP"], low_memory=False)
+        df = df[df["SYMBOL"].str.upper() == "NIFTY 50"].copy()
+        df["TIMESTAMP"] = pd.to_datetime(df["TIMESTAMP"], errors="coerce")
+        df["CLOSE"] = pd.to_numeric(df["CLOSE"], errors="coerce")
+        df = df.dropna(subset=["TIMESTAMP", "CLOSE"]).sort_values("TIMESTAMP").tail(days)
+        return df[["TIMESTAMP", "CLOSE"]].to_dict("records")
+    except Exception:
+        return []
+
+
+def compute_breadth(hist: pd.DataFrame) -> dict:
+    """Compute NSE market breadth: Advance/Decline, 52w-high proximity, % above 200MA."""
+    if hist.empty:
+        return {}
+    try:
+        df = hist.copy()
+        df = df.sort_values(["SYMBOL", "TIMESTAMP"])
+
+        dates = sorted(df["TIMESTAMP"].dt.date.unique())
+        if len(dates) < 2:
+            return {}
+        d1, d0 = dates[-1], dates[-2]
+
+        today = df[df["TIMESTAMP"].dt.date == d1].groupby("SYMBOL")["CLOSE"].last()
+        prev  = df[df["TIMESTAMP"].dt.date == d0].groupby("SYMBOL")["CLOSE"].last()
+        common = today.index.intersection(prev.index)
+        chgs = today[common] / prev[common] - 1
+
+        advances  = int((chgs > 0).sum())
+        declines  = int((chgs < 0).sum())
+        unchanged = int((chgs == 0).sum())
+        total     = advances + declines + unchanged
+        ad_ratio  = round(advances / declines, 2) if declines > 0 else 0.0
+
+        # 52w-high proximity: close within 2% of symbol's all-time-high in dataset
+        w52_high   = df.groupby("SYMBOL")["HIGH"].max()
+        common_idx = today.index.intersection(w52_high.index)
+        near52     = int((today[common_idx] >= w52_high[common_idx] * 0.98).sum())
+
+        # % above 200MA — use only symbols present in today's data for speed
+        syms_today = set(today.index)
+        df_filt = df[df["SYMBOL"].isin(syms_today)]
+        ma200_ser = df_filt.groupby("SYMBOL")["CLOSE"].apply(
+            lambda x: x.iloc[-200:].mean() if len(x) >= 200 else float("nan")
+        )
+        last_close = df_filt.groupby("SYMBOL")["CLOSE"].last()
+        valid = ma200_ser.dropna()
+        above200 = int((last_close.reindex(valid.index) > valid).sum())
+        total200 = len(valid)
+        pct200   = round(above200 / total200 * 100, 1) if total200 > 0 else 0.0
+
+        return {
+            "advances": advances, "declines": declines, "unchanged": unchanged,
+            "total": total, "ad_ratio": ad_ratio, "near_52w_high": near52,
+            "above_200ma": above200, "total_200ma": total200,
+            "pct_above_200ma": pct200, "date": str(d1),
+        }
+    except Exception:
+        return {}
+
+
     """Fetch top gainers and losers from NSE."""
     result = {"gainers": [], "losers": []}
     try:
@@ -493,6 +559,9 @@ def run_screener(hist: pd.DataFrame, live_prices: dict, top_n: int = 20) -> dict
     for k in results:
         results[k] = results[k][:top_n]
 
+    # Market breadth from same history
+    results["breadth"] = compute_breadth(hist)
+
     return results
 
 
@@ -636,6 +705,79 @@ def build_sector_table(indices: dict) -> Panel:
 
     return Panel(tbl, title="[bold magenta]■ SECTOR ROTATION[/bold magenta]",
                  border_style="magenta", height=4, subtitle="[dim]sorted by performance[/dim]")
+
+
+def _sparkline(values: list[float]) -> Text:
+    """Unicode block sparkline coloured green/red per direction."""
+    BLOCKS = "▁▂▃▄▅▆▇█"
+    t = Text()
+    if not values or len(values) < 2:
+        return t
+    mn, mx = min(values), max(values)
+    prev = None
+    for v in values:
+        idx = int((v - mn) / (mx - mn) * 7) if mx > mn else 3
+        clr = "green" if (prev is None or v >= prev) else "red"
+        t.append(BLOCKS[idx], style=clr)
+        prev = v
+    return t
+
+
+def build_breadth_bar(breadth: dict, trend: list[dict]) -> Panel:
+    """Full-width market breadth + Nifty trend sparkline row."""
+    row = Text()
+
+    if breadth:
+        adv  = breadth.get("advances",  0)
+        dec  = breadth.get("declines",  0)
+        unch = breadth.get("unchanged", 0)
+        adr  = breadth.get("ad_ratio",  0.0)
+        n52  = breadth.get("near_52w_high", 0)
+        p200 = breadth.get("pct_above_200ma", 0.0)
+        ab200 = breadth.get("above_200ma", 0)
+        tot200 = breadth.get("total_200ma", 0)
+
+        row.append("A/D  ", style="bold white")
+        row.append(f"{adv}▲", style="bold green")
+        row.append(" / ", style="dim")
+        row.append(f"{dec}▼", style="bold red")
+        if unch:
+            row.append(f" / {unch}─", style="dim")
+        adr_clr = "bold green" if adr >= 1.2 else ("green" if adr >= 1 else "red")
+        row.append("  ratio ", style="dim")
+        row.append(f"{adr:.2f}", style=adr_clr)
+
+        row.append("  │  52W-High: ", style="dim")
+        row.append(f"{n52}", style="bold yellow")
+
+        row.append("  │  >200MA: ", style="dim")
+        p200_clr = ("bold green" if p200 >= 60 else
+                    "green"      if p200 >= 50 else
+                    "yellow"     if p200 >= 40 else "red")
+        row.append(f"{p200:.1f}%", style=p200_clr)
+        row.append(f" ({ab200}/{tot200})", style="dim")
+
+    if trend:
+        closes = [float(r["CLOSE"]) for r in trend]
+        dates  = [r["TIMESTAMP"]    for r in trend]
+        d0 = dates[0].strftime("%d%b")  if hasattr(dates[0],  "strftime") else str(dates[0])[:5]
+        d1 = dates[-1].strftime("%d%b") if hasattr(dates[-1], "strftime") else str(dates[-1])[:5]
+        chg   = round((closes[-1] / closes[0] - 1) * 100, 2) if closes[0] > 0 else 0
+        updays = sum(1 for i in range(1, len(closes)) if closes[i] >= closes[i - 1])
+        chg_clr = "green" if chg >= 0 else "red"
+
+        row.append("  │  ", style="dim")
+        row.append(f"Nifty {len(closes)}d  ", style="bold white")
+        row.append_text(_sparkline(closes))
+        row.append(f"  {d0}→{d1}  ", style="dim")
+        row.append(f"{chg:+.2f}%", style=f"bold {chg_clr}")
+        row.append(f"  ({updays}/{len(closes)-1} up)", style="dim")
+
+    tbl = Table(box=None, padding=(0, 1), expand=True, show_header=False)
+    tbl.add_column("data", no_wrap=True)
+    tbl.add_row(row)
+    return Panel(tbl, title="[bold blue]■ MARKET BREADTH & TREND[/bold blue]",
+                 border_style="blue", height=4, subtitle="[dim]NSE universe[/dim]")
 
 
 def build_signal_table(title: str, icon: str, items: list, columns: list,
@@ -788,7 +930,10 @@ def build_full_layout(indices: dict, signals: dict, last_update: str,
     # Row 2: Sector rotation (full width, compact)
     grid.add_row(build_sector_table(indices))
 
-    # Row 3: Supertrend + Breakout
+    # Row 3: Market breadth + Nifty trend
+    grid.add_row(build_breadth_bar(signals.get("breadth", {}), signals.get("nifty_trend", [])))
+
+    # Row 4: Supertrend + Breakout
     row2 = Table.grid(expand=True)
     row2.add_column(ratio=1)
     row2.add_column(ratio=1)
@@ -841,7 +986,7 @@ def refresh_data(top_n: int) -> tuple[dict, dict, str, int]:
             indices[key] = eod   # use EOD when live is absent/zero
 
     console.log("[dim]Loading price history…[/dim]")
-    hist = load_price_history(days=260)
+    hist = load_price_history(days=400)
     hist_rows = len(hist)
 
     # Live stock prices only during market hours; else fall back to EOD closes
@@ -855,6 +1000,7 @@ def refresh_data(top_n: int) -> tuple[dict, dict, str, int]:
 
     console.log("[dim]Running technical screener…[/dim]")
     signals = run_screener(hist, live_prices, top_n=top_n)
+    signals["nifty_trend"] = load_nifty_trend(10)
 
     ts = datetime.now().strftime("%H:%M:%S")
     if not market_open:
