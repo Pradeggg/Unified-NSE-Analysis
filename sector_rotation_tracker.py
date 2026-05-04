@@ -969,8 +969,91 @@ def build_change_report(
     top_picks = sorted(result["stage2_now"], key=lambda r: float(r.get("investment_score") or 0), reverse=True)[:15]
     result["top_picks"] = top_picks
 
+    # Trend data across last 10 snapshots
+    result["trend"] = _build_trend_data(conn, today_snap)
+
     conn.close()
     return result
+
+
+def _build_trend_data(conn: sqlite3.Connection, snap_date: str) -> dict:
+    """Query last 10 snapshots for trend charts: breadth, sector, avg metrics."""
+    # Last 10 dates up to snap_date
+    rows = conn.execute(
+        "SELECT DISTINCT snapshot_date FROM stage_snapshots "
+        "WHERE snapshot_date <= ? ORDER BY snapshot_date DESC LIMIT 10",
+        (snap_date,)
+    ).fetchall()
+    dates = [r[0] for r in reversed(rows)]
+
+    # Stage counts per day
+    breadth = []
+    for d in dates:
+        r = conn.execute(
+            "SELECT "
+            "  SUM(CASE WHEN stage='STAGE_1' THEN 1 ELSE 0 END),"
+            "  SUM(CASE WHEN stage='STAGE_2' THEN 1 ELSE 0 END),"
+            "  SUM(CASE WHEN stage='STAGE_3' THEN 1 ELSE 0 END),"
+            "  SUM(CASE WHEN stage='STAGE_4' THEN 1 ELSE 0 END),"
+            "  COUNT(*)"
+            " FROM stage_snapshots WHERE snapshot_date=?", (d,)
+        ).fetchone()
+        breadth.append({"date": d, "s1": r[0] or 0, "s2": r[1] or 0, "s3": r[2] or 0, "s4": r[3] or 0, "total": r[4] or 0})
+
+    # Avg metrics for Stage 2 per day
+    metrics = []
+    for d in dates:
+        r = conn.execute(
+            "SELECT ROUND(AVG(CAST(technical_score AS REAL)),1),"
+            "       ROUND(AVG(CAST(rsi AS REAL)),1),"
+            "       ROUND(AVG(CAST(change_1m_pct AS REAL)),1),"
+            "       ROUND(AVG(CAST(investment_score AS REAL)),1)"
+            " FROM stage_snapshots WHERE snapshot_date=? AND stage='STAGE_2'", (d,)
+        ).fetchone()
+        metrics.append({"date": d, "avg_tech": r[0], "avg_rsi": r[1], "avg_1m": r[2], "avg_inv": r[3]})
+
+    # Sector breakdown for Stage 2 today
+    sec_rows = conn.execute(
+        "SELECT sector, COUNT(*) cnt FROM stage_snapshots "
+        "WHERE snapshot_date=? AND stage='STAGE_2' "
+        "GROUP BY sector ORDER BY cnt DESC", (snap_date,)
+    ).fetchall()
+    sectors = [{"sector": r[0] or "Unknown", "count": r[1]} for r in sec_rows]
+
+    # Entries/exits for snap_date vs previous
+    prev_date_row = conn.execute(
+        "SELECT MAX(snapshot_date) FROM stage_snapshots WHERE snapshot_date < ?", (snap_date,)
+    ).fetchone()
+    prev_date = prev_date_row[0] if prev_date_row else None
+    entries, exits = [], []
+    if prev_date:
+        e_rows = conn.execute(
+            "SELECT sc.symbol, ss.sector, ss.live_price, ss.rsi, ss.change_1m_pct "
+            "FROM stage_changes sc "
+            "JOIN stage_snapshots ss ON sc.symbol=ss.symbol AND ss.snapshot_date=? "
+            "WHERE sc.change_date=? AND sc.compare_date=? AND sc.change_type='NEW_STAGE2' "
+            "GROUP BY sc.symbol",
+            (snap_date, snap_date, prev_date)
+        ).fetchall()
+        entries = [{"symbol": r[0], "sector": r[1] or "Other", "price": r[2], "rsi": r[3], "chg_1m": r[4]} for r in e_rows]
+        x_rows = conn.execute(
+            "SELECT sc.symbol, ss.sector, ss.live_price, ss.rsi, sc.stage_now "
+            "FROM stage_changes sc "
+            "JOIN stage_snapshots ss ON sc.symbol=ss.symbol AND ss.snapshot_date=? "
+            "WHERE sc.change_date=? AND sc.compare_date=? AND sc.change_type='EXIT_STAGE2' "
+            "GROUP BY sc.symbol",
+            (snap_date, snap_date, prev_date)
+        ).fetchall()
+        exits = [{"symbol": r[0], "sector": r[1] or "Other", "price": r[2], "rsi": r[3], "now_stage": r[4]} for r in x_rows]
+
+    return {
+        "dates": dates,
+        "breadth": breadth,
+        "metrics": metrics,
+        "sectors": sectors,
+        "entries": entries,
+        "exits": exits,
+    }
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1176,12 +1259,214 @@ tr.row-sell{background:rgba(220,38,38,.03)}
 </style>"""
 
 
+def _build_trend_html(trend: dict, snap_date: str) -> str:
+    """Build a Market Trends panel with Chart.js charts."""
+    if not trend or not trend.get("dates"):
+        return ""
+
+    import json as _json
+
+    dates     = trend["dates"]
+    breadth   = trend["breadth"]
+    metrics   = trend["metrics"]
+    sectors   = trend["sectors"]
+    entries   = trend["entries"]
+    exits     = trend["exits"]
+
+    # Short date labels e.g. "Apr 21"
+    def short_date(d: str) -> str:
+        try:
+            from datetime import datetime as _dt
+            return _dt.fromisoformat(d).strftime("%b %d")
+        except Exception:
+            return d
+
+    labels_js   = _json.dumps([short_date(d) for d in dates])
+    s2_counts   = _json.dumps([b["s2"] for b in breadth])
+    s1_counts   = _json.dumps([b["s1"] for b in breadth])
+    s3_counts   = _json.dumps([b["s3"] for b in breadth])
+    s4_counts   = _json.dumps([b["s4"] for b in breadth])
+    rsi_vals    = _json.dumps([m["avg_rsi"]  for m in metrics])
+    tech_vals   = _json.dumps([m["avg_tech"] for m in metrics])
+    chg1m_vals  = _json.dumps([m["avg_1m"]   for m in metrics])
+
+    sec_labels  = _json.dumps([s["sector"] for s in sectors])
+    sec_counts  = _json.dumps([s["count"]  for s in sectors])
+
+    # Entries/exits table rows
+    def entry_rows():
+        rows = ""
+        for e in entries:
+            rsi_v = f'{e["rsi"]:.0f}' if e["rsi"] else "—"
+            chg   = f'{e["chg_1m"]:.1f}%' if e["chg_1m"] is not None else "—"
+            price = f'₹{e["price"]:,.2f}' if e["price"] else "—"
+            rows += f'<tr><td><strong>{_H(e["symbol"])}</strong></td><td>{_H(e["sector"])}</td><td>{price}</td><td>{rsi_v}</td><td style="color:#16a34a;font-weight:600">{chg}</td></tr>\n'
+        return rows or '<tr><td colspan="5" style="text-align:center;color:#94a3b8">No entries</td></tr>'
+
+    def exit_rows():
+        rows = ""
+        for e in exits:
+            price = f'₹{e["price"]:,.2f}' if e["price"] else "—"
+            rsi_v = f'{e["rsi"]:.0f}' if e["rsi"] else "—"
+            rows += f'<tr><td><strong>{_H(e["symbol"])}</strong></td><td>{_H(e["sector"])}</td><td>{price}</td><td>{rsi_v}</td><td><span style="background:#fee2e2;color:#991b1b;padding:1px 7px;border-radius:4px;font-size:.75rem">{_H(e["now_stage"])}</span></td></tr>\n'
+        return rows or '<tr><td colspan="5" style="text-align:center;color:#94a3b8">No exits</td></tr>'
+
+    # Colour palette for sector donut
+    palette = ["#0ea5e9","#16a34a","#7c3aed","#f59e0b","#ef4444","#06b6d4","#84cc16","#ec4899","#6366f1","#14b8a6","#f97316","#a855f7"]
+    bg_colors = _json.dumps((palette * 4)[:len(sectors)])
+
+    return f"""
+<div class="section" style="margin-bottom:20px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+    <h2 style="font-size:1.05rem;font-weight:700;color:#0f172a;margin:0">📊 Market Trends &nbsp;<span style="font-size:.8rem;font-weight:400;color:#64748b">Last {len(dates)} trading days</span></h2>
+  </div>
+
+  <!-- Row 1: Breadth + Sector donut -->
+  <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px">
+
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px">
+      <div style="font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#64748b;margin-bottom:10px">Market Breadth — Stage Distribution</div>
+      <div style="position:relative;height:220px"><canvas id="breadthChart"></canvas></div>
+    </div>
+
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px">
+      <div style="font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#64748b;margin-bottom:10px">Stage 2 Sectors — Today</div>
+      <div style="position:relative;height:220px"><canvas id="sectorChart"></canvas></div>
+    </div>
+
+  </div>
+
+  <!-- Row 2: RSI + Tech + 1m perf line charts -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px">
+
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px">
+      <div style="font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#64748b;margin-bottom:10px">Avg RSI — Stage 2</div>
+      <div style="position:relative;height:160px"><canvas id="rsiChart"></canvas></div>
+    </div>
+
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px">
+      <div style="font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#64748b;margin-bottom:10px">Avg Tech Score — Stage 2</div>
+      <div style="position:relative;height:160px"><canvas id="techChart"></canvas></div>
+    </div>
+
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px">
+      <div style="font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#64748b;margin-bottom:10px">Avg 1-Month Return — Stage 2</div>
+      <div style="position:relative;height:160px"><canvas id="chg1mChart"></canvas></div>
+    </div>
+
+  </div>
+
+  <!-- Row 3: Entries / Exits tables -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:16px">
+      <div style="font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#15803d;margin-bottom:10px">🟢 New Stage 2 Entries ({len(entries)})</div>
+      <table style="width:100%;font-size:.78rem;border-collapse:collapse">
+        <thead><tr style="color:#64748b;border-bottom:1px solid #e2e8f0">
+          <th style="text-align:left;padding:4px 6px">Symbol</th>
+          <th style="text-align:left;padding:4px 6px">Sector</th>
+          <th style="text-align:right;padding:4px 6px">Price</th>
+          <th style="text-align:right;padding:4px 6px">RSI</th>
+          <th style="text-align:right;padding:4px 6px">1M Chg</th>
+        </tr></thead>
+        <tbody>{entry_rows()}</tbody>
+      </table>
+    </div>
+
+    <div style="background:#fff5f5;border:1px solid #fecaca;border-radius:10px;padding:16px">
+      <div style="font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#991b1b;margin-bottom:10px">🔴 Stage 2 Exits ({len(exits)})</div>
+      <table style="width:100%;font-size:.78rem;border-collapse:collapse">
+        <thead><tr style="color:#64748b;border-bottom:1px solid #e2e8f0">
+          <th style="text-align:left;padding:4px 6px">Symbol</th>
+          <th style="text-align:left;padding:4px 6px">Sector</th>
+          <th style="text-align:right;padding:4px 6px">Price</th>
+          <th style="text-align:right;padding:4px 6px">RSI</th>
+          <th style="text-align:right;padding:4px 6px">Now</th>
+        </tr></thead>
+        <tbody>{exit_rows()}</tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function(){{
+  var labels = {labels_js};
+  var s2 = {s2_counts}, s1 = {s1_counts}, s3 = {s3_counts}, s4 = {s4_counts};
+
+  // Breadth stacked bar
+  new Chart(document.getElementById('breadthChart'), {{
+    type: 'bar',
+    data: {{
+      labels: labels,
+      datasets: [
+        {{label:'Stage 2 ✅', data: s2, backgroundColor:'#16a34a', stack:'a'}},
+        {{label:'Stage 1',    data: s1, backgroundColor:'#f59e0b', stack:'a'}},
+        {{label:'Stage 3',    data: s3, backgroundColor:'#f97316', stack:'a'}},
+        {{label:'Stage 4 ❌', data: s4, backgroundColor:'#dc2626', stack:'a'}},
+      ]
+    }},
+    options: {{responsive:true, maintainAspectRatio:false,
+      plugins:{{legend:{{position:'bottom', labels:{{font:{{size:10}}}}}}}},
+      scales:{{x:{{stacked:true, ticks:{{font:{{size:10}}}}}}, y:{{stacked:true, ticks:{{font:{{size:10}}}}}}}}
+    }}
+  }});
+
+  // Sector donut
+  new Chart(document.getElementById('sectorChart'), {{
+    type: 'doughnut',
+    data: {{
+      labels: {sec_labels},
+      datasets: [{{data: {sec_counts}, backgroundColor: {bg_colors}, borderWidth: 1}}]
+    }},
+    options: {{responsive:true, maintainAspectRatio:false,
+      plugins:{{legend:{{position:'right', labels:{{font:{{size:10}}, boxWidth:10}}}}, tooltip:{{callbacks:{{label: function(ctx){{ return ctx.label + ': ' + ctx.raw; }}}}}}}}
+    }}
+  }});
+
+  function lineChart(id, data, color, label, minY, maxY) {{
+    new Chart(document.getElementById(id), {{
+      type: 'line',
+      data: {{labels: labels, datasets: [{{label: label, data: data,
+        borderColor: color, backgroundColor: color + '22',
+        fill: true, tension: 0.3, pointRadius: 4, pointHoverRadius: 6}}]}},
+      options: {{responsive:true, maintainAspectRatio:false,
+        plugins:{{legend:{{display:false}}}},
+        scales:{{
+          x:{{ticks:{{font:{{size:10}}}}}},
+          y:{{min: minY, max: maxY, ticks:{{font:{{size:10}}}}}}
+        }}
+      }}
+    }});
+  }}
+
+  var rsiData  = {rsi_vals};
+  var techData = {tech_vals};
+  var chgData  = {chg1m_vals};
+
+  var rsiMin  = Math.max(0,  Math.min.apply(null, rsiData.filter(function(v){{return v!=null;}})) - 5);
+  var rsiMax  = Math.min(100,Math.max.apply(null, rsiData.filter(function(v){{return v!=null;}})) + 5);
+  var techMin = Math.max(0,  Math.min.apply(null, techData.filter(function(v){{return v!=null;}})) - 5);
+  var techMax = Math.min(100,Math.max.apply(null, techData.filter(function(v){{return v!=null;}})) + 5);
+  var chgMin  = Math.min.apply(null, chgData.filter(function(v){{return v!=null;}})) - 2;
+  var chgMax  = Math.max.apply(null, chgData.filter(function(v){{return v!=null;}})) + 2;
+
+  lineChart('rsiChart',   rsiData,  '#0891b2', 'Avg RSI',        rsiMin,  rsiMax);
+  lineChart('techChart',  techData, '#7c3aed', 'Avg Tech Score', techMin, techMax);
+  lineChart('chg1mChart', chgData,  '#16a34a', 'Avg 1M Chg %',  chgMin,  chgMax);
+}})();
+</script>
+"""
+
+
 def build_html_report(report: dict) -> str:
     snap = report.get("snap_date", "N/A")
     prev = report.get("prev_date", "N/A")
     week = report.get("week_snap", "N/A")
     summ = report.get("summary", {})
     now_ts = datetime.now().strftime("%Y-%m-%d %H:%M")
+    trend = report.get("trend", {})
 
     s2_list   = report.get("stage2_now", [])
     new_s2    = report.get("new_stage2", [])
@@ -1658,6 +1943,9 @@ def build_html_report(report: dict) -> str:
         )
     picks_section = top_picks_html(top_picks)
 
+    # ── Trend Section ─────────────────────────────────────────────────────────
+    trend_section = _build_trend_html(trend, snap)
+
     # ── Tabs ─────────────────────────────────────────────────────────────────
     help_tab_content = """
 <div style="padding:24px 28px;max-width:900px;font-size:.88rem;line-height:1.7;color:#334155">
@@ -2044,6 +2332,7 @@ function closePickModal() {
 <html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Stage 2 Tracker – {snap}</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 {CSS}
 </head>
 <body>
@@ -2054,6 +2343,7 @@ function closePickModal() {
 </div>
 <div class="container">
   <div class="summary-grid">{cards}</div>
+  {trend_section}
   {trans_html}
   {picks_section}
   <div class="section">
