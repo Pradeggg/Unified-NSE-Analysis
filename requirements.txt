@@ -23,6 +23,9 @@ pandas-ta>=0.3.14b
 # Optional: For better performance
 # numba>=0.56.0  # For faster numerical computations
 
+# Terminal UI (nse_terminal.py Bloomberg-style CLI)
+rich>=13.0.0
+
 # Reports: Excel export (working-sector comprehensive report)
 openpyxl>=3.1.0
 
