@@ -1380,8 +1380,9 @@ function applyPager(tid) {
   var start = (state.page - 1) * state.size;
   var end   = start + state.size;
 
+  // Hide only data rows — never touch detail rows (they manage their own display)
   Array.from(tbody.querySelectorAll('tr')).forEach(function(r) {
-    r.style.display = 'none';
+    if (!r.classList.contains('detail-row')) r.style.display = 'none';
   });
   visible.forEach(function(r, i) {
     r.style.display = (i >= start && i < end) ? '' : 'none';
@@ -1434,7 +1435,9 @@ function exportCSV(tid) {
 /* ── Detail row expand ── */
 function toggleDetail(id) {
   var row = document.getElementById(id);
-  if (row) row.classList.toggle('open');
+  if (!row) return;
+  var isOpen = row.style.display === 'table-row';
+  row.style.display = isOpen ? 'none' : 'table-row';
 }
 
 /* ── Stage filter chips ── */
