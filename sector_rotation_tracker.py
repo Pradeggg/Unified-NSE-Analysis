@@ -753,7 +753,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f1f5f9;color:#0f172
 .app-bar p{font-size:0.82rem;opacity:.8;margin-top:4px}
 .container{max-width:1600px;margin:0 auto;padding:20px 16px}
 .summary-grid{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px}
-.sum-card{background:#fff;border-radius:8px;padding:14px 20px;box-shadow:0 1px 3px rgba(0,0,0,.08);min-width:140px}
+.sum-card{background:#fff;border-radius:8px;padding:14px 20px;box-shadow:0 1px 3px rgba(0,0,0,.08);min-width:140px;border-top:3px solid transparent}
 .sum-card .sc-val{font-size:2rem;font-weight:700;line-height:1}
 .sum-card .sc-lbl{font-size:0.75rem;color:#64748b;margin-top:4px;text-transform:uppercase;letter-spacing:.04em}
 .sc-green{color:#16a34a}.sc-amber{color:#d97706}.sc-red{color:#dc2626}.sc-blue{color:#2563eb}
@@ -878,11 +878,18 @@ tr.row-sell{background:rgba(220,38,38,.03)}
 .pick-card .pk-sector{font-size:.75rem;background:#e0f2fe;color:#0369a1;padding:1px 6px;border-radius:4px;display:inline-block;margin-bottom:6px}
 .pick-card .pk-inv{font-size:1.4rem;font-weight:700;color:#059669}
 .pick-card .pk-meta{font-size:.75rem;color:#64748b;margin-top:4px}
-/* ── Transition pills ── */
-.trans-wrap{display:flex;flex-wrap:wrap;gap:6px;padding:10px 18px;border-top:1px solid #f1f5f9}
-.trans-pill{padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600}
-.tp-up{background:#dcfce7;color:#166534}
-.tp-down{background:#fee2e2;color:#991b1b}
+/* ── Transition section ── */
+.trans-section{background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.08);padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;flex-wrap:wrap;gap:12px}
+.trans-label{font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+.trans-flows{display:flex;flex-wrap:wrap;gap:16px;flex:1}
+.trans-group{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tg-hdr{font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:4px;white-space:nowrap}
+.tg-up{background:#dcfce7;color:#166534}.tg-dn{background:#fee2e2;color:#991b1b}
+.trans-flow-item{display:flex;align-items:center;gap:3px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:5px 10px;cursor:default}
+.tf-from,.tf-to{font-size:.78rem;font-weight:700;color:#334155}
+.tf-arrow{font-size:1rem;font-weight:900;line-height:1;padding:0 2px}
+.tf-count{font-size:.85rem;font-weight:800;padding:1px 7px;border-radius:10px;margin-left:4px}
+.trans-note{font-size:.78rem;color:#94a3b8;font-style:italic}
 </style>"""
 
 
@@ -1181,23 +1188,86 @@ def build_html_report(report: dict) -> str:
     trans = summ.get("transitions", {})
     stage_counts = summ.get("stage_counts", {})
 
+    # ── helpers for delta badge on cards ─────────────────────────────────────
+    def _delta_badge(net: int) -> str:
+        """Green ▲N or red ▼N badge, or blank if zero."""
+        if net > 0:
+            return f'<span style="font-size:.75rem;font-weight:700;color:#16a34a;margin-left:6px">▲{net}</span>'
+        if net < 0:
+            return f'<span style="font-size:.75rem;font-weight:700;color:#dc2626;margin-left:6px">▼{abs(net)}</span>'
+        return '<span style="font-size:.75rem;color:#94a3b8;margin-left:6px">—</span>'
+
+    # net change per stage: entries into - exits from each stage
+    s1_net = trans.get("S2_to_S1", 0) - trans.get("S1_to_S2", 0)
+    s2_net = (trans.get("S1_to_S2", 0) + trans.get("S3_to_S2", 0)
+              - trans.get("S2_to_S1", 0) - trans.get("S2_to_S3", 0))
+    s3_net = trans.get("S2_to_S3", 0) - trans.get("S3_to_S2", 0) - trans.get("S3_to_S4", 0)
+    s4_net = trans.get("S3_to_S4", 0)
+
+    def _stage_card(label: str, count: int, color: str, emoji: str, delta: int, sublabel: str = "") -> str:
+        return (
+            f'<div class="sum-card" style="border-top:3px solid {color}">'
+            f'<div style="display:flex;align-items:baseline;gap:0">'
+            f'<div class="sc-val" style="color:{color}">{count}</div>'
+            f'{_delta_badge(delta)}'
+            f'</div>'
+            f'<div class="sc-lbl">{emoji} {label}</div>'
+            + (f'<div style="font-size:.7rem;color:#94a3b8;margin-top:2px">{sublabel}</div>' if sublabel else '')
+            + '</div>'
+        )
+
     stage_count_html = (
-        f'<div class="sum-card"><div class="sc-val" style="color:#ca8a04">{stage_counts.get("STAGE_1",0)}</div><div class="sc-lbl">Stage 1 stocks</div></div>'
-        f'<div class="sum-card"><div class="sc-val sc-green">{stage_counts.get("STAGE_2",0)}</div><div class="sc-lbl">Stage 2 stocks</div></div>'
-        f'<div class="sum-card"><div class="sc-val" style="color:#ea580c">{stage_counts.get("STAGE_3",0)}</div><div class="sc-lbl">Stage 3 stocks</div></div>'
-        f'<div class="sum-card"><div class="sc-val sc-red">{stage_counts.get("STAGE_4",0)}</div><div class="sc-lbl">Stage 4 stocks</div></div>'
+        _stage_card("Stage 1", stage_counts.get("STAGE_1", 0), "#ca8a04", "🟡", s1_net, "Accumulation / Basing")
+        + _stage_card("Stage 2", stage_counts.get("STAGE_2", 0), "#16a34a", "🟢", s2_net, "Advancing / Uptrend")
+        + _stage_card("Stage 3", stage_counts.get("STAGE_3", 0), "#ea580c", "🟠", s3_net, "Topping / Distribution")
+        + _stage_card("Stage 4", stage_counts.get("STAGE_4", 0), "#dc2626", "🔴", s4_net, "Declining / Downtrend")
     )
 
-    trans_html = ""
-    if trans:
-        pills = []
-        if trans.get("S1_to_S2"): pills.append(f'<span class="trans-pill tp-up">S1→S2: {trans["S1_to_S2"]}</span>')
-        if trans.get("S2_to_S3"): pills.append(f'<span class="trans-pill tp-down">S2→S3: {trans["S2_to_S3"]}</span>')
-        if trans.get("S3_to_S4"): pills.append(f'<span class="trans-pill tp-down">S3→S4: {trans["S3_to_S4"]}</span>')
-        if trans.get("S2_to_S1"): pills.append(f'<span class="trans-pill tp-down">S2→S1: {trans["S2_to_S1"]}</span>')
-        if trans.get("S3_to_S2"): pills.append(f'<span class="trans-pill tp-up">S3→S2: {trans["S3_to_S2"]}</span>')
-        if pills:
-            trans_html = f'<div class="trans-wrap">{"".join(pills)}</div>'
+    # ── Transition flow visual ────────────────────────────────────────────────
+    def _trans_arrow(frm: str, to: str, count: int, is_upgrade: bool) -> str:
+        if not count:
+            return ""
+        color = "#16a34a" if is_upgrade else "#dc2626"
+        arrow = "↑" if is_upgrade else "↓"
+        title = f"{frm} → {to}: {count} stock{'s' if count!=1 else ''} moved {'up' if is_upgrade else 'down'}"
+        return (
+            f'<div class="trans-flow-item" title="{title}">'
+            f'<span class="tf-from">{frm}</span>'
+            f'<span class="tf-arrow" style="color:{color}">{arrow}</span>'
+            f'<span class="tf-to">{to}</span>'
+            f'<span class="tf-count" style="background:{color}20;color:{color}">{count}</span>'
+            f'</div>'
+        )
+
+    upgrades = (
+        _trans_arrow("S1", "S2", trans.get("S1_to_S2", 0), True)
+        + _trans_arrow("S2", "S3", trans.get("S2_to_S3", 0), False)  # S3 is distribution — bad
+        + _trans_arrow("S3", "S4", trans.get("S3_to_S4", 0), False)
+    )
+    downgrades = (
+        _trans_arrow("S2", "S1", trans.get("S2_to_S1", 0), False)
+        + _trans_arrow("S3", "S2", trans.get("S3_to_S2", 0), True)   # S3→S2 would be unusual
+    )
+
+    has_transitions = any(trans.values())
+    if has_transitions:
+        trans_html = (
+            '<div class="trans-section">'
+            '<div class="trans-label">Stage Transitions (vs prev snapshot)</div>'
+            '<div class="trans-flows">'
+            + (f'<div class="trans-group"><span class="tg-hdr tg-up">▲ Upgrades</span>{upgrades}</div>' if upgrades else '')
+            + (f'<div class="trans-group"><span class="tg-hdr tg-dn">▼ Downgrades</span>{downgrades}</div>' if downgrades else '')
+            + '</div>'
+            + (f'<div class="trans-note">No stage transitions recorded yet — add more daily snapshots to track movement.</div>' if not upgrades and not downgrades else '')
+            + '</div>'
+        )
+    else:
+        trans_html = (
+            '<div class="trans-section">'
+            '<div class="trans-label">Stage Transitions</div>'
+            '<div class="trans-note">No transitions yet — run daily snapshots to track movement over time.</div>'
+            '</div>'
+        )
 
     cards = (
         stage_count_html
