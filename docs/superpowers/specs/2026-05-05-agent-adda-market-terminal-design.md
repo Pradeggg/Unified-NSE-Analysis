@@ -55,23 +55,46 @@ The v1 authority level is read-only research plus controlled safe tools:
 
 Natural-language flow:
 
-1. **Situation assessment:** detect whether the user is asking about a stock, index, sector, technical setup, portfolio, report, data health, or latest external catalyst.
-2. **Intent detection:** classify the request into a known intent such as `stock_latest_brief`, `stock_technical_setup`, `sector_scan`, `index_status`, `portfolio_question`, `report_lookup`, `data_health`, `web_catalyst_search`, or `custom_readonly_analysis`.
-3. **Entity resolution:** resolve names and aliases such as "Reliance" to `RELIANCE`, "Nifty Bank" to the correct index name, and sector phrases to canonical sector labels.
-4. **Tool plan:** create a small auditable execution plan using approved tools first.
-5. **Execution:** execute the plan through the tool registry. Generated code is allowed only for read-only dataframe analysis when deterministic tools cannot answer the request.
-6. **Synthesis:** produce a balanced, sourced response with data freshness and no-investment-advice framing.
+1. **Data-mode detection:** detect and strip explicit prefixes such as `/historical` and `/intraday` before intent detection.
+2. **Situation assessment:** detect whether the user is asking about a stock, index, sector, technical setup, portfolio, report, data health, or latest external catalyst.
+3. **Intent detection:** classify the request into a known intent such as `stock_latest_brief`, `stock_technical_setup`, `sector_scan`, `index_status`, `portfolio_question`, `report_lookup`, `data_health`, `web_catalyst_search`, or `custom_readonly_analysis`.
+4. **Entity resolution:** resolve names and aliases such as "Reliance" to `RELIANCE`, "Nifty Bank" to the correct index name, and sector phrases to canonical sector labels.
+5. **Tool plan:** create a small auditable execution plan using approved tools first. Every market-data or calculation tool receives the resolved `data_mode`.
+6. **Execution:** execute the plan through the tool registry. Generated code is allowed only for read-only dataframe analysis when deterministic tools cannot answer the request.
+7. **Synthesis:** produce a balanced, sourced response with data freshness and no-investment-advice framing.
+
+### Data Modes
+
+The NLP agent supports explicit data-source routing:
+
+- `/historical <query>` uses only EOD-loaded data:
+  - `data/nse_sec_full_data.csv`
+  - `data/nse_index_data.csv`
+  - latest EOD tracker snapshot in `data/sector_rotation_tracker.db.stage_snapshots`
+- `/intraday <query>` uses intraday/live SQLite tables for price, OHLCV, derived intraday indicators, screeners, and calculations.
+- No prefix defaults to `/historical` for reproducibility, unless the user clearly asks for live/current/today/now/intraday data. In that case the router may infer `intraday`, but must say so in the answer.
+
+The router must not silently mix modes for calculations. `/intraday` may use EOD data only as reference metadata, such as company name, sector, prior Stage 2 status, and previous close. If intraday tables are missing or stale, the agent should say that and ask whether to fall back to `/historical`.
+
+All market-data tool signatures should accept `data_mode`:
+
+```python
+get_symbol_snapshot(symbol="RELIANCE", data_mode="intraday")
+get_technical_setup(symbol="RELIANCE", data_mode="historical")
+run_screener_query(screen_type="stage2", data_mode="intraday")
+get_sector_context(sector_or_symbol="Banking", data_mode="historical")
+```
 
 Example:
 
 ```text
-User: show me the latest on Reliance
+User: /intraday show me the latest on Reliance
 
 Plan:
   - resolve_symbol("Reliance") -> RELIANCE
-  - get_symbol_snapshot("RELIANCE")
-  - get_technical_setup("RELIANCE")
-  - get_sector_context("RELIANCE")
+  - get_symbol_snapshot("RELIANCE", data_mode="intraday")
+  - get_technical_setup("RELIANCE", data_mode="intraday")
+  - get_sector_context("RELIANCE", data_mode="intraday")
   - search_latest_catalysts("RELIANCE", max_results=5)
   - synthesize_balanced_brief()
 ```
@@ -80,7 +103,10 @@ The default response format for stock questions is a balanced brief:
 
 ```text
 Reliance Industries - Market Brief
-Data freshness: EOD <date>, live/index snapshot <time or unavailable>
+Mode: Intraday
+Data source: SQLite live tables
+Fallback: EOD snapshot used only for sector/stage labels
+Data freshness: live/intraday snapshot <time or unavailable>
 
 1. Snapshot
 2. Technical Setup
@@ -110,8 +136,8 @@ The agent chooses from a fixed registry of typed tools. It must not call arbitra
 V1 tool categories:
 
 - **Entity tools:** `resolve_symbol`, `resolve_index`, `resolve_sector`.
-- **Market data tools:** `get_symbol_snapshot`, `get_index_snapshot`, `get_sector_context`.
-- **Technical tools:** `get_technical_setup`, `run_screener_query`, `explain_setup_score`.
+- **Market data tools:** `get_symbol_snapshot`, `get_index_snapshot`, `get_sector_context`, each with `data_mode`.
+- **Technical tools:** `get_technical_setup`, `run_screener_query`, `explain_setup_score`, each with `data_mode`.
 - **Report tools:** `find_latest_report`, `read_report_summary`, `open_report_artifact`.
 - **Portfolio tools:** `get_portfolio_exposure`, `find_portfolio_overlap`.
 - **Health tools:** `get_data_health`, `refresh_market_snapshot`.
@@ -124,6 +150,7 @@ Safety rules:
 - No arbitrary shell execution from the agent.
 - Generated analysis code cannot import network, subprocess, filesystem mutation, or secrets.
 - Every tool call is logged with timestamp, intent, inputs, output summary, and source freshness.
+- Every market-data tool call logs the selected `data_mode` and source tables/files used.
 - Response language uses "setup", "risk", "watch", and "research priority" rather than "buy/sell recommendation".
 
 ## Screens
@@ -210,6 +237,8 @@ Commands should be case-insensitive and return useful errors for unknown symbols
 The same input bar should support deterministic commands and natural-language queries:
 
 - `RELIANCE`
+- `/historical show me Reliance setup`
+- `/intraday show me Reliance setup`
 - `show me the latest on Reliance`
 - `why is Tata Motors showing up?`
 - `compare Reliance vs ONGC`
@@ -267,8 +296,13 @@ Required test coverage:
 
 - Command parser unit tests.
 - Intent detection fixture tests.
+- Data-mode parser tests:
+  - `/historical show Reliance` -> `data_mode=historical`, cleaned query `show Reliance`.
+  - `/intraday show Reliance` -> `data_mode=intraday`, cleaned query `show Reliance`.
+  - `show Reliance live now` -> inferred `data_mode=intraday`.
+  - `show Reliance setup` -> default `data_mode=historical`.
 - Entity resolution fixture tests for common symbols, indices, and sector aliases.
-- Tool-plan tests that confirm intents map to approved ordered tool calls.
+- Tool-plan tests that confirm intents map to approved ordered tool calls with `data_mode` propagated to every market-data and calculation tool.
 - Agent safety tests that block write operations, shell commands, network imports in generated code, secrets access, and unsupported imports.
 - Synthesis tests that require data freshness, source trail, and no-investment-advice framing.
 - Data-health classification tests.
@@ -302,6 +336,7 @@ Must ship:
 - Report shortcuts.
 - Public/free data providers.
 - Natural-language query agent for read-only research and controlled safe tools.
+- Explicit `/historical` and `/intraday` query modes.
 - Balanced stock brief for latest-symbol queries.
 - Tool trace and query logs.
 

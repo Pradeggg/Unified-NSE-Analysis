@@ -1041,14 +1041,24 @@ REPORT        Open latest HTML/PDF/MD report outputs
 REFRESH       Refresh market snapshots
 EOD           Run daily EOD refresh
 ASK <query>   Run natural-language market research query
+/historical <query> Run NLP query using EOD CSV + tracker snapshot data
+/intraday <query>   Run NLP query using intraday/live SQLite tables
 ```
 
 **NLP query agent:**
 - Add an **Agent Adda Query Agent** below the terminal input bar.
 - Support read-only research plus controlled safe tools.
-- Flow: situation assessment → intent detection → entity resolution → tool plan → allowlisted tool execution → balanced response synthesis.
+- Flow: data-mode detection → situation assessment → intent detection → entity resolution → tool plan → allowlisted tool execution → balanced response synthesis.
 - Use approved tools first; generated code is allowed only for read-only dataframe analysis against approved local files when deterministic tools cannot answer the request.
 - Standard response for stock questions: snapshot, technical setup, sector/index context, latest catalysts, risks/watch items, source trail, and no-investment-advice framing.
+
+**Data-mode routing:**
+- `/historical` uses EOD-loaded data only: `data/nse_sec_full_data.csv`, `data/nse_index_data.csv`, and latest tracker snapshot in `data/sector_rotation_tracker.db.stage_snapshots`.
+- `/intraday` uses intraday/live SQLite tables for price, OHLCV, technical indicators, screeners, calculations, and research context.
+- No prefix defaults to `/historical`, except when the user explicitly asks for live/current/today/now/intraday data; inferred intraday mode must be stated in the response.
+- `/intraday` may use EOD data only as reference metadata, such as company name, sector, prior Stage 2 status, and previous close.
+- If intraday tables are missing or stale, the agent must state that clearly and ask whether to fall back to `/historical`; it must not silently mix modes for calculations.
+- Tool traces must include `data_mode` and source tables/files used.
 
 **V1 intent types:**
 ```text
@@ -1111,6 +1121,11 @@ custom_readonly_analysis
 - Data Health screen marks sources as `fresh`, `stale`, `missing`, or `failed`.
 - Report screen can locate latest `reports/latest/sector_rotation.html`, `.pdf`, and `.md`.
 - `ASK show me the latest on Reliance` resolves `RELIANCE`, runs the approved tool plan, and returns a balanced market brief.
+- `/historical show me Reliance setup` uses EOD CSV + latest tracker snapshot and labels the response `Mode: Historical`.
+- `/intraday show me Reliance setup` uses intraday/live SQLite tables and labels the response `Mode: Intraday`.
+- Data-mode parser tests cover explicit prefixes, inferred intraday phrases, and historical default.
+- Tool-plan tests confirm `data_mode` is propagated to every market-data and calculation tool.
+- If `/intraday` source tables are missing/stale, the answer does not calculate from EOD silently and instead asks whether to fall back.
 - `python nse_terminal.py --ask "show me the latest on Reliance" --once` runs as a smoke test.
 - Intent detection, entity resolution, tool planning, generated-code safety, and synthesis format have fixture tests.
 - Every NLP response includes data freshness, source trail, and no-investment-advice framing.
