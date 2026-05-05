@@ -122,37 +122,32 @@ def _ts() -> str:
 
 
 def _bubble(entry: dict) -> Panel:
-    """Render one chat message as a styled bubble."""
+    """Render one chat message as a compact styled bubble."""
     role     = entry["role"]
     text     = entry["text"]
     ts       = entry.get("ts", "")
     thinking = entry.get("thinking", False)
 
-    cell = Table.grid(expand=True, padding=(0, 1))
-    cell.add_column()
-
     if thinking:
         t = Text()
-        t.append("  ⏳ ", style="bold yellow")
-        t.append(text, style="bold yellow")
-        cell.add_row(t)
-        return Panel(cell, border_style="yellow", padding=(0, 1))
+        t.append(" ⏳ ", style="bold yellow")
+        t.append(text, style="yellow")
+        return Panel(t, border_style="yellow", padding=(0, 1))
 
     if role == "user":
         t = Text()
-        t.append("  ❯ ", style="bold cyan")
+        t.append(" ❯ ", style="bold cyan")
         t.append(text, style="bold white")
-        t.append(f"  [{ts}]", style="dim")
-        cell.add_row(t)
-        return Panel(cell, border_style="bright_cyan", padding=(0, 0))
+        t.append(f" [{ts}]", style="dim")
+        return Panel(t, border_style="bright_cyan", padding=(0, 1))
     else:
         if any(c in text for c in ["**", "##", "- ", "* ", "```", "\n"]):
-            cell.add_row(Markdown(text))
+            body = Markdown(text)
         else:
-            cell.add_row(Text(text, style="white"))
-        footer = Text(f"  🤖 Agent Adda  [{ts}]", style="dim green")
-        return Panel(cell, border_style="bright_green",
-                     subtitle=footer, padding=(0, 1))
+            body = Text(text, style="white")
+        return Panel(body, border_style="bright_green",
+                     subtitle=Text(f" 🤖  [{ts}]", style="dim green"),
+                     padding=(0, 1))
 
 
 def _welcome_splash() -> Text:
@@ -192,9 +187,9 @@ def build_chat_layout(input_buf: str) -> Layout:
     """Build the full chat terminal layout."""
     root = Layout()
     root.split_column(
-        Layout(name="header", size=4),
+        Layout(name="header", size=3),
         Layout(name="body"),
-        Layout(name="status", size=3),
+        Layout(name="status", size=1),
         Layout(name="input",  size=3),
     )
 
@@ -226,7 +221,7 @@ def build_chat_layout(input_buf: str) -> Layout:
 
     # ── Body: messages (pinned to bottom) or welcome splash ───────────────────
     h = console.size.height
-    body_rows = max(4, h - 4 - 3 - 3 - 4)   # terminal_h minus fixed sections
+    body_rows = max(4, h - 3 - 1 - 3 - 4)   # terminal_h minus header(3)+status(1)+input(3)+borders(~4)
 
     visible = _history[-30:] if _history else []
     if not visible:
@@ -251,12 +246,12 @@ def build_chat_layout(input_buf: str) -> Layout:
         root["body"].update(Panel(chat_grid, border_style="dim", padding=(0, 0),
                                   title="[dim]conversation[/dim]"))
 
-    # ── Status bar ────────────────────────────────────────────────────────────
-    st = Text()
+    # ── Status bar (single line, no Panel border) ─────────────────────────────
     is_thinking = "Thinking" in _status or "⏳" in _status
-    st.append("  ● ", style="bold yellow" if is_thinking else "bold green")
+    st = Text()
+    st.append(" ● ", style="bold yellow" if is_thinking else "bold green")
     st.append(_status, style="bold yellow" if is_thinking else "dim white")
-    root["status"].update(Panel(st, border_style="dim", padding=(0, 0)))
+    root["status"].update(st)
 
     # ── Input bar ─────────────────────────────────────────────────────────────
     bar = Text()

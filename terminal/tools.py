@@ -334,6 +334,15 @@ def run_screener_query(screen_type: str = "stage2", top_n: int = 10) -> dict:
             "FROM stage_snapshots WHERE snapshot_date=? AND stage='STAGE_2' "
             "ORDER BY investment_score DESC"
         ),
+        "breakouts": (
+            "SELECT symbol, company_name, stage_score, investment_score, price, "
+            "relative_strength, change_1m_pct, rsi, trading_signal, sector "
+            "FROM stage_snapshots WHERE snapshot_date=? AND stage='STAGE_2' "
+            "AND COALESCE(relative_strength, 0) > 0 "
+            "AND COALESCE(change_1m_pct, 0) > 0 "
+            "AND COALESCE(rsi, 0) >= 55 "
+            "ORDER BY investment_score DESC, relative_strength DESC, change_1m_pct DESC"
+        ),
         "supertrend_buy": (
             "SELECT symbol, company_name, stage_score, investment_score, price, "
             "relative_strength, change_1d_pct, rsi, trading_signal, sector "
@@ -356,11 +365,15 @@ def run_screener_query(screen_type: str = "stage2", top_n: int = 10) -> dict:
         ),
     }
 
-    sql = query_map.get(screen_type.lower(), query_map["stage2"])
+    screen_key = screen_type.lower()
+    if screen_key not in query_map:
+        return {"error": f"Unknown screener: {screen_type}"}
+
+    sql = query_map[screen_key]
     cols = ["symbol","company_name","stage_score","investment_score","price",
             "relative_strength","change","rsi","trading_signal","sector"]
 
-    if "new_entrants" in screen_type:
+    if screen_key == "new_entrants":
         rows = conn.execute(sql, (snap_date, snap_date)).fetchmany(top_n)
     else:
         rows = conn.execute(sql, (snap_date,)).fetchmany(top_n)
@@ -374,7 +387,7 @@ def run_screener_query(screen_type: str = "stage2", top_n: int = 10) -> dict:
         stocks.append(d)
 
     return {
-        "screen_type":    screen_type,
+        "screen_type":    screen_key,
         "snapshot_date":  snap_date,
         "count":          len(stocks),
         "results":        stocks,
@@ -722,10 +735,151 @@ def find_portfolio_overlap(screener: str = "stage2") -> dict:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Live NSE quote tool
+# ─────────────────────────────────────────────────────────────────────────────
+
+_NSE_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/124.0.0.0 Safari/537.36"
+    ),
+    "Accept":          "application/json, text/plain, */*",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Referer":         "https://www.nseindia.com/",
+}
+
+_live_session: Any = None
+_live_session_ts: float = 0.0
+
+
+def _get_live_session():
+    import requests, time as _time
+    global _live_session, _live_session_ts
+    if _live_session is None or (_time.time() - _live_session_ts) > 600:
+        s = requests.Session()
+        s.headers.update(_NSE_HEADERS)
+        try:
+            s.get("https://www.nseindia.com/", timeout=8)
+        except Exception:
+            pass
+        _live_session = s
+        _live_session_ts = _time.time()
+    return _live_session
+
+
+def get_live_quote(symbol: str) -> dict:
+    """Fetch live intraday quote for a single NSE symbol from the NSE API.
+
+    Returns current price, day OHLC, volume, % change, and 52-week range.
+    """
+    import requests
+    sym = symbol.strip().upper()
+    try:
+        s   = _get_live_session()
+        url = f"https://www.nseindia.com/api/quote-equity?symbol={requests.utils.quote(sym)}"
+        r   = s.get(url, timeout=10)
+        r.raise_for_status()
+        d   = r.json()
+
+        info  = d.get("info", {})
+        price = d.get("priceInfo", {})
+        week  = d.get("priceInfo", {}).get("weekHighLow", {})
+
+        last   = price.get("lastPrice",        price.get("close", None))
+        open_  = price.get("open",             None)
+        high   = price.get("intraDayHighLow",  {}).get("max", None)
+        low    = price.get("intraDayHighLow",  {}).get("min", None)
+        prev   = price.get("previousClose",    None)
+        chg    = price.get("change",           None)
+        pchg   = price.get("pChange",          None)
+        vol    = d.get("marketDeptOrderBook",  {}).get("tradeInfo", {}).get("totalTradedVolume", None)
+
+        if last is None:
+            return {"symbol": sym, "error": "No price data returned"}
+
+        result = {
+            "symbol":         sym,
+            "name":           info.get("companyName", sym),
+            "last_price":     last,
+            "open":           open_,
+            "day_high":       high,
+            "day_low":        low,
+            "prev_close":     prev,
+            "change":         round(chg,  2) if chg  is not None else None,
+            "pct_change":     round(pchg, 2) if pchg is not None else None,
+            "volume":         vol,
+            "52w_high":       week.get("max"),
+            "52w_low":        week.get("min"),
+            "as_of":          datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "source":         "NSE live API",
+        }
+        return result
+    except Exception as e:
+        return {"symbol": sym, "error": str(e)}
+
+
+def get_live_market_overview() -> dict:
+    """Fetch live Nifty 50, Nifty Bank, and Nifty IT index values plus advances/declines."""
+    import requests
+    try:
+        s   = _get_live_session()
+        url = "https://www.nseindia.com/api/allIndices"
+        r   = s.get(url, timeout=10)
+        r.raise_for_status()
+        data    = r.json().get("data", [])
+        indices = {}
+        for item in data:
+            nm = item.get("index", "")
+            if nm in ("NIFTY 50", "NIFTY BANK", "NIFTY IT", "NIFTY MIDCAP 100",
+                      "NIFTY SMALLCAP 100"):
+                last  = item.get("last",          item.get("lastPrice", 0))
+                prev  = item.get("previousClose", 0)
+                chg   = round(last - prev, 2) if last and prev else 0
+                pchg  = round(chg / prev * 100, 2) if prev else 0
+                indices[nm] = {
+                    "last":       last,
+                    "change":     chg,
+                    "pct_change": pchg,
+                    "day_high":   item.get("dayHigh"),
+                    "day_low":    item.get("dayLow"),
+                }
+        adv_dec = {}
+        try:
+            url2 = "https://www.nseindia.com/api/equity-stockIndices?index=NIFTY%20500"
+            r2   = s.get(url2, timeout=10)
+            items = r2.json().get("data", [])
+            advances = sum(1 for x in items if float(x.get("pChange", 0) or 0) > 0)
+            declines = sum(1 for x in items if float(x.get("pChange", 0) or 0) < 0)
+            adv_dec  = {"advances": advances, "declines": declines,
+                        "unchanged": len(items) - advances - declines}
+        except Exception:
+            pass
+        return {
+            "indices":    indices,
+            "adv_dec":    adv_dec,
+            "as_of":      datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "source":     "NSE live API",
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Tool registry — name → (function, description, param_schema)
 # ─────────────────────────────────────────────────────────────────────────────
 
 TOOL_REGISTRY: dict[str, Any] = {
+    "get_live_quote": (
+        get_live_quote,
+        "Fetch live intraday price quote for a single NSE symbol (real-time: last price, OHLC, % change, volume, 52w range). Use for 'current price', 'live', 'today', 'now' queries.",
+        {"type": "object", "properties": {"symbol": {"type": "string"}}, "required": ["symbol"]},
+    ),
+    "get_live_market_overview": (
+        get_live_market_overview,
+        "Fetch live NSE index levels (Nifty 50, Bank Nifty, IT, Midcap, Smallcap) plus advances/declines. Use for 'how is the market', 'market today', 'live market' queries.",
+        {"type": "object", "properties": {}, "required": []},
+    ),
     "resolve_symbol": (
         resolve_symbol,
         "Resolve a company name or alias to its NSE ticker symbol",
@@ -748,11 +902,11 @@ TOOL_REGISTRY: dict[str, Any] = {
     ),
     "run_screener_query": (
         run_screener_query,
-        "Run a screener: stage2, supertrend_buy, strong_buy, new_entrants",
+        "Run a screener: stage2, breakouts, supertrend_buy, strong_buy, new_entrants",
         {
             "type": "object",
             "properties": {
-                "screen_type": {"type": "string", "enum": ["stage2","supertrend_buy","strong_buy","new_entrants"]},
+                "screen_type": {"type": "string", "enum": ["stage2","breakouts","supertrend_buy","strong_buy","new_entrants"]},
                 "top_n": {"type": "integer", "default": 10},
             },
             "required": ["screen_type"],
