@@ -81,12 +81,8 @@ _BANNER = [
 ]
 
 
-def _separator(style: str = "dim") -> None:
-    w = console.width or 80
-    colors = [Fore.CYAN, Fore.GREEN, Fore.YELLOW, Fore.MAGENTA, Fore.RED]
-    seg = max(1, w // len(colors))
-    bar = "".join(c + "─" * seg for c in colors)
-    print(bar[:w] + Style.RESET_ALL)
+def _separator() -> None:
+    console.print(Rule(style="dim cyan"))
 
 
 def print_banner() -> None:
@@ -167,10 +163,9 @@ def _build_prompt() -> ANSI:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _print_user(query: str) -> None:
-    print()
-    print(Fore.CYAN + Style.BRIGHT + " ❯  " +
-          Fore.WHITE + Style.BRIGHT + query +
-          Fore.WHITE + Style.DIM + f"  [{_ts()}]")
+    console.print()
+    console.print(f"[bold cyan] ❯  [/bold cyan][bold white]{query}[/bold white]"
+                  f"[dim]  [{_ts()}][/dim]")
 
 
 def _print_response(result: dict) -> None:
@@ -182,13 +177,12 @@ def _print_response(result: dict) -> None:
     clean, _followups = _parse_followups(answer)
 
     # ── Agent header ──────────────────────────────────────────────────────
-    print()
-    print(Fore.GREEN + Style.BRIGHT + " 🤖  Agent Adda" +
-          Style.DIM + f"  [{_ts()}]  backend: {backend}")
+    console.print()
+    console.print(f"[bold green] 🤖  Agent Adda[/bold green]"
+                  f"[dim]  [{_ts()}]  backend: {backend}[/dim]")
     _separator()
 
     # ── Body — Rich Markdown rendered to full terminal width ───────────────
-    # Use Rich console.print so Markdown wraps to terminal width with no clipping
     has_markup = any(c in clean for c in ["**", "##", "- ", "* ", "```", "\n"])
     if has_markup:
         console.print(Markdown(clean))
@@ -197,12 +191,11 @@ def _print_response(result: dict) -> None:
 
     # ── Follow-up suggestions ─────────────────────────────────────────────
     if _followups:
-        print()
-        print(Fore.YELLOW + Style.BRIGHT + " 💬  What to explore next:")
+        console.print()
+        console.print("[bold yellow] 💬  What to explore next:[/bold yellow]")
         for i, q in enumerate(_followups, 1):
-            print(Fore.YELLOW + f"   {i}. " + Fore.WHITE + Style.BRIGHT + q)
-        print(Fore.YELLOW + Style.DIM +
-              "   → Type 1, 2 or 3 to ask, or type your own question")
+            console.print(f"[yellow]   {i}.[/yellow] [white]{q}[/white]")
+        console.print("[dim]   → Type 1, 2 or 3 to ask, or your own question[/dim]")
 
     _separator()
 
@@ -254,8 +247,8 @@ def _run_with_spinner(agent, query: str, show_trace: bool, animated: bool = True
     exc: list    = []
 
     if not animated:
-        # Inside patch_stdout — just print a static status line
-        print(f"  {Fore.CYAN}⏳  Agent Adda is thinking…{Style.RESET_ALL}")
+        # Inside patch_stdout — static status via Rich (no raw ANSI)
+        console.print("[cyan]  ⏳  Agent Adda is thinking…[/cyan]")
         try:
             result = agent.query(query, show_trace=show_trace)
         except Exception as e:
@@ -278,12 +271,8 @@ def _run_with_spinner(agent, query: str, show_trace: bool, animated: bool = True
     frames = itertools.cycle("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏")
     while not done.wait(0.08):
         f = next(frames)
-        sys.stdout.write(
-            f"\r  {Fore.CYAN}{f}{Style.RESET_ALL}  "
-            f"{Fore.WHITE}Agent Adda is thinking…{Style.RESET_ALL}  "
-        )
+        sys.stdout.write(f"\r  \x1b[36m{f}\x1b[0m  \x1b[37mAgent Adda is thinking…\x1b[0m  ")
         sys.stdout.flush()
-    # Clear spinner line
     sys.stdout.write("\r" + " " * 60 + "\r")
     sys.stdout.flush()
 
@@ -313,10 +302,9 @@ def _chat_loop(agent, show_trace: bool) -> None:
 
     session = PromptSession(history=InMemoryHistory())
 
-    print(Fore.GREEN + Style.BRIGHT + "  ✓ Agent Adda ready — type your question and press Enter")
-    print(Fore.WHITE + Style.DIM +
-          "  Tip: /live  /eod  /auto  │  1·2·3 = follow-ups  │  /help  │  exit")
-    print()
+    console.print("[bold green]  ✓ Agent Adda ready[/bold green] — type your question and press Enter")
+    console.print("[dim]  Tip: /live  /eod  /auto  │  1·2·3 = follow-ups  │  /help  │  exit[/dim]")
+    console.print()
 
     with patch_stdout():
         while True:
@@ -339,18 +327,15 @@ def _chat_loop(agent, show_trace: bool) -> None:
             # ── Mode commands ──────────────────────────────────────────────
             if text.lower() in ("/live", "/intraday", "/l"):
                 _mode = "intraday"
-                print(Fore.RED + Style.BRIGHT +
-                      "  ● Mode → LIVE  (real-time NSE API)")
+                console.print("[bold red]  ● Mode → LIVE  (real-time NSE API)[/bold red]")
                 continue
             if text.lower() in ("/eod", "/historical", "/h"):
                 _mode = "historical"
-                print(Fore.BLUE + Style.BRIGHT +
-                      "  ● Mode → EOD  (historical CSV + DB snapshot)")
+                console.print("[bold blue]  ● Mode → EOD  (historical CSV + DB snapshot)[/bold blue]")
                 continue
             if text.lower() in ("/auto", "/a"):
                 _mode = "auto"
-                print(Fore.WHITE +
-                      "  ● Mode → AUTO  (keyword-based detection)")
+                console.print("[dim]  ● Mode → AUTO  (keyword-based detection)[/dim]")
                 continue
 
             # ── Utility commands ───────────────────────────────────────────
@@ -368,7 +353,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
                 idx = int(text) - 1
                 if idx < len(_followups):
                     text = _followups[idx]
-                    print(Fore.DIM + f"  → {text}" + Style.RESET_ALL)
+                    console.print(f"[dim]  → {text}[/dim]")
 
             # ── Apply mode prefix ──────────────────────────────────────────
             if _mode == "intraday":
@@ -386,11 +371,12 @@ def _chat_loop(agent, show_trace: bool) -> None:
                 if show_trace:
                     _print_trace(result.get("trace", []))
             except Exception as e:
-                print(Fore.RED + f"  ❌  Error: {e}" + Style.RESET_ALL)
+                console.print(f"[bold red]  ❌  Error: {e}[/bold red]")
                 _separator()
 
-    print()
-    print(Fore.CYAN + Style.BRIGHT + "  Agent Adda closed. Goodbye! 🏛\n")
+    console.print()
+    console.print("[bold cyan]  Agent Adda closed. Goodbye! 🏛[/bold cyan]")
+    console.print()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -415,13 +401,14 @@ def main() -> None:
 
     print_banner()
 
-    print(Fore.CYAN + "  Loading Agent Adda…", end="\r", flush=True)
+    sys.stdout.write("\x1b[36m  Loading Agent Adda…\x1b[0m\r")
+    sys.stdout.flush()
     from terminal.agent import Agent
     agent = Agent()
-    print(Fore.GREEN + Style.BRIGHT + f"  ✓ Agent Adda ready" +
-          Style.DIM   + f"  │  backend: {agent.backend_name}" +
-          Style.DIM   + f"  │  mode: {_mode}" + " " * 10)
-    print()
+    console.print(f"[bold green]  ✓ Agent Adda ready[/bold green]"
+                  f"[dim]  │  backend: {agent.backend_name}"
+                  f"  │  mode: {_mode}[/dim]")
+    console.print()
 
     if args.query:
         _single_query(agent, args.query, args.trace)
