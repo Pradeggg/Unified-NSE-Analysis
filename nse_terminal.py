@@ -119,7 +119,9 @@ _old_term_settings = None                 # saved termios state for cleanup
 
 def _start_input_reader() -> None:
     """Daemon thread: sets stdin to raw mode, reads char-by-char, updates
-    _current_input buffer and pushes completed lines into _input_queue."""
+    _current_input buffer and pushes completed lines into _input_queue.
+    Must be called AFTER Live.__enter__ (Rich switches to alternate screen
+    first; this then sets raw mode so keystrokes aren't echoed)."""
     global _current_input, _old_term_settings
 
     fd = sys.stdin.fileno()
@@ -133,9 +135,16 @@ def _start_input_reader() -> None:
         threading.Thread(target=_line_reader, daemon=True).start()
         return
 
+    # Apply raw mode immediately on the calling thread so it takes effect
+    # before the reader thread starts (avoids a race where the first keypress
+    # is received in cooked mode).
+    try:
+        tty.setraw(fd, termios.TCSAFLUSH)
+    except Exception:
+        pass
+
     def _raw_reader():
         global _current_input
-        tty.setraw(fd, termios.TCSANOW)
         buf = ""
         try:
             while True:
@@ -158,9 +167,9 @@ def _start_input_reader() -> None:
                         _current_input = buf
 
                 elif c == "\x1b":               # Escape or ANSI sequence
-                    # Consume any trailing ANSI sequence bytes (e.g. [A for arrow)
+                    # Drain trailing ANSI sequence bytes (e.g. \x1b[A = arrow up)
                     try:
-                        nxt = os.read(fd, 3)    # may be empty if plain Escape
+                        nxt = os.read(fd, 3)
                     except Exception:
                         nxt = b""
                     if not nxt or nxt[:1] != b"[":
@@ -2498,8 +2507,11 @@ def main():
         return
 
     # Live refresh mode
-    _start_input_reader()          # background thread reads stdin → _input_queue
-    with Live(console=console, screen=True, refresh_per_second=1) as live:
+    # Start input reader INSIDE the Live context so raw mode is set after Rich
+    # has switched to the alternate screen (Rich may reset termios on __enter__)
+    with Live(console=console, screen=True, refresh_per_second=8) as live:
+        _start_input_reader()      # raw-mode char reader — must start after Live.__enter__
+
         indices, signals = {}, {}
         last_update      = "loading…"
         hist_rows        = 0
@@ -2509,6 +2521,7 @@ def main():
         sector_breadth: dict = {}
         next_refresh     = 0.0
         narrative        = ""
+        _last_render_sec = -1     # track which second we last rendered data labels
 
         while True:
             now = time.time()
@@ -2543,12 +2556,14 @@ def main():
                             current_input=cur_input)
             live.update(layout)
 
-            # Command mode: check if user typed something (non-blocking queue poll)
+            # Check for a submitted command (non-blocking)
             try:
                 raw = _input_queue.get_nowait()
             except queue.Empty:
                 raw = ""
-            time.sleep(1)
+
+            # Render at 8 fps so keystrokes appear within ~125 ms
+            time.sleep(0.125)
 
             if not raw:
                 continue
