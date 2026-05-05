@@ -17,12 +17,15 @@ from __future__ import annotations
 import argparse
 import io
 import json
+import os
 import queue
 import re
 import sqlite3
 import sys
+import termios
 import threading
 import time
+import tty
 from datetime import datetime, date, timedelta
 from pathlib import Path
 from typing import Optional
@@ -106,20 +109,93 @@ _nse_session: Optional[requests.Session] = None
 _nse_session_ts: float = 0.0          # epoch time session was last initialised
 _SESSION_TTL: float = 4 * 60          # re-handshake with NSE every 4 minutes
 
-# ── Background stdin reader (non-blocking input without freezing the refresh loop) ──
-_input_queue: queue.Queue = queue.Queue()
+# ── Background stdin reader (raw char-by-char, non-blocking for the refresh loop) ──
+_input_queue:   queue.Queue = queue.Queue()
+_current_input: str         = ""          # live buffer shown in the input bar
+_input_lock     = threading.Lock()
+_old_term_settings = None                 # saved termios state for cleanup
+
 
 def _start_input_reader() -> None:
-    """Daemon thread that reads lines from stdin into _input_queue."""
-    def _reader():
-        while True:
-            try:
-                line = sys.stdin.readline()
-                if line:
-                    _input_queue.put(line.strip())
-            except Exception:
-                break
-    threading.Thread(target=_reader, daemon=True).start()
+    """Daemon thread: sets stdin to raw mode, reads char-by-char, updates
+    _current_input buffer and pushes completed lines into _input_queue."""
+    global _current_input, _old_term_settings
+
+    fd = sys.stdin.fileno()
+    try:
+        _old_term_settings = termios.tcgetattr(fd)
+    except Exception:
+        # Not a real TTY (e.g. piped input) — fall back to line reader
+        def _line_reader():
+            for line in sys.stdin:
+                _input_queue.put(line.strip())
+        threading.Thread(target=_line_reader, daemon=True).start()
+        return
+
+    def _raw_reader():
+        global _current_input
+        tty.setraw(fd, termios.TCSANOW)
+        buf = ""
+        try:
+            while True:
+                ch = os.read(fd, 1)
+                if not ch:
+                    continue
+                c = ch.decode("utf-8", errors="replace")
+
+                if c in ("\r", "\n"):           # Enter → submit
+                    with _input_lock:
+                        line = buf
+                        _current_input = ""
+                    buf = ""
+                    if line.strip():
+                        _input_queue.put(line.strip())
+
+                elif c in ("\x7f", "\x08"):     # Backspace / Delete
+                    buf = buf[:-1]
+                    with _input_lock:
+                        _current_input = buf
+
+                elif c == "\x1b":               # Escape or ANSI sequence
+                    # Consume any trailing ANSI sequence bytes (e.g. [A for arrow)
+                    try:
+                        nxt = os.read(fd, 3)    # may be empty if plain Escape
+                    except Exception:
+                        nxt = b""
+                    if not nxt or nxt[:1] != b"[":
+                        # Plain Escape → clear buffer
+                        buf = ""
+                        with _input_lock:
+                            _current_input = ""
+
+                elif c == "\x03":               # Ctrl-C
+                    raise KeyboardInterrupt
+
+                elif c == "\x15":               # Ctrl-U → clear line
+                    buf = ""
+                    with _input_lock:
+                        _current_input = ""
+
+                elif c >= " ":                  # printable character
+                    buf += c
+                    with _input_lock:
+                        _current_input = buf
+
+        except KeyboardInterrupt:
+            raise
+        except Exception:
+            pass
+
+    threading.Thread(target=_raw_reader, daemon=True).start()
+
+
+def _restore_terminal() -> None:
+    """Restore terminal settings on exit (called from main)."""
+    if _old_term_settings is not None:
+        try:
+            termios.tcsetattr(sys.stdin.fileno(), termios.TCSADRAIN, _old_term_settings)
+        except Exception:
+            pass
 
 
 _prev_prices:     dict[str, float] = {}   # key → last rendered price
@@ -1683,6 +1759,23 @@ def build_right_sidebar(indices: dict, signals: dict, sector_breadth: dict,
     return Panel(grid, style="on grey7", padding=(0, 0))
 
 
+def build_input_bar(current_text: str) -> Panel:
+    """Persistent input bar at the bottom of the terminal.
+    Shows what the user is currently typing; green cursor when active."""
+    t = Text()
+    t.append("  ❯ ", style="bold cyan")
+    if current_text:
+        t.append(current_text, style="bold white")
+        t.append("▌", style="bold cyan blink")   # blinking cursor
+    else:
+        t.append("Type your query and press Enter  │  Esc to clear  │  Ctrl-U to erase line",
+                 style="dim italic")
+        t.append("  ▌", style="bold cyan blink")
+    return Panel(t, height=3, border_style="cyan",
+                 title="[bold cyan]💬 Agent Adda — Query Input[/bold cyan]",
+                 padding=(0, 0))
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Main render loop
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1696,7 +1789,8 @@ def build_full_layout(indices: dict, signals: dict, last_update: str,
                        sector_breadth: dict | None = None,
                        narrative: str = "",
                        nlp_history: list[dict] | None = None,
-                       nlp_pending: bool = False) -> Table:
+                       nlp_pending: bool = False,
+                       current_input: str = "") -> Table:
     """Compose the full terminal layout: left main content + right sidebar."""
     nlp_history = nlp_history or []
     visible_top_n = _adaptive_signal_rows(top_n, has_watchlist=bool(watchlist))
@@ -1734,6 +1828,7 @@ def build_full_layout(indices: dict, signals: dict, last_update: str,
         left.add_row(build_watchlist_panel(watchlist[:visible_top_n], live_prices, hist, db_data))
 
     left.add_row(build_status_bar(last_update, hist_rows, signals))
+    left.add_row(build_input_bar(current_input))      # ← always-visible input bar
 
     # ── Right column: sidebar ─────────────────────────────────────────────────
     right = build_right_sidebar(indices, signals, sector_breadth or {},
@@ -2343,7 +2438,7 @@ def main():
     refresh_secs = args.refresh * 60
 
     def _build(indices, signals, label, hist_rows, hist, live_prices, db_data, sector_breadth,
-               narrative="", nlp_hist=None, nlp_pending=False):
+               narrative="", nlp_hist=None, nlp_pending=False, current_input=""):
         return build_full_layout(
             indices, signals, label, hist_rows, args.top, args.refresh,
             watchlist=watchlist or None,
@@ -2354,6 +2449,7 @@ def main():
             narrative=narrative,
             nlp_history=nlp_hist or [],
             nlp_pending=nlp_pending,
+            current_input=current_input,
         )
 
     if args.once:
@@ -2403,9 +2499,13 @@ def main():
                 if cached:
                     narrative = cached
 
+            with _input_lock:
+                cur_input = _current_input
+
             layout = _build(indices, signals, countdown, hist_rows, hist, live_prices,
                             db_data, sector_breadth, narrative=narrative,
-                            nlp_hist=nlp_hist, nlp_pending=nlp_pending)
+                            nlp_hist=nlp_hist, nlp_pending=nlp_pending,
+                            current_input=cur_input)
             live.update(layout)
 
             # Command mode: check if user typed something (non-blocking queue poll)
@@ -2421,6 +2521,17 @@ def main():
             cmd_type, arg = _parse_input(raw)
             if cmd_type != "ignore":
                 live.stop()
+
+                def _wait_enter():
+                    """Block until user presses Enter (clears any buffered input)."""
+                    console.print("\n[dim]Press Enter to return to terminal…[/dim]")
+                    while True:
+                        try:
+                            _input_queue.get(timeout=30)
+                            break
+                        except queue.Empty:
+                            break
+
                 if cmd_type == "nlp":
                     query = arg
                     with _nlp_lock:
@@ -2431,8 +2542,6 @@ def main():
                         response = _run_agent_query(query)
                     console.print(f"[bold green]🤖[/bold green] {response}")
                     console.rule()
-                    console.print("\n[dim]Press Enter to return to terminal…[/dim]")
-                    sys.stdin.readline()
                     ts_str = datetime.now().strftime("%H:%M")
                     with _nlp_lock:
                         entry = {"query": query, "response": response, "ts": ts_str}
@@ -2440,31 +2549,31 @@ def main():
                         if len(_nlp_history) > _NLP_HISTORY_MAX:
                             _nlp_history.pop(0)
                         _nlp_state["pending"] = False
+                    _wait_enter()
                 elif cmd_type == "symbol":
                     _show_symbol_drilldown(arg, hist, live_prices, db_data,
                                            indices, sector_breadth)
-                    sys.stdin.readline()
+                    _wait_enter()
                 elif cmd_type == "health":
                     _show_health_screen()
-                    sys.stdin.readline()
+                    _wait_enter()
                 elif cmd_type == "signal":
                     _show_signal_screen(arg, signals)
-                    sys.stdin.readline()
+                    _wait_enter()
                 elif cmd_type == "sector":
                     _show_sector_screen(arg, indices, sector_breadth)
-                    sys.stdin.readline()
+                    _wait_enter()
                 elif cmd_type == "portfolio":
                     _show_portfolio_screen()
-                    sys.stdin.readline()
+                    _wait_enter()
                 elif cmd_type == "report":
                     _show_report_screen()
-                    sys.stdin.readline()
+                    _wait_enter()
                 elif cmd_type == "refresh":
                     next_refresh = 0.0
                 elif cmd_type == "eod":
                     console.print("[yellow]Run:[/yellow] [bold]python daily_refresh.py[/bold] after market close")
-                    console.print("\n[dim]Press Enter to return to terminal…[/dim]")
-                    sys.stdin.readline()
+                    _wait_enter()
                 live.start()
 
 
@@ -2472,4 +2581,7 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
+        pass
+    finally:
+        _restore_terminal()
         console.print("\n[bold cyan]NSE Terminal closed.[/bold cyan]")
