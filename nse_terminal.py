@@ -362,29 +362,81 @@ def compute_sector_breadth(hist: pd.DataFrame) -> dict[str, dict]:
     return result
 
 
-def fetch_live_prices(symbols: list[str]) -> dict[str, float]:
-    """Fetch live prices for a list of symbols using NSE index pages."""
+def fetch_live_ohlcv() -> tuple[dict[str, float], pd.DataFrame]:
+    """Fetch live OHLCV + volume for all NSE stocks via equity-stockIndices API.
+
+    Returns:
+        live_prices: {SYMBOL: lastPrice}
+        live_ohlcv:  DataFrame with columns [SYMBOL, TIMESTAMP, OPEN, HIGH, LOW, CLOSE, TOTTRDQTY]
+                     containing today's intraday data for all fetched stocks
+    """
     prices: dict[str, float] = {}
-    s = _get_nse_session()
+    rows:   list[dict]       = []
+    today   = pd.Timestamp(datetime.now().date())
+    session = _get_nse_session()
+
     index_names = [
         "NIFTY 500", "NIFTY SMALLCAP 250", "NIFTY MICROCAP 250",
         "NIFTY MIDSMALLCAP 400", "NIFTY TOTAL MARKET",
     ]
-    sym_set = {s.upper() for s in symbols}
+    seen: set[str] = set()
     for idx in index_names:
-        if len(prices) >= len(sym_set):
-            break
         try:
             url = f"https://www.nseindia.com/api/equity-stockIndices?index={requests.utils.quote(idx)}"
-            r = s.get(url, timeout=12)
+            r   = session.get(url, timeout=12)
             for item in r.json().get("data", []):
                 sym = item.get("symbol", "").upper()
-                if sym in sym_set and sym not in prices:
-                    prices[sym] = float(item.get("lastPrice", 0) or 0)
+                if not sym or sym in seen:
+                    continue
+                seen.add(sym)
+                last = float(item.get("lastPrice",  0) or 0)
+                o    = float(item.get("open",        item.get("openPrice",  last)) or last)
+                h    = float(item.get("dayHigh",     item.get("highPrice",  last)) or last)
+                l    = float(item.get("dayLow",      item.get("lowPrice",   last)) or last)
+                vol  = float(item.get("totalTradedVolume", item.get("tradedVolume", 0)) or 0)
+                prices[sym] = last
+                if last > 0:
+                    rows.append({
+                        "SYMBOL":    sym,
+                        "TIMESTAMP": today,
+                        "OPEN":      o,
+                        "HIGH":      h,
+                        "LOW":       l,
+                        "CLOSE":     last,
+                        "TOTTRDQTY": vol,
+                    })
         except Exception:
             pass
         time.sleep(0.3)
+
+    live_ohlcv = pd.DataFrame(rows) if rows else pd.DataFrame(
+        columns=["SYMBOL", "TIMESTAMP", "OPEN", "HIGH", "LOW", "CLOSE", "TOTTRDQTY"]
+    )
+    return prices, live_ohlcv
+
+
+def fetch_live_prices(symbols: list[str]) -> dict[str, float]:
+    """Fetch live prices only (lightweight wrapper around fetch_live_ohlcv)."""
+    prices, _ = fetch_live_ohlcv()
     return prices
+
+
+def patch_live_ohlcv(hist: pd.DataFrame, live_ohlcv: pd.DataFrame) -> pd.DataFrame:
+    """Replace / append today's rows in history with live NSE intraday OHLCV.
+
+    This ensures that RSI, ADX, MACD, supertrend etc. are computed on
+    today's live price action — not on yesterday's EOD data.
+    """
+    if live_ohlcv.empty or hist.empty:
+        return hist
+
+    today = pd.Timestamp(datetime.now().date())
+    # Drop any existing rows for today (could be partial from CSV)
+    hist_no_today = hist[hist["TIMESTAMP"].dt.date != today.date()]
+    # Append live data
+    combined = pd.concat([hist_no_today, live_ohlcv], ignore_index=True)
+    return combined.sort_values(["SYMBOL", "TIMESTAMP"])
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1378,10 +1430,16 @@ def _market_is_open() -> bool:
 
 def refresh_data(top_n: int) -> tuple[dict, dict, str, int, pd.DataFrame, dict, dict, dict]:
     """Fetch all live data and compute signals.
-    Returns (indices, signals, last_update, hist_rows, hist, live_prices, db_data, sector_breadth)."""
+    Returns (indices, signals, last_update, hist_rows, hist, live_prices, db_data, sector_breadth).
+
+    Data sources:
+      Historical OHLCV  → local CSV  (data/nse_sec_full_data.csv)
+      Today's OHLCV     → NSE API    (equity-stockIndices, market hours only)
+      Index quotes      → NSE API    (allIndices, market hours) / local CSV fallback
+    """
     market_open = _market_is_open()
 
-    console.log("[dim]Fetching index data…[/dim]")
+    console.log("[dim]Fetching index data from NSE…[/dim]")
     indices = fetch_all_indices() if market_open else {}
 
     # Always load EOD for fallback; fill any missing/zero indices
@@ -1394,19 +1452,22 @@ def refresh_data(top_n: int) -> tuple[dict, dict, str, int, pd.DataFrame, dict, 
     for key, eod in eod_indices.items():
         live = indices.get(key, {})
         if not live or _parse_price(live.get("lastPrice", 0)) == 0:
-            indices[key] = eod   # use EOD when live is absent/zero
+            indices[key] = eod   # use local EOD when NSE live is absent/zero
 
-    console.log("[dim]Loading price history…[/dim]")
+    console.log("[dim]Loading historical price data from local CSV…[/dim]")
     hist = load_price_history(days=400)
     hist_rows = len(hist)
 
-    # Live stock prices only during market hours; else fall back to EOD closes
     if market_open:
-        console.log("[dim]Fetching live stock prices…[/dim]")
-        symbols     = hist["SYMBOL"].unique().tolist() if not hist.empty else []
-        live_prices = fetch_live_prices(symbols[:200])
+        # Fetch full OHLCV + volume from NSE for all available stocks
+        console.log("[dim]Fetching live OHLCV from NSE (equity-stockIndices)…[/dim]")
+        live_prices, live_ohlcv = fetch_live_ohlcv()
+        # Patch today's live data into history so indicators reflect intraday price action
+        if not live_ohlcv.empty:
+            console.log(f"[dim]Patching {len(live_ohlcv):,} live rows into history…[/dim]")
+            hist = patch_live_ohlcv(hist, live_ohlcv)
     else:
-        console.log("[dim]Loading EOD stock prices…[/dim]")
+        console.log("[dim]Market closed — using local EOD prices…[/dim]")
         live_prices = load_eod_stock_prices()
 
     console.log("[dim]Running technical screener…[/dim]")
