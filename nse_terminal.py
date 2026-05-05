@@ -1284,6 +1284,23 @@ def build_status_bar(last_update: str, hist_rows: int, signals: dict) -> Panel:
     return Panel(txt, height=3, style="on grey15")
 
 
+def _adaptive_signal_rows(requested: int, has_watchlist: bool = False,
+                          terminal_height: int | None = None) -> int:
+    """Return rows per signal panel that fit the current terminal height."""
+    if requested <= 0:
+        return requested
+
+    term_h = terminal_height or console.size.height or 68
+    fixed_h = 3 + 4 + 4 + 4 + 3  # header + index/sector/breadth bars + status
+    signal_sections = 3 + (1 if has_watchlist else 0)
+
+    # Each signal panel section needs border/title/table-header/subtitle chrome
+    # around data rows. Rich renders this as about six non-data rows per section.
+    max_rows = ((term_h - fixed_h) // signal_sections) - 6
+    min_rows = min(3, requested)
+    return max(min_rows, min(requested, max_rows))
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Main render loop
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1298,6 +1315,7 @@ def build_full_layout(indices: dict, signals: dict, last_update: str,
     """Compose the full terminal layout as a Rich renderable."""
     grid = Table.grid(expand=True)
     grid.add_column()
+    visible_top_n = _adaptive_signal_rows(top_n, has_watchlist=bool(watchlist))
 
     # Header
     grid.add_row(build_header(indices, refresh_mins))
@@ -1315,8 +1333,8 @@ def build_full_layout(indices: dict, signals: dict, last_update: str,
     row4 = Table.grid(expand=True)
     row4.add_column(ratio=1)
     row4.add_column(ratio=1)
-    st_items = signals.get("supertrend_buy", [])[:top_n]
-    bo_items = (signals.get("breakouts_52w", []) + signals.get("breakouts_20d", []))[:top_n]
+    st_items = signals.get("supertrend_buy", [])[:visible_top_n]
+    bo_items = (signals.get("breakouts_52w", []) + signals.get("breakouts_20d", []))[:visible_top_n]
     row4.add_row(
         build_supertrend_panel(st_items),
         build_breakout_panel(bo_items, "52W / 20D BREAKOUTS"),
@@ -1328,8 +1346,8 @@ def build_full_layout(indices: dict, signals: dict, last_update: str,
     row5.add_column(ratio=1)
     row5.add_column(ratio=1)
     row5.add_row(
-        build_vcp_panel(signals.get("vcp_setups", [])[:top_n]),
-        build_stage2_panel(signals.get("stage2_leaders", [])[:top_n]),
+        build_vcp_panel(signals.get("vcp_setups", [])[:visible_top_n]),
+        build_stage2_panel(signals.get("stage2_leaders", [])[:visible_top_n]),
     )
     grid.add_row(row5)
 
@@ -1338,14 +1356,14 @@ def build_full_layout(indices: dict, signals: dict, last_update: str,
     row6.add_column(ratio=1)
     row6.add_column(ratio=1)
     row6.add_row(
-        build_darvas_panel(signals.get("darvas_setups", [])[:top_n]),
-        build_momentum52w_panel(signals.get("momentum_52w", [])[:top_n]),
+        build_darvas_panel(signals.get("darvas_setups", [])[:visible_top_n]),
+        build_momentum52w_panel(signals.get("momentum_52w", [])[:visible_top_n]),
     )
     grid.add_row(row6)
 
     # Row 7: Watchlist (optional — only if watchlist provided and non-empty)
     if watchlist and hist is not None and live_prices is not None and db_data is not None:
-        grid.add_row(build_watchlist_panel(watchlist, live_prices, hist, db_data))
+        grid.add_row(build_watchlist_panel(watchlist[:visible_top_n], live_prices, hist, db_data))
 
     # Status bar
     grid.add_row(build_status_bar(last_update, hist_rows, signals))
@@ -1412,8 +1430,8 @@ def refresh_data(top_n: int) -> tuple[dict, dict, str, int, pd.DataFrame, dict, 
 def main():
     parser = argparse.ArgumentParser(description="NSE Bloomberg Terminal")
     parser.add_argument("--once",      action="store_true", help="Run once, no live refresh")
-    parser.add_argument("--refresh",   type=int, default=5, metavar="MIN",
-                        help="Refresh interval in minutes (default: 5)")
+    parser.add_argument("--refresh",   type=int, default=2, metavar="MIN",
+                        help="Refresh interval in minutes (default: 2)")
     parser.add_argument("--top",       type=int, default=15, metavar="N",
                         help="Max stocks per signal panel (default: 15)")
     parser.add_argument("--watchlist", type=str, default="", metavar="SYMS",
