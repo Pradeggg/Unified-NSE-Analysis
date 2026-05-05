@@ -1,45 +1,57 @@
 #!/usr/bin/env python3
 """
-nse_agent.py — Agent Adda Chat Terminal
+nse_agent.py — Agent Adda  ·  NSE Market Research Chat
 
-A standalone Rich + colorama chat interface for the NSE market research agent.
-Run this in a second terminal alongside nse_terminal.py.
+Architecture
+────────────
+• prompt_toolkit  — input bar with history, arrow-key editing, persistent bottom toolbar
+• Rich            — Markdown rendering of full agent responses (no truncation)
+• Colorama        — banner, prompt colouring, section separators
+• Normal terminal scroll — messages print above the prompt; no fixed-height panel clipping
 
-Usage:
-  python nse_agent.py                        # interactive chat UI
-  python nse_agent.py --query "show me RELIANCE"   # single query, no UI
-  python nse_agent.py --trace                # show tool execution trace
+Usage
+─────
+  python nse_agent.py                   # interactive chat
+  python nse_agent.py -q "RELIANCE"     # single query, print and exit
+  python nse_agent.py --trace           # show tool-call trace
 
-Controls (in chat mode):
-  Type your question + Enter to send
-  Ctrl-C or type 'exit' / 'quit' to close
-
-Environment:
-  OPENAI_API_KEY  — enables OpenAI GPT-4o-mini backend
-  OPENAI_MODEL    — override model (default: gpt-4o-mini)
+Mode commands (in chat):
+  /live  or /l   → force Live / Intraday mode  (always calls NSE live API)
+  /eod   or /h   → force EOD  / Historical mode (CSV + DB snapshot)
+  /auto  or /a   → auto-detect from query keywords  (default)
+  /clear         → clear screen
+  /help  or ?    → show this help
+  1 / 2 / 3      → pick a suggested follow-up question
+  exit / quit    → exit
 """
 
 from __future__ import annotations
 
 import argparse
+import itertools
+import os
+import re
 import sys
-import time
 import threading
+import time
 from datetime import datetime
 from pathlib import Path
 
 import colorama
-from colorama import Fore, Back, Style
+from colorama import Fore, Style
 
 from rich.console import Console
-from rich.layout import Layout
-from rich.live import Live
 from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.rule import Rule
 from rich.table import Table
 from rich.text import Text
 from rich import box
+
+from prompt_toolkit import PromptSession
+from prompt_toolkit.history import InMemoryHistory
+from prompt_toolkit.patch_stdout import patch_stdout
+from prompt_toolkit.formatted_text import ANSI
 
 colorama.init(autoreset=True)
 
@@ -49,380 +61,373 @@ try:
 except ImportError:
     pass
 
-console = Console()
+# ── Rich console (force colour even in redirected environments) ───────────────
+console = Console(highlight=False)
 
-# ── ASCII art banner (colorama-coloured, printed before the TUI starts) ───────
+# ── Global chat state ─────────────────────────────────────────────────────────
+_mode             = "auto"   # "auto" | "intraday" | "historical"
+_followups: list[str] = []   # current follow-up suggestions (up to 3)
 
-_BANNER_LINES = [
-    (Fore.CYAN  + Style.BRIGHT, r"   ___                     _      _       _     _      "),
-    (Fore.CYAN  + Style.BRIGHT, r"  / _ \   __ _   ___  _ __ | |_   / \   __| | __| | __ _ "),
-    (Fore.GREEN + Style.BRIGHT, r" / /_\ \ / _` | / _ \| '_ \| __| / _ \ / _` |/ _` |/ _` |"),
-    (Fore.GREEN + Style.BRIGHT, r"/ /   \ \ (_| ||  __/| | | | |_ / ___ \ (_| | (_| | (_| |"),
-    (Fore.YELLOW+ Style.BRIGHT, r"\/     \/ \__, | \___||_| |_|\__/_/   \_\__,_|\__,_|\__,_|"),
-    (Fore.YELLOW+ Style.BRIGHT, r"          |___/                                            "),
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Banner  (printed once at startup before chat loop)
+# ─────────────────────────────────────────────────────────────────────────────
+
+_BANNER = [
+    (Fore.CYAN  + Style.BRIGHT, r"   _   ___ ___ _  _ _____      _   ___  ___   _   "),
+    (Fore.CYAN  + Style.BRIGHT, r"  /_\ / __| __| \| |_   _|    /_\ |   \|   \ /_\  "),
+    (Fore.GREEN + Style.BRIGHT, r" / _ \ (_ | _|| .` | | |     / _ \| |) | |) / _ \ "),
+    (Fore.YELLOW+ Style.BRIGHT, r"/_/ \_\___|___|_|\_| |_|    /_/ \_\___/|___/_/ \_|"),
 ]
 
-_TAGLINE = [
-    Fore.WHITE  + Style.BRIGHT + "  ┌" + "─" * 54 + "┐",
-    Fore.CYAN   + Style.BRIGHT + "  │" +
-        Fore.YELLOW + "  🏛  NSE Market Research  " +
-        Fore.WHITE  + "│  " +
-        Fore.GREEN  + "AI-powered analysis" +
-        Fore.WHITE  + Style.BRIGHT + "  │",
-    Fore.WHITE  + Style.BRIGHT + "  │" +
-        Fore.CYAN   + "  Ask: stocks · sectors · signals · health " +
-        Fore.WHITE  + Style.BRIGHT + "│",
-    Fore.WHITE  + Style.BRIGHT + "  │" +
-        Fore.MAGENTA + "  Type  exit  or  Ctrl-C  to quit          " +
-        Fore.WHITE  + Style.BRIGHT + "│",
-    Fore.WHITE  + Style.BRIGHT + "  └" + "─" * 54 + "┘",
-]
 
-_EXAMPLES = [
-    ("  💡 ", Fore.CYAN,   "How is the market today?"),
-    ("  💡 ", Fore.GREEN,  "Show me Stage 2 breakout stocks"),
-    ("  💡 ", Fore.YELLOW, "RELIANCE technical setup"),
-    ("  💡 ", Fore.MAGENTA,"Sector rotation — which sectors are leading?"),
-    ("  💡 ", Fore.CYAN,   "What are the strongest Supertrend buy signals?"),
-]
+def _separator(style: str = "dim") -> None:
+    w = console.width or 80
+    colors = [Fore.CYAN, Fore.GREEN, Fore.YELLOW, Fore.MAGENTA, Fore.RED]
+    seg = max(1, w // len(colors))
+    bar = "".join(c + "─" * seg for c in colors)
+    print(bar[:w] + Style.RESET_ALL)
 
 
 def print_banner() -> None:
-    """Print colorama-coloured ASCII banner to stdout before TUI starts."""
+    """Colorama ASCII banner printed to stdout before chat starts."""
     print()
-    for colour, line in _BANNER_LINES:
+    for colour, line in _BANNER:
         print(colour + line)
     print()
-    for line in _TAGLINE:
-        print(line)
+    box_w = 58
+    print(Fore.WHITE + Style.BRIGHT + "  ╔" + "═" * box_w + "╗")
+    print(Fore.WHITE + Style.BRIGHT + "  ║" +
+          Fore.YELLOW + Style.BRIGHT + "  🏛  NSE Market Research  " +
+          Fore.WHITE + "│  " + Fore.GREEN + "AI-powered analysis" +
+          " " * 3 + Fore.WHITE + Style.BRIGHT + "  ║")
+    print(Fore.WHITE + Style.BRIGHT + "  ║" +
+          Fore.CYAN + "  stocks · sectors · signals · screeners · health" +
+          " " * 5 + Fore.WHITE + Style.BRIGHT + "  ║")
+    print(Fore.WHITE + Style.BRIGHT + "  ╚" + "═" * box_w + "╝")
     print()
-    print(Fore.WHITE + Style.DIM + "  Example queries:")
-    for icon, colour, text in _EXAMPLES:
-        print(Fore.WHITE + icon + colour + Style.BRIGHT + text)
+    for icon, colour, text in [
+        ("💡", Fore.CYAN,    "How is the market today?"),
+        ("💡", Fore.GREEN,   "Show me Stage 2 breakout stocks"),
+        ("💡", Fore.YELLOW,  "RELIANCE technical setup"),
+        ("💡", Fore.MAGENTA, "Which sectors are leading right now?"),
+    ]:
+        print(f"  {icon}  {colour}{Style.BRIGHT}{text}{Style.RESET_ALL}")
     print()
-    # Gradient separator
-    colors = [Fore.CYAN, Fore.GREEN, Fore.YELLOW, Fore.RED, Fore.MAGENTA]
-    bar = ""
-    for i, c in enumerate(colors):
-        bar += c + Style.BRIGHT + "━" * (console.width // len(colors))
-    print(bar + Style.RESET_ALL)
+    print(Fore.WHITE + Style.DIM +
+          "  /live  /eod  /auto  │  1 2 3 = follow-ups  │  /help  │  exit")
+    print()
+    _separator()
     print()
 
 
-# ── Chat history ──────────────────────────────────────────────────────────────
-# Each entry: {"role": "user"|"agent", "text": str, "ts": str, "thinking": bool}
-_history: list[dict] = []
-_status  = "Ready — type your question below"
-
-
-# ── Rendering helpers ─────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+# Helpers
+# ─────────────────────────────────────────────────────────────────────────────
 
 def _ts() -> str:
     return datetime.now().strftime("%H:%M:%S")
 
 
-def _bubble(entry: dict) -> Panel:
-    """Render one chat message as a compact styled bubble."""
-    role     = entry["role"]
-    text     = entry["text"]
-    ts       = entry.get("ts", "")
-    thinking = entry.get("thinking", False)
-
-    if thinking:
-        t = Text()
-        t.append(" ⏳ ", style="bold yellow")
-        t.append(text, style="yellow")
-        return Panel(t, border_style="yellow", padding=(0, 1))
-
-    if role == "user":
-        t = Text()
-        t.append(" ❯ ", style="bold cyan")
-        t.append(text, style="bold white")
-        t.append(f" [{ts}]", style="dim")
-        return Panel(t, border_style="bright_cyan", padding=(0, 1))
-    else:
-        if any(c in text for c in ["**", "##", "- ", "* ", "```", "\n"]):
-            body = Markdown(text)
-        else:
-            body = Text(text, style="white")
-        return Panel(body, border_style="bright_green",
-                     subtitle=Text(f" 🤖  [{ts}]", style="dim green"),
-                     padding=(0, 1))
-
-
-def _welcome_splash() -> Text:
-    """Compact welcome splash shown when no messages yet."""
-    t = Text()
-    palette = ["bold cyan","bold bright_cyan","bold green","bold bright_green","bold yellow"]
-    lines = [
-        "  ╔═╗╔═╗╔═╗╔╗╔╔╦╗   ╔═╗╔╦╗╔╦╗╔═╗",
-        "  ╠═╣║ ╦║╣ ║║║ ║    ╠═╣ ║║ ║║╠═╣",
-        "  ╩ ╩╚═╝╚═╝╝╚╝ ╩    ╩ ╩═╩╝═╩╝╩ ╩",
-    ]
-    for i, line in enumerate(lines):
-        t.append(line + "\n", style=palette[i])
-    t.append("\n  NSE Market Research  ·  AI-powered analysis\n\n", style="bold white")
-    for colour, text in [
-        ("cyan",    "  💡  How is the market today?"),
-        ("green",   "  💡  Show me Stage 2 breakout stocks"),
-        ("yellow",  "  💡  RELIANCE technical setup"),
-        ("magenta", "  💡  Sector rotation — which sectors are leading?"),
-    ]:
-        t.append(f"{text}\n", style=colour)
-    t.append("\n  Type your question below and press ", style="dim")
-    t.append("Enter\n", style="bold cyan")
-    return t
-
-
-def build_chat_layout(input_buf: str) -> Layout:
-    """Build the full chat terminal layout."""
-    root = Layout()
-    root.split_column(
-        Layout(name="header", size=3),
-        Layout(name="body"),
-        Layout(name="status", size=1),
-        Layout(name="input",  size=3),
+def _parse_followups(text: str) -> tuple[str, list[str]]:
+    """Strip the '## 💬 …' follow-up block; return (clean_text, [q1, q2, q3])."""
+    pattern = re.compile(
+        r"##\s*💬[^\n]*\n((?:\d+\..+\n?)+)",
+        re.IGNORECASE | re.MULTILINE,
     )
+    m = pattern.search(text)
+    if not m:
+        return text, []
+    questions = re.findall(r"\d+\.\s*(.+)", m.group(1))
+    clean = text[:m.start()].rstrip()
+    return clean, [q.strip() for q in questions[:3]]
 
-    # ── Header: one-line rainbow title + pills ────────────────────────────────
-    title = Text()
-    title.append(" 🏛 ", style="bold white")
-    palette = ["bold cyan","bold bright_cyan","bold green","bold bright_green",
-               "bold yellow","bold bright_yellow","bold magenta","bold red",
-               "bold bright_red","bold white"]
-    for i, ch in enumerate("AGENT ADDA"):
-        title.append(ch, style=palette[i % len(palette)])
-    title.append("  │ ", style="dim")
-    for label, colour in [("stocks","cyan"),("sectors","green"),("signals","yellow"),
-                          ("screeners","magenta"),("health","red")]:
-        title.append(f" {label}", style=colour)
-        title.append(" ·", style="dim")
-    title.append("  Esc=clear  Ctrl-U=erase  Ctrl-C=exit", style="dim")
-    root["header"].update(Panel(title, border_style="bright_cyan",
-                                padding=(0, 0)))
 
-    # ── Body: messages top-down; welcome splash when empty ───────────────────
-    h = console.size.height
-    # Max bubbles that fit: each bubble ~ 3 rows (compact); body ≈ h - 3 - 1 - 3 - 4
-    body_rows   = max(4, h - 11)
-    max_bubbles = max(1, body_rows // 3)
+def _mode_tag() -> str:
+    tags = {
+        "auto":       Fore.WHITE  + Style.DIM    + "[AUTO]"  + Style.RESET_ALL,
+        "intraday":   Fore.RED    + Style.BRIGHT + "[LIVE🔴]" + Style.RESET_ALL,
+        "historical": Fore.BLUE   + Style.BRIGHT + "[EOD📚]"  + Style.RESET_ALL,
+    }
+    return tags[_mode]
 
-    visible = _history[-max_bubbles:] if _history else []
-    if not visible:
-        root["body"].update(Panel(_welcome_splash(), border_style="dim",
-                                  padding=(0, 1),
-                                  title="[dim]─ conversation ─[/dim]"))
+
+def _build_prompt() -> ANSI:
+    tag = {
+        "auto":       "\x1b[2m[AUTO]\x1b[0m",
+        "intraday":   "\x1b[1;31m[LIVE🔴]\x1b[0m",
+        "historical": "\x1b[1;34m[EOD📚]\x1b[0m",
+    }[_mode]
+    fup = (f"  \x1b[33m(follow-ups: 1·2·3)\x1b[0m" if _followups else "")
+    return ANSI(f"  {tag}{fup}\x1b[1;36m ❯ \x1b[0m")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Display helpers  (all print to stdout; terminal scrolls naturally)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _print_user(query: str) -> None:
+    print()
+    print(Fore.CYAN + Style.BRIGHT + " ❯  " +
+          Fore.WHITE + Style.BRIGHT + query +
+          Fore.WHITE + Style.DIM + f"  [{_ts()}]")
+
+
+def _print_response(result: dict) -> None:
+    global _followups
+    answer  = result.get("answer", "(no answer)")
+    backend = result.get("backend", "?")
+
+    # Strip follow-ups from answer body
+    clean, _followups = _parse_followups(answer)
+
+    # ── Agent header ──────────────────────────────────────────────────────
+    print()
+    print(Fore.GREEN + Style.BRIGHT + " 🤖  Agent Adda" +
+          Style.DIM + f"  [{_ts()}]  backend: {backend}")
+    _separator()
+
+    # ── Body — Rich Markdown rendered to full terminal width ───────────────
+    # Use Rich console.print so Markdown wraps to terminal width with no clipping
+    has_markup = any(c in clean for c in ["**", "##", "- ", "* ", "```", "\n"])
+    if has_markup:
+        console.print(Markdown(clean))
     else:
-        chat_grid = Table.grid(expand=True, padding=(0, 0))
-        chat_grid.add_column()
-        for entry in visible:
-            chat_grid.add_row(_bubble(entry))
-        root["body"].update(Panel(chat_grid, border_style="dim", padding=(0, 0),
-                                  title="[dim]─ conversation ─[/dim]"))
+        console.print(Text(clean, style="white"))
 
-    # ── Status bar (single line, no Panel border) ─────────────────────────────
-    is_thinking = "Thinking" in _status or "⏳" in _status
-    st = Text()
-    st.append(" ● ", style="bold yellow" if is_thinking else "bold green")
-    st.append(_status, style="bold yellow" if is_thinking else "dim white")
-    root["status"].update(st)
+    # ── Follow-up suggestions ─────────────────────────────────────────────
+    if _followups:
+        print()
+        print(Fore.YELLOW + Style.BRIGHT + " 💬  What to explore next:")
+        for i, q in enumerate(_followups, 1):
+            print(Fore.YELLOW + f"   {i}. " + Fore.WHITE + Style.BRIGHT + q)
+        print(Fore.YELLOW + Style.DIM +
+              "   → Type 1, 2 or 3 to ask, or type your own question")
 
-    # ── Input bar ─────────────────────────────────────────────────────────────
-    bar = Text()
-    bar.append("  ❯ ", style="bold cyan")
-    if input_buf:
-        bar.append(input_buf, style="bold white")
-        bar.append("▌", style="bold cyan blink")
-    else:
-        bar.append("Ask your question…  │  Esc=clear  │  Ctrl-U=erase  │  Ctrl-C=exit",
-                   style="dim italic")
-        bar.append("  ▌", style="bold cyan blink")
-    root["input"].update(Panel(bar, border_style="bright_cyan",
-                               title="[bold cyan]Query[/bold cyan]", padding=(0, 0)))
-    return root
+    _separator()
 
 
-# ── Agent thread ──────────────────────────────────────────────────────────────
-
-def _run_query_async(agent, query: str, show_trace: bool) -> None:
-    global _status
-    _status = f"⏳  Thinking… [{_ts()}]"
-    placeholder = {"role": "agent", "text": "Agent Adda is thinking…",
-                   "ts": _ts(), "thinking": True}
-    _history.append(placeholder)
-    try:
-        result = agent.query(query, show_trace=show_trace)
-        answer  = result.get("answer", "(no answer)")
-        backend = result.get("backend", "")
-        if _history and _history[-1].get("thinking"):
-            _history.pop()
-        _history.append({"role": "agent", "text": answer, "ts": _ts()})
-        _status = f"✓  Last answered {_ts()}  │  backend: {backend}"
-    except Exception as e:
-        if _history and _history[-1].get("thinking"):
-            _history.pop()
-        _history.append({"role": "agent", "text": f"❌ Error: {e}", "ts": _ts()})
-        _status = f"✗  Error at {_ts()}"
+def _print_trace(trace: list[dict]) -> None:
+    if not trace:
+        return
+    tbl = Table(box=box.SIMPLE, header_style="bold dim", expand=True)
+    tbl.add_column("Tool",   style="cyan",  width=26)
+    tbl.add_column("Args",   style="dim",   width=30)
+    tbl.add_column("Result", style="white", width=40)
+    for t in trace:
+        res = t.get("result", {})
+        err = res.get("error", "")
+        s = f"ERROR: {err[:40]}" if err else f"ok — {', '.join(list(res)[:4])}"
+        tbl.add_row(t.get("tool", "—"), str(t.get("args", {}))[:40], s)
+    console.print(Panel(tbl, title="[bold dim]Tool Trace[/bold dim]",
+                        border_style="dim"))
 
 
-# ── Single-query mode ─────────────────────────────────────────────────────────
+def _print_help() -> None:
+    print()
+    console.print(Panel(
+        Text.from_markup(
+            "[bold cyan]MODE COMMANDS[/bold cyan]\n"
+            "  [red]/live[/red]  or  [red]/l[/red]   — Live / Intraday  (real-time NSE API)\n"
+            "  [blue]/eod[/blue]   or  [blue]/h[/blue]   — EOD / Historical (CSV + DB snapshot)\n"
+            "  [white]/auto[/white]  or  [white]/a[/white]   — Auto-detect from query keywords\n\n"
+            "[bold cyan]FOLLOW-UPS[/bold cyan]\n"
+            "  [yellow]1 / 2 / 3[/yellow]          — Ask the numbered follow-up question\n\n"
+            "[bold cyan]OTHER[/bold cyan]\n"
+            "  [dim]/clear[/dim]             — Clear screen\n"
+            "  [dim]exit / quit[/dim]        — Exit Agent Adda\n"
+            "  [dim]Ctrl-C[/dim]             — Exit (same as quit)\n"
+        ),
+        title="[bold cyan]Agent Adda Help[/bold cyan]",
+        border_style="cyan",
+    ))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Spinner (runs while agent is querying)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _run_with_spinner(agent, query: str, show_trace: bool, animated: bool = True) -> dict:
+    """Run agent query with a spinner. animated=True for single-query mode (real TTY,
+    no patch_stdout); animated=False inside the chat loop (patch_stdout active)."""
+    result: dict = {}
+    exc: list    = []
+
+    if not animated:
+        # Inside patch_stdout — just print a static status line
+        print(f"  {Fore.CYAN}⏳  Agent Adda is thinking…{Style.RESET_ALL}")
+        try:
+            result = agent.query(query, show_trace=show_trace)
+        except Exception as e:
+            raise e
+        return result
+
+    # Animated braille spinner (for single-query / non-patch_stdout context)
+    done = threading.Event()
+
+    def _worker():
+        try:
+            result.update(agent.query(query, show_trace=show_trace))
+        except Exception as e:
+            exc.append(e)
+        finally:
+            done.set()
+
+    threading.Thread(target=_worker, daemon=True).start()
+
+    frames = itertools.cycle("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏")
+    while not done.wait(0.08):
+        f = next(frames)
+        sys.stdout.write(
+            f"\r  {Fore.CYAN}{f}{Style.RESET_ALL}  "
+            f"{Fore.WHITE}Agent Adda is thinking…{Style.RESET_ALL}  "
+        )
+        sys.stdout.flush()
+    # Clear spinner line
+    sys.stdout.write("\r" + " " * 60 + "\r")
+    sys.stdout.flush()
+
+    if exc:
+        raise exc[0]
+    return result
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Single-query mode  (no TUI, just print result and exit)
+# ─────────────────────────────────────────────────────────────────────────────
 
 def _single_query(agent, query: str, show_trace: bool) -> None:
-    print(Fore.CYAN + Style.BRIGHT + "\n  ❯ " + Fore.WHITE + query)
-    print(Fore.YELLOW + "  " + "─" * 60)
-    with console.status("[bold cyan]Thinking…[/bold cyan]"):
-        result = agent.query(query, show_trace=show_trace)
-    answer  = result.get("answer", "(no answer)")
-    backend = result.get("backend", "")
-    print(Fore.GREEN + Style.DIM + f"\n  🤖 Agent Adda  [{_ts()}]  backend: {backend}\n")
-    if any(c in answer for c in ["**", "##", "- ", "```"]):
-        console.print(Markdown(answer))
-    else:
-        console.print(answer)
-    if show_trace and result.get("trace"):
-        tbl = Table(box=box.SIMPLE, header_style="bold dim", expand=True)
-        tbl.add_column("Tool",   style="cyan",  width=26)
-        tbl.add_column("Args",   style="dim",   width=30)
-        tbl.add_column("Result", style="white", width=30)
-        for t in result["trace"]:
-            res = t.get("result", {})
-            err = res.get("error", "")
-            s   = f"ERROR: {err[:40]}" if err else f"ok — {', '.join(list(res)[:4])}"
-            tbl.add_row(t.get("tool", "—"), str(t.get("args", {}))[:40], s)
-        console.print(Panel(tbl, title="[bold dim]Tool Trace[/bold dim]", border_style="dim"))
+    _print_user(query)
+    result = _run_with_spinner(agent, query, show_trace)
+    _print_response(result)
+    if show_trace:
+        _print_trace(result.get("trace", []))
 
 
-# ── Interactive chat TUI ──────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+# Interactive chat loop
+# ─────────────────────────────────────────────────────────────────────────────
 
-def _chat_tui(agent, show_trace: bool) -> None:
-    global _status
+def _chat_loop(agent, show_trace: bool) -> None:
+    global _mode, _followups
 
-    import os, tty, termios
+    session = PromptSession(history=InMemoryHistory())
 
-    input_buf    = ""
-    input_lock   = threading.Lock()
-    submit_queue: list[str] = []
-    _old_settings = None
+    print(Fore.GREEN + Style.BRIGHT + "  ✓ Agent Adda ready — type your question and press Enter")
+    print(Fore.WHITE + Style.DIM +
+          "  Tip: /live  /eod  /auto  │  1·2·3 = follow-ups  │  /help  │  exit")
+    print()
 
-    fd = sys.stdin.fileno()
-    try:
-        _old_settings = termios.tcgetattr(fd)
-    except Exception:
-        _old_settings = None
-
-    def _restore():
-        if _old_settings is not None:
-            try:
-                termios.tcsetattr(fd, termios.TCSADRAIN, _old_settings)
-            except Exception:
-                pass
-
-    with Live(console=console, screen=True, refresh_per_second=8) as live:
-        try:
-            tty.setraw(fd, termios.TCSAFLUSH)
-        except Exception:
-            pass
-
-        def _reader():
-            nonlocal input_buf
-            try:
-                while True:
-                    ch = os.read(fd, 1)
-                    if not ch:
-                        continue
-                    c = ch.decode("utf-8", errors="replace")
-                    if c in ("\r", "\n"):
-                        with input_lock:
-                            line = input_buf
-                            input_buf = ""
-                        if line.strip().lower() in ("exit", "quit", "q", ":q"):
-                            submit_queue.append("__EXIT__")
-                        elif line.strip():
-                            submit_queue.append(line.strip())
-                    elif c in ("\x7f", "\x08"):
-                        with input_lock:
-                            input_buf = input_buf[:-1]
-                    elif c == "\x1b":
-                        try:
-                            nxt = os.read(fd, 3)
-                        except Exception:
-                            nxt = b""
-                        if not nxt or nxt[:1] != b"[":
-                            with input_lock:
-                                input_buf = ""
-                    elif c == "\x03":
-                        submit_queue.append("__EXIT__")
-                    elif c == "\x15":
-                        with input_lock:
-                            input_buf = ""
-                    elif c >= " ":
-                        with input_lock:
-                            input_buf += c
-            except Exception:
-                pass
-
-        threading.Thread(target=_reader, daemon=True).start()
-
-        _pending_thread: threading.Thread | None = None
-
+    with patch_stdout():
         while True:
-            with input_lock:
-                buf = input_buf
+            try:
+                raw = session.prompt(_build_prompt())
+            except KeyboardInterrupt:
+                print()
+                continue
+            except EOFError:
+                break
 
-            live.update(build_chat_layout(buf))
+            text = raw.strip()
+            if not text:
+                continue
 
-            if submit_queue:
-                cmd = submit_queue.pop(0)
-                if cmd == "__EXIT__":
-                    break
-                if _pending_thread and _pending_thread.is_alive():
-                    _status = "⚠  Still thinking — please wait…"
-                else:
-                    _history.append({"role": "user", "text": cmd, "ts": _ts()})
-                    _pending_thread = threading.Thread(
-                        target=_run_query_async,
-                        args=(agent, cmd, show_trace),
-                        daemon=True,
-                    )
-                    _pending_thread.start()
+            # ── Exit ──────────────────────────────────────────────────────
+            if text.lower() in ("exit", "quit", "q", ":q"):
+                break
 
-            time.sleep(0.125)
+            # ── Mode commands ──────────────────────────────────────────────
+            if text.lower() in ("/live", "/intraday", "/l"):
+                _mode = "intraday"
+                print(Fore.RED + Style.BRIGHT +
+                      "  ● Mode → LIVE  (real-time NSE API)")
+                continue
+            if text.lower() in ("/eod", "/historical", "/h"):
+                _mode = "historical"
+                print(Fore.BLUE + Style.BRIGHT +
+                      "  ● Mode → EOD  (historical CSV + DB snapshot)")
+                continue
+            if text.lower() in ("/auto", "/a"):
+                _mode = "auto"
+                print(Fore.WHITE +
+                      "  ● Mode → AUTO  (keyword-based detection)")
+                continue
 
-    _restore()
-    print(Fore.CYAN + Style.BRIGHT + "\n  Agent Adda closed. Goodbye!\n")
+            # ── Utility commands ───────────────────────────────────────────
+            if text.lower() in ("/help", "?", "/h"):
+                _print_help()
+                continue
+            if text.lower() == "/clear":
+                _followups = []
+                os.system("clear")
+                print_banner()
+                continue
+
+            # ── Follow-up shortcut ─────────────────────────────────────────
+            if text in ("1", "2", "3") and _followups:
+                idx = int(text) - 1
+                if idx < len(_followups):
+                    text = _followups[idx]
+                    print(Fore.DIM + f"  → {text}" + Style.RESET_ALL)
+
+            # ── Apply mode prefix ──────────────────────────────────────────
+            if _mode == "intraday":
+                query = f"/intraday {text}"
+            elif _mode == "historical":
+                query = f"/historical {text}"
+            else:
+                query = text
+
+            _print_user(text)
+
+            try:
+                result = _run_with_spinner(agent, query, show_trace, animated=False)
+                _print_response(result)
+                if show_trace:
+                    _print_trace(result.get("trace", []))
+            except Exception as e:
+                print(Fore.RED + f"  ❌  Error: {e}" + Style.RESET_ALL)
+                _separator()
+
+    print()
+    print(Fore.CYAN + Style.BRIGHT + "  Agent Adda closed. Goodbye! 🏛\n")
 
 
-# ── Entry point ───────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+# Entry point
+# ─────────────────────────────────────────────────────────────────────────────
 
-def main():
-    parser = argparse.ArgumentParser(description="Agent Adda — NSE Market Research Chat")
-    parser.add_argument("--query",  "-q", type=str, default="",
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Agent Adda — NSE Market Research Chat"
+    )
+    parser.add_argument("--query", "-q", default="",
                         help="Single query (non-interactive)")
-    parser.add_argument("--trace",  "-t", action="store_true",
+    parser.add_argument("--trace", "-t", action="store_true",
                         help="Show tool execution trace")
+    parser.add_argument("--mode",  "-m", default="auto",
+                        choices=["auto", "intraday", "historical"],
+                        help="Default data mode (default: auto)")
     args = parser.parse_args()
 
-    # Show colorama banner + load agent on the normal screen
+    global _mode
+    _mode = args.mode
+
     print_banner()
-    print(Fore.CYAN + "  Loading Agent Adda…", end="\r")
+
+    print(Fore.CYAN + "  Loading Agent Adda…", end="\r", flush=True)
     from terminal.agent import Agent
     agent = Agent()
     print(Fore.GREEN + Style.BRIGHT + f"  ✓ Agent Adda ready" +
-          Fore.WHITE + Style.DIM   + f"  │  backend: {agent.backend_name}" + " " * 20)
+          Style.DIM   + f"  │  backend: {agent.backend_name}" +
+          Style.DIM   + f"  │  mode: {_mode}" + " " * 10)
     print()
 
     if args.query:
         _single_query(agent, args.query, args.trace)
         return
 
-    # Brief pause so user can read the banner, then clear for the TUI
-    time.sleep(1.2)
-    console.clear()   # clean slate so Live fills the full screen from row 0
-
-    try:
-        _chat_tui(agent, args.trace)
-    except KeyboardInterrupt:
-        print(Fore.CYAN + Style.BRIGHT + "\n  Agent Adda closed.\n")
+    _chat_loop(agent, args.trace)
 
 
 if __name__ == "__main__":
