@@ -93,17 +93,23 @@ NSE_HEADERS = {
 # ─────────────────────────────────────────────────────────────────────────────
 
 _nse_session: Optional[requests.Session] = None
+_nse_session_ts: float = 0.0          # epoch time session was last initialised
+_SESSION_TTL: float = 4 * 60          # re-handshake with NSE every 4 minutes
 
-def _get_nse_session() -> requests.Session:
-    global _nse_session
-    if _nse_session is None:
-        _nse_session = requests.Session()
-        _nse_session.headers.update(NSE_HEADERS)
+def _get_nse_session(force: bool = False) -> requests.Session:
+    """Return a live NSE session, renewing the cookie every _SESSION_TTL seconds."""
+    global _nse_session, _nse_session_ts
+    age = time.time() - _nse_session_ts
+    if _nse_session is None or force or age > _SESSION_TTL:
+        s = requests.Session()
+        s.headers.update(NSE_HEADERS)
         try:
-            _nse_session.get("https://www.nseindia.com/", timeout=10)
+            s.get("https://www.nseindia.com/", timeout=10)
             time.sleep(0.5)
         except Exception:
             pass
+        _nse_session = s
+        _nse_session_ts = time.time()
     return _nse_session
 
 
@@ -123,12 +129,18 @@ def fetch_index_quote(index_name: str) -> Optional[dict]:
 
 
 def fetch_all_indices() -> dict[str, dict]:
-    """Fetch all NSE index quotes in one call. Returns {index_name: quote_dict}."""
+    """Fetch all NSE index quotes in one call. Returns {index_name: quote_dict}.
+    Normalises the 'last' field (allIndices API) to 'lastPrice' so callers can
+    use a single field name regardless of whether data is live or EOD.
+    """
     out: dict[str, dict] = {}
     try:
         s = _get_nse_session()
         r = s.get("https://www.nseindia.com/api/allIndices", timeout=12)
         for item in r.json().get("data", []):
+            # allIndices uses 'last'; normalise to 'lastPrice' for consistency
+            if "lastPrice" not in item or not item["lastPrice"]:
+                item["lastPrice"] = item.get("last", 0)
             out[item.get("index", "").upper()] = item
     except Exception:
         pass
