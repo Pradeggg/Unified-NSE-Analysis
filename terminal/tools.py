@@ -278,7 +278,7 @@ def get_sector_context(sector_or_symbol: str) -> dict:
     ).fetchone()
     sector = sym_row[0] if sym_row and sym_row[0] else sector_or_symbol  # preserve original case
 
-    # Case-insensitive sector match
+    # Case-insensitive sector match — try exact first, then LIKE fuzzy
     rows = conn.execute(
         """SELECT symbol, company_name, stage, investment_score, relative_strength,
                   change_1d_pct, change_1w_pct, change_1m_pct, rsi, trading_signal
@@ -287,6 +287,40 @@ def get_sector_context(sector_or_symbol: str) -> dict:
            ORDER BY investment_score DESC""",
         (sector, snap_date),
     ).fetchall()
+
+    if not rows:
+        # Fuzzy fallback: LIKE '%sector%'
+        rows = conn.execute(
+            """SELECT symbol, company_name, stage, investment_score, relative_strength,
+                      change_1d_pct, change_1w_pct, change_1m_pct, rsi, trading_signal
+               FROM stage_snapshots
+               WHERE UPPER(sector) LIKE UPPER(?) AND snapshot_date=?
+               ORDER BY investment_score DESC""",
+            (f"%{sector}%", snap_date),
+        ).fetchall()
+        # Also resolve common abbreviations
+        if not rows:
+            abbrev_map = {
+                "IT": "Information Technology", "TECH": "Information Technology",
+                "PHARMA": "Pharma & Healthcare", "HEALTH": "Pharma & Healthcare",
+                "BANK": "Banking & Finance", "FINANCE": "Banking & Finance",
+                "AUTO": "EV & Auto Ancillaries", "EV": "EV & Auto Ancillaries",
+                "FMCG": "FMCG & Consumer Goods", "CONSUMER": "FMCG & Consumer Goods",
+                "ENERGY": "Energy - Oil & Gas", "OIL": "Energy - Oil & Gas",
+                "POWER": "Energy - Power", "METAL": "Metals & Mining",
+                "MINING": "Metals & Mining", "DEFENCE": "Defence & Aerospace",
+                "REALTY": "Realty", "REAL ESTATE": "Realty",
+            }
+            mapped = abbrev_map.get(sector.upper())
+            if mapped:
+                rows = conn.execute(
+                    """SELECT symbol, company_name, stage, investment_score, relative_strength,
+                              change_1d_pct, change_1w_pct, change_1m_pct, rsi, trading_signal
+                       FROM stage_snapshots
+                       WHERE UPPER(sector) LIKE UPPER(?) AND snapshot_date=?
+                       ORDER BY investment_score DESC""",
+                    (f"%{mapped}%", snap_date),
+                ).fetchall()
     conn.close()
 
     if not rows:

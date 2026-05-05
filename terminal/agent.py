@@ -52,7 +52,15 @@ You have access to these data tools (call them as needed):
 • get_portfolio_exposure(sector?)  → Portfolio sector distribution and holdings
 • find_portfolio_overlap(screener) → Holdings that match a screener
 
-━━━ THINKING PROCESS ━━━
+━━━ TOOL SELECTION RULES ━━━
+• "current price / live / now / today / intraday" → call get_live_quote or get_live_market_overview FIRST
+• "sector analysis / how is [sector] / sector health" → ALWAYS call get_sector_context(sector_name), then get_index_snapshot for that sector index
+• "technical setup / indicators / signals" → call get_technical_setup + get_symbol_snapshot
+• "market overview / breadth" → call get_live_market_overview + get_market_breadth
+• "screener / breakouts / stage 2 / buy signals" → call run_screener_query
+• "news / catalysts / events" → call search_latest_catalysts
+
+
 Before answering, THINK STEP BY STEP:
 1. Identify what the user is asking (price? setup? sector? screen? news?).
 2. Decide whether this needs LIVE data (current price, intraday moves) or EOD data (technicals, stage analysis).
@@ -507,7 +515,9 @@ class Agent:
         # ── LLM path ──────────────────────────────────────────────────────────
         if self.backend is not None:
             result = self._llm_query(clean_input, show_trace, mode_context)
-            result["answer"] = result.get("answer", "") + mode_suffix
+            # Only append mode suffix if the LLM didn't include a Source Trail
+            if "Mode:" not in result.get("answer", "")[-600:]:
+                result["answer"] = result.get("answer", "") + mode_suffix
             return result
 
         # ── Keyword fallback path ──────────────────────────────────────────────
@@ -549,7 +559,8 @@ class Agent:
             else:
                 # Final text response
                 answer = resp["content"]
-                if not answer.rstrip().endswith("research and learning only."):
+                # Only append disclaimer if LLM didn't include it (check last 400 chars)
+                if "research and learning only" not in answer[-400:]:
                     answer += "\n\n━━━ Not investment advice. For research and learning only. ━━━"
                 return {
                     "answer":  answer,
