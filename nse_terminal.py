@@ -56,6 +56,7 @@ try:
     from rich.rule import Rule
     from rich.align import Align
     from rich.padding import Padding
+    from rich.markdown import Markdown
 except ImportError:
     print("Install rich:  pip install rich")
     sys.exit(1)
@@ -250,6 +251,7 @@ def fetch_all_indices() -> dict[str, dict]:
     """Fetch all NSE index quotes in one call. Returns {index_name: quote_dict}.
     Normalises the 'last' field (allIndices API) to 'lastPrice' so callers can
     use a single field name regardless of whether data is live or EOD.
+    Derives 'change' and 'pChange' from lastPrice / previousClose when absent.
     """
     out: dict[str, dict] = {}
     try:
@@ -259,6 +261,14 @@ def fetch_all_indices() -> dict[str, dict]:
             # allIndices uses 'last'; normalise to 'lastPrice' for consistency
             if "lastPrice" not in item or not item["lastPrice"]:
                 item["lastPrice"] = item.get("last", 0)
+            # Derive change / pChange if the API didn't supply them
+            lp   = float(item.get("lastPrice") or 0)
+            prev = float(item.get("previousClose") or item.get("previousOClose") or 0)
+            if not item.get("pChange") and prev > 0:
+                chg  = round(lp - prev, 2)
+                pchg = round(chg / prev * 100, 2)
+                item.setdefault("change",  chg)
+                item.setdefault("pChange", pchg)
             out[item.get("index", "").upper()] = item
     except Exception:
         pass
@@ -1628,12 +1638,13 @@ def _adaptive_signal_rows(requested: int, has_watchlist: bool = False,
         return requested
 
     term_h = terminal_height or console.size.height or 68
-    fixed_h = 3 + 4 + 4 + 4 + 3  # header + index/sector/breadth bars + status
+    # fixed rows: header(3) + indices(3) + sector(4) + breadth(3) + status(3) + input_bar(3)
+    fixed_h = 3 + 3 + 4 + 3 + 3 + 3
     signal_sections = 3 + (1 if has_watchlist else 0)
 
     # Each signal panel section needs border/title/table-header/subtitle chrome
-    # around data rows. Rich renders this as about six non-data rows per section.
-    max_rows = ((term_h - fixed_h) // signal_sections) - 6
+    # around data rows. Rich renders this as about four non-data rows per section.
+    max_rows = ((term_h - fixed_h) // signal_sections) - 4
     min_rows = min(3, requested)
     return max(min_rows, min(requested, max_rows))
 
@@ -1790,19 +1801,19 @@ def build_full_layout(indices: dict, signals: dict, last_update: str,
                        narrative: str = "",
                        nlp_history: list[dict] | None = None,
                        nlp_pending: bool = False,
-                       current_input: str = "") -> Table:
+                       current_input: str = "") -> Layout:
     """Compose the full terminal layout: left main content + right sidebar."""
     nlp_history = nlp_history or []
     visible_top_n = _adaptive_signal_rows(top_n, has_watchlist=bool(watchlist))
 
     # ── Left column: all market content ──────────────────────────────────────
-    left = Table.grid(expand=True)
-    left.add_column()
+    left_grid = Table.grid(expand=True)
+    left_grid.add_column()
 
-    left.add_row(build_header(indices, refresh_mins))
-    left.add_row(build_indices_bar(indices))
-    left.add_row(build_sector_table(indices, sector_breadth))
-    left.add_row(build_breadth_bar(signals.get("breadth", {}), signals.get("nifty_trend", [])))
+    left_grid.add_row(build_header(indices, refresh_mins))
+    left_grid.add_row(build_indices_bar(indices))
+    left_grid.add_row(build_sector_table(indices, sector_breadth))
+    left_grid.add_row(build_breadth_bar(signals.get("breadth", {}), signals.get("nifty_trend", [])))
 
     row4 = Table.grid(expand=True)
     row4.add_column(ratio=1); row4.add_column(ratio=1)
@@ -1810,36 +1821,37 @@ def build_full_layout(indices: dict, signals: dict, last_update: str,
     bo_items = (signals.get("breakouts_52w", []) + signals.get("breakouts_20d", []))[:visible_top_n]
     row4.add_row(build_supertrend_panel(st_items),
                  build_breakout_panel(bo_items, "52W / 20D BREAKOUTS"))
-    left.add_row(row4)
+    left_grid.add_row(row4)
 
     row5 = Table.grid(expand=True)
     row5.add_column(ratio=1); row5.add_column(ratio=1)
     row5.add_row(build_vcp_panel(signals.get("vcp_setups", [])[:visible_top_n]),
                  build_stage2_panel(signals.get("stage2_leaders", [])[:visible_top_n]))
-    left.add_row(row5)
+    left_grid.add_row(row5)
 
     row6 = Table.grid(expand=True)
     row6.add_column(ratio=1); row6.add_column(ratio=1)
     row6.add_row(build_darvas_panel(signals.get("darvas_setups", [])[:visible_top_n]),
                  build_momentum52w_panel(signals.get("momentum_52w", [])[:visible_top_n]))
-    left.add_row(row6)
+    left_grid.add_row(row6)
 
     if watchlist and hist is not None and live_prices is not None and db_data is not None:
-        left.add_row(build_watchlist_panel(watchlist[:visible_top_n], live_prices, hist, db_data))
+        left_grid.add_row(build_watchlist_panel(watchlist[:visible_top_n], live_prices, hist, db_data))
 
-    left.add_row(build_status_bar(last_update, hist_rows, signals))
-    left.add_row(build_input_bar(current_input))      # ← always-visible input bar
+    left_grid.add_row(build_status_bar(last_update, hist_rows, signals))
+    left_grid.add_row(build_input_bar(current_input))      # always-visible input bar
 
     # ── Right column: sidebar ─────────────────────────────────────────────────
     right = build_right_sidebar(indices, signals, sector_breadth or {},
                                 nlp_history, nlp_pending, narrative)
 
-    # ── Outer two-column grid ────────────────────────────────────────────────
-    outer = Table.grid(expand=True)
-    outer.add_column(ratio=3)          # left: main content (75%)
-    outer.add_column(ratio=1)          # right: sidebar (25%), scales with terminal width
-    outer.add_row(left, right)
-    return outer
+    # ── Use Layout (not Table.grid) so it fills terminal height correctly ─────
+    root = Layout()
+    root.split_row(
+        Layout(left_grid, name="left",  ratio=3),
+        Layout(right,     name="right", ratio=1),
+    )
+    return root
 
 
 def _market_is_open() -> bool:
@@ -2414,6 +2426,29 @@ def _run_agent_query(query: str) -> str:
         return f"Agent error: {e}"
 
 
+def _agent_response_panel(query: str, response: str, terminal_width: int | None = None) -> Panel:
+    """Build a readable, wrapped Agent Adda response panel for command mode."""
+    term_width = terminal_width or console.size.width
+    panel_width = max(50, min(120, term_width - 6 if term_width > 60 else term_width))
+
+    body = Table.grid(expand=True, padding=(0, 1))
+    body.add_column(no_wrap=False, overflow="fold")
+
+    q = Text()
+    q.append("❓ ", style="bold cyan")
+    q.append(query, style="bold white")
+    body.add_row(q)
+    body.add_row(Markdown(response))
+
+    return Panel(
+        body,
+        title="[bold cyan]💬 Agent Adda[/bold cyan]",
+        border_style="cyan",
+        padding=(1, 1),
+        width=panel_width,
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description="NSE Bloomberg Terminal")
     parser.add_argument("--once",      action="store_true", help="Run once, no live refresh")
@@ -2536,12 +2571,9 @@ def main():
                     query = arg
                     with _nlp_lock:
                         _nlp_state["pending"] = True
-                    console.rule("[bold cyan]💬 Agent Adda[/bold cyan]")
-                    console.print(f"[bold cyan]❓[/bold cyan] [white]{query}[/white]")
                     with console.status("[bold yellow]Agent thinking…[/bold yellow]"):
                         response = _run_agent_query(query)
-                    console.print(f"[bold green]🤖[/bold green] {response}")
-                    console.rule()
+                    console.print(Align.center(_agent_response_panel(query, response)))
                     ts_str = datetime.now().strftime("%H:%M")
                     with _nlp_lock:
                         entry = {"query": query, "response": response, "ts": ts_str}
