@@ -16,7 +16,13 @@ import json
 import os
 import re
 import time
+from pathlib import Path
 from typing import Any
+
+from dotenv import load_dotenv
+
+# Load .env from project root (two levels up from terminal/)
+load_dotenv(Path(__file__).parent.parent / ".env")
 
 from .tools import call_tool, get_symbol_snapshot, openai_tool_schemas, resolve_symbol
 
