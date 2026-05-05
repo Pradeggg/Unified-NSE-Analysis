@@ -19,7 +19,6 @@ import io
 import json
 import queue
 import re
-import select
 import sqlite3
 import sys
 import threading
@@ -107,7 +106,22 @@ _nse_session: Optional[requests.Session] = None
 _nse_session_ts: float = 0.0          # epoch time session was last initialised
 _SESSION_TTL: float = 4 * 60          # re-handshake with NSE every 4 minutes
 
-# ── Price flash animation state ───────────────────────────────────────────────
+# ── Background stdin reader (non-blocking input without freezing the refresh loop) ──
+_input_queue: queue.Queue = queue.Queue()
+
+def _start_input_reader() -> None:
+    """Daemon thread that reads lines from stdin into _input_queue."""
+    def _reader():
+        while True:
+            try:
+                line = sys.stdin.readline()
+                if line:
+                    _input_queue.put(line.strip())
+            except Exception:
+                break
+    threading.Thread(target=_reader, daemon=True).start()
+
+
 _prev_prices:     dict[str, float] = {}   # key → last rendered price
 _flash_direction: dict[str, str]   = {}   # key → "up" | "dn"
 _flash_expires:   dict[str, float] = {}   # key → epoch when flash expires
@@ -1727,8 +1741,8 @@ def build_full_layout(indices: dict, signals: dict, last_update: str,
 
     # ── Outer two-column grid ────────────────────────────────────────────────
     outer = Table.grid(expand=True)
-    outer.add_column(ratio=4)          # left: main content
-    outer.add_column(min_width=38)     # right: sidebar, fixed width
+    outer.add_column(ratio=3)          # left: main content (75%)
+    outer.add_column(ratio=1)          # right: sidebar (25%), scales with terminal width
     outer.add_row(left, right)
     return outer
 
@@ -2353,6 +2367,7 @@ def main():
         return
 
     # Live refresh mode
+    _start_input_reader()          # background thread reads stdin → _input_queue
     with Live(console=console, screen=True, refresh_per_second=1) as live:
         indices, signals = {}, {}
         last_update      = "loading…"
@@ -2393,60 +2408,64 @@ def main():
                             nlp_hist=nlp_hist, nlp_pending=nlp_pending)
             live.update(layout)
 
-            # Non-blocking stdin: command mode dispatcher
-            ready = select.select([sys.stdin], [], [], 1.0)[0]
-            if ready:
-                raw = sys.stdin.readline().strip()
-                cmd_type, arg = _parse_input(raw)
-                if cmd_type == "ignore":
-                    pass
-                else:
-                    live.stop()
-                    if cmd_type == "nlp":
-                        query = arg
-                        with _nlp_lock:
-                            _nlp_state["pending"] = True
-                        console.rule("[bold cyan]💬 Agent Adda[/bold cyan]")
-                        console.print(f"[bold cyan]❓[/bold cyan] [white]{query}[/white]")
-                        with console.status("[bold yellow]Agent thinking…[/bold yellow]"):
-                            response = _run_agent_query(query)
-                        console.print(f"[bold green]🤖[/bold green] {response}")
-                        console.rule()
-                        console.print("\n[dim]Press Enter to return to terminal…[/dim]")
-                        sys.stdin.readline()
-                        ts_str = datetime.now().strftime("%H:%M")
-                        with _nlp_lock:
-                            entry = {"query": query, "response": response, "ts": ts_str}
-                            _nlp_history.append(entry)
-                            if len(_nlp_history) > _NLP_HISTORY_MAX:
-                                _nlp_history.pop(0)
-                            _nlp_state["pending"] = False
-                    elif cmd_type == "symbol":
-                        _show_symbol_drilldown(arg, hist, live_prices, db_data,
-                                               indices, sector_breadth)
-                        sys.stdin.readline()
-                    elif cmd_type == "health":
-                        _show_health_screen()
-                        sys.stdin.readline()
-                    elif cmd_type == "signal":
-                        _show_signal_screen(arg, signals)
-                        sys.stdin.readline()
-                    elif cmd_type == "sector":
-                        _show_sector_screen(arg, indices, sector_breadth)
-                        sys.stdin.readline()
-                    elif cmd_type == "portfolio":
-                        _show_portfolio_screen()
-                        sys.stdin.readline()
-                    elif cmd_type == "report":
-                        _show_report_screen()
-                        sys.stdin.readline()
-                    elif cmd_type == "refresh":
-                        next_refresh = 0.0  # trigger immediate refresh on next tick
-                    elif cmd_type == "eod":
-                        console.print("[yellow]Run:[/yellow] [bold]python daily_refresh.py[/bold] after market close")
-                        console.print("\n[dim]Press Enter to return to terminal…[/dim]")
-                        sys.stdin.readline()
-                    live.start()
+            # Command mode: check if user typed something (non-blocking queue poll)
+            try:
+                raw = _input_queue.get_nowait()
+            except queue.Empty:
+                raw = ""
+            time.sleep(1)
+
+            if not raw:
+                continue
+
+            cmd_type, arg = _parse_input(raw)
+            if cmd_type != "ignore":
+                live.stop()
+                if cmd_type == "nlp":
+                    query = arg
+                    with _nlp_lock:
+                        _nlp_state["pending"] = True
+                    console.rule("[bold cyan]💬 Agent Adda[/bold cyan]")
+                    console.print(f"[bold cyan]❓[/bold cyan] [white]{query}[/white]")
+                    with console.status("[bold yellow]Agent thinking…[/bold yellow]"):
+                        response = _run_agent_query(query)
+                    console.print(f"[bold green]🤖[/bold green] {response}")
+                    console.rule()
+                    console.print("\n[dim]Press Enter to return to terminal…[/dim]")
+                    sys.stdin.readline()
+                    ts_str = datetime.now().strftime("%H:%M")
+                    with _nlp_lock:
+                        entry = {"query": query, "response": response, "ts": ts_str}
+                        _nlp_history.append(entry)
+                        if len(_nlp_history) > _NLP_HISTORY_MAX:
+                            _nlp_history.pop(0)
+                        _nlp_state["pending"] = False
+                elif cmd_type == "symbol":
+                    _show_symbol_drilldown(arg, hist, live_prices, db_data,
+                                           indices, sector_breadth)
+                    sys.stdin.readline()
+                elif cmd_type == "health":
+                    _show_health_screen()
+                    sys.stdin.readline()
+                elif cmd_type == "signal":
+                    _show_signal_screen(arg, signals)
+                    sys.stdin.readline()
+                elif cmd_type == "sector":
+                    _show_sector_screen(arg, indices, sector_breadth)
+                    sys.stdin.readline()
+                elif cmd_type == "portfolio":
+                    _show_portfolio_screen()
+                    sys.stdin.readline()
+                elif cmd_type == "report":
+                    _show_report_screen()
+                    sys.stdin.readline()
+                elif cmd_type == "refresh":
+                    next_refresh = 0.0
+                elif cmd_type == "eod":
+                    console.print("[yellow]Run:[/yellow] [bold]python daily_refresh.py[/bold] after market close")
+                    console.print("\n[dim]Press Enter to return to terminal…[/dim]")
+                    sys.stdin.readline()
+                live.start()
 
 
 if __name__ == "__main__":
