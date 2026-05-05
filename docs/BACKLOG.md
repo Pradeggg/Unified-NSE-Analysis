@@ -171,7 +171,7 @@ Every external and internal data source the platform uses or will use. Items mar
 | P3-1 Causal Inference Model | ⏳ BLOCKED | — | Needs 6+ months of P0-1 signal data |
 | P3-2 Voice Briefing | 🔜 READY | — | `generate_voice_briefing.py`. Needs OpenAI TTS key. |
 | P3-3 Real-Time Mode | 💤 DEFERRED | — | Needs live NSE data subscription |
-| P3-4 Agent Adda Market Terminal | 🔜 READY | — | Terminal cockpit + controlled NLP query agent. Spec: `docs/superpowers/specs/2026-05-05-agent-adda-market-terminal-design.md` |
+| 🖥️ TERMINAL — P3-4 Agent Adda Market Terminal | 🔜 READY | — | Terminal cockpit + controlled NLP query agent. Spec: `docs/superpowers/specs/2026-05-05-agent-adda-market-terminal-design.md` |
 | **Phase 4 — Branch A: Advanced Screeners** | | | |
 | A1 Stage Analysis Screener | 🔜 READY | — | William O'Neil 4-stage classification; Stage 2 only buy zone |
 | A2 Darvas Box Breakout | 🔜 READY | — | Box top/bottom detection; breakout + volume confirmation |
@@ -1007,15 +1007,17 @@ response.stream_to_file(f"reports/briefing_{today}.mp3")
 Replace batch daily run with a streaming mode:
 - Intraday price updates every 15 minutes via Yahoo Finance (free, `yfinance`)
 - Re-score candidates when any stock crosses resistance or drops below stop
-- Push alert to terminal / desktop notification when actionable signal fires
+- Push alert to 🖥️ TERMINAL / desktop notification when actionable signal fires
 
 **Note:** Yahoo Finance 15-min data is free but rate-limited. NSE's official EODS data subscription (~₹2,000/month) needed for production intraday.
 
 ---
 
-### P3-4 — Agent Adda Market Terminal
+### 🖥️ TERMINAL — P3-4 — Agent Adda Market Terminal
 **Size:** XL  
 **Priority:** High (product shell for daily research workflow)
+
+**Terminal Workstream:** This is the umbrella backlog item for all terminal-first work. Any item marked **🖥️ TERMINAL** belongs to the command-line market cockpit and NLP query layer, not the HTML/PDF report pipeline.
 
 **Design spec:** `docs/superpowers/specs/2026-05-05-agent-adda-market-terminal-design.md`
 
@@ -1027,7 +1029,7 @@ Replace batch daily run with a streaming mode:
 **What to build:**  
 Create a terminal-first Indian markets cockpit for research and learning, branded as **Agent Adda - Market Intelligence Agent**. The terminal should combine market scanner, keyboard command workflow, natural-language query agent, symbol drilldown, portfolio awareness, report shortcuts, and data-health monitoring.
 
-**Core commands:**
+**🖥️ TERMINAL-TUI-1 — Core commands:**
 ```text
 STAGE2        Show Stage 2 / leadership setups
 BREAKOUTS     Show breakout candidates
@@ -1045,14 +1047,14 @@ ASK <query>   Run natural-language market research query
 /intraday <query>   Run NLP query using intraday/live SQLite tables
 ```
 
-**NLP query agent:**
+**🖥️ TERMINAL-AGENT-1 — NLP query agent:**
 - Add an **Agent Adda Query Agent** below the terminal input bar.
 - Support read-only research plus controlled safe tools.
 - Flow: data-mode detection → situation assessment → intent detection → entity resolution → tool plan → allowlisted tool execution → balanced response synthesis.
 - Use approved tools first; generated code is allowed only for read-only dataframe analysis against approved local files when deterministic tools cannot answer the request.
 - Standard response for stock questions: snapshot, technical setup, sector/index context, latest catalysts, risks/watch items, source trail, and no-investment-advice framing.
 
-**Data-mode routing:**
+**🖥️ TERMINAL-AGENT-2 — Data-mode routing:**
 - `/historical` uses EOD-loaded data only: `data/nse_sec_full_data.csv`, `data/nse_index_data.csv`, and latest tracker snapshot in `data/sector_rotation_tracker.db.stage_snapshots`.
 - `/intraday` uses intraday/live SQLite tables for price, OHLCV, technical indicators, screeners, calculations, and research context.
 - No prefix defaults to `/historical`, except when the user explicitly asks for live/current/today/now/intraday data; inferred intraday mode must be stated in the response.
@@ -1060,7 +1062,7 @@ ASK <query>   Run natural-language market research query
 - If intraday tables are missing or stale, the agent must state that clearly and ask whether to fall back to `/historical`; it must not silently mix modes for calculations.
 - Tool traces must include `data_mode` and source tables/files used.
 
-**V1 intent types:**
+**🖥️ TERMINAL-AGENT-3 — V1 intent types:**
 ```text
 stock_latest_brief
 stock_technical_setup
@@ -1073,7 +1075,7 @@ web_catalyst_search
 custom_readonly_analysis
 ```
 
-**Allowlisted tool categories:**
+**🖥️ TERMINAL-TOOLS-1 — Allowlisted tool categories:**
 - Entity tools: `resolve_symbol`, `resolve_index`, `resolve_sector`.
 - Market data tools: `get_symbol_snapshot`, `get_index_snapshot`, `get_sector_context`.
 - Technical tools: `get_technical_setup`, `run_screener_query`, `explain_setup_score`.
@@ -1083,7 +1085,7 @@ custom_readonly_analysis
 - Research tools: `search_latest_catalysts`, `summarize_sources`.
 - Fallback analysis: `run_readonly_dataframe_analysis`.
 
-**Agent safety rules:**
+**🖥️ TERMINAL-SAFETY-1 — Agent safety rules:**
 - No order placement or trading execution tools.
 - No arbitrary shell execution.
 - No write operations except logs/cache for query results.
@@ -1091,14 +1093,14 @@ custom_readonly_analysis
 - Every tool call is logged with timestamp, intent, inputs, output summary, and source freshness.
 - Response copy must avoid buy/sell recommendation language.
 
-**Screens to build:**
+**🖥️ TERMINAL-TUI-2 — Screens to build:**
 - **Scanner Home:** market regime, top sectors, top setups, risk flags, data-health strip.
 - **Symbol Drilldown:** `Setup | Fundamentals | Catalysts | Narrative | History`.
 - **Portfolio Cockpit:** held symbols, sector concentration, candidate overlap, watchlist badges.
 - **Data Health:** source freshness, last successful fetch, stale/missing/failed status.
 - **Reports:** open/copy latest sector rotation report, tracker report, generated CSVs, and PDF/HTML/MD artifacts.
 
-**Files to create / modify:**
+**🖥️ TERMINAL-FILES-1 — Files to create / modify:**
 - Create `terminal/app.py` as the main TUI entry point.
 - Create `terminal/screens/` for scanner, symbol, portfolio, health, and reports screens.
 - Create `terminal/services/` for scanner snapshot, symbol profile, portfolio state, report discovery, and data-health services.
@@ -1108,12 +1110,12 @@ custom_readonly_analysis
 - Keep `nse_terminal.py` as a thin launcher or compatibility wrapper.
 - Reuse existing engines instead of duplicating analytics logic.
 
-**Dependencies:**
+**🖥️ TERMINAL-DEPS-1 — Dependencies:**
 - Existing CSV/data outputs from daily refresh.
 - Existing report generation pipeline.
 - Public/free data first; broker/API live-feed integration deferred behind adapter interfaces.
 
-**Acceptance criteria:**
+**🖥️ TERMINAL-ACCEPTANCE — Acceptance criteria:**
 - `python nse_terminal.py` opens the terminal cockpit without requiring paid data.
 - Scanner home renders from cached data even if one external data source is stale or unavailable.
 - `STAGE2`, `BREAKOUTS`, `SECTOR <name>`, `<SYMBOL>`, `PORT`, `HEALTH`, `REPORT`, `REFRESH`, and `EOD` commands execute without crashing.
@@ -2340,7 +2342,7 @@ SPRINT 7: Synthesis + Flow Intelligence
 
 SPRINT 8: Learning + Futuristic
   P2-3  Learning Loop                    [L] — 90 days signal data accumulated by now
-  P3-4  Agent Adda Market Terminal       [XL] — terminal cockpit over existing engines
+  🖥️ TERMINAL — P3-4  Agent Adda Market Terminal       [XL] — terminal cockpit over existing engines
   P3-2  Voice Briefing                   [M] — OpenAI TTS
   P3-1  Causal Inference Model           [XL] — 6+ months signal data required
   P3-3  Real-Time Mode                   [XL]
