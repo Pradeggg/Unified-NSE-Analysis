@@ -595,6 +595,133 @@ def search_latest_catalysts(symbol: str, max_results: int = 5) -> dict:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Portfolio tools
+# ─────────────────────────────────────────────────────────────────────────────
+
+HOLDINGS_CSV = ROOT / "portfolio-analyzer" / "output" / "holdings.csv"
+
+
+def get_portfolio_exposure(sector: str = None) -> dict:
+    """Return portfolio holdings summary, optionally filtered by sector.
+
+    Returns total_stocks, sector_counts, top_holdings.  If sector is given,
+    also returns filtered symbol list for that sector.
+    """
+    if not HOLDINGS_CSV.exists():
+        return {"error": f"Holdings file not found: {HOLDINGS_CSV}"}
+    try:
+        df = pd.read_csv(HOLDINGS_CSV)
+        df.columns = df.columns.str.lower()
+        sym_col = "symbol" if "symbol" in df.columns else df.columns[0]
+        val_col = next(
+            (c for c in ["value_rs", "value", "current_value"] if c in df.columns), None
+        )
+        symbols = df[sym_col].str.upper().tolist()
+
+        # Sector mapping from DB
+        sector_counts: dict[str, int] = {}
+        sym_sector: dict[str, str] = {}
+        if DB_PATH.exists():
+            conn = _db_conn()
+            placeholders = ",".join("?" * len(symbols))
+            rows = conn.execute(
+                f"SELECT symbol, sector FROM stage_snapshots "
+                f"WHERE symbol IN ({placeholders}) "
+                f"GROUP BY symbol ORDER BY snapshot_date DESC",
+                symbols,
+            ).fetchall()
+            conn.close()
+            sym_sector = {r[0]: (r[1] or "Unknown") for r in rows}
+        for sym in symbols:
+            sec = sym_sector.get(sym, "Unknown")
+            sector_counts[sec] = sector_counts.get(sec, 0) + 1
+
+        # Top 10 by value
+        top_holdings: list[dict] = []
+        if val_col and val_col in df.columns:
+            df[val_col] = pd.to_numeric(df[val_col], errors="coerce").fillna(0)
+            for _, row in df.nlargest(10, val_col).iterrows():
+                top_holdings.append({
+                    "symbol": row[sym_col],
+                    "value":  round(float(row[val_col]), 2),
+                    "sector": sym_sector.get(str(row[sym_col]).upper(), "—"),
+                })
+
+        result: dict[str, Any] = {
+            "total_stocks":  len(df),
+            "sector_counts": sector_counts,
+            "top_holdings":  top_holdings,
+        }
+        if sector:
+            result["filtered_by_sector"] = sector
+            result["sector_symbols"] = [
+                sym for sym in symbols
+                if sector.lower() in sym_sector.get(sym, "").lower()
+            ]
+        return result
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def find_portfolio_overlap(screener: str = "stage2") -> dict:
+    """Find portfolio holdings that also appear in a DB screener result.
+
+    screener: 'stage2' | 'supertrend_buy' | 'all'
+    Returns overlap_count, overlapping_symbols with stage/signal data.
+    """
+    if not HOLDINGS_CSV.exists():
+        return {"error": f"Holdings file not found: {HOLDINGS_CSV}"}
+    if not DB_PATH.exists():
+        return {"error": "Stage snapshots DB not found"}
+    try:
+        df = pd.read_csv(HOLDINGS_CSV)
+        df.columns = df.columns.str.lower()
+        sym_col = "symbol" if "symbol" in df.columns else df.columns[0]
+        portfolio_symbols = set(df[sym_col].str.upper().tolist())
+
+        conn = _db_conn()
+        if screener == "stage2":
+            rows = conn.execute(
+                "SELECT symbol, stage, investment_score, trading_signal FROM stage_snapshots "
+                "WHERE stage='STAGE_2' "
+                "AND snapshot_date=(SELECT MAX(snapshot_date) FROM stage_snapshots)"
+            ).fetchall()
+        elif screener == "supertrend_buy":
+            rows = conn.execute(
+                "SELECT symbol, stage, investment_score, trading_signal FROM stage_snapshots "
+                "WHERE supertrend_state='BUY' "
+                "AND snapshot_date=(SELECT MAX(snapshot_date) FROM stage_snapshots)"
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT symbol, stage, investment_score, trading_signal FROM stage_snapshots "
+                "WHERE snapshot_date=(SELECT MAX(snapshot_date) FROM stage_snapshots)"
+            ).fetchall()
+        conn.close()
+
+        screener_map = {r[0]: r for r in rows}
+        overlap = [
+            {
+                "symbol":          sym,
+                "stage":           screener_map[sym][1],
+                "investment_score": screener_map[sym][2],
+                "trading_signal":  screener_map[sym][3],
+            }
+            for sym in portfolio_symbols
+            if sym in screener_map
+        ]
+        return {
+            "screener":          screener,
+            "portfolio_count":   len(portfolio_symbols),
+            "screener_count":    len(screener_map),
+            "overlap_count":     len(overlap),
+            "overlapping_symbols": overlap,
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Tool registry — name → (function, description, param_schema)
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -661,6 +788,32 @@ TOOL_REGISTRY: dict[str, Any] = {
                 "max_results": {"type": "integer", "default": 5},
             },
             "required": ["symbol"],
+        },
+    ),
+    "get_portfolio_exposure": (
+        get_portfolio_exposure,
+        "Return portfolio holdings summary (total stocks, sector distribution, top holdings). Optionally filter by sector.",
+        {
+            "type": "object",
+            "properties": {
+                "sector": {"type": "string", "description": "Optional sector name to filter holdings"},
+            },
+            "required": [],
+        },
+    ),
+    "find_portfolio_overlap": (
+        find_portfolio_overlap,
+        "Find portfolio holdings that also appear in a screener (stage2, supertrend_buy, all)",
+        {
+            "type": "object",
+            "properties": {
+                "screener": {
+                    "type": "string",
+                    "enum": ["stage2", "supertrend_buy", "all"],
+                    "default": "stage2",
+                },
+            },
+            "required": [],
         },
     ),
 }

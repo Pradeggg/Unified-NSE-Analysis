@@ -409,6 +409,11 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict]) -> str:
 # Main Agent class
 # ─────────────────────────────────────────────────────────────────────────────
 
+_INTRADAY_KEYWORDS: frozenset[str] = frozenset(
+    {"live", "current", "today", "now", "intraday", "real-time", "realtime"}
+)
+
+
 class Agent:
     """Agent Adda NLP Query Agent."""
 
@@ -422,28 +427,62 @@ class Agent:
         )
 
     def query(self, user_input: str, show_trace: bool = False) -> dict:
-        """Process a user query. Returns {"answer": str, "trace": list, "backend": str}."""
+        """Process a user query. Returns {"answer": str, "trace": list, "backend": str}.
+
+        Supports optional prefixes:
+          /historical <query>  — force EOD / CSV mode
+          /intraday <query>    — force live API mode
+        Auto-detects intraday intent from keywords if no prefix given.
+        """
+        # ── Determine data mode ───────────────────────────────────────────────
+        clean_input = user_input
+        mode = "historical"
+        if user_input.startswith("/historical "):
+            mode        = "historical"
+            clean_input = user_input[len("/historical "):].strip()
+        elif user_input.startswith("/intraday "):
+            mode        = "intraday"
+            clean_input = user_input[len("/intraday "):].strip()
+        else:
+            words = set(re.split(r"\W+", user_input.lower()))
+            if words & _INTRADAY_KEYWORDS:
+                mode = "intraday"
+
+        mode_context = (
+            f"Data mode: {mode}. "
+            f"Use {'live NSE API data' if mode == 'intraday' else 'EOD CSV and DB snapshot data'}."
+        )
+        mode_suffix = (
+            f"\n\n_Mode: {mode.title()} | Sources: "
+            f"{'NSE live API' if mode == 'intraday' else 'EOD CSV + DB snapshot'}_"
+        )
+
         trace: list[dict] = []
 
         # ── LLM path ──────────────────────────────────────────────────────────
         if self.backend is not None:
-            return self._llm_query(user_input, show_trace)
+            result = self._llm_query(clean_input, show_trace, mode_context)
+            result["answer"] = result.get("answer", "") + mode_suffix
+            return result
 
         # ── Keyword fallback path ──────────────────────────────────────────────
-        intent_plan = _keyword_intent(user_input)
+        intent_plan = _keyword_intent(clean_input)
         trace.append({"step": "intent", "result": intent_plan})
 
         tool_results = _execute_plan(intent_plan["plan"])
         trace.extend(tool_results)
 
-        answer = _synthesize_no_llm(intent_plan["intent"], tool_results)
+        answer = _synthesize_no_llm(intent_plan["intent"], tool_results) + mode_suffix
         return {"answer": answer, "trace": trace, "backend": self.backend_name,
                 "intent": intent_plan["intent"]}
 
-    def _llm_query(self, user_input: str, show_trace: bool) -> dict:
+    def _llm_query(self, user_input: str, show_trace: bool,
+                   mode_context: str = "") -> dict:
         """Full LLM-powered agentic query loop."""
+        system_content = (f"{mode_context}\n\n{SYSTEM_PROMPT}" if mode_context
+                          else SYSTEM_PROMPT)
         messages = [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": system_content},
             {"role": "user",   "content": user_input},
         ]
         tool_results: list[dict] = []

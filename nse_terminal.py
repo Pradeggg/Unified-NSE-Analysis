@@ -18,6 +18,7 @@ import argparse
 import io
 import json
 import queue
+import re
 import select
 import sqlite3
 import sys
@@ -1522,7 +1523,11 @@ def build_status_bar(last_update: str, hist_rows: int, signals: dict) -> Panel:
         f"[magenta]DARVAS:{len(signals.get('darvas_setups',[]))}[/magenta]",
         f"[bright_cyan]52MOM:{len(signals.get('momentum_52w',[]))}[/bright_cyan]",
     ])
-    txt = f"[dim]Last update:[/dim] [white]{last_update}[/white]  │  {counts}  │  [dim]Price history: {hist_rows:,} rows[/dim]"
+    hint = "[dim]/ query  │  SYMBOL drilldown  │  HEALTH  │  PORT  │  REFRESH[/dim]"
+    txt = (
+        f"[dim]Last update:[/dim] [white]{last_update}[/white]  │  {counts}  │  "
+        f"[dim]Price history: {hist_rows:,} rows[/dim]  │  {hint}"
+    )
     return Panel(txt, height=3, style="on grey15")
 
 
@@ -1790,6 +1795,500 @@ def refresh_data(top_n: int) -> tuple[dict, dict, str, int, pd.DataFrame, dict, 
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Bloomberg-style command mode helpers
+# ─────────────────────────────────────────────────────────────────────────────
+
+_CMD_KEYWORDS: frozenset[str] = frozenset({
+    "STAGE2", "BREAKOUTS", "VCP", "SUPERTREND", "DARVAS", "52W",
+    "HEALTH", "PORT", "PORTFOLIO", "REPORT", "REFRESH", "EOD",
+})
+_SYMBOL_RE = re.compile(r"^[A-Z][A-Z0-9&-]{0,19}$")
+
+
+def _parse_input(raw: str) -> tuple[str, str]:
+    """Classify terminal input into (cmd_type, arg).
+
+    Returns one of:
+      ('nlp', query_text) — route to Agent Adda
+      ('signal', SIGNAL)  — show full signal screen
+      ('sector', NAME)    — sector drilldown
+      ('health', '')      — data health screen
+      ('portfolio', '')   — portfolio screen
+      ('report', '')      — reports screen
+      ('refresh', '')     — force immediate data refresh
+      ('eod', '')         — print EOD run hint
+      ('symbol', SYMBOL)  — stock drilldown
+      ('ignore', '')      — empty / whitespace only
+    """
+    raw = raw.strip()
+    if not raw:
+        return ("ignore", "")
+
+    # /query prefix always → NLP (strip leading slashes)
+    if raw.startswith("/"):
+        query_text = raw.lstrip("/").strip()
+        return ("nlp", query_text) if query_text else ("ignore", "")
+
+    upper = raw.upper()
+
+    if upper in ("STAGE2", "BREAKOUTS", "VCP", "SUPERTREND", "DARVAS", "52W"):
+        return ("signal", upper)
+
+    if upper.startswith("SECTOR "):
+        sector = raw[7:].strip()
+        return ("sector", sector.upper()) if sector else ("ignore", "")
+
+    if upper == "HEALTH":
+        return ("health", "")
+    if upper in ("PORT", "PORTFOLIO"):
+        return ("portfolio", "")
+    if upper == "REPORT":
+        return ("report", "")
+    if upper == "REFRESH":
+        return ("refresh", "")
+    if upper == "EOD":
+        return ("eod", "")
+
+    # Bare NSE symbol: matches regex and not a command keyword
+    if _SYMBOL_RE.match(upper) and upper not in _CMD_KEYWORDS:
+        return ("symbol", upper)
+
+    # Everything else → NLP
+    return ("nlp", raw)
+
+
+def _load_symbol_db_extra(symbol: str) -> dict:
+    """Load richer DB snapshot fields for a single symbol (for drilldown)."""
+    if not DB_PATH.exists():
+        return {}
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        row = conn.execute(
+            "SELECT stage, stage_score, investment_score, sector, trading_signal, "
+            "relative_strength, supertrend_state, rsi "
+            "FROM stage_snapshots WHERE symbol=? "
+            "AND snapshot_date=(SELECT MAX(snapshot_date) FROM stage_snapshots)",
+            (symbol,),
+        ).fetchone()
+        conn.close()
+        if row:
+            return {
+                "stage": row[0],
+                "stage_score": row[1],
+                "investment_score": row[2],
+                "sector": row[3],
+                "trading_signal": row[4],
+                "relative_strength": row[5],
+                "supertrend_state": row[6],
+                "rsi_db": row[7],
+            }
+    except Exception:
+        pass
+    return {}
+
+
+def _show_symbol_drilldown(
+    symbol: str,
+    hist: pd.DataFrame,
+    live_prices: dict,
+    db_data: dict,
+    indices: dict,
+    sector_breadth: dict,
+) -> None:
+    """Full Bloomberg-style symbol drilldown printed to console."""
+    console.rule(f"[bold cyan]📊 {symbol}[/bold cyan]")
+
+    grp = hist[hist["SYMBOL"] == symbol].copy() if not hist.empty else pd.DataFrame()
+    db  = {**db_data.get(symbol, {}), **_load_symbol_db_extra(symbol)}
+
+    # ── Section A: Price Header ───────────────────────────────────────────────
+    if not grp.empty:
+        grp = grp.sort_values("TIMESTAMP")
+        last_close = float(grp["CLOSE"].iloc[-1])
+        prev_close = float(grp["CLOSE"].iloc[-2]) if len(grp) > 1 else last_close
+        price  = live_prices.get(symbol) or last_close
+        chg_pct = ((price - prev_close) / prev_close * 100) if prev_close else 0
+        arrow   = "▲" if chg_pct >= 0 else "▼"
+        color   = "green" if chg_pct >= 0 else "red"
+
+        open_p = float(grp["OPEN"].iloc[-1])
+        high_p = float(grp["HIGH"].iloc[-1])
+        low_p  = float(grp["LOW"].iloc[-1])
+
+        hist_252 = grp.tail(252)
+        w52_high = float(hist_252["HIGH"].max())
+        w52_low  = float(hist_252["LOW"].min())
+
+        console.print(
+            f"  [bold white]₹{price:,.2f}[/bold white]  "
+            f"[{color}]{arrow} {chg_pct:+.2f}%[/{color}]  "
+            f"[dim]O:{open_p:.2f}  H:{high_p:.2f}  L:{low_p:.2f}[/dim]  "
+            f"[dim]52W H:[/dim][green]{w52_high:.2f}[/green]  "
+            f"[dim]52W L:[/dim][red]{w52_low:.2f}[/red]"
+        )
+    else:
+        console.print(f"[yellow]No price history found for {symbol}[/yellow]")
+    console.print()
+
+    # ── Section B: Technical Indicators ──────────────────────────────────────
+    tech_t = Table(
+        title="📈 Technical Indicators",
+        show_header=True, header_style="bold magenta", box=box.SIMPLE,
+    )
+    tech_t.add_column("Indicator", style="bold")
+    tech_t.add_column("Value")
+    tech_t.add_column("Signal")
+
+    if not grp.empty:
+        rsi_val = compute_rsi(grp["CLOSE"])
+        adx_val = compute_adx(grp)
+        rsi_c   = _rsi_color(rsi_val)
+        tech_t.add_row("RSI(14)",  f"[{rsi_c}]{rsi_val:.1f}[/{rsi_c}]",
+                       "Overbought" if rsi_val > 70 else ("Oversold" if rsi_val < 30 else "Neutral"))
+        tech_t.add_row("ADX(14)",  f"{adx_val:.1f}",
+                       "[green]Trending[/green]" if adx_val > 25 else "Ranging")
+
+    st_state  = db.get("supertrend_state") or db.get("st_state") or "—"
+    stage     = db.get("stage") or "—"
+    rs_raw    = db.get("relative_strength") or db.get("rs")
+    rs_str    = f"{float(rs_raw) * 100:.1f}" if rs_raw is not None else "—"
+    inv_score = db.get("investment_score")
+    inv_str   = f"{float(inv_score):.1f}" if inv_score is not None else "—"
+
+    tech_t.add_row("Supertrend", _st_color(st_state) if st_state != "—" else "—", "")
+    tech_t.add_row("Stage",      str(stage), "")
+    tech_t.add_row("RS Score",   rs_str, "")
+    tech_t.add_row("Inv. Score", inv_str, "")
+    console.print(tech_t)
+    console.print()
+
+    # ── Section C: Sector Context ─────────────────────────────────────────────
+    sector_name = db.get("sector") or "—"
+    console.print(f"[bold cyan]🏭 Sector:[/bold cyan] [white]{sector_name}[/white]")
+    if sector_name != "—":
+        sb = sector_breadth.get(sector_name, {})
+        pct50 = sb.get("pct_above_50dma")
+        if pct50 is not None:
+            sb_c = "green" if pct50 > 60 else ("yellow" if pct50 > 40 else "red")
+            console.print(f"  [dim]Sector %>50DMA:[/dim] [{sb_c}]{pct50:.1f}%[/{sb_c}]")
+        # Sector index performance
+        for idx_sector_label, idx_key in SECTOR_INDEX_MAP.items():
+            if sector_name.lower() in idx_sector_label.lower():
+                for iname, idata in indices.items():
+                    if idx_key.lower() in idata.get("index", iname).lower():
+                        try:
+                            idx_chg = float(idata.get("percentChange") or idata.get("pChange") or 0)
+                        except (TypeError, ValueError):
+                            idx_chg = 0
+                        ic = "green" if idx_chg >= 0 else "red"
+                        console.print(f"  [dim]{idx_key}:[/dim] [{ic}]{idx_chg:+.2f}%[/{ic}]")
+                        break
+                break
+    console.print()
+
+    # ── Section D: 20-Day Price Sparkline ────────────────────────────────────
+    if not grp.empty:
+        closes_20 = grp["CLOSE"].tail(20).tolist()
+        console.print("[bold cyan]📉 20-Day:[/bold cyan] ", end="")
+        console.print(_sparkline(closes_20))
+    console.print()
+
+    # ── Section E: Trading Signals ────────────────────────────────────────────
+    active: list[str] = []
+    st_lower = str(st_state).lower()
+    if st_lower in ("buy", "bullish"):
+        active.append("[green]✅ Supertrend BUY[/green]")
+    if str(stage).upper() in ("STAGE_2", "2", "STAGE 2"):
+        active.append("[gold1]✅ Stage 2 Leader[/gold1]")
+    ts_signal = db.get("trading_signal") or ""
+    if "buy" in str(ts_signal).lower():
+        active.append(f"[cyan]✅ Signal: {ts_signal}[/cyan]")
+
+    if active:
+        console.print("[bold cyan]🚦 Active Signals:[/bold cyan]")
+        for sig in active:
+            console.print(f"  {sig}")
+    else:
+        console.print("[dim]No active screener signals in DB snapshot.[/dim]")
+    console.print()
+    console.print("[dim]Press Enter to return…[/dim]")
+
+
+def _show_health_screen() -> None:
+    """Display data-source freshness / health status."""
+    console.rule("[bold cyan]🏥 Data Health[/bold cyan]")
+
+    t = Table(show_header=True, header_style="bold cyan", box=box.SIMPLE, expand=False)
+    t.add_column("Source", style="bold")
+    t.add_column("File / Table")
+    t.add_column("Last Updated")
+    t.add_column("Age")
+    t.add_column("Status")
+
+    now_dt = datetime.now()
+
+    def _row(source: str, path_str: str, ts: Optional[datetime]) -> None:
+        if ts is None:
+            t.add_row(source, path_str, "[red]missing[/red]", "—", "[red]❌ MISSING[/red]")
+            return
+        age_secs = (now_dt - ts).total_seconds()
+        days = age_secs / 86400
+        age_str = f"{days:.1f}d" if days >= 1 else f"{age_secs / 3600:.1f}h"
+        if days < 1:
+            status = "[green]✅ Fresh[/green]"
+        elif days < 3:
+            status = "[yellow]⚠️  Stale[/yellow]"
+        else:
+            status = "[red]❌ Old[/red]"
+        t.add_row(source, path_str, ts.strftime("%Y-%m-%d %H:%M"), age_str, status)
+
+    # Price history CSV
+    if STOCK_CSV.exists():
+        _row("Price History CSV", "data/nse_sec_full_data.csv",
+             datetime.fromtimestamp(STOCK_CSV.stat().st_mtime))
+    else:
+        _row("Price History CSV", "data/nse_sec_full_data.csv", None)
+
+    # Index history CSV
+    if INDEX_CSV.exists():
+        _row("Index History CSV", "data/nse_index_data.csv",
+             datetime.fromtimestamp(INDEX_CSV.stat().st_mtime))
+    else:
+        _row("Index History CSV", "data/nse_index_data.csv", None)
+
+    # Stage snapshot DB
+    if DB_PATH.exists():
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            row  = conn.execute("SELECT MAX(snapshot_date) FROM stage_snapshots").fetchone()
+            conn.close()
+            if row and row[0]:
+                snap_ts = datetime.strptime(row[0], "%Y-%m-%d")
+                _row("Stage Snapshot DB", "data/sector_rotation_tracker.db", snap_ts)
+            else:
+                _row("Stage Snapshot DB", "data/sector_rotation_tracker.db", None)
+        except Exception:
+            _row("Stage Snapshot DB", "data/sector_rotation_tracker.db", None)
+    else:
+        _row("Stage Snapshot DB", "data/sector_rotation_tracker.db", None)
+
+    # NSE live session
+    if _nse_session_ts > 0:
+        sess_ts  = datetime.fromtimestamp(_nse_session_ts)
+        sess_age = time.time() - _nse_session_ts
+        status   = "[green]✅ Active[/green]" if sess_age < _SESSION_TTL else "[yellow]⚠️  Expired[/yellow]"
+        t.add_row("NSE Session", "live API", sess_ts.strftime("%H:%M:%S"),
+                  f"{int(sess_age)}s", status)
+    else:
+        t.add_row("NSE Session", "live API", "[dim]not started[/dim]", "—", "[dim]—[/dim]")
+
+    console.print(t)
+    console.print()
+    console.print("[dim]Press Enter to return…[/dim]")
+
+
+def _show_signal_screen(signal_name: str, signals: dict) -> None:
+    """Display full screener results for a signal command."""
+    _SIGNAL_MAP: dict[str, list[str]] = {
+        "STAGE2":     ["stage2_leaders"],
+        "BREAKOUTS":  ["breakouts_52w", "breakouts_20d"],
+        "VCP":        ["vcp_setups"],
+        "SUPERTREND": ["supertrend_buy"],
+        "DARVAS":     ["darvas_setups"],
+        "52W":        ["momentum_52w"],
+    }
+    keys  = _SIGNAL_MAP.get(signal_name.upper(), [])
+    items: list[dict] = []
+    for k in keys:
+        items.extend(signals.get(k, []))
+
+    console.rule(f"[bold cyan]{signal_name}  —  {len(items)} stocks[/bold cyan]")
+
+    if not items:
+        console.print(f"[yellow]No {signal_name} signals currently active.[/yellow]")
+        console.print()
+        console.print("[dim]Press Enter to return…[/dim]")
+        return
+
+    sig_t = Table(show_header=True, header_style="bold cyan", box=box.SIMPLE)
+    cols = list(items[0].keys())
+    for c in cols:
+        sig_t.add_column(str(c).upper(), overflow="fold")
+    for item in items:
+        sig_t.add_row(*[str(item.get(c, "—")) for c in cols])
+
+    console.print(sig_t)
+    console.print()
+    console.print("[dim]Press Enter to return…[/dim]")
+
+
+def _show_portfolio_screen() -> None:
+    """Display portfolio holdings summary."""
+    holdings_path = ROOT / "portfolio-analyzer" / "output" / "holdings.csv"
+    summary_path  = ROOT / "portfolio-analyzer" / "output" / "portfolio_summary.json"
+
+    console.rule("[bold cyan]💼 Portfolio[/bold cyan]")
+
+    if not holdings_path.exists():
+        console.print(f"[red]Holdings file not found: {holdings_path}[/red]")
+        console.print()
+        console.print("[dim]Press Enter to return…[/dim]")
+        return
+
+    try:
+        df = pd.read_csv(holdings_path)
+    except Exception as e:
+        console.print(f"[red]Error reading holdings: {e}[/red]")
+        console.print()
+        console.print("[dim]Press Enter to return…[/dim]")
+        return
+
+    df.columns = df.columns.str.lower()
+    sym_col = "symbol"   if "symbol"   in df.columns else df.columns[0]
+    qty_col = next((c for c in ["quantity", "shares", "qty"] if c in df.columns), None)
+    val_col = next((c for c in ["value_rs", "value", "current_value"] if c in df.columns), None)
+
+    console.print(f"[bold white]Total Holdings:[/bold white] {len(df)} stocks")
+    console.print()
+
+    # Sector distribution from JSON summary (if exists)
+    if summary_path.exists():
+        try:
+            summary = json.loads(summary_path.read_text())
+            sec_dist = summary.get("sector_distribution", {})
+            if sec_dist:
+                sec_t = Table(title="Sector Distribution", show_header=True,
+                              header_style="bold magenta", box=box.SIMPLE)
+                sec_t.add_column("Sector")
+                sec_t.add_column("Count",  justify="right")
+                sec_t.add_column("Value ₹", justify="right")
+                for sec_name, sdata in sec_dist.items():
+                    sec_t.add_row(
+                        sec_name,
+                        str(sdata.get("count", "—")),
+                        f"₹{float(sdata['value']):,.0f}" if sdata.get("value") else "—",
+                    )
+                console.print(sec_t)
+                console.print()
+        except Exception:
+            pass
+
+    # Top 10 holdings by value
+    if val_col and val_col in df.columns:
+        df[val_col] = pd.to_numeric(df[val_col], errors="coerce").fillna(0)
+        top10 = df.nlargest(10, val_col)
+    else:
+        top10 = df.head(10)
+
+    top_t = Table(title="Top 10 Holdings by Value", show_header=True,
+                  header_style="bold cyan", box=box.SIMPLE)
+    top_t.add_column("Symbol", style="bold")
+    if qty_col and qty_col in df.columns:
+        top_t.add_column("Qty", justify="right")
+    if val_col and val_col in df.columns:
+        top_t.add_column("Value ₹", justify="right")
+
+    for _, row in top10.iterrows():
+        cells = [str(row.get(sym_col, "—"))]
+        if qty_col and qty_col in df.columns:
+            cells.append(str(row.get(qty_col, "—")))
+        if val_col and val_col in df.columns:
+            v = row.get(val_col, 0)
+            cells.append(f"₹{float(v):,.2f}" if v else "—")
+        top_t.add_row(*cells)
+
+    console.print(top_t)
+    console.print()
+    console.print("[dim]Press Enter to return…[/dim]")
+
+
+def _show_sector_screen(sector_name: str, indices: dict, sector_breadth: dict) -> None:
+    """Display sector breadth and index performance."""
+    console.rule(f"[bold cyan]🏭 Sector: {sector_name}[/bold cyan]")
+
+    sb = sector_breadth.get(sector_name, {})
+    if not sb:
+        for key in sector_breadth:
+            if sector_name.lower() in key.lower():
+                sb = sector_breadth[key]
+                sector_name = key
+                break
+
+    if sb:
+        sb_t = Table(show_header=True, header_style="bold cyan", box=box.SIMPLE)
+        sb_t.add_column("Metric")
+        sb_t.add_column("Value")
+        for metric, label in [
+            ("pct_above_50dma",  "% Above 50DMA"),
+            ("pct_above_200dma", "% Above 200DMA"),
+            ("total_stocks",     "Total Stocks"),
+            ("stage2_count",     "Stage 2 Count"),
+            ("stage4_count",     "Stage 4 Count"),
+        ]:
+            val = sb.get(metric)
+            if val is None:
+                continue
+            if "pct" in metric:
+                color = "green" if float(val) > 60 else ("yellow" if float(val) > 40 else "red")
+                sb_t.add_row(label, f"[{color}]{val:.1f}%[/{color}]")
+            else:
+                sb_t.add_row(label, str(val))
+        top_stocks = sb.get("top_stocks", [])
+        if top_stocks:
+            sb_t.add_row("Top Stocks", ", ".join(str(s) for s in top_stocks[:8]))
+        console.print(sb_t)
+    else:
+        console.print(f"[yellow]No sector breadth data for '{sector_name}'.[/yellow]")
+        if sector_breadth:
+            console.print(f"Available: {', '.join(list(sector_breadth.keys())[:8])}")
+
+    # Matching index performance
+    for idx_label, idx_key in SECTOR_INDEX_MAP.items():
+        if sector_name.lower() in idx_label.lower():
+            for iname, idata in indices.items():
+                lbl = idata.get("index", iname)
+                if idx_key.lower() in lbl.lower():
+                    try:
+                        chg = float(idata.get("percentChange") or idata.get("pChange") or 0)
+                    except (TypeError, ValueError):
+                        chg = 0
+                    ic = "green" if chg >= 0 else "red"
+                    console.print(f"\n[bold white]{lbl}:[/bold white] [{ic}]{chg:+.2f}%[/{ic}]")
+                    break
+            break
+    console.print()
+    console.print("[dim]Press Enter to return…[/dim]")
+
+
+def _show_report_screen() -> None:
+    """List available generated reports."""
+    console.rule("[bold cyan]📄 Reports[/bold cyan]")
+    reports_dir = ROOT / "reports"
+    if not reports_dir.exists():
+        console.print("[yellow]reports/ directory not found.[/yellow]")
+        console.print()
+        console.print("[dim]Press Enter to return…[/dim]")
+        return
+
+    files = sorted(reports_dir.glob("*"), key=lambda f: f.stat().st_mtime, reverse=True)[:20]
+    if not files:
+        console.print("[yellow]No reports found.[/yellow]")
+    else:
+        rep_t = Table(show_header=True, header_style="bold cyan", box=box.SIMPLE)
+        rep_t.add_column("File")
+        rep_t.add_column("Size", justify="right")
+        rep_t.add_column("Last Modified")
+        for f in files:
+            st   = f.stat()
+            size = f"{st.st_size / 1024:.1f} KB"
+            mtime = datetime.fromtimestamp(st.st_mtime).strftime("%Y-%m-%d %H:%M")
+            rep_t.add_row(f.name, size, mtime)
+        console.print(rep_t)
+    console.print()
+    console.print("[dim]Press Enter to return…[/dim]")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Entry point
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -1798,7 +2297,10 @@ def _run_agent_query(query: str) -> str:
     try:
         from terminal.agent import Agent
         agent = Agent()
-        return agent.query(query, show_trace=False)
+        result = agent.query(query, show_trace=False)
+        if isinstance(result, dict):
+            return result.get("answer", str(result))
+        return str(result)
     except Exception as e:
         return f"Agent error: {e}"
 
@@ -1891,30 +2393,59 @@ def main():
                             nlp_hist=nlp_hist, nlp_pending=nlp_pending)
             live.update(layout)
 
-            # Non-blocking stdin: user types "/query" + Enter to invoke Agent Adda
+            # Non-blocking stdin: command mode dispatcher
             ready = select.select([sys.stdin], [], [], 1.0)[0]
             if ready:
-                raw   = sys.stdin.readline().strip()
-                query = raw.lstrip("/").strip()
-                if query:
-                    with _nlp_lock:
-                        _nlp_state["pending"] = True
+                raw = sys.stdin.readline().strip()
+                cmd_type, arg = _parse_input(raw)
+                if cmd_type == "ignore":
+                    pass
+                else:
                     live.stop()
-                    console.rule("[bold cyan]💬 Agent Adda[/bold cyan]")
-                    console.print(f"[bold cyan]❓[/bold cyan] [white]{query}[/white]")
-                    with console.status("[bold yellow]Agent thinking…[/bold yellow]"):
-                        response = _run_agent_query(query)
-                    console.print(f"[bold green]🤖[/bold green] {response}")
-                    console.rule()
-                    console.print("[dim]Press Enter to return to terminal…[/dim]")
-                    sys.stdin.readline()
-                    ts_str = datetime.now().strftime("%H:%M")
-                    with _nlp_lock:
-                        entry = {"query": query, "response": response, "ts": ts_str}
-                        _nlp_history.append(entry)
-                        if len(_nlp_history) > _NLP_HISTORY_MAX:
-                            _nlp_history.pop(0)
-                        _nlp_state["pending"] = False
+                    if cmd_type == "nlp":
+                        query = arg
+                        with _nlp_lock:
+                            _nlp_state["pending"] = True
+                        console.rule("[bold cyan]💬 Agent Adda[/bold cyan]")
+                        console.print(f"[bold cyan]❓[/bold cyan] [white]{query}[/white]")
+                        with console.status("[bold yellow]Agent thinking…[/bold yellow]"):
+                            response = _run_agent_query(query)
+                        console.print(f"[bold green]🤖[/bold green] {response}")
+                        console.rule()
+                        console.print("\n[dim]Press Enter to return to terminal…[/dim]")
+                        sys.stdin.readline()
+                        ts_str = datetime.now().strftime("%H:%M")
+                        with _nlp_lock:
+                            entry = {"query": query, "response": response, "ts": ts_str}
+                            _nlp_history.append(entry)
+                            if len(_nlp_history) > _NLP_HISTORY_MAX:
+                                _nlp_history.pop(0)
+                            _nlp_state["pending"] = False
+                    elif cmd_type == "symbol":
+                        _show_symbol_drilldown(arg, hist, live_prices, db_data,
+                                               indices, sector_breadth)
+                        sys.stdin.readline()
+                    elif cmd_type == "health":
+                        _show_health_screen()
+                        sys.stdin.readline()
+                    elif cmd_type == "signal":
+                        _show_signal_screen(arg, signals)
+                        sys.stdin.readline()
+                    elif cmd_type == "sector":
+                        _show_sector_screen(arg, indices, sector_breadth)
+                        sys.stdin.readline()
+                    elif cmd_type == "portfolio":
+                        _show_portfolio_screen()
+                        sys.stdin.readline()
+                    elif cmd_type == "report":
+                        _show_report_screen()
+                        sys.stdin.readline()
+                    elif cmd_type == "refresh":
+                        next_refresh = 0.0  # trigger immediate refresh on next tick
+                    elif cmd_type == "eod":
+                        console.print("[yellow]Run:[/yellow] [bold]python daily_refresh.py[/bold] after market close")
+                        console.print("\n[dim]Press Enter to return to terminal…[/dim]")
+                        sys.stdin.readline()
                     live.start()
 
 
