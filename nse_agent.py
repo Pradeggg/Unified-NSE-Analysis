@@ -151,35 +151,26 @@ def _bubble(entry: dict) -> Panel:
 
 
 def _welcome_splash() -> Text:
-    """Colorful welcome splash shown in the body when no messages yet."""
+    """Compact welcome splash shown when no messages yet."""
     t = Text()
-    # Rainbow AGENT ADDA title (big block letters via box-drawing)
+    palette = ["bold cyan","bold bright_cyan","bold green","bold bright_green","bold yellow"]
     lines = [
         "  ╔═╗╔═╗╔═╗╔╗╔╔╦╗   ╔═╗╔╦╗╔╦╗╔═╗",
         "  ╠═╣║ ╦║╣ ║║║ ║    ╠═╣ ║║ ║║╠═╣",
         "  ╩ ╩╚═╝╚═╝╝╚╝ ╩    ╩ ╩═╩╝═╩╝╩ ╩",
     ]
-    grad = ["bold cyan", "bold bright_cyan", "bold green",
-            "bold bright_green", "bold yellow"]
     for i, line in enumerate(lines):
-        t.append(line + "\n", style=grad[i % len(grad)])
-
-    t.append("\n  NSE Market Research  ·  AI-powered analysis\n\n",
-             style="bold white")
-
-    examples = [
-        ("cyan",    "💡  How is the market today?"),
-        ("green",   "💡  Show me Stage 2 breakout stocks"),
-        ("yellow",  "💡  RELIANCE technical setup"),
-        ("magenta", "💡  Sector rotation — which sectors are leading?"),
-        ("red",     "💡  What are the strongest Supertrend buy signals?"),
-    ]
-    for colour, text in examples:
-        t.append(f"  {text}\n", style=colour)
-
+        t.append(line + "\n", style=palette[i])
+    t.append("\n  NSE Market Research  ·  AI-powered analysis\n\n", style="bold white")
+    for colour, text in [
+        ("cyan",    "  💡  How is the market today?"),
+        ("green",   "  💡  Show me Stage 2 breakout stocks"),
+        ("yellow",  "  💡  RELIANCE technical setup"),
+        ("magenta", "  💡  Sector rotation — which sectors are leading?"),
+    ]:
+        t.append(f"{text}\n", style=colour)
     t.append("\n  Type your question below and press ", style="dim")
-    t.append("Enter", style="bold cyan")
-    t.append("  ·  Esc = clear  ·  Ctrl-C = exit\n", style="dim")
+    t.append("Enter\n", style="bold cyan")
     return t
 
 
@@ -193,58 +184,41 @@ def build_chat_layout(input_buf: str) -> Layout:
         Layout(name="input",  size=3),
     )
 
-    # ── Header: rainbow AGENT ADDA + topic pills ──────────────────────────────
-    hdr = Table.grid(expand=True, padding=(0, 1))
-    hdr.add_column()
-
+    # ── Header: one-line rainbow title + pills ────────────────────────────────
     title = Text()
-    title.append("  🏛  ", style="bold white")
-    palette = ["bold cyan", "bold bright_cyan", "bold green", "bold bright_green",
-               "bold yellow", "bold bright_yellow", "bold magenta",
-               "bold red", "bold bright_red", "bold white"]
+    title.append(" 🏛 ", style="bold white")
+    palette = ["bold cyan","bold bright_cyan","bold green","bold bright_green",
+               "bold yellow","bold bright_yellow","bold magenta","bold red",
+               "bold bright_red","bold white"]
     for i, ch in enumerate("AGENT ADDA"):
         title.append(ch, style=palette[i % len(palette)])
-    title.append("  │  NSE Market Research", style="dim white")
-    hdr.add_row(title)
-
-    pills = Text()
+    title.append("  │ ", style="dim")
     for label, colour in [("stocks","cyan"),("sectors","green"),("signals","yellow"),
-                           ("screeners","magenta"),("health","red")]:
-        pills.append(f"  {label}", style=colour)
-        pills.append("  ·", style="dim")
-    pills.append("  Esc=clear  Ctrl-U=erase  Ctrl-C=exit", style="dim")
-    hdr.add_row(pills)
-
-    root["header"].update(Panel(hdr, border_style="cyan",
-                                title="[bold cyan]💬 Agent Adda[/bold cyan]",
+                          ("screeners","magenta"),("health","red")]:
+        title.append(f" {label}", style=colour)
+        title.append(" ·", style="dim")
+    title.append("  Esc=clear  Ctrl-U=erase  Ctrl-C=exit", style="dim")
+    root["header"].update(Panel(title, border_style="bright_cyan",
                                 padding=(0, 0)))
 
-    # ── Body: messages (pinned to bottom) or welcome splash ───────────────────
+    # ── Body: messages top-down; welcome splash when empty ───────────────────
     h = console.size.height
-    body_rows = max(4, h - 3 - 1 - 3 - 4)   # terminal_h minus header(3)+status(1)+input(3)+borders(~4)
+    # Max bubbles that fit: each bubble ~ 3 rows (compact); body ≈ h - 3 - 1 - 3 - 4
+    body_rows   = max(4, h - 11)
+    max_bubbles = max(1, body_rows // 3)
 
-    visible = _history[-30:] if _history else []
+    visible = _history[-max_bubbles:] if _history else []
     if not visible:
         root["body"].update(Panel(_welcome_splash(), border_style="dim",
                                   padding=(0, 1),
-                                  title="[dim]conversation[/dim]"))
+                                  title="[dim]─ conversation ─[/dim]"))
     else:
-        # Show last N bubbles that fill the body.
-        # Estimate ~4 rows per bubble; show as many as fit.
-        max_bubbles = max(1, body_rows // 4)
-        shown = visible[-max_bubbles:]
-
         chat_grid = Table.grid(expand=True, padding=(0, 0))
         chat_grid.add_column()
-        # Spacer pushes messages to the bottom
-        spacer_rows = max(0, body_rows - len(shown) * 4)
-        if spacer_rows > 0:
-            chat_grid.add_row(Text("\n" * spacer_rows, style=""))
-        for entry in shown:
+        for entry in visible:
             chat_grid.add_row(_bubble(entry))
-
         root["body"].update(Panel(chat_grid, border_style="dim", padding=(0, 0),
-                                  title="[dim]conversation[/dim]"))
+                                  title="[dim]─ conversation ─[/dim]"))
 
     # ── Status bar (single line, no Panel border) ─────────────────────────────
     is_thinking = "Thinking" in _status or "⏳" in _status
