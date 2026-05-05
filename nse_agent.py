@@ -50,7 +50,6 @@ from rich import box
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.history import InMemoryHistory
-from prompt_toolkit.patch_stdout import patch_stdout
 from prompt_toolkit.formatted_text import ANSI
 
 colorama.init(autoreset=True)
@@ -61,8 +60,8 @@ try:
 except ImportError:
     pass
 
-# ── Rich console (force colour even in redirected environments) ───────────────
-console = Console(highlight=False)
+# ── Rich console — force_terminal so ANSI codes always work ──────────────────
+console = Console(highlight=False, force_terminal=True)
 
 # ── Global chat state ─────────────────────────────────────────────────────────
 _mode             = "auto"   # "auto" | "intraday" | "historical"
@@ -81,8 +80,9 @@ _BANNER = [
 ]
 
 
-def _separator() -> None:
-    console.print(Rule(style="dim cyan"))
+def _separator(title: str = "") -> None:
+    """Thin horizontal rule, optional centred title."""
+    console.rule(title, style="dim")
 
 
 def print_banner() -> None:
@@ -164,8 +164,8 @@ def _build_prompt() -> ANSI:
 
 def _print_user(query: str) -> None:
     console.print()
-    console.print(f"[bold cyan] ❯  [/bold cyan][bold white]{query}[/bold white]"
-                  f"[dim]  [{_ts()}][/dim]")
+    console.rule(f"[bold cyan]❯[/bold cyan]  [bold]{query}[/bold]  [dim]{_ts()}[/dim]",
+                 style="dim cyan", align="left")
 
 
 def _print_response(result: dict) -> None:
@@ -176,27 +176,31 @@ def _print_response(result: dict) -> None:
     # Strip follow-ups from answer body
     clean, _followups = _parse_followups(answer)
 
-    # ── Agent header ──────────────────────────────────────────────────────
+    # ── Agent header (rule with centred title) ────────────────────────────
     console.print()
-    console.print(f"[bold green] 🤖  Agent Adda[/bold green]"
-                  f"[dim]  [{_ts()}]  backend: {backend}[/dim]")
-    _separator()
+    console.rule(
+        f"[bold green] 🤖  Agent Adda [/bold green][dim] {_ts()}  ·  {backend} [/dim]",
+        style="green dim",
+    )
+    console.print()
 
     # ── Body — Rich Markdown rendered to full terminal width ───────────────
     has_markup = any(c in clean for c in ["**", "##", "- ", "* ", "```", "\n"])
     if has_markup:
         console.print(Markdown(clean))
     else:
-        console.print(Text(clean, style="white"))
+        console.print(clean, style="white")
 
     # ── Follow-up suggestions ─────────────────────────────────────────────
     if _followups:
         console.print()
-        console.print("[bold yellow] 💬  What to explore next:[/bold yellow]")
+        console.rule("[bold yellow] 💬  What to explore next [/bold yellow]",
+                     style="dim yellow")
         for i, q in enumerate(_followups, 1):
-            console.print(f"[yellow]   {i}.[/yellow] [white]{q}[/white]")
-        console.print("[dim]   → Type 1, 2 or 3 to ask, or your own question[/dim]")
+            console.print(f"  [bold yellow]{i}[/bold yellow]  {q}")
+        console.print("[dim]  Reply 1 · 2 · 3 or ask your own question[/dim]")
 
+    console.print()
     _separator()
 
 
@@ -241,13 +245,13 @@ def _print_help() -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _run_with_spinner(agent, query: str, show_trace: bool, animated: bool = True) -> dict:
-    """Run agent query with a spinner. animated=True for single-query mode (real TTY,
-    no patch_stdout); animated=False inside the chat loop (patch_stdout active)."""
+    """Run agent query. animated=True: braille spinner for --query mode.
+    animated=False: static status line for the interactive chat loop."""
     result: dict = {}
     exc: list    = []
 
     if not animated:
-        # Inside patch_stdout — static status via Rich (no raw ANSI)
+        # Chat loop — print static status, then block synchronously
         console.print("[cyan]  ⏳  Agent Adda is thinking…[/cyan]")
         try:
             result = agent.query(query, show_trace=show_trace)
@@ -255,7 +259,7 @@ def _run_with_spinner(agent, query: str, show_trace: bool, animated: bool = True
             raise e
         return result
 
-    # Animated braille spinner (for single-query / non-patch_stdout context)
+    # Animated braille spinner (--query / single-shot mode)
     done = threading.Event()
 
     def _worker():
@@ -306,73 +310,72 @@ def _chat_loop(agent, show_trace: bool) -> None:
     console.print("[dim]  Tip: /live  /eod  /auto  │  1·2·3 = follow-ups  │  /help  │  exit[/dim]")
     console.print()
 
-    with patch_stdout():
-        while True:
-            try:
-                raw = session.prompt(_build_prompt())
-            except KeyboardInterrupt:
-                print()
-                continue
-            except EOFError:
-                break
+    while True:
+        try:
+            raw = session.prompt(_build_prompt())
+        except KeyboardInterrupt:
+            console.print()
+            continue
+        except EOFError:
+            break
 
-            text = raw.strip()
-            if not text:
-                continue
+        text = raw.strip()
+        if not text:
+            continue
 
-            # ── Exit ──────────────────────────────────────────────────────
-            if text.lower() in ("exit", "quit", "q", ":q"):
-                break
+        # ── Exit ──────────────────────────────────────────────────────
+        if text.lower() in ("exit", "quit", "q", ":q"):
+            break
 
-            # ── Mode commands ──────────────────────────────────────────────
-            if text.lower() in ("/live", "/intraday", "/l"):
-                _mode = "intraday"
-                console.print("[bold red]  ● Mode → LIVE  (real-time NSE API)[/bold red]")
-                continue
-            if text.lower() in ("/eod", "/historical", "/h"):
-                _mode = "historical"
-                console.print("[bold blue]  ● Mode → EOD  (historical CSV + DB snapshot)[/bold blue]")
-                continue
-            if text.lower() in ("/auto", "/a"):
-                _mode = "auto"
-                console.print("[dim]  ● Mode → AUTO  (keyword-based detection)[/dim]")
-                continue
+        # ── Mode commands ──────────────────────────────────────────────
+        if text.lower() in ("/live", "/intraday", "/l"):
+            _mode = "intraday"
+            console.print("[bold red]  ● Mode → LIVE  (real-time NSE API)[/bold red]")
+            continue
+        if text.lower() in ("/eod", "/historical", "/h"):
+            _mode = "historical"
+            console.print("[bold blue]  ● Mode → EOD  (historical CSV + DB snapshot)[/bold blue]")
+            continue
+        if text.lower() in ("/auto", "/a"):
+            _mode = "auto"
+            console.print("[dim]  ● Mode → AUTO  (keyword-based detection)[/dim]")
+            continue
 
-            # ── Utility commands ───────────────────────────────────────────
-            if text.lower() in ("/help", "?", "/h"):
-                _print_help()
-                continue
-            if text.lower() == "/clear":
-                _followups = []
-                os.system("clear")
-                print_banner()
-                continue
+        # ── Utility commands ───────────────────────────────────────────
+        if text.lower() in ("/help", "?", "/h"):
+            _print_help()
+            continue
+        if text.lower() == "/clear":
+            _followups = []
+            os.system("clear")
+            print_banner()
+            continue
 
-            # ── Follow-up shortcut ─────────────────────────────────────────
-            if text in ("1", "2", "3") and _followups:
-                idx = int(text) - 1
-                if idx < len(_followups):
-                    text = _followups[idx]
-                    console.print(f"[dim]  → {text}[/dim]")
+        # ── Follow-up shortcut ─────────────────────────────────────────
+        if text in ("1", "2", "3") and _followups:
+            idx = int(text) - 1
+            if idx < len(_followups):
+                text = _followups[idx]
+                console.print(f"[dim]  → {text}[/dim]")
 
-            # ── Apply mode prefix ──────────────────────────────────────────
-            if _mode == "intraday":
-                query = f"/intraday {text}"
-            elif _mode == "historical":
-                query = f"/historical {text}"
-            else:
-                query = text
+        # ── Apply mode prefix ──────────────────────────────────────────
+        if _mode == "intraday":
+            query = f"/intraday {text}"
+        elif _mode == "historical":
+            query = f"/historical {text}"
+        else:
+            query = text
 
-            _print_user(text)
+        _print_user(text)
 
-            try:
-                result = _run_with_spinner(agent, query, show_trace, animated=False)
-                _print_response(result)
-                if show_trace:
-                    _print_trace(result.get("trace", []))
-            except Exception as e:
-                console.print(f"[bold red]  ❌  Error: {e}[/bold red]")
-                _separator()
+        try:
+            result = _run_with_spinner(agent, query, show_trace, animated=False)
+            _print_response(result)
+            if show_trace:
+                _print_trace(result.get("trace", []))
+        except Exception as e:
+            console.print(f"[bold red]  ❌  Error: {e}[/bold red]")
+            _separator()
 
     console.print()
     console.print("[bold cyan]  Agent Adda closed. Goodbye! 🏛[/bold cyan]")
