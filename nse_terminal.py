@@ -16,8 +16,12 @@ from __future__ import annotations
 
 import argparse
 import io
+import json
+import queue
+import select
 import sqlite3
 import sys
+import threading
 import time
 from datetime import datetime, date, timedelta
 from pathlib import Path
@@ -25,6 +29,12 @@ from typing import Optional
 
 import pandas as pd
 import requests
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv(Path(__file__).resolve().parent / ".env")
+except ImportError:
+    pass
 
 ROOT = Path(__file__).resolve().parent
 DB_PATH = ROOT / "data" / "sector_rotation_tracker.db"
@@ -95,6 +105,21 @@ NSE_HEADERS = {
 _nse_session: Optional[requests.Session] = None
 _nse_session_ts: float = 0.0          # epoch time session was last initialised
 _SESSION_TTL: float = 4 * 60          # re-handshake with NSE every 4 minutes
+
+# ── Price flash animation state ───────────────────────────────────────────────
+_prev_prices:     dict[str, float] = {}   # key → last rendered price
+_flash_direction: dict[str, str]   = {}   # key → "up" | "dn"
+_flash_expires:   dict[str, float] = {}   # key → epoch when flash expires
+_FLASH_SECS = 4                           # seconds to hold the bright colour
+
+# ── Market narrative cache ────────────────────────────────────────────────────
+_narrative_cache: dict = {"text": "", "ts": 0.0}
+_narrative_lock   = threading.Lock()
+_NARRATIVE_TTL    = 5 * 60               # regenerate narrative every 5 minutes
+
+# ── NLP / Agent Adda state ───────────────────────────────────────────────────
+_nlp_state: dict = {"query": "", "response": "", "ts": "", "pending": False}
+_nlp_lock   = threading.Lock()
 
 def _get_nse_session(force: bool = False) -> requests.Session:
     """Return a live NSE session, renewing the cookie every _SESSION_TTL seconds."""
@@ -872,6 +897,152 @@ def run_screener(hist: pd.DataFrame, live_prices: dict, top_n: int = 20) -> dict
 # Rich UI builders
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _update_flash(key: str, cur: float) -> Optional[str]:
+    """Track price changes and return a bright flash style when price moves.
+    Returns None when no recent change (caller uses their own base colour).
+    """
+    now = time.time()
+    prev = _prev_prices.get(key)
+    if prev is not None and cur != prev:
+        _flash_expires[key]   = now + _FLASH_SECS
+        _flash_direction[key] = "up" if cur > prev else "dn"
+    _prev_prices[key] = cur
+    if _flash_expires.get(key, 0) > now:
+        return "bold bright_green" if _flash_direction.get(key) == "up" else "bold bright_red"
+    return None
+
+
+def _rule_narrative(indices: dict, breadth: dict, signals: dict) -> str:
+    """Build a concise market narrative from current data without an LLM."""
+    nifty  = indices.get("NIFTY 50", {})
+    nv     = _parse_price(nifty.get("lastPrice", 0))
+    pchg   = _parse_price(nifty.get("pChange",   0))
+    adv    = breadth.get("advances", 0)
+    dec    = breadth.get("declines", 0)
+    mco    = breadth.get("mco",      0)
+    trin   = breadth.get("trin",     1.0)
+    hi52   = breadth.get("new_highs", 0)
+    ab200  = breadth.get("above_200ma_pct", 0)
+
+    dir_w  = "gaining" if pchg > 0.3 else ("under pressure" if pchg < -0.3 else "flat")
+    trin_w = ("institutional accumulation" if trin < 0.7
+               else "net distribution" if trin > 1.3 else "balanced flows")
+    mco_w  = "expanding breadth" if mco > 20 else ("deteriorating breadth" if mco < -20 else "neutral breadth")
+
+    # Top sector by pChange
+    top_sec = max(
+        ((k, _parse_price(indices.get(v.replace("Nifty ", "NIFTY ").upper(), {}).get("pChange", 0)))
+         for k, v in SECTOR_INDEX_MAP.items()),
+        key=lambda x: x[1], default=("—", 0)
+    )
+
+    l1 = (f"NIFTY 50 is {dir_w} at {nv:,.0f} ({pchg:+.2f}%).")
+    l2 = (f"Breadth {adv}↑/{dec}↓; MCO {mco:+.0f} ({mco_w}), "
+          f"TRIN {trin:.2f} signals {trin_w}.")
+    l3 = (f"{hi52} stocks hit 52W highs; {ab200:.0f}% above 200DMA. "
+          f"Leading sector: {top_sec[0]} ({top_sec[1]:+.2f}%).")
+    return f"{l1}  {l2}  {l3}"
+
+
+def _fetch_llm_narrative(indices: dict, breadth: dict, signals: dict) -> None:
+    """Background thread: ask OpenAI for a 2-sentence market summary and update cache."""
+    import os
+    key = os.getenv("OPENAI_API_KEY", "")
+    if not key:
+        return
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=key)
+        nifty = indices.get("NIFTY 50", {})
+        payload = {
+            "nifty": _parse_price(nifty.get("lastPrice", 0)),
+            "nifty_pchg": _parse_price(nifty.get("pChange", 0)),
+            "advances": breadth.get("advances", 0),
+            "declines": breadth.get("declines", 0),
+            "mco": breadth.get("mco", 0),
+            "trin": breadth.get("trin", 1),
+            "new_highs_52w": breadth.get("new_highs", 0),
+            "above_200dma_pct": breadth.get("above_200ma_pct", 0),
+            "supertrend_buys": len(signals.get("supertrend_buy", [])),
+            "vcp_setups": len(signals.get("vcp_setups", [])),
+            "darvas_breakouts": len(signals.get("darvas_setups", [])),
+        }
+        prompt = (
+            "You are a terse NSE market analyst. Write exactly 2 sentences of market commentary "
+            f"based on this live data: {json.dumps(payload)}. "
+            "Be specific with numbers. No bullet points. No investment advice disclaimer."
+        )
+        resp = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=120, temperature=0.6,
+        )
+        text = resp.choices[0].message.content.strip()
+        with _narrative_lock:
+            _narrative_cache["text"] = text
+            _narrative_cache["ts"]   = time.time()
+    except Exception:
+        pass
+
+
+def _ensure_narrative(indices: dict, breadth: dict, signals: dict) -> str:
+    """Return a current narrative string, refreshing via LLM if stale."""
+    now = time.time()
+    with _narrative_lock:
+        age  = now - _narrative_cache.get("ts", 0)
+        text = _narrative_cache.get("text", "")
+
+    if age > _NARRATIVE_TTL or not text:
+        # Fire background LLM call; return rule-based immediately
+        threading.Thread(
+            target=_fetch_llm_narrative,
+            args=(indices, breadth, signals),
+            daemon=True,
+        ).start()
+
+    return text or _rule_narrative(indices, breadth, signals)
+
+
+def build_narrative_panel(text: str) -> Panel:
+    """One-line market narrative strip below breadth bar."""
+    t = Text()
+    t.append("  📰 ", style="bold yellow")
+    t.append(text, style="italic white")
+    return Panel(t, height=3, style="on grey11")
+
+
+def build_nlp_panel(query: str, response: str, ts: str, pending: bool) -> Panel:
+    """Agent Adda inline Q&A panel shown at the bottom of the terminal."""
+    grid = Table.grid(expand=True, padding=(0, 1))
+    grid.add_column()
+
+    if pending:
+        grid.add_row(Text("  ⏳ Agent thinking…", style="bold yellow"))
+    elif query and response:
+        q_line = Text()
+        q_line.append("  ❓ ", style="bold cyan")
+        q_line.append(query, style="bold white")
+        a_line = Text()
+        a_line.append("  🤖 ", style="bold green")
+        a_line.append(response, style="white")
+        grid.add_row(q_line)
+        grid.add_row(a_line)
+    else:
+        grid.add_row(Text(
+            "  💬 Agent Adda ready  —  press [/] then type your query and hit Enter",
+            style="dim italic",
+        ))
+
+    hint = Text()
+    hint.append("  Press ", style="dim")
+    hint.append("[/]", style="bold cyan")
+    hint.append(" to query  │  ", style="dim")
+    if ts:
+        hint.append(f"last answered {ts}", style="dim")
+    return Panel(grid, title="[bold cyan]💬 Agent Adda[/bold cyan]",
+                 subtitle=hint, style="on grey7", height=6 if (query and response) else 4)
+
+
 def _chg_color(v: float) -> str:
     if v > 1.5:  return "bold green"
     if v > 0:    return "green"
@@ -901,7 +1072,10 @@ def build_header(indices: dict, refresh_mins: int = 5) -> Panel:
     market_open = _market_is_open()
 
     arrow = "▲" if nc >= 0 else "▼"
-    clr   = "green" if nc >= 0 else "red"
+    base_clr = "green" if nc >= 0 else "red"
+    flash_clr = _update_flash("NIFTY50", nv)   # bright flash when price ticks
+    nv_clr  = flash_clr or f"bold {base_clr}"
+    chg_clr = flash_clr or base_clr
 
     txt = Text()
     txt.append("  ⚡ NSE TERMINAL  ", style="bold white on dark_blue")
@@ -916,10 +1090,10 @@ def build_header(indices: dict, refresh_mins: int = 5) -> Panel:
     else:
         txt.append("● MARKET CLOSED", style="bold red")
     txt.append("    NIFTY 50  ", style="bold white")
-    txt.append(f"{nv:,.0f}" if nv else "—", style=f"bold {clr}")
+    txt.append(f"{nv:,.0f}" if nv else "—", style=nv_clr)
     if nc != 0:
-        txt.append(f"  {arrow} {abs(nc):,.0f}  ({np_:+.2f}%)", style=clr)
-    txt.append(f"  │  🔄 /{refresh_mins}min  │  Ctrl+C to exit", style="dim")
+        txt.append(f"  {arrow} {abs(nc):,.0f}  ({np_:+.2f}%)", style=chg_clr)
+    txt.append(f"  │  🔄 /{refresh_mins}min  │  [/] to query", style="dim")
 
     return Panel(txt, style="on dark_blue", height=3)
 
@@ -948,14 +1122,16 @@ def build_indices_bar(indices: dict) -> Panel:
         pchg  = _parse_price(d.get("pChange",   0))
         high  = _parse_price(d.get("dayHigh",  d.get("highPrice",  0)))
         low   = _parse_price(d.get("dayLow",   d.get("lowPrice",   0)))
-        clr   = _chg_color(pchg)
-        arrow = "▲" if pchg >= 0 else "▼"
+        base_clr = _chg_color(pchg)
+        flash    = _update_flash(f"IDX:{key}", price)
+        p_clr    = flash or f"bold {base_clr}"
+        arrow    = "▲" if pchg >= 0 else "▼"
 
         cell = Text()
         cell.append(f"{label.strip()} ", style="bold white")
-        cell.append(f"{price:,.0f}", style=f"bold {clr}") if price else cell.append("—", style="dim")
+        cell.append(f"{price:,.0f}", style=p_clr) if price else cell.append("—", style="dim")
         if pchg != 0:
-            cell.append(f"  {arrow}{abs(pchg):.2f}%", style=clr)
+            cell.append(f"  {arrow}{abs(pchg):.2f}%", style=flash or base_clr)
         if high and low:
             cell.append(f"  H:{high:,.0f} L:{low:,.0f}", style="dim")
         cells.append(cell)
@@ -1375,7 +1551,12 @@ def build_full_layout(indices: dict, signals: dict, last_update: str,
                        hist: "pd.DataFrame | None" = None,
                        live_prices: dict | None = None,
                        db_data: dict | None = None,
-                       sector_breadth: dict | None = None) -> Table:
+                       sector_breadth: dict | None = None,
+                       narrative: str = "",
+                       nlp_query: str = "",
+                       nlp_response: str = "",
+                       nlp_ts: str = "",
+                       nlp_pending: bool = False) -> Table:
     """Compose the full terminal layout as a Rich renderable."""
     grid = Table.grid(expand=True)
     grid.add_column()
@@ -1392,6 +1573,10 @@ def build_full_layout(indices: dict, signals: dict, last_update: str,
 
     # Row 3: Market breadth + McClellan + TRIN + Nifty trend
     grid.add_row(build_breadth_bar(signals.get("breadth", {}), signals.get("nifty_trend", [])))
+
+    # Row 3b: LLM / rule-based market narrative
+    if narrative:
+        grid.add_row(build_narrative_panel(narrative))
 
     # Row 4: Supertrend + Breakout
     row4 = Table.grid(expand=True)
@@ -1428,6 +1613,9 @@ def build_full_layout(indices: dict, signals: dict, last_update: str,
     # Row 7: Watchlist (optional — only if watchlist provided and non-empty)
     if watchlist and hist is not None and live_prices is not None and db_data is not None:
         grid.add_row(build_watchlist_panel(watchlist[:visible_top_n], live_prices, hist, db_data))
+
+    # Row 8: Agent Adda NLP panel (always visible)
+    grid.add_row(build_nlp_panel(nlp_query, nlp_response, nlp_ts, nlp_pending))
 
     # Status bar
     grid.add_row(build_status_bar(last_update, hist_rows, signals))
@@ -1500,6 +1688,16 @@ def refresh_data(top_n: int) -> tuple[dict, dict, str, int, pd.DataFrame, dict, 
 # Entry point
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _run_agent_query(query: str) -> str:
+    """Run a query through Agent Adda and return the response string."""
+    try:
+        from terminal.agent import Agent
+        agent = Agent()
+        return agent.query(query, show_trace=False)
+    except Exception as e:
+        return f"Agent error: {e}"
+
+
 def main():
     parser = argparse.ArgumentParser(description="NSE Bloomberg Terminal")
     parser.add_argument("--once",      action="store_true", help="Run once, no live refresh")
@@ -1523,7 +1721,8 @@ def main():
 
     refresh_secs = args.refresh * 60
 
-    def _build(indices, signals, label, hist_rows, hist, live_prices, db_data, sector_breadth):
+    def _build(indices, signals, label, hist_rows, hist, live_prices, db_data, sector_breadth,
+               narrative="", nlp_q="", nlp_r="", nlp_ts="", nlp_pending=False):
         return build_full_layout(
             indices, signals, label, hist_rows, args.top, args.refresh,
             watchlist=watchlist or None,
@@ -1531,13 +1730,17 @@ def main():
             live_prices=live_prices if watchlist else None,
             db_data=db_data if watchlist else None,
             sector_breadth=sector_breadth,
+            narrative=narrative,
+            nlp_query=nlp_q, nlp_response=nlp_r, nlp_ts=nlp_ts, nlp_pending=nlp_pending,
         )
 
     if args.once:
         with console.status("[bold cyan]Loading NSE Terminal…"):
             res = refresh_data(args.top)
         indices, signals, last_update, hist_rows, hist, live_prices, db_data, sb = res
-        layout = _build(indices, signals, last_update, hist_rows, hist, live_prices, db_data, sb)
+        narrative = _rule_narrative(indices, signals.get("breadth", {}), signals)
+        layout = _build(indices, signals, last_update, hist_rows, hist, live_prices, db_data, sb,
+                        narrative=narrative)
         console.print(layout)
         return
 
@@ -1551,6 +1754,7 @@ def main():
         db_data: dict    = {}
         sector_breadth: dict = {}
         next_refresh     = 0.0
+        narrative        = ""
 
         while True:
             now = time.time()
@@ -1558,6 +1762,8 @@ def main():
                 try:
                     res = refresh_data(args.top)
                     indices, signals, last_update, hist_rows, hist, live_prices, db_data, sector_breadth = res
+                    # Refresh narrative (LLM in background, rule-based immediately)
+                    narrative = _ensure_narrative(indices, signals.get("breadth", {}), signals)
                 except Exception as e:
                     last_update = f"ERROR: {e}"
                 next_refresh = time.time() + refresh_secs
@@ -1567,9 +1773,52 @@ def main():
             mins, secs_r = divmod(secs_left, 60)
             countdown = f"{last_update}  │  Next refresh in {mins:02d}:{secs_r:02d}"
 
-            layout = _build(indices, signals, countdown, hist_rows, hist, live_prices, db_data, sector_breadth)
+            # Read NLP state snapshot
+            with _nlp_lock:
+                nlp_q       = _nlp_state["query"]
+                nlp_r       = _nlp_state["response"]
+                nlp_ts_str  = _nlp_state["ts"]
+                nlp_pending = _nlp_state["pending"]
+
+            # Also pick up latest narrative from LLM cache
+            with _narrative_lock:
+                cached = _narrative_cache.get("text", "")
+                if cached:
+                    narrative = cached
+
+            layout = _build(indices, signals, countdown, hist_rows, hist, live_prices,
+                            db_data, sector_breadth, narrative=narrative,
+                            nlp_q=nlp_q, nlp_r=nlp_r, nlp_ts=nlp_ts_str,
+                            nlp_pending=nlp_pending)
             live.update(layout)
-            time.sleep(1)
+
+            # Non-blocking stdin check: user typed "/" followed by Enter to query agent
+            ready = select.select([sys.stdin], [], [], 1.0)[0]
+            if ready:
+                raw = sys.stdin.readline().strip()
+                query = raw.lstrip("/").strip()
+                if query:
+                    # Mark pending, stop live, collect response, resume
+                    with _nlp_lock:
+                        _nlp_state["query"]   = query
+                        _nlp_state["pending"] = True
+                        _nlp_state["response"] = ""
+                    live.stop()
+                    console.rule("[bold cyan]💬 Agent Adda[/bold cyan]")
+                    console.print(f"[bold cyan]❓[/bold cyan] [white]{query}[/white]")
+                    with console.status("[bold yellow]Agent thinking…[/bold yellow]"):
+                        response = _run_agent_query(query)
+                    console.print(f"[bold green]🤖[/bold green] {response}")
+                    console.rule()
+                    console.print("[dim]Press Enter to return to terminal…[/dim]")
+                    sys.stdin.readline()   # wait for user to press Enter
+                    ts_str = datetime.now().strftime("%H:%M")
+                    with _nlp_lock:
+                        _nlp_state["query"]    = query
+                        _nlp_state["response"] = response
+                        _nlp_state["ts"]       = ts_str
+                        _nlp_state["pending"]  = False
+                    live.start()
 
 
 if __name__ == "__main__":
