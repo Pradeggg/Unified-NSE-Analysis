@@ -16,6 +16,14 @@ from typing import Any
 
 import pandas as pd
 
+# ── Web research module (screener.in, Yahoo Finance, multi-site search) ───────
+from terminal.web_research import (
+    scrape_screener_in,
+    search_yahoo_finance,
+    multi_source_web_search,
+    comprehensive_stock_research,
+)
+
 # ── Paths ─────────────────────────────────────────────────────────────────────
 ROOT      = Path(__file__).parent.parent
 DB_PATH   = ROOT / "data" / "sector_rotation_tracker.db"
@@ -620,12 +628,26 @@ def search_latest_catalysts(symbol: str, max_results: int = 5) -> dict:
         parser = _ResultParser()
         parser.feed(resp.text)
 
+        def _decode_url(raw: str) -> str:
+            """Extract real URL from DuckDuckGo redirect (/l/?uddg=<encoded>)."""
+            import urllib.parse
+            if not raw:
+                return ""
+            # Add scheme if missing
+            if raw.startswith("//"):
+                raw = "https:" + raw
+            parsed = urllib.parse.urlparse(raw)
+            qs = urllib.parse.parse_qs(parsed.query)
+            if "uddg" in qs:
+                return qs["uddg"][0]
+            return raw
+
         results = []
         for r in parser.results[:max_results]:
             if r.get("title") and len(r["title"]) > 5:
                 results.append({
                     "title":   r.get("title", ""),
-                    "url":     r.get("url", ""),
+                    "url":     _decode_url(r.get("url", "")),
                     "snippet": r.get("snippet", ""),
                 })
 
@@ -974,6 +996,70 @@ TOOL_REGISTRY: dict[str, Any] = {
             "properties": {
                 "symbol": {"type": "string"},
                 "max_results": {"type": "integer", "default": 5},
+            },
+            "required": ["symbol"],
+        },
+    ),
+    "scrape_screener_in": (
+        scrape_screener_in,
+        (
+            "Scrape screener.in for deep fundamental data: key ratios (P/E, P/B, ROE, ROCE, "
+            "market-cap, dividend yield), Screener's pros/cons analysis, last 6 quarters of "
+            "financials, 5-year annual P&L, peer comparison table, shareholding pattern, "
+            "BSE corporate-announcement PDF links, annual-report PDF links. "
+            "Use for 'fundamentals', 'ratios', 'financial statements', 'peers', 'valuation' queries."
+        ),
+        {"type": "object", "properties": {"symbol": {"type": "string"}}, "required": ["symbol"]},
+    ),
+    "search_yahoo_finance": (
+        search_yahoo_finance,
+        (
+            "Fetch Yahoo Finance data for an NSE stock: current price stats (52-week range, "
+            "day range, prev close) and up to 6 recent news articles with real URLs. "
+            "Use for 'yahoo finance', 'YF news', 'latest news', or as a supplementary "
+            "news source alongside search_latest_catalysts."
+        ),
+        {"type": "object", "properties": {"symbol": {"type": "string"}}, "required": ["symbol"]},
+    ),
+    "multi_source_web_search": (
+        multi_source_web_search,
+        (
+            "Search multiple finance websites (moneycontrol.com, screener.in, "
+            "economictimes.indiatimes.com, nseindia.com, bseindia.com) for a stock. "
+            "Returns up to 4 real results per site with decoded URLs. "
+            "Use for 'moneycontrol', 'concall', 'transcript', 'BSE filings', 'announcements', "
+            "or when comprehensive multi-source research is needed."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbol":       {"type": "string"},
+                "company_name": {"type": "string", "description": "Full company name for better search"},
+                "extra_query":  {"type": "string", "description": "Additional search terms e.g. 'concall Q4 2026'"},
+            },
+            "required": ["symbol"],
+        },
+    ),
+    "comprehensive_stock_research": (
+        comprehensive_stock_research,
+        (
+            "One-call deep research across ALL sources: screener.in fundamentals + Yahoo Finance "
+            "stats + multi-site news search (moneycontrol, ET, NSE, BSE). Returns ratios, "
+            "pros/cons, quarterly results, peer table, shareholding, filings, news, and direct "
+            "deep-links to screener.in, NSE, BSE, Yahoo Finance pages. "
+            "Use for broad 'research', 'full analysis', or when user asks for comprehensive info "
+            "about a stock from multiple sources."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbol":  {"type": "string"},
+                "aspects": {
+                    "type": "array",
+                    "items": {"type": "string",
+                              "enum": ["fundamentals","news","concalls","peers","filings","ratios","all"]},
+                    "description": "Which aspects to fetch. Defaults to all.",
+                },
             },
             "required": ["symbol"],
         },

@@ -191,6 +191,42 @@ def _print_response(result: dict) -> None:
     else:
         console.print(clean, style="white")
 
+    # ── Direct catalysts / news render (bypasses LLM formatting) ─────────
+    cats = result.get("catalysts")
+    if cats:
+        items = cats.get("results") or cats.get("items") or cats.get("news_articles") or []
+        # multi_source_web_search returns {"source": [list]} — flatten to list
+        if isinstance(items, dict):
+            flat = []
+            for source, hits in items.items():
+                if isinstance(hits, list):
+                    for h in hits:
+                        if isinstance(h, dict):
+                            h = dict(h)
+                            h.setdefault("source", source)
+                            flat.append(h)
+            items = flat
+        # filter to only proper dicts with at least a title or url
+        items = [r for r in items if isinstance(r, dict) and (r.get("title") or r.get("url"))]
+        if items:
+            console.print()
+            console.rule("[bold cyan] 📰  News & Catalysts [/bold cyan]", style="dim cyan")
+            for r in items:
+                title   = r.get("title") or r.get("name") or ""
+                url     = r.get("url")   or r.get("link") or ""
+                snippet = r.get("snippet") or r.get("body") or ""
+                source  = r.get("source", "")
+                if source:
+                    console.print(f"[dim cyan]  [{source}][/dim cyan]", end=" ")
+                if title:
+                    console.print(f"  [bold]{title}[/bold]")
+                if url:
+                    console.print(f"  [dim cyan]{url}[/dim cyan]")
+                if snippet:
+                    console.print(f"  [dim]{snippet[:140]}…[/dim]" if len(snippet) > 140
+                                  else f"  [dim]{snippet}[/dim]")
+                console.print()
+
     # ── Follow-up suggestions ─────────────────────────────────────────────
     if _followups:
         console.print()

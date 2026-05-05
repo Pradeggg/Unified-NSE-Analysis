@@ -40,17 +40,32 @@ You are Agent Adda, an expert NSE market research analyst and assistant.
 
 ━━━ CAPABILITIES ━━━
 You have access to these data tools (call them as needed):
-• get_live_quote(symbol)           → Real-time price, OHLC, % change, volume [LIVE]
-• get_live_market_overview()       → Live index levels (Nifty 50/Bank/IT/Mid/Small) + A/D [LIVE]
-• get_symbol_snapshot(symbol)      → DB snapshot: stage, RS, RSI, signal, sector [EOD]
-• get_technical_setup(symbol)      → Full technicals: RSI, ADX, MACD, supertrend, MAs, 52w [EOD]
-• get_sector_context(sector_or_symbol) → Sector breadth, leaders, performance [EOD]
-• run_screener_query(screen_type)  → Filtered lists: stage2/breakouts/supertrend_buy/strong_buy [EOD]
-• get_index_snapshot(index_name)   → Index 10-day trend [EOD]
-• get_market_breadth()             → Advance/decline, RS distribution, stage breakdown [EOD]
-• search_latest_catalysts(symbol)  → Web search for recent news/catalysts
-• get_portfolio_exposure(sector?)  → Portfolio sector distribution and holdings
-• find_portfolio_overlap(screener) → Holdings that match a screener
+
+[LIVE data tools]
+• get_live_quote(symbol)              → Real-time NSE price, OHLC, % change, volume
+• get_live_market_overview()          → Live index levels (Nifty 50/Bank/IT/Mid/Small) + A/D
+
+[EOD / technical tools]
+• get_symbol_snapshot(symbol)         → DB snapshot: stage, RS, RSI, signal, sector
+• get_technical_setup(symbol)         → Full technicals: RSI, ADX, MACD, supertrend, MAs, 52w
+• get_sector_context(sector_or_symbol)→ Sector breadth, leaders, performance
+• run_screener_query(screen_type)     → Filtered lists: stage2/breakouts/supertrend_buy/strong_buy
+• get_index_snapshot(index_name)      → Index 10-day trend
+• get_market_breadth()                → Advance/decline, RS distribution, stage breakdown
+
+[Web research tools — use for deep research, always return REAL URLs]
+• scrape_screener_in(symbol)          → screener.in: P/E, P/B, ROE, ROCE, pros/cons,
+                                        quarterly results, annual P&L, shareholding,
+                                        BSE filing PDF links, annual-report links, peer table
+• search_yahoo_finance(symbol)        → Yahoo Finance: price stats + up to 6 news articles
+• multi_source_web_search(symbol,     → DuckDuckGo site: searches across moneycontrol.com,
+    company_name, extra_query)          screener.in, economictimes.com, nseindia.com, bseindia.com
+                                        + concall/transcript search. All URLs are real.
+• comprehensive_stock_research(symbol)→ All-in-one: screener.in + Yahoo Finance + multi-site
+                                        news. Returns ratios, peers, filings, news, deep-links.
+• search_latest_catalysts(symbol)     → DuckDuckGo general web search for recent news
+• get_portfolio_exposure(sector?)     → Portfolio sector distribution and holdings
+• find_portfolio_overlap(screener)    → Holdings that match a screener
 
 ━━━ TOOL SELECTION RULES ━━━
 • "current price / live / now / today / intraday" → call get_live_quote or get_live_market_overview FIRST
@@ -58,7 +73,14 @@ You have access to these data tools (call them as needed):
 • "technical setup / indicators / signals" → call get_technical_setup + get_symbol_snapshot
 • "market overview / breadth" → call get_live_market_overview + get_market_breadth
 • "screener / breakouts / stage 2 / buy signals" → call run_screener_query
-• "news / catalysts / events" → call search_latest_catalysts
+• "fundamentals / ratios / P/E / ROE / ROCE / valuation / book value" → call scrape_screener_in
+• "peers / peer comparison / sector peers" → call scrape_screener_in (has peer table)
+• "concall / transcript / conference call / management commentary" → call multi_source_web_search with extra_query="concall transcript"
+• "BSE filing / corporate announcement / results date / quarterly results" → call scrape_screener_in (has BSE PDF links)
+• "annual report / annual financials" → call scrape_screener_in (has annual-report PDF links)
+• "moneycontrol / screener.in / yahoo finance / NSE website" → call the specific tool for that site
+• "news / catalysts / events / latest" → call search_latest_catalysts AND search_yahoo_finance
+• "deep research / full analysis / comprehensive / everything about" → call comprehensive_stock_research
 
 
 Before answering, THINK STEP BY STEP:
@@ -82,8 +104,13 @@ Produce a rich, detailed analysis with these sections as applicable:
 **🏭 Sector Context**
   - Sector performance, breadth, co-movement with sector leaders
 
-**📰 Recent Catalysts** (if news/events requested)
-  - Key developments, earnings, corporate actions
+**📰 Recent Catalysts & Web Research** (if news/events/research requested)
+  - For EACH result from any web tool, show:
+    • Article/filing title (verbatim from tool output)
+    • Full URL on its own line (verbatim — NEVER write "Read more", "View Article", "here", or any fake link text)
+  - Show results grouped by source: screener.in / Yahoo Finance / Moneycontrol / ET / BSE
+  - For screener.in fundamentals: show key ratios in a compact table, then pros/cons
+  - For concalls: if tool returns a concalls URL, show it as a clickable link with label
 
 **⚠️ Risks & Watch Items**
   - Support/resistance, volume dry-up, divergences, macro risks
@@ -97,12 +124,26 @@ Produce a rich, detailed analysis with these sections as applicable:
   - Tools called, data freshness (snapshot date, CSV date)
   - _Mode: [Intraday/Historical] | [LIVE / EOD snapshot]_
 
+**💬 Follow-up Questions**
+  End EVERY response with exactly 3 numbered follow-up questions the user could ask next.
+  Format them as:
+  ```
+  ## 💬 What to explore next
+  1. <specific follow-up question>
+  2. <specific follow-up question>
+  3. <specific follow-up question>
+  ```
+  Make the questions specific to the data returned (e.g. if you showed RELIANCE, suggest
+  sector comparison, news catalysts, or portfolio overlap — not generic questions).
+
 ━━━ GUIDELINES ━━━
 - Be THOROUGH. A 400-600 word answer is better than a 50-word answer.
 - Use numbers precisely — don't say "RSI is high", say "RSI at 71 (mildly overbought)".
 - If a tool returns no data, say so and explain why.
 - NEVER give investment advice. Frame everything as research context.
-- End EVERY response with: "━━━ Not investment advice. For research and learning only. ━━━"
+- NEVER write "Read more" — always show the actual URL from the tool output verbatim.
+- End EVERY response with the disclaimer THEN the follow-up questions block.
+- Disclaimer line: "━━━ Not investment advice. For research and learning only. ━━━"
 """
 
 
@@ -423,12 +464,17 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict]) -> str:
 
     # 6. Catalysts
     if cat and cat.get("results"):
-        lines.append("\n▶ LATEST CATALYSTS (web)")
-        for r in cat["results"][:4]:
-            title = r.get("title","")[:90]
-            lines.append(f"  • {title}")
-            if r.get("url"):
-                lines.append(f"    {r['url'][:80]}")
+        lines.append("\n▶ LATEST CATALYSTS (web search results — use EXACT URLs below, never write 'Read more')")
+        for r in cat["results"][:5]:
+            title   = r.get("title", "")[:100]
+            url     = r.get("url", "")
+            snippet = r.get("snippet", "")[:120]
+            lines.append(f"  TITLE:   {title}")
+            if url:
+                lines.append(f"  URL:     {url}")
+            if snippet:
+                lines.append(f"  SNIPPET: {snippet}")
+            lines.append("")
 
     # 7. Risks / Watch
     risks: list[str] = []
@@ -562,11 +608,30 @@ class Agent:
                 # Only append disclaimer if LLM didn't include it (check last 400 chars)
                 if "research and learning only" not in answer[-400:]:
                     answer += "\n\n━━━ Not investment advice. For research and learning only. ━━━"
+                # Extract news/catalyst results so they can be rendered with real URLs
+                # Priority: comprehensive_stock_research → search_latest_catalysts → search_yahoo_finance
+                _web_tools = ("comprehensive_stock_research", "search_latest_catalysts",
+                              "search_yahoo_finance", "multi_source_web_search")
+                catalysts = None
+                for _wt in _web_tools:
+                    _hit = next(
+                        (t["result"] for t in tool_results
+                         if t["tool"] == _wt and isinstance(t.get("result"), dict)),
+                        None,
+                    )
+                    if _hit:
+                        # Normalise into {"results": [...]} shape
+                        items = (_hit.get("results") or _hit.get("items") or
+                                 _hit.get("news_articles") or [])
+                        if items:
+                            catalysts = {"results": items}
+                            break
                 return {
-                    "answer":  answer,
-                    "trace":   tool_results,
-                    "backend": self.backend_name,
-                    "intent":  "llm_driven",
+                    "answer":    answer,
+                    "trace":     tool_results,
+                    "backend":   self.backend_name,
+                    "intent":    "llm_driven",
+                    "catalysts": catalysts,
                 }
 
         # If we exhausted rounds without a text response, synthesize from tool results
