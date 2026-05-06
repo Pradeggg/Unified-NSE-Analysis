@@ -69,8 +69,206 @@ _followups: list[str] = []   # current follow-up suggestions (up to 3)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Banner  (printed once at startup before chat loop)
+# Prompt Library  — curated, ready-to-run research prompts
 # ─────────────────────────────────────────────────────────────────────────────
+
+PROMPT_LIBRARY = [
+    # ── 1. Market Overview ────────────────────────────────────────────────────
+    {
+        "cat": "📊 Market Overview",
+        "key": "market",
+        "color": "cyan",
+        "prompts": [
+            ("Market Pulse",         "Give me a full live market overview — NIFTY 50, BANK, IT, MID, SMALL indices with breadth, FII/DII flow, and stage distribution."),
+            ("Breadth Snapshot",     "Show current market breadth: advance/decline ratio, RS distribution by percentile, stage 1-4 stock counts, and what it signals."),
+            ("FII vs DII Flow",      "Compare today's FII and DII activity in crores. Who is buying, who is selling, and what does the institutional flow tell us?"),
+            ("Top Movers Today",     "Top 5 gainers and top 5 losers in NIFTY 50 today with % change, volume context, and possible reasons."),
+            ("Most Active Stocks",   "Which stocks have the highest trading volume and value today? Show most active by value from NIFTY 500."),
+            ("52-Week Extremes",     "List stocks nearest to their 52-week high in NIFTY 500 — these are the strongest trending names right now."),
+        ],
+    },
+    # ── 2. Intraday Trading ───────────────────────────────────────────────────
+    {
+        "cat": "⚡ Intraday Trading",
+        "key": "intraday",
+        "color": "red",
+        "prompts": [
+            ("Bank Nifty Scan",      "Scan NIFTY BANK for intraday buy and sell signals using all strategies on 15m charts. Show entry, target, SL and R:R."),
+            ("Nifty 50 Scan",        "Scan NIFTY 50 for the best intraday setups right now — momentum, breakouts, and mean-reversion on 15m candles."),
+            ("Nifty IT Scan",        "Scan NIFTY IT index for intraday signals. Focus on MACD and EMA crossovers."),
+            ("RELIANCE Intraday",    "Intraday trading setup for RELIANCE on 15m — entry, target, stoploss, R:R, pivot levels, and key indicators."),
+            ("VCP Pattern Hunt",     "Scan NIFTY 500 for VCP (Volatility Contraction Pattern) stocks ready for intraday breakout on 15m."),
+            ("Volume Spike Alert",   "Which NIFTY 50 or BANK NIFTY stocks are showing 2x+ volume spikes with price confirmation right now?"),
+            ("Supertrend BUY List",  "Scan NIFTY MIDCAP 100 for stocks with active Supertrend BUY signals on 15m with R:R above 1.5."),
+        ],
+    },
+    # ── 3. Technical Analysis ─────────────────────────────────────────────────
+    {
+        "cat": "📈 Technical Analysis",
+        "key": "technical",
+        "color": "green",
+        "prompts": [
+            ("Stage 2 Breakouts",    "Show me stocks currently in Weinstein Stage 2 with recent breakouts — RS rank high, volume expanding."),
+            ("Supertrend BUY Sweep", "Run the supertrend_buy screener and show the top 10 names with stage, RSI, RS%, and 1-month returns."),
+            ("Strong Buy Signals",   "Which stocks have strong_buy signals right now? Show technicals: stage, RSI, ADX, MACD, RS rank."),
+            ("ADX Trend Leaders",    "Find stocks with ADX > 30 (strong trend) and positive DI+ vs DI−. These are the trending names to watch."),
+            ("NIFTY 50 Technicals",  "Full technical setup for NIFTY 50 index — RSI, MACD, Supertrend, key support/resistance, 50/200 MA position."),
+            ("BANK NIFTY Setup",     "Technical setup for BANK NIFTY — current trend, key levels, indicators, and what to expect next."),
+            ("52W High Breakouts",   "List stocks that are within 5% of their 52-week high from NIFTY 500 — potential breakout candidates."),
+        ],
+    },
+    # ── 4. Sector Analysis ────────────────────────────────────────────────────
+    {
+        "cat": "🏭 Sector Analysis",
+        "key": "sector",
+        "color": "magenta",
+        "prompts": [
+            ("IT Sector Health",     "Analyse the IT sector — breadth, stage distribution, RS vs Nifty, leaders and laggards, and key themes."),
+            ("Banking Sector",       "Banking sector deep dive — BANK NIFTY trend, top PSU vs private banks, NPA concerns vs growth stocks."),
+            ("Pharma Sector",        "Pharma sector analysis — sector trend, stage distribution, top performers, USFDA/regulatory watch."),
+            ("Auto Sector",          "Auto sector outlook — EV transition stocks, two-wheelers vs passenger vehicles, volumes data context."),
+            ("FMCG vs Consumer",     "Compare FMCG sector vs Consumer Discretionary — which is showing more Stage 2 stocks and better RS?"),
+            ("Top Sector Today",     "Which sectors are leading the market today? Show sector-wise performance and breadth right now."),
+            ("Sector Rotation",      "Where is smart money rotating? Analyse sector RS trends over last 1 month — which sectors are gaining/losing momentum?"),
+        ],
+    },
+    # ── 5. Screeners & Filters ───────────────────────────────────────────────
+    {
+        "cat": "🔬 Screeners",
+        "key": "screener",
+        "color": "yellow",
+        "prompts": [
+            ("Stage 2 Universe",     "Show all stocks currently in Weinstein Stage 2 (advancing). Filter by RS > 60 and sort by 1-month returns."),
+            ("Breakout Candidates",  "Run the breakouts screener — stocks with price near pivot, high RS rank, volume build-up, in Stage 2."),
+            ("High RS Stocks",       "List the top 20 stocks by Relative Strength percentage rank vs NIFTY 50. These are the market leaders."),
+            ("Investment Grade",     "Which stocks have the highest investment scores combining fundamentals + technicals? Top 15 names."),
+            ("Recovery Plays",       "Show stocks transitioning from Stage 1 (basing) to Stage 2 (advancing) — early movers with rising RS."),
+            ("Momentum Movers",      "Top 10 stocks with the best 1-week and 1-month returns with RSI still below 75 — not yet overbought."),
+        ],
+    },
+    # ── 6. Fundamentals & Valuation ──────────────────────────────────────────
+    {
+        "cat": "🏦 Fundamentals",
+        "key": "fundamentals",
+        "color": "blue",
+        "prompts": [
+            ("TCS Full Analysis",    "Full fundamental analysis of TCS — P/E, P/B, ROE, ROCE, revenue growth, debt, pros/cons from screener.in."),
+            ("HDFC Bank Valuation",  "HDFC Bank valuation deep dive — P/B vs peers, NIM trend, ROE, capital adequacy, screener.in fundamentals."),
+            ("IT Sector P/E Compare","Compare P/E, ROE, ROCE, and revenue growth of TCS vs INFY vs WIPRO vs HCL TECH vs LTIM."),
+            ("High ROE Low PE",      "Find NSE stocks with ROE > 20% and P/E < 25 — quality at reasonable price (GARP) screen."),
+            ("Debt-Free Companies",  "Show debt-free or near-zero debt companies in NIFTY 500 with ROE > 15% and earnings growth."),
+            ("Concall Summary",      "Get the latest concall transcript and key management commentary for RELIANCE from screener.in."),
+            ("Peer Comparison",      "Compare RELIANCE vs ONGC vs BPCL — P/E, EV/EBITDA, ROE, dividend yield, and technical stage."),
+        ],
+    },
+    # ── 7. Stock Deep Dive ────────────────────────────────────────────────────
+    {
+        "cat": "🔍 Stock Deep Dive",
+        "key": "stock",
+        "color": "green",
+        "prompts": [
+            ("RELIANCE Full View",   "Everything on RELIANCE — live price, technical setup, fundamentals from screener.in, recent news, sector context, and intraday levels."),
+            ("INFOSYS Analysis",     "Full analysis of INFOSYS — stage, technicals, P/E vs peers, recent quarterly results, and trading setup."),
+            ("ADANI ENTERPRISES",    "Research ADANI ENTERPRISES — technical stage, RS rank, fundamentals, FII/DII holding changes, latest news."),
+            ("ZOMATO Setup",         "ZOMATO current setup — Stage analysis, RSI, MACD, support/resistance, fundamental burn rate and path to profitability."),
+            ("TATA MOTORS View",     "TATA MOTORS — JLR performance, EV segment, technical setup, sector context, valuation vs global peers."),
+            ("SBI Deep Dive",        "SBI complete analysis — NPA trend, ROE, P/B vs HDFC, technical stage, FII holding, and key catalysts."),
+        ],
+    },
+    # ── 8. News & Catalysts ───────────────────────────────────────────────────
+    {
+        "cat": "📰 News & Catalysts",
+        "key": "news",
+        "color": "cyan",
+        "prompts": [
+            ("Today's Top News",     "What are the top market-moving news stories today? Search moneycontrol, ET, NSE announcements."),
+            ("Results Calendar",     "Which companies are announcing quarterly results this week? What are the expected earnings and market reaction?"),
+            ("FII Bulk Deals Today", "Show today's bulk deals and block deals — who is buying, who is selling, and what sizes?"),
+            ("Macro Events Week",    "What are the key macro events this week — RBI, Fed, CPI data, F&O expiry — and how should traders position?"),
+            ("Nifty News Flow",      "Latest news and catalysts affecting NIFTY 50 — policy updates, global cues, sector rotation triggers."),
+        ],
+    },
+    # ── 9. Portfolio ──────────────────────────────────────────────────────────
+    {
+        "cat": "📋 Portfolio",
+        "key": "portfolio",
+        "color": "magenta",
+        "prompts": [
+            ("Portfolio Exposure",   "Show my portfolio sector distribution and concentration. Which sectors am I overweight or underweight?"),
+            ("Portfolio vs Stage2",  "Which of my portfolio holdings are in Weinstein Stage 2? Which are in Stage 3 or 4 and need review?"),
+            ("Portfolio vs Screen",  "Which of my holdings match the current strong_buy screener? Are my best performers the ones with best signals?"),
+            ("Holdings Health",      "Evaluate my portfolio holdings — stage, RSI, RS rank, and 1-month returns for each position."),
+        ],
+    },
+    # ── 10. Global & Macro ────────────────────────────────────────────────────
+    {
+        "cat": "🌍 Global & Macro",
+        "key": "global",
+        "color": "yellow",
+        "prompts": [
+            ("Global Market Check",  "What happened in US, Asian, and European markets overnight? SGX Nifty cues for India's open."),
+            ("USD/INR Impact",       "How is USD/INR moving today and what is the impact on IT exporters, importers, and metal stocks?"),
+            ("Crude Oil Effect",     "Current crude oil price and its impact on OMCs, aviation stocks, paint sector, and tyre companies."),
+            ("FII Net Position",     "FII net activity this month — cumulative buying/selling, which sectors saw inflows, and what it implies for Nifty."),
+            ("India vs Emerging",    "How is India performing vs other emerging markets (China, Brazil, Korea) this month? Relative outperformance?"),
+        ],
+    },
+]
+
+# flat list for O(1) lookup: prompt_number → (category, title, query)
+_PROMPT_INDEX: dict[int, tuple[str, str, str]] = {}
+_n = 1
+for _cat in PROMPT_LIBRARY:
+    for _title, _query in _cat["prompts"]:
+        _PROMPT_INDEX[_n] = (_cat["cat"], _title, _query)
+        _n += 1
+
+
+def _print_prompts_library(filter_key: str = "") -> None:
+    """Render the prompt library as a rich table. filter_key narrows to one category."""
+    fk = filter_key.lower().strip()
+    total = 0
+    n = 1
+
+    for cat_data in PROMPT_LIBRARY:
+        if fk and fk not in cat_data["key"] and fk not in cat_data["cat"].lower():
+            n += len(cat_data["prompts"])
+            continue
+
+        color  = cat_data["color"]
+        table  = Table(
+            show_header=True,
+            header_style=f"bold {color}",
+            box=box.SIMPLE_HEAD,
+            padding=(0, 1),
+            expand=True,
+        )
+        table.add_column("#",     style="bold white", width=4, no_wrap=True)
+        table.add_column("Prompt", style=f"bold {color}", min_width=22, no_wrap=True)
+        table.add_column("What it does", style="dim white")
+
+        for title, query in cat_data["prompts"]:
+            table.add_row(f"p{n}", title, query[:90] + ("…" if len(query) > 90 else ""))
+            n += 1
+            total += 1
+
+        console.print()
+        console.print(Panel(
+            table,
+            title=f"[bold {color}]{cat_data['cat']}[/bold {color}]",
+            border_style=color,
+            padding=(0, 1),
+        ))
+
+    console.print()
+    console.print(
+        f"[dim]  {total} prompts shown  ·  Type [bold white]p<number>[/bold white] to run  ·  "
+        f"/prompts [bold]market|intraday|technical|sector|screener|fundamentals|"
+        f"stock|news|portfolio|global[/bold] to filter[/dim]"
+    )
+    console.print()
+
+
 
 _BANNER = [
     (Fore.CYAN  + Style.BRIGHT, r"   _   ___ ___ _  _ _____      _   ___  ___   _   "),
@@ -111,7 +309,7 @@ def print_banner() -> None:
         print(f"  {icon}  {colour}{Style.BRIGHT}{text}{Style.RESET_ALL}")
     print()
     print(Fore.WHITE + Style.DIM +
-          "  /live  /eod  /auto  │  1 2 3 = follow-ups  │  /help  │  exit")
+          "  /live  /eod  /auto  │  /prompts  │  p<n> = run prompt  │  1 2 3 = follow-ups  │  /help  │  exit")
     print()
     _separator()
     print()
@@ -261,18 +459,22 @@ def _print_help() -> None:
     console.print(Panel(
         Text.from_markup(
             "[bold cyan]MODE COMMANDS[/bold cyan]\n"
-            "  [red]/live[/red]  or  [red]/l[/red]   — Live / Intraday  (real-time NSE API)\n"
-            "  [blue]/eod[/blue]   or  [blue]/h[/blue]   — EOD / Historical (CSV + DB snapshot)\n"
-            "  [white]/auto[/white]  or  [white]/a[/white]   — Auto-detect from query keywords\n\n"
+            "  [red]/live[/red]  or  [red]/l[/red]        — Live / Intraday  (real-time NSE API)\n"
+            "  [blue]/eod[/blue]   or  [blue]/h[/blue]        — EOD / Historical (CSV + DB snapshot)\n"
+            "  [white]/auto[/white]  or  [white]/a[/white]        — Auto-detect from query keywords\n\n"
             "[bold cyan]INTRADAY SCREENER[/bold cyan]\n"
-            "  [green]/scan[/green]                    — Scan NIFTY 50 for intraday signals\n"
-            "  [green]/scan NIFTY BANK[/green]         — Scan any index (NIFTY IT, PHARMA…)\n\n"
+            "  [green]/scan[/green]                   — Scan NIFTY 50 for intraday signals\n"
+            "  [green]/scan NIFTY BANK[/green]        — Scan any index (NIFTY IT, PHARMA…)\n\n"
+            "[bold cyan]PROMPT LIBRARY[/bold cyan]\n"
+            "  [yellow]/prompts[/yellow]               — Browse all 50+ curated research prompts\n"
+            "  [yellow]/prompts intraday[/yellow]      — Filter by category (market/technical/sector…)\n"
+            "  [yellow]p<number>[/yellow]              — Run prompt by number  (e.g. p5, p23, p41)\n\n"
             "[bold cyan]FOLLOW-UPS[/bold cyan]\n"
             "  [yellow]1 / 2 / 3[/yellow]              — Ask the numbered follow-up question\n\n"
             "[bold cyan]OTHER[/bold cyan]\n"
-            "  [dim]/clear[/dim]                 — Clear screen\n"
-            "  [dim]exit / quit[/dim]            — Exit Agent Adda\n"
-            "  [dim]Ctrl-C[/dim]                 — Exit (same as quit)\n"
+            "  [dim]/clear[/dim]                  — Clear screen\n"
+            "  [dim]exit / quit[/dim]             — Exit Agent Adda\n"
+            "  [dim]Ctrl-C[/dim]                  — Exit (same as quit)\n"
         ),
         title="[bold cyan]Agent Adda Help[/bold cyan]",
         border_style="cyan",
@@ -543,12 +745,32 @@ def _chat_loop(agent, show_trace: bool) -> None:
             print_banner()
             continue
 
+        # ── /prompts library ───────────────────────────────────────────
+        if text.lower().startswith("/prompts") or text.lower() == "/p":
+            parts = text.split(maxsplit=1)
+            fkey  = parts[1].strip() if len(parts) > 1 else ""
+            _print_prompts_library(fkey)
+            continue
+
         # ── /scan shortcut: run intraday screener ──────────────────────
         if text.lower().startswith("/scan"):
             parts = text.split(maxsplit=1)
             idx   = parts[1].upper() if len(parts) > 1 else "NIFTY 50"
             text  = f"Scan {idx} for intraday buy and sell signals using all strategies on 15m charts"
             console.print(f"[dim]  → Intraday scan: {idx}[/dim]")
+
+        # ── p<n> prompt library shortcut ───────────────────────────────
+        import re as _re
+        _pm = _re.fullmatch(r"p(\d{1,3})", text.lower())
+        if _pm:
+            pnum = int(_pm.group(1))
+            if pnum in _PROMPT_INDEX:
+                _cat, _ptitle, _pquery = _PROMPT_INDEX[pnum]
+                console.print(f"[dim]  → [bold]{_ptitle}[/bold]  ({_cat})[/dim]")
+                text = _pquery
+            else:
+                console.print(f"[dim red]  ✗  No prompt p{pnum}. Type /prompts to browse.[/dim red]")
+                continue
 
         # ── Follow-up shortcut ─────────────────────────────────────────
         if text in ("1", "2", "3") and _followups:
