@@ -76,9 +76,15 @@ You have access to these data tools (call them as needed):
 • run_intraday_screener(screen_type)  → SQLite-backed setup scanner: momentum, breakouts, vcp, supertrend
 • get_intraday_analysis(symbol,       → Legacy yfinance analysis of one stock when SQLite tables are absent
     interval, strategies)               or explicitly requested; keep output research-only.
-• scan_intraday_market(index,         → Legacy yfinance index scan when explicitly requested.
+                                        Returns EOD daily levels + session context when intraday unavailable.
+• scan_intraday_market(index,         → yfinance scan of ALL stocks in an NSE index.
     interval, strategies,
     direction_filter, min_rr, top_n)
+• scan_symbols_intraday(symbols,      → yfinance scan of a SPECIFIC SYMBOL LIST — use when
+    interval, strategies,               you already know which stocks to check (from EOD screen,
+    direction_filter, min_rr, top_n)    breakout list, watchlist, small-caps not in any index).
+                                        Works for ANY NSE stock. Has market-session awareness and
+                                        EOD daily level fallback for pre-market / missing data.
 
 [Web research tools — use for deep research, always return REAL URLs]
 • scrape_screener_in(symbol)          → screener.in: P/E, P/B, ROE, ROCE, pros/cons,
@@ -99,6 +105,8 @@ You have access to these data tools (call them as needed):
 • "intraday levels / support resistance / pivots / VWAP levels" → call get_intraday_levels(symbol)
 • "intraday data health / live table health / SQLite intraday" → call get_intraday_source_health
 • "intraday screener / scan / best intraday stocks / momentum plays" → call run_intraday_screener(screen_type="momentum")
+• "intraday setup for [list of stocks] / check these intraday / scan my watchlist / small-cap intraday" → call scan_symbols_intraday(symbols=[...])
+• "scan [index] intraday / all NIFTY 50 signals / bank nifty buy signals" → call scan_intraday_market(index=...)
 • "MACD signal / RSI signal / supertrend signal / VCP pattern" → call compute_intraday_indicators or explain_intraday_setup
 • "current price / live / now / today" → call get_live_quote or get_live_market_overview FIRST
 • "top gainers / top losers / biggest movers / what's up / what's down" → call get_top_gainers_losers

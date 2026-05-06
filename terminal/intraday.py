@@ -40,6 +40,34 @@ _INTERVAL_PERIOD: dict[str, str] = {
     "1d":  "1y",
 }
 
+# Minimum usable candles per interval
+_MIN_CANDLES: dict[str, int] = {
+    "1m": 30, "5m": 20, "15m": 10, "30m": 8, "1h": 8, "1d": 20,
+}
+
+# Fallback interval chain when data is thin
+_INTERVAL_FALLBACK: dict[str, str] = {
+    "5m": "15m", "15m": "30m", "30m": "1h", "1h": "1h",
+}
+
+def _market_context() -> dict:
+    """Return current IST time and whether NSE market is open."""
+    now  = datetime.now()
+    hour = now.hour + now.minute / 60
+    # NSE: Mon–Fri 09:15–15:30 IST
+    is_weekday = now.weekday() < 5
+    is_open    = is_weekday and 9.25 <= hour <= 15.5
+    if not is_weekday:
+        session = "weekend"
+    elif hour < 9.25:
+        session = "pre-market"
+    elif hour > 15.5:
+        session = "post-market"
+    else:
+        session = "live"
+    return {"session": session, "is_open": is_open,
+            "time_ist": now.strftime("%H:%M IST")}
+
 # ── Candle fetch ─────────────────────────────────────────────────────────────
 
 def get_intraday_candles(
@@ -49,36 +77,55 @@ def get_intraday_candles(
 ) -> pd.DataFrame:
     """Fetch OHLCV candles from Yahoo Finance for an NSE stock.
 
-    Args:
-        symbol:   NSE ticker (e.g. 'TCS').
-        interval: '1m', '5m', '15m', '30m', '1h', '1d'.
-        period:   yfinance period string; auto-selected from interval if None.
+    Tries NSE (.NS) first, then BSE (.BO) if NSE returns too few candles.
+    If the requested interval is too granular, auto-upgrades to the next
+    coarser interval.
 
-    Returns:
-        DataFrame with DatetimeIndex and columns: Open, High, Low, Close, Volume.
-        Empty DataFrame on error.
+    Returns DataFrame with DatetimeIndex and columns: Open, High, Low, Close, Volume.
+    Empty DataFrame on error.
     """
     import yfinance as yf
 
-    yf_sym = symbol.strip().upper() + ".NS"
-    per    = period or _INTERVAL_PERIOD.get(interval, "5d")
-    try:
-        df = yf.download(
-            yf_sym, period=per, interval=interval,
-            progress=False, auto_adjust=True, prepost=False,
-        )
-        if df.empty:
+    sym   = symbol.strip().upper()
+    per   = period or _INTERVAL_PERIOD.get(interval, "5d")
+    min_c = _MIN_CANDLES.get(interval, 10)
+
+    def _fetch(ticker: str, ivl: str, prd: str) -> pd.DataFrame:
+        try:
+            df = yf.download(ticker, period=prd, interval=ivl,
+                             progress=False, auto_adjust=True, prepost=False)
+            if df.empty:
+                return pd.DataFrame()
+            if isinstance(df.columns, pd.MultiIndex):
+                df.columns = df.columns.get_level_values(0)
+            df.index = pd.to_datetime(df.index)
+            if df.index.tzinfo is not None:
+                df.index = df.index.tz_convert("Asia/Kolkata").tz_localize(None)
+            df = df[["Open", "High", "Low", "Close", "Volume"]].dropna()
+            return df
+        except Exception:
             return pd.DataFrame()
-        # Flatten MultiIndex columns (yfinance ≥ 0.2 returns MultiIndex)
-        if isinstance(df.columns, pd.MultiIndex):
-            df.columns = df.columns.get_level_values(0)
-        df.index = pd.to_datetime(df.index)
-        # Convert to IST if timezone-aware
-        if df.index.tzinfo is not None:
-            df.index = df.index.tz_convert("Asia/Kolkata").tz_localize(None)
-        return df[["Open", "High", "Low", "Close", "Volume"]].dropna()
-    except Exception:
-        return pd.DataFrame()
+
+    # Try NSE first
+    df = _fetch(f"{sym}.NS", interval, per)
+
+    # BSE fallback if NSE thin
+    if df.empty or len(df) < min_c:
+        df_bse = _fetch(f"{sym}.BO", interval, per)
+        if len(df_bse) > len(df):
+            df = df_bse
+
+    # Auto-upgrade interval if still insufficient
+    fallback_ivl = _INTERVAL_FALLBACK.get(interval)
+    if (df.empty or len(df) < min_c) and fallback_ivl:
+        fallback_per = _INTERVAL_PERIOD.get(fallback_ivl, "60d")
+        df2 = _fetch(f"{sym}.NS", fallback_ivl, fallback_per)
+        if df2.empty or len(df2) < _MIN_CANDLES.get(fallback_ivl, 8):
+            df2 = _fetch(f"{sym}.BO", fallback_ivl, fallback_per)
+        if len(df2) >= _MIN_CANDLES.get(fallback_ivl, 8):
+            df = df2  # return with upgraded interval noted in caller
+
+    return df
 
 
 def get_multi_candles(
@@ -812,9 +859,57 @@ def get_intraday_analysis(
         interval:   '5m', '15m', '30m', '1h'.
         strategies: List of strategies to run; None = all.
     """
-    df = get_intraday_candles(symbol, interval)
+    ctx   = _market_context()
+    sym   = symbol.strip().upper()
+    df    = get_intraday_candles(sym, interval)
+
+    # ── Insufficient data path ────────────────────────────────────────────
     if df.empty or len(df) < 10:
-        return {"symbol": symbol, "error": f"Insufficient data for {symbol} at {interval}"}
+        reason = (
+            "Market is pre-open — intraday candles not yet available for today."
+            if ctx["session"] == "pre-market"
+            else (
+                "Post-market: using last session's candles is less reliable."
+                if ctx["session"] == "post-market"
+                else f"Symbol {sym} has insufficient intraday data on Yahoo Finance."
+            )
+        )
+        # Try fetching daily candles as a fallback to at least show S/R
+        df_daily = get_intraday_candles(sym, "1d")
+        if not df_daily.empty and len(df_daily) >= 5:
+            last_d  = df_daily.iloc[-1]
+            prev_d  = df_daily.iloc[-2]
+            hi_20   = _f(df_daily["High"].tail(20).max())
+            lo_20   = _f(df_daily["Low"].tail(20).min())
+            atr_eod = _f((df_daily["High"] - df_daily["Low"]).tail(14).mean())
+            return {
+                "symbol":      sym,
+                "interval":    interval,
+                "as_of":       ctx["time_ist"],
+                "session":     ctx["session"],
+                "data_source": "EOD daily candles (intraday unavailable)",
+                "reason":      reason,
+                "close":       _f(last_d["Close"]),
+                "prev_close":  _f(prev_d["Close"]),
+                "day_range":   f"{_f(last_d['Low'])} – {_f(last_d['High'])}",
+                "atr_daily":   atr_eod,
+                "approx_levels": {
+                    "resistance_20d_high": hi_20,
+                    "support_20d_low":     lo_20,
+                    "prev_day_high":       _f(prev_d["High"]),
+                    "prev_day_low":        _f(prev_d["Low"]),
+                    "prev_day_close":      _f(prev_d["Close"]),
+                    "approx_target":       _f(last_d["Close"] + atr_eod * 1.5) if atr_eod else None,
+                    "approx_stoploss":     _f(last_d["Close"] - atr_eod) if atr_eod else None,
+                },
+                "note": "Use these daily levels for swing/positional context. Re-run after 09:30 IST for live intraday setup.",
+                "signals": [], "buy_signals": [], "sell_signals": [], "watch_alerts": [],
+            }
+        return {
+            "symbol": sym, "interval": interval,
+            "session": ctx["session"], "reason": reason,
+            "error": f"No data available for {sym}. {reason}",
+        }
 
     df_ind = compute_all(df)
     last   = df_ind.iloc[-1]
@@ -840,9 +935,10 @@ def get_intraday_analysis(
     confluence_sell = [s["strategy"] for s in sell_sigs]
 
     return {
-        "symbol":       symbol.upper(),
+        "symbol":       sym,
         "interval":     interval,
-        "as_of":        datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "session":      ctx["session"],
+        "as_of":        ctx["time_ist"],
         "close":        _f(close),
         "atr":          _f(atr),
         "pct_change":   _f((close - df["Close"].iloc[0]) / df["Close"].iloc[0] * 100),

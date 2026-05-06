@@ -26,9 +26,12 @@ from terminal.web_research import (
 
 # ── Intraday screener engine ──────────────────────────────────────────────────
 from terminal.intraday import (
+    compute_all as _compute_intraday_all,
     get_intraday_analysis,
     run_intraday_screener as _run_intraday_screener,
     get_intraday_candles,
+    key_levels as _intraday_key_levels,
+    run_all_signals as _run_intraday_all_signals,
 )
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
@@ -36,6 +39,8 @@ ROOT      = Path(__file__).parent.parent
 DB_PATH   = ROOT / "data" / "sector_rotation_tracker.db"
 STOCK_CSV = ROOT / "data" / "nse_sec_full_data.csv"
 INDEX_CSV = ROOT / "data" / "nse_index_data.csv"
+GLOBAL_INDEX_CSV = ROOT / "data" / "global_indices.csv"
+GLOBAL_CORR_CSV  = ROOT / "data" / "global_correlations.csv"
 REPORTS   = ROOT / "reports"
 
 
@@ -105,6 +110,19 @@ def _compute_macd_signal(closes: pd.Series) -> str:
     signal = macd.ewm(span=9, adjust=False).mean()
     hist   = float(macd.iloc[-1] - signal.iloc[-1])
     return "bullish" if hist > 0 else "bearish"
+
+
+def _safe_float(v: Any, digits: int = 2) -> float | None:
+    """Return a rounded plain float, or None for missing/non-numeric values."""
+    if v is None:
+        return None
+    try:
+        fv = float(v)
+    except (TypeError, ValueError):
+        return None
+    if pd.isna(fv):
+        return None
+    return round(fv, digits)
 
 
 def _supertrend(grp: pd.DataFrame, period: int = 10, mult: float = 3.0) -> str | None:
@@ -534,6 +552,646 @@ def get_market_breadth() -> dict:
         "ad_ratio":      ad_ratio,
         "avg_rs_pct":    avg_rs,
         "stage_distribution": stage_dist,
+    }
+
+
+def get_global_market_assessment() -> dict:
+    """Assess global market cues from cached global index and correlation files."""
+    if not GLOBAL_INDEX_CSV.exists():
+        return {"error": f"Global indices file not found: {GLOBAL_INDEX_CSV}"}
+
+    df = pd.read_csv(GLOBAL_INDEX_CSV)
+    if "Date" not in df.columns or df.empty:
+        return {"error": "Global indices CSV is empty or missing Date column"}
+
+    df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
+    df = df.dropna(subset=["Date"]).sort_values("Date")
+    if len(df) < 2:
+        return {"error": "Global indices CSV needs at least two dated rows"}
+
+    latest = df.iloc[-1]
+    prev_idx = len(df) - 2
+    moves: dict[str, dict[str, Any]] = {}
+    for asset in [c for c in df.columns if c != "Date"]:
+        latest_val = pd.to_numeric(pd.Series([latest.get(asset)]), errors="coerce").iloc[0]
+        if pd.isna(latest_val):
+            continue
+
+        prev_val = None
+        for i in range(prev_idx, -1, -1):
+            candidate = pd.to_numeric(pd.Series([df.iloc[i].get(asset)]), errors="coerce").iloc[0]
+            if pd.notna(candidate) and candidate != 0:
+                prev_val = float(candidate)
+                break
+        if prev_val is None:
+            continue
+
+        pct_change = round((float(latest_val) / prev_val - 1) * 100, 2)
+        moves[asset] = {
+            "price": round(float(latest_val), 2),
+            "pct_change": pct_change,
+        }
+
+    def _avg(names: list[str]) -> float | None:
+        vals = [moves[n]["pct_change"] for n in names if n in moves]
+        return round(sum(vals) / len(vals), 2) if vals else None
+
+    def _bias(avg: float | None) -> str:
+        if avg is None:
+            return "unknown"
+        if avg > 0.35:
+            return "positive"
+        if avg < -0.35:
+            return "negative"
+        return "mixed"
+
+    us_avg = _avg(["S&P 500", "Nasdaq"])
+    asia_avg = _avg(["Hang Seng", "Nikkei 225"])
+    commodity_avg = _avg(["Gold", "Crude Oil", "Copper"])
+    fx_avg = _avg(["DXY", "USDINR"])
+
+    regions = {
+        "US": {"avg_pct_change": us_avg, "bias": _bias(us_avg)},
+        "Asia": {"avg_pct_change": asia_avg, "bias": _bias(asia_avg)},
+        "Commodities": {"avg_pct_change": commodity_avg, "bias": _bias(commodity_avg)},
+        "FX": {"avg_pct_change": fx_avg, "bias": _bias(fx_avg)},
+    }
+
+    risk_points = 0
+    if us_avg is not None:
+        risk_points += 2 if us_avg > 1.0 else (1 if us_avg > 0.35 else (-2 if us_avg < -1.0 else (-1 if us_avg < -0.35 else 0)))
+    if asia_avg is not None:
+        risk_points += 1 if asia_avg > 0.35 else (-1 if asia_avg < -0.35 else 0)
+    if moves.get("DXY", {}).get("pct_change", 0) > 0.35:
+        risk_points -= 1
+    if moves.get("Gold", {}).get("pct_change", 0) > 1 and risk_points < 1:
+        risk_points -= 1
+
+    if risk_points >= 2:
+        risk_regime = "RISK_ON"
+    elif risk_points <= -2:
+        risk_regime = "RISK_OFF"
+    else:
+        risk_regime = "MIXED"
+
+    india_readthrough: list[str] = []
+    nasdaq = moves.get("Nasdaq", {}).get("pct_change")
+    crude = moves.get("Crude Oil", {}).get("pct_change")
+    usdinr = moves.get("USDINR", {}).get("pct_change")
+    copper = moves.get("Copper", {}).get("pct_change")
+    dxy = moves.get("DXY", {}).get("pct_change")
+
+    if nasdaq is not None and nasdaq > 0.75:
+        india_readthrough.append("Nasdaq strength is supportive for IT, digital, and growth-oriented Indian equities.")
+    elif nasdaq is not None and nasdaq < -0.75:
+        india_readthrough.append("Nasdaq weakness is a caution flag for IT and growth-oriented Indian equities.")
+
+    if crude is not None and crude > 1.0:
+        india_readthrough.append("Crude up is a headwind for oil importers, OMCs, aviation, paints, tyres, and broad inflation sentiment.")
+    elif crude is not None and crude < -1.0:
+        india_readthrough.append("Crude weakness can ease pressure on import-sensitive sectors and inflation expectations.")
+
+    if usdinr is not None and usdinr > 0.2:
+        india_readthrough.append("USDINR firmness can support exporters such as IT and pharma but pressures import-heavy sectors.")
+    elif usdinr is not None and usdinr < -0.2:
+        india_readthrough.append("USDINR softness can help importers but reduces currency tailwind for exporters.")
+
+    if copper is not None and copper > 1.0:
+        india_readthrough.append("Copper strength supports the cyclicals and metals read-through.")
+    elif copper is not None and copper < -1.0:
+        india_readthrough.append("Copper weakness is a caution flag for cyclicals and metals demand.")
+
+    if dxy is not None and dxy > 0.35:
+        india_readthrough.append("DXY strength can tighten global liquidity conditions for emerging markets, including India.")
+
+    if not india_readthrough:
+        india_readthrough.append("Global cues are balanced; confirm with Nifty breadth, Bank Nifty, and FII/DII flow.")
+
+    watch_items = [
+        "Nifty gap risk versus overnight US and Asia moves",
+        "Bank Nifty follow-through after the first 30 minutes",
+        "FII/DII flow confirmation",
+        "Crude, USDINR, and DXY continuation during Indian market hours",
+    ]
+
+    correlations: list[dict[str, Any]] = []
+    if GLOBAL_CORR_CSV.exists():
+        corr = pd.read_csv(GLOBAL_CORR_CSV)
+        keep = ["asset", "price", "corr_30d", "corr_60d", "change", "alert"]
+        if not corr.empty and all(c in corr.columns for c in keep):
+            for _, row in corr[keep].head(12).iterrows():
+                correlations.append(row.where(pd.notna(row), None).to_dict())
+
+    return {
+        "risk_regime": risk_regime,
+        "as_of": str(latest["Date"].date()),
+        "regions": regions,
+        "moves": moves,
+        "india_readthrough": india_readthrough,
+        "watch_items": watch_items,
+        "correlations": correlations,
+        "source": "Cached global market CSVs",
+        "source_files": {
+            "global_indices": str(GLOBAL_INDEX_CSV.relative_to(ROOT)) if GLOBAL_INDEX_CSV.is_relative_to(ROOT) else str(GLOBAL_INDEX_CSV),
+            "global_correlations": str(GLOBAL_CORR_CSV.relative_to(ROOT)) if GLOBAL_CORR_CSV.is_relative_to(ROOT) else str(GLOBAL_CORR_CSV),
+        },
+    }
+
+
+def _sqlite_table_exists(table_name: str) -> bool:
+    if not DB_PATH.exists():
+        return False
+    conn = _db_conn()
+    row = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+        (table_name,),
+    ).fetchone()
+    conn.close()
+    return bool(row)
+
+
+def get_intraday_source_health(max_age_minutes: int = 30) -> dict:
+    """Report health of SQLite intraday source tables."""
+    table_names = [
+        "intraday_quotes",
+        "intraday_ohlcv",
+        "intraday_indicators",
+        "intraday_signals",
+        "intraday_levels",
+        "intraday_agent_runs",
+    ]
+    result: dict[str, Any] = {
+        "data_mode": "intraday",
+        "db_path": str(DB_PATH.relative_to(ROOT)) if DB_PATH.is_relative_to(ROOT) else str(DB_PATH),
+        "max_age_minutes": max_age_minutes,
+        "tables": {},
+    }
+    if not DB_PATH.exists():
+        result["overall_status"] = "MISSING"
+        result["error"] = "Intraday SQLite database not found"
+        return result
+
+    now = datetime.now()
+    conn = _db_conn()
+    statuses: list[str] = []
+    for table in table_names:
+        exists = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+            (table,),
+        ).fetchone()
+        if not exists:
+            result["tables"][table] = {"exists": False, "status": "MISSING"}
+            statuses.append("MISSING")
+            continue
+
+        row_count = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+        cols = [r[1] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()]
+        timestamp_col = next((c for c in cols if c.lower() in ("timestamp", "datetime", "time", "as_of")), None)
+        latest_ts = None
+        age_minutes = None
+        status = "EMPTY" if row_count == 0 else "UNKNOWN"
+        if row_count and timestamp_col:
+            raw_ts = conn.execute(f"SELECT MAX({timestamp_col}) FROM {table}").fetchone()[0]
+            parsed = pd.to_datetime(raw_ts, errors="coerce")
+            if pd.notna(parsed):
+                latest_dt = parsed.to_pydatetime()
+                latest_ts = latest_dt.strftime("%Y-%m-%d %H:%M:%S")
+                age_minutes = round((now - latest_dt).total_seconds() / 60, 1)
+                status = "FRESH" if age_minutes <= max_age_minutes else "STALE"
+        elif row_count:
+            status = "PRESENT"
+
+        result["tables"][table] = {
+            "exists": True,
+            "status": status,
+            "rows": row_count,
+            "latest_timestamp": latest_ts,
+            "age_minutes": age_minutes,
+        }
+        statuses.append(status)
+    conn.close()
+
+    if result["tables"].get("intraday_ohlcv", {}).get("status") == "FRESH":
+        result["overall_status"] = "FRESH"
+    elif result["tables"].get("intraday_ohlcv", {}).get("exists"):
+        result["overall_status"] = result["tables"]["intraday_ohlcv"]["status"]
+    elif "MISSING" in statuses:
+        result["overall_status"] = "MISSING"
+    else:
+        result["overall_status"] = "UNKNOWN"
+    return result
+
+
+def get_intraday_bars(
+    symbol: str,
+    timeframe: str = "15m",
+    lookback: int = 120,
+) -> dict:
+    """Read intraday OHLCV bars from SQLite intraday_ohlcv."""
+    sym = symbol.strip().upper()
+    if not DB_PATH.exists():
+        return {"symbol": sym, "data_mode": "intraday", "error": "Intraday SQLite database not found"}
+    if not _sqlite_table_exists("intraday_ohlcv"):
+        return {"symbol": sym, "data_mode": "intraday", "error": "intraday_ohlcv table not found"}
+
+    conn = _db_conn()
+    df = pd.read_sql_query(
+        "SELECT * FROM intraday_ohlcv WHERE UPPER(symbol)=? AND timeframe=?",
+        conn,
+        params=(sym, timeframe),
+    )
+    conn.close()
+    if df.empty:
+        return {
+            "symbol": sym,
+            "timeframe": timeframe,
+            "data_mode": "intraday",
+            "source": "SQLite intraday_ohlcv",
+            "bars": [],
+            "error": f"No intraday bars for {sym} at {timeframe}",
+        }
+
+    df.columns = [str(c).lower() for c in df.columns]
+    required = ["timestamp", "open", "high", "low", "close", "volume"]
+    missing = [c for c in required if c not in df.columns]
+    if missing:
+        return {
+            "symbol": sym,
+            "timeframe": timeframe,
+            "data_mode": "intraday",
+            "source": "SQLite intraday_ohlcv",
+            "error": f"intraday_ohlcv missing columns: {', '.join(missing)}",
+        }
+
+    df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
+    df = df.dropna(subset=["timestamp"]).sort_values("timestamp").tail(lookback)
+    for col in ["open", "high", "low", "close", "volume"]:
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+    df = df.dropna(subset=["open", "high", "low", "close"])
+    bars = [
+        {
+            "timestamp": row["timestamp"].strftime("%Y-%m-%d %H:%M:%S"),
+            "open": round(float(row["open"]), 2),
+            "high": round(float(row["high"]), 2),
+            "low": round(float(row["low"]), 2),
+            "close": round(float(row["close"]), 2),
+            "volume": int(row["volume"]) if pd.notna(row["volume"]) else None,
+        }
+        for _, row in df.iterrows()
+    ]
+    return {
+        "symbol": sym,
+        "timeframe": timeframe,
+        "lookback": lookback,
+        "data_mode": "intraday",
+        "source": "SQLite intraday_ohlcv",
+        "count": len(bars),
+        "latest_timestamp": bars[-1]["timestamp"] if bars else None,
+        "bars": bars,
+    }
+
+
+def _bars_to_intraday_df(bars: list[dict]) -> pd.DataFrame:
+    df = pd.DataFrame(bars)
+    if df.empty:
+        return df
+    df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
+    df = df.dropna(subset=["timestamp"]).set_index("timestamp").sort_index()
+    return df.rename(
+        columns={
+            "open": "Open",
+            "high": "High",
+            "low": "Low",
+            "close": "Close",
+            "volume": "Volume",
+        }
+    )[["Open", "High", "Low", "Close", "Volume"]]
+
+
+def get_intraday_levels(symbol: str, timeframe: str = "15m") -> dict:
+    """Compute support/resistance levels from SQLite intraday OHLCV bars."""
+    sym = symbol.strip().upper()
+    bars_result = get_intraday_bars(sym, timeframe=timeframe, lookback=240)
+    if bars_result.get("error"):
+        return bars_result
+
+    df = _bars_to_intraday_df(bars_result.get("bars", []))
+    if df.empty or len(df) < 10:
+        return {
+            "symbol": sym,
+            "timeframe": timeframe,
+            "data_mode": "intraday",
+            "source": "SQLite intraday_ohlcv",
+            "error": "Insufficient SQLite intraday bars for level analysis",
+        }
+
+    df_ind = _compute_intraday_all(df)
+    levels = _intraday_key_levels(df_ind)
+    latest_close = float(df_ind["Close"].iloc[-1])
+    return {
+        "symbol": sym,
+        "timeframe": timeframe,
+        "data_mode": "intraday",
+        "source": "SQLite intraday_ohlcv",
+        "latest_timestamp": bars_result.get("latest_timestamp"),
+        "latest_close": round(latest_close, 2),
+        "pivot": levels.get("pivot"),
+        "supports": levels.get("supports", []),
+        "resistances": levels.get("resistances", []),
+        "ema_levels": {
+            "ema9": levels.get("ema9"),
+            "ema21": levels.get("ema21"),
+            "ema50": levels.get("ema50"),
+            "ema200": levels.get("ema200"),
+        },
+        "pivot_levels": levels.get("pivot_levels", {}),
+        "copy_rule": "Technical levels only. Not investment advice or a trade recommendation.",
+    }
+
+
+def _normalise_signal_direction(direction: str | None) -> str:
+    d = (direction or "").upper()
+    if d == "BUY":
+        return "LONG_SETUP"
+    if d == "SELL":
+        return "SHORT_SETUP"
+    if d == "WATCH":
+        return "WATCH"
+    return "AVOID"
+
+
+def compute_intraday_indicators(symbol: str, timeframe: str = "15m") -> dict:
+    """Compute latest intraday indicators from SQLite intraday_ohlcv bars."""
+    sym = symbol.strip().upper()
+    bars_result = get_intraday_bars(sym, timeframe=timeframe, lookback=240)
+    if bars_result.get("error"):
+        return bars_result
+
+    df = _bars_to_intraday_df(bars_result.get("bars", []))
+    if df.empty or len(df) < 30:
+        return {
+            "symbol": sym,
+            "timeframe": timeframe,
+            "data_mode": "intraday",
+            "source": "SQLite intraday_ohlcv",
+            "error": "Insufficient SQLite intraday bars for indicator calculation",
+        }
+
+    df_ind = _compute_intraday_all(df)
+    last = df_ind.iloc[-1]
+    first_close = float(df_ind["Close"].iloc[0])
+    latest_close = float(last["Close"])
+    volume_avg_20 = float(df_ind["Volume"].tail(20).mean()) if len(df_ind) >= 20 else None
+    volume_last = float(last["Volume"]) if pd.notna(last["Volume"]) else None
+    volume_ratio = round(volume_last / volume_avg_20, 2) if volume_avg_20 and volume_last else None
+    roc = round((latest_close / first_close - 1) * 100, 2) if first_close else None
+    macd_hist = float(last["MACD_hist"]) if pd.notna(last["MACD_hist"]) else 0.0
+    supertrend_dir = int(last["Supertrend_dir"]) if pd.notna(last["Supertrend_dir"]) else 0
+
+    momentum_score = 0
+    momentum_score += 20 if latest_close > float(last["EMA21"]) else -10
+    momentum_score += 20 if latest_close > float(last["EMA50"]) else -10
+    momentum_score += 15 if macd_hist > 0 else -10
+    rsi = float(last["RSI"]) if pd.notna(last["RSI"]) else 50.0
+    momentum_score += 15 if 50 <= rsi <= 75 else (-10 if rsi > 80 or rsi < 35 else 0)
+    momentum_score += 15 if supertrend_dir == 1 else -10
+    momentum_score += 15 if (volume_ratio or 0) >= 1.2 else 0
+    score = max(0, min(100, 50 + momentum_score))
+
+    return {
+        "symbol": sym,
+        "timeframe": timeframe,
+        "data_mode": "intraday",
+        "source": "SQLite intraday_ohlcv",
+        "latest_timestamp": bars_result.get("latest_timestamp"),
+        "latest_close": round(latest_close, 2),
+        "pct_change": roc,
+        "bars": len(df_ind),
+        "score": round(score, 1),
+        "indicators": {
+            "rsi": _safe_float(last["RSI"], 1),
+            "macd": _safe_float(last["MACD"], 4),
+            "macd_signal": _safe_float(last["MACD_signal"], 4),
+            "macd_hist": _safe_float(last["MACD_hist"], 4),
+            "supertrend": _safe_float(last["Supertrend"]),
+            "supertrend_dir": supertrend_dir,
+            "ema9": _safe_float(last["EMA9"]),
+            "ema21": _safe_float(last["EMA21"]),
+            "ema50": _safe_float(last["EMA50"]),
+            "ema200": _safe_float(last["EMA200"]),
+            "bb_pct": _safe_float(last["BB_pct"]),
+            "bb_width": _safe_float(last["BB_width"], 4),
+            "atr": _safe_float(last["ATR"]),
+            "volume_ratio": volume_ratio,
+        },
+    }
+
+
+def explain_intraday_setup(symbol: str, timeframe: str = "15m") -> dict:
+    """Explain an intraday setup from SQLite bars with research-only labels."""
+    sym = symbol.strip().upper()
+    ind = compute_intraday_indicators(sym, timeframe=timeframe)
+    if ind.get("error"):
+        return ind
+
+    bars_result = get_intraday_bars(sym, timeframe=timeframe, lookback=240)
+    df = _bars_to_intraday_df(bars_result.get("bars", []))
+    df_ind = _compute_intraday_all(df)
+    raw_signals = _run_intraday_all_signals(df_ind)
+    levels = get_intraday_levels(sym, timeframe=timeframe)
+    indicators = ind.get("indicators", {})
+
+    long_evidence: list[str] = []
+    short_evidence: list[str] = []
+    watch_evidence: list[str] = []
+
+    if (indicators.get("supertrend_dir") or 0) == 1:
+        long_evidence.append("Supertrend is bullish")
+    elif (indicators.get("supertrend_dir") or 0) == -1:
+        short_evidence.append("Supertrend is bearish")
+
+    if (indicators.get("macd_hist") or 0) > 0:
+        long_evidence.append("MACD histogram is positive")
+    elif (indicators.get("macd_hist") or 0) < 0:
+        short_evidence.append("MACD histogram is negative")
+
+    rsi = indicators.get("rsi")
+    if isinstance(rsi, (int, float)):
+        if 50 <= rsi <= 75:
+            long_evidence.append(f"RSI {rsi} supports momentum without extreme overextension")
+        elif rsi > 80:
+            watch_evidence.append(f"RSI {rsi} is extended")
+        elif rsi < 40:
+            short_evidence.append(f"RSI {rsi} shows weak momentum")
+
+    latest_close = ind.get("latest_close")
+    ema21 = indicators.get("ema21")
+    ema50 = indicators.get("ema50")
+    if isinstance(latest_close, (int, float)) and isinstance(ema21, (int, float)):
+        if latest_close > ema21:
+            long_evidence.append("Price is above EMA21")
+        else:
+            short_evidence.append("Price is below EMA21")
+    if isinstance(latest_close, (int, float)) and isinstance(ema50, (int, float)):
+        if latest_close > ema50:
+            long_evidence.append("Price is above EMA50")
+        else:
+            short_evidence.append("Price is below EMA50")
+
+    signal_labels = [_normalise_signal_direction(s.get("direction")) for s in raw_signals]
+    if "LONG_SETUP" in signal_labels:
+        long_evidence.append("At least one indicator strategy triggered a long-side setup")
+    if "SHORT_SETUP" in signal_labels:
+        short_evidence.append("At least one indicator strategy triggered a short-side setup")
+    if "WATCH" in signal_labels:
+        watch_evidence.append("At least one volatility or pattern alert is in watch state")
+
+    long_score = len(long_evidence) * 12
+    short_score = len(short_evidence) * 12
+    score = ind.get("score", 0)
+    if long_score >= 36 and long_score >= short_score:
+        setup_label = "LONG_SETUP"
+    elif short_score >= 36 and short_score > long_score:
+        setup_label = "SHORT_SETUP"
+    elif watch_evidence or score >= 55:
+        setup_label = "WATCH"
+    else:
+        setup_label = "AVOID"
+
+    supports = levels.get("supports") or []
+    resistances = levels.get("resistances") or []
+    atr = indicators.get("atr") or 0
+    invalidation = None
+    target_zones: list[float] = []
+    if setup_label == "LONG_SETUP":
+        invalidation = supports[0] if supports else (round(latest_close - atr, 2) if latest_close and atr else None)
+        target_zones = resistances[:2] or ([round(latest_close + atr, 2)] if latest_close and atr else [])
+    elif setup_label == "SHORT_SETUP":
+        invalidation = resistances[0] if resistances else (round(latest_close + atr, 2) if latest_close and atr else None)
+        target_zones = supports[:2] or ([round(latest_close - atr, 2)] if latest_close and atr else [])
+
+    analyzers = {
+        "TrendAgent": long_evidence[:2] if long_evidence else short_evidence[:2],
+        "MomentumAgent": [e for e in long_evidence + short_evidence + watch_evidence if "RSI" in e or "MACD" in e],
+        "LevelsAgent": {
+            "support": supports[:2],
+            "resistance": resistances[:2],
+            "invalidation_level": invalidation,
+            "technical_target_zones": target_zones,
+        },
+        "RiskAgent": [
+            "Technical setup only; no order placement or recommendation",
+            "Confirm freshness, liquidity, spreads, and market regime before using this for research",
+        ],
+    }
+
+    return {
+        "symbol": sym,
+        "timeframe": timeframe,
+        "data_mode": "intraday",
+        "source": "SQLite intraday_ohlcv",
+        "latest_timestamp": ind.get("latest_timestamp"),
+        "latest_close": latest_close,
+        "setup_label": setup_label,
+        "setup_side": "long" if setup_label == "LONG_SETUP" else ("short" if setup_label == "SHORT_SETUP" else "neutral"),
+        "score": score,
+        "indicators": indicators,
+        "signals": [
+            {
+                **s,
+                "setup_label": _normalise_signal_direction(s.get("direction")),
+                "copy_rule": "Research setup only; not a buy/sell recommendation.",
+            }
+            for s in raw_signals
+        ],
+        "analyzers": analyzers,
+        "levels": levels,
+        "invalidation_level": invalidation,
+        "technical_target_zones": target_zones,
+        "disclaimer": (
+            "Research and learning only. Not investment advice. Not a recommendation to buy, "
+            "sell, trade, copy, or replicate. Users are responsible for their own risk, "
+            "compliance, and legal obligations. Agent Adda is not SEBI registered."
+        ),
+    }
+
+
+def run_intraday_screener(
+    screen_type: str = "momentum",
+    timeframe: str = "15m",
+    min_score: float = 55,
+    top_n: int = 10,
+    symbols: list[str] | None = None,
+) -> dict:
+    """Run a SQLite-backed intraday screener with research-only setup labels."""
+    screen_key = screen_type.lower().strip()
+    supported = {"momentum", "breakouts", "vcp", "supertrend", "levels", "all"}
+    if screen_key not in supported:
+        return {"error": f"Unknown intraday screener: {screen_type}", "supported": sorted(supported)}
+    if not DB_PATH.exists():
+        return {"screen_type": screen_key, "data_mode": "intraday", "error": "Intraday SQLite database not found"}
+    if not _sqlite_table_exists("intraday_ohlcv"):
+        return {"screen_type": screen_key, "data_mode": "intraday", "error": "intraday_ohlcv table not found"}
+
+    if symbols is None:
+        conn = _db_conn()
+        rows = conn.execute(
+            "SELECT DISTINCT UPPER(symbol) FROM intraday_ohlcv WHERE timeframe=? ORDER BY UPPER(symbol)",
+            (timeframe,),
+        ).fetchall()
+        conn.close()
+        symbols = [r[0] for r in rows]
+
+    results: list[dict[str, Any]] = []
+    errors: list[dict[str, str]] = []
+    for sym in symbols:
+        setup = explain_intraday_setup(sym, timeframe=timeframe)
+        if setup.get("error"):
+            errors.append({"symbol": sym, "error": setup["error"]})
+            continue
+        label = setup.get("setup_label")
+        indicators = setup.get("indicators", {})
+        include = setup.get("score", 0) >= min_score
+        if screen_key == "breakouts":
+            include = include and label in ("LONG_SETUP", "WATCH") and bool(setup.get("technical_target_zones"))
+        elif screen_key == "vcp":
+            include = any(s.get("strategy_key") == "vcp" for s in setup.get("signals", [])) or label == "WATCH"
+        elif screen_key == "supertrend":
+            include = include and indicators.get("supertrend_dir") in (1, -1)
+        elif screen_key == "levels":
+            include = True
+
+        if include:
+            levels = setup.get("levels", {})
+            results.append({
+                "symbol": setup["symbol"],
+                "timeframe": timeframe,
+                "setup_label": label,
+                "setup_side": setup.get("setup_side"),
+                "score": setup.get("score"),
+                "price": setup.get("latest_close"),
+                "rsi": indicators.get("rsi"),
+                "macd_hist": indicators.get("macd_hist"),
+                "supertrend_dir": indicators.get("supertrend_dir"),
+                "support": (levels.get("supports") or [None])[0],
+                "resistance": (levels.get("resistances") or [None])[0],
+                "invalidation_level": setup.get("invalidation_level"),
+                "technical_target_zones": setup.get("technical_target_zones"),
+                "freshness": setup.get("latest_timestamp"),
+            })
+
+    results.sort(key=lambda r: (r.get("score") or 0), reverse=True)
+    return {
+        "screen_type": screen_key,
+        "timeframe": timeframe,
+        "data_mode": "intraday",
+        "source": "SQLite intraday_ohlcv",
+        "min_score": min_score,
+        "scanned": len(symbols),
+        "count": len(results[:top_n]),
+        "results": results[:top_n],
+        "errors": errors,
+        "disclaimer": "Research and learning only. Not investment advice or a trade recommendation.",
     }
 
 
@@ -1342,6 +2000,45 @@ def scan_intraday_market(
     result["top_sell"] = result["sell_signals"][:top_n]
     return result
 
+
+def scan_symbols_intraday(
+    symbols: list[str],
+    interval: str = "15m",
+    strategies: list[str] | None = None,
+    direction_filter: str = "all",
+    min_rr: float = 1.3,
+    top_n: int = 10,
+) -> dict:
+    """Scan a specific list of NSE stocks for intraday signals.
+
+    Use this when you already have a list of stocks from EOD screening,
+    breakout analysis, or any source — NOT just index constituents.
+    Returns ranked BUY/SELL signals with entry/target/SL/R:R.
+
+    Args:
+        symbols:          List of NSE tickers, e.g. ['RELIANCE', 'TCS', 'CHENNPETRO'].
+        interval:         Candle interval: 5m, 15m, 30m, 1h.
+        strategies:       Strategy keys: macd, rsi, supertrend, bollinger, ema, vcp, volume. None = all.
+        direction_filter: 'buy', 'sell', or 'all'.
+        min_rr:           Minimum Risk:Reward ratio (default 1.3).
+        top_n:            Max signals to return.
+    """
+    if not symbols:
+        return {"error": "No symbols provided"}
+    # Clean and deduplicate
+    clean_syms = list(dict.fromkeys(s.strip().upper() for s in symbols if s.strip()))
+    result = _run_intraday_screener(
+        symbols=clean_syms,
+        interval=interval,
+        strategies=strategies,
+        direction_filter=direction_filter,
+        min_rr=min_rr,
+    )
+    result["symbols_scanned"] = clean_syms
+    result["top_buy"]         = result["buy_signals"][:top_n]
+    result["top_sell"]        = result["sell_signals"][:top_n]
+    return result
+
 TOOL_REGISTRY: dict[str, Any] = {
     "get_live_quote": (
         get_live_quote,
@@ -1508,6 +2205,31 @@ TOOL_REGISTRY: dict[str, Any] = {
             "required": [],
         },
     ),
+    "scan_symbols_intraday": (
+        scan_symbols_intraday,
+        (
+            "Scan a SPECIFIC LIST of NSE stocks for intraday signals — use when you already know which stocks to check. "
+            "Works for ANY stock (not just index constituents). Ideal after EOD screening, breakout hunting, or "
+            "when user asks 'check these stocks intraday', 'intraday setup for CHENNPETRO, NAM-INDIA, YATHARTH', "
+            "'scan my watchlist intraday', 'which of these have buy signals'. "
+            "Includes market-session awareness and EOD fallback for pre-market queries."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbols":          {"type": "array", "items": {"type": "string"},
+                                     "description": "List of NSE tickers, e.g. ['RELIANCE','CHENNPETRO']"},
+                "interval":         {"type": "string", "enum": ["5m","15m","30m","1h"], "default": "15m"},
+                "strategies":       {"type": "array",
+                                     "items": {"type": "string",
+                                               "enum": ["macd","rsi","supertrend","bollinger","ema","vcp","volume"]}},
+                "direction_filter": {"type": "string", "enum": ["buy","sell","all"], "default": "all"},
+                "min_rr":           {"type": "number", "default": 1.3},
+                "top_n":            {"type": "integer", "default": 10},
+            },
+            "required": ["symbols"],
+        },
+    ),
     "resolve_symbol": (
         resolve_symbol,
         "Resolve a company name or alias to its NSE ticker symbol",
@@ -1549,6 +2271,115 @@ TOOL_REGISTRY: dict[str, Any] = {
         get_market_breadth,
         "Get overall NSE market breadth: advance/decline, RS distribution, stage breakdown",
         {"type": "object", "properties": {}, "required": []},
+    ),
+    "get_global_market_assessment": (
+        get_global_market_assessment,
+        (
+            "Assess global market cues for Indian markets from cached global index, FX, "
+            "commodity, and correlation data. Returns risk regime, US/Asia/commodity/FX "
+            "bias, India sector read-through, watch items, and Nifty correlation context. "
+            "Use for global market assessment, overnight cues, US/Asia markets, crude, "
+            "DXY, USDINR, and India read-through questions."
+        ),
+        {"type": "object", "properties": {}, "required": []},
+    ),
+    "get_intraday_source_health": (
+        get_intraday_source_health,
+        (
+            "Check SQLite intraday source health. Reports whether intraday_ohlcv and "
+            "related live tables exist, row counts, latest timestamps, freshness, and "
+            "overall intraday status. Use before intraday calculations."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "max_age_minutes": {"type": "integer", "default": 30},
+            },
+            "required": [],
+        },
+    ),
+    "get_intraday_bars": (
+        get_intraday_bars,
+        (
+            "Read OHLCV bars from the SQLite intraday_ohlcv table for one symbol and "
+            "timeframe. Returns bars with source metadata and does not use EOD/yfinance fallback."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string"},
+                "timeframe": {"type": "string", "enum": ["5m", "15m", "30m", "1h"], "default": "15m"},
+                "lookback": {"type": "integer", "default": 120},
+            },
+            "required": ["symbol"],
+        },
+    ),
+    "get_intraday_levels": (
+        get_intraday_levels,
+        (
+            "Compute support, resistance, pivot, EMA, and latest close levels from "
+            "SQLite intraday_ohlcv bars. Technical levels only; not a trade recommendation."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string"},
+                "timeframe": {"type": "string", "enum": ["5m", "15m", "30m", "1h"], "default": "15m"},
+            },
+            "required": ["symbol"],
+        },
+    ),
+    "compute_intraday_indicators": (
+        compute_intraday_indicators,
+        (
+            "Compute RSI, MACD, Supertrend, EMA, Bollinger, ATR, volume ratio, and "
+            "a research setup score from SQLite intraday_ohlcv bars. Does not use "
+            "EOD/yfinance fallback."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string"},
+                "timeframe": {"type": "string", "enum": ["5m", "15m", "30m", "1h"], "default": "15m"},
+            },
+            "required": ["symbol"],
+        },
+    ),
+    "explain_intraday_setup": (
+        explain_intraday_setup,
+        (
+            "Explain a symbol's SQLite-backed intraday setup using analyzer-style evidence, "
+            "research-only labels LONG_SETUP/SHORT_SETUP/WATCH/AVOID/SETUP_INVALIDATED, "
+            "technical target zones, and setup invalidation levels."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string"},
+                "timeframe": {"type": "string", "enum": ["5m", "15m", "30m", "1h"], "default": "15m"},
+            },
+            "required": ["symbol"],
+        },
+    ),
+    "run_intraday_screener": (
+        run_intraday_screener,
+        (
+            "Run a SQLite-backed intraday screener over symbols in intraday_ohlcv. "
+            "Screen types: momentum, breakouts, vcp, supertrend, levels, all. Returns "
+            "research-only setup labels, support/resistance, invalidation, target zones, "
+            "freshness, and source metadata."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "screen_type": {"type": "string", "enum": ["momentum", "breakouts", "vcp", "supertrend", "levels", "all"], "default": "momentum"},
+                "timeframe": {"type": "string", "enum": ["5m", "15m", "30m", "1h"], "default": "15m"},
+                "min_score": {"type": "number", "default": 55},
+                "top_n": {"type": "integer", "default": 10},
+                "symbols": {"type": "array", "items": {"type": "string"}},
+            },
+            "required": [],
+        },
     ),
     "get_data_health": (
         get_data_health,
