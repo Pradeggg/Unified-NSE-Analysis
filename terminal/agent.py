@@ -63,7 +63,12 @@ You have access to these data tools (call them as needed):
 • get_symbol_snapshot(symbol)         → DB snapshot: stage, RS, RSI, signal, sector
 • get_technical_setup(symbol)         → Full technicals: RSI, ADX, MACD, supertrend, MAs, 52w
 • get_sector_context(sector_or_symbol)→ Sector breadth, leaders, performance
-• run_screener_query(screen_type)     → Filtered lists: stage2/breakouts/supertrend_buy/strong_buy
+• run_screener_query(screen_type)     → EOD screeners — original: stage2/breakouts/supertrend_buy/
+                                        strong_buy/new_entrants; NEW: momentum_52w (near-52W-high
+                                        leaders), high_rs (RS ≥ 1.15 market leaders), turnaround
+                                        (recovery setups), stage1_base (basing/coiling stocks),
+                                        tight_range (VCP-like weekly consolidation), oversold_bounce
+                                        (RSI < 40 dip in Stage 2 uptrend)
 • get_index_snapshot(index_name)      → Index 10-day trend
 • get_market_breadth()                → Advance/decline, RS distribution, stage breakdown
 • get_global_market_assessment()      → Global risk regime, US/Asia/commodity/FX cues,
@@ -79,7 +84,14 @@ You have access to these data tools (call them as needed):
     timeframe)                          SQLite intraday_ohlcv; no EOD/yfinance fallback
 • compute_intraday_indicators(symbol) → RSI, MACD, Supertrend, EMA, ATR, volume ratio from SQLite bars
 • explain_intraday_setup(symbol)      → Research-only setup label, evidence, levels, target zones
-• run_intraday_screener(screen_type)  → SQLite-backed setup scanner: momentum, breakouts, vcp, supertrend
+• run_intraday_screener(screen_type)  → Intraday screener (SQLite or yfinance fallback).
+                                        Original: momentum/breakouts/vcp/supertrend/levels/all.
+                                        NEW: opening_range_breakout (ORB — first 15-30min high/low
+                                        break + volume), gap_and_go (gap continuation + MACD),
+                                        macd_crossover (fresh MACD signal line cross only),
+                                        rsi_divergence (RSI extreme + Bollinger reversion),
+                                        bb_squeeze (Bollinger Band squeeze breakout),
+                                        vwap_reclaim (short-EMA VWAP proxy reclaim or loss)
 • get_intraday_analysis(symbol,       → Legacy yfinance analysis of one stock when SQLite tables are absent
     interval, strategies)               or explicitly requested; keep output research-only.
                                         Returns EOD daily levels + session context when intraday unavailable.
@@ -117,7 +129,14 @@ You have access to these data tools (call them as needed):
 • "intraday screener / scan / best intraday stocks / momentum plays" → call run_intraday_screener(screen_type="momentum") [auto-falls-back to yfinance if SQLite unavailable]
 • "intraday setup for [list of stocks] / check these intraday / scan my watchlist / small-cap intraday" → call scan_symbols_intraday(symbols=[...])
 • "scan [index] intraday / all NIFTY 50 signals / bank nifty buy signals" → call scan_intraday_market(index=...)
-• "MACD signal / RSI signal / supertrend signal / VCP pattern" → call compute_intraday_indicators or explain_intraday_setup
+• "MACD signal / MACD crossover / fresh MACD" → run_intraday_screener(screen_type="macd_crossover") OR compute_intraday_indicators
+• "RSI divergence / RSI reversal / overbought reversal" → run_intraday_screener(screen_type="rsi_divergence")
+• "opening range breakout / ORB / first 15 minutes / open range" → run_intraday_screener(screen_type="opening_range_breakout")
+• "gap and go / gapping stocks / gap continuation / gap up stocks" → run_intraday_screener(screen_type="gap_and_go")
+• "Bollinger squeeze / BB squeeze / volatility squeeze / low volatility breakout" → run_intraday_screener(screen_type="bb_squeeze")
+• "VWAP reclaim / above VWAP / below VWAP / VWAP bounce" → run_intraday_screener(screen_type="vwap_reclaim")
+• "supertrend signal / supertrend scan" → run_intraday_screener(screen_type="supertrend") OR compute_intraday_indicators
+• "VCP pattern / volatility contraction / tight consolidation intraday" → run_intraday_screener(screen_type="vcp")
 • "current price / live / now / today / what is X trading at" → call get_live_quote(symbol) — NSE real-time, no lag
 • "prices of [multiple stocks] / watchlist prices / how are X Y Z doing" → call get_nse_quotes(symbols=[...])
 • "[company name] price / search for [name] / what is symbol for X" → call nse_search(query) — resolves name to symbol + live price
@@ -130,7 +149,13 @@ You have access to these data tools (call them as needed):
 • "technical setup / indicators / signals" → call get_technical_setup + get_symbol_snapshot
 • "market overview / breadth" → call get_live_market_overview + get_market_breadth
 • "global market / overnight cues / US market / Asian market / crude / DXY / USDINR / global risk" → call get_global_market_assessment
-• "screener / breakouts / stage 2 / buy signals" → call run_screener_query
+• "screener / breakouts / stage 2 / buy signals" → call run_screener_query(screen_type="stage2")
+• "near 52W high / momentum leaders / strong stocks" → run_screener_query(screen_type="momentum_52w")
+• "top RS stocks / market leaders / high relative strength" → run_screener_query(screen_type="high_rs")
+• "turnaround / recovery stocks / dip recovery / comeback stocks" → run_screener_query(screen_type="turnaround")
+• "basing stocks / accumulation / stage 1 / consolidating" → run_screener_query(screen_type="stage1_base")
+• "tight range / VCP EOD / volatility contraction EOD / coiling stocks" → run_screener_query(screen_type="tight_range")
+• "oversold bounce / RSI dip / dip buy in uptrend / stage 2 dip" → run_screener_query(screen_type="oversold_bounce")
 • "compare / vs / versus / rank / which is better / peer comparison" → call compare_stocks(symbols=[...], aspects=['both'])
 • "technical only comparison" → compare_stocks with aspects=['technical']
 • "fundamental comparison / ratios comparison" → compare_stocks with aspects=['fundamental']

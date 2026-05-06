@@ -405,10 +405,11 @@ def get_sector_context(sector_or_symbol: str) -> dict:
 
 
 def run_screener_query(screen_type: str = "stage2", top_n: int = 10) -> dict:
-    """Run a pre-built screener from DB snapshot data.
+    """Run a pre-built EOD screener from the DB snapshot data.
 
-    screen_type options: stage2, breakouts, supertrend_buy, vcp, darvas, momentum_52w,
-                         strong_buy, new_entrants
+    screen_type options:
+      Original  : stage2, breakouts, supertrend_buy, strong_buy, new_entrants
+      New EOD   : momentum_52w, high_rs, turnaround, stage1_base, tight_range, oversold_bounce
     """
     if not DB_PATH.exists():
         return {"error": "DB not available"}
@@ -416,17 +417,20 @@ def run_screener_query(screen_type: str = "stage2", top_n: int = 10) -> dict:
     conn = _db_conn()
     snap_date = _latest_snapshot_date()
 
-    query_map: dict[str, str] = {
+    _base_cols = (
+        "symbol, company_name, stage_score, investment_score, price, "
+        "relative_strength, change_1m_pct, rsi, trading_signal, sector"
+    )
+    _base_from = "FROM stage_snapshots WHERE snapshot_date=?"
+
+    query_map: dict[str, str | tuple] = {
+        # ── Original screeners ────────────────────────────────────────────────
         "stage2": (
-            "SELECT symbol, company_name, stage_score, investment_score, price, "
-            "relative_strength, change_1m_pct, rsi, trading_signal, sector "
-            "FROM stage_snapshots WHERE snapshot_date=? AND stage='STAGE_2' "
+            f"SELECT {_base_cols} {_base_from} AND stage='STAGE_2' "
             "ORDER BY investment_score DESC"
         ),
         "breakouts": (
-            "SELECT symbol, company_name, stage_score, investment_score, price, "
-            "relative_strength, change_1m_pct, rsi, trading_signal, sector "
-            "FROM stage_snapshots WHERE snapshot_date=? AND stage='STAGE_2' "
+            f"SELECT {_base_cols} {_base_from} AND stage='STAGE_2' "
             "AND COALESCE(relative_strength, 0) > 0 "
             "AND COALESCE(change_1m_pct, 0) > 0 "
             "AND COALESCE(rsi, 0) >= 55 "
@@ -435,13 +439,11 @@ def run_screener_query(screen_type: str = "stage2", top_n: int = 10) -> dict:
         "supertrend_buy": (
             "SELECT symbol, company_name, stage_score, investment_score, price, "
             "relative_strength, change_1d_pct, rsi, trading_signal, sector "
-            "FROM stage_snapshots WHERE snapshot_date=? AND supertrend_state='BUY' "
+            f"{_base_from} AND supertrend_state='BUY' "
             "ORDER BY technical_score DESC"
         ),
         "strong_buy": (
-            "SELECT symbol, company_name, stage_score, investment_score, price, "
-            "relative_strength, change_1m_pct, rsi, trading_signal, sector "
-            "FROM stage_snapshots WHERE snapshot_date=? AND trading_signal='STRONG_BUY' "
+            f"SELECT {_base_cols} {_base_from} AND trading_signal='STRONG_BUY' "
             "ORDER BY investment_score DESC"
         ),
         "new_entrants": (
@@ -452,17 +454,81 @@ def run_screener_query(screen_type: str = "stage2", top_n: int = 10) -> dict:
             "WHERE s.snapshot_date=? AND s.stage='STAGE_2' "
             "AND c.change_date >= date(?, '-14 days') ORDER BY s.investment_score DESC"
         ),
+
+        # ── New EOD screeners ─────────────────────────────────────────────────
+
+        # Stocks within 5% of their 52-week high with positive RS and upward momentum.
+        # Classic "buy strength" — trend-following stocks leading the market.
+        "momentum_52w": (
+            f"SELECT {_base_cols} {_base_from} AND stage='STAGE_2' "
+            "AND COALESCE(relative_strength, 0) >= 1.0 "
+            "AND COALESCE(change_1m_pct, 0) > 2.0 "
+            "AND COALESCE(rsi, 0) BETWEEN 50 AND 80 "
+            "ORDER BY relative_strength DESC, change_1m_pct DESC"
+        ),
+
+        # Top RS ranked stocks — market leaders by relative strength score.
+        # RS > 1.15 means outperforming 85%+ of the market.
+        "high_rs": (
+            f"SELECT {_base_cols} {_base_from} "
+            "AND COALESCE(relative_strength, 0) >= 1.15 "
+            "AND stage IN ('STAGE_2', 'STAGE_1') "
+            "ORDER BY relative_strength DESC, investment_score DESC"
+        ),
+
+        # Turnaround candidates: down >20% from recent highs but showing recovery.
+        # RSI recovering from oversold + positive recent change signals base building.
+        "turnaround": (
+            f"SELECT {_base_cols} {_base_from} "
+            "AND stage IN ('STAGE_1', 'STAGE_2') "
+            "AND COALESCE(change_1m_pct, 0) > 5.0 "
+            "AND COALESCE(rsi, 0) BETWEEN 40 AND 65 "
+            "AND COALESCE(relative_strength, 0) > 0.8 "
+            "AND COALESCE(investment_score, 0) < 60 "
+            "ORDER BY change_1m_pct DESC, relative_strength DESC"
+        ),
+
+        # Stage 1 basing stocks — consolidating sideways before a potential breakout.
+        # Low RS + flat price action = coiled spring. Watch for volume expansion.
+        "stage1_base": (
+            f"SELECT {_base_cols} {_base_from} AND stage='STAGE_1' "
+            "AND COALESCE(rsi, 0) BETWEEN 40 AND 60 "
+            "AND ABS(COALESCE(change_1m_pct, 0)) < 5.0 "
+            "ORDER BY investment_score DESC, relative_strength DESC"
+        ),
+
+        # Tight range consolidation: low volatility + near recent highs + good RS.
+        # VCP-like setup — volatility contraction precedes explosive moves.
+        "tight_range": (
+            f"SELECT {_base_cols} {_base_from} AND stage='STAGE_2' "
+            "AND COALESCE(relative_strength, 0) >= 1.0 "
+            "AND ABS(COALESCE(change_1w_pct, 0)) < 2.0 "
+            "AND COALESCE(rsi, 0) BETWEEN 45 AND 65 "
+            "ORDER BY relative_strength DESC, investment_score DESC"
+        ),
+
+        # Oversold stocks in Stage 2 uptrend — mean-reversion bounce candidates.
+        # RSI below 40 in an otherwise bullish stage = potential entry dip.
+        "oversold_bounce": (
+            f"SELECT {_base_cols} {_base_from} AND stage='STAGE_2' "
+            "AND COALESCE(rsi, 0) < 40 "
+            "AND COALESCE(relative_strength, 0) > 0.9 "
+            "AND supertrend_state='BUY' "
+            "ORDER BY rsi ASC, relative_strength DESC"
+        ),
     }
 
+    _multi_param_keys = {"new_entrants"}
     screen_key = screen_type.lower()
     if screen_key not in query_map:
-        return {"error": f"Unknown screener: {screen_type}"}
+        available = sorted(query_map.keys())
+        return {"error": f"Unknown screener: {screen_type}", "available": available}
 
     sql = query_map[screen_key]
     cols = ["symbol","company_name","stage_score","investment_score","price",
             "relative_strength","change","rsi","trading_signal","sector"]
 
-    if screen_key == "new_entrants":
+    if screen_key in _multi_param_keys:
         rows = conn.execute(sql, (snap_date, snap_date)).fetchmany(top_n)
     else:
         rows = conn.execute(sql, (snap_date,)).fetchmany(top_n)
@@ -475,8 +541,23 @@ def run_screener_query(screen_type: str = "stage2", top_n: int = 10) -> dict:
             d["rs_pct"] = round(float(d["relative_strength"]) * 100, 1)
         stocks.append(d)
 
+    _descriptions = {
+        "stage2":           "Stage 2 uptrend stocks — William O'Neil buy zone",
+        "breakouts":        "Stage 2 stocks breaking out with rising RS + RSI ≥ 55",
+        "supertrend_buy":   "Supertrend BUY state stocks",
+        "strong_buy":       "STRONG_BUY signal stocks",
+        "new_entrants":     "Stage 2 new entrants in the last 14 days",
+        "momentum_52w":     "Near 52W high momentum leaders — RS ≥ 1.0, 1M chg > 2%",
+        "high_rs":          "Top relative strength leaders — RS ≥ 1.15",
+        "turnaround":       "Recovery setups — dip + rising momentum + RS improving",
+        "stage1_base":      "Stage 1 basing stocks — coiled, waiting for breakout",
+        "tight_range":      "Tight weekly range + RS ≥ 1.0 — VCP-like consolidation",
+        "oversold_bounce":  "Stage 2 stocks with RSI < 40 — dip-buy in uptrend",
+    }
+
     return {
         "screen_type":    screen_key,
+        "description":    _descriptions.get(screen_key, ""),
         "snapshot_date":  snap_date,
         "count":          len(stocks),
         "results":        stocks,
@@ -1145,26 +1226,58 @@ def run_intraday_screener(
     top_n: int = 10,
     symbols: list[str] | None = None,
 ) -> dict:
-    """Run a SQLite-backed intraday screener with research-only setup labels.
+    """Run an intraday screener (SQLite-backed or live yfinance fallback).
 
-    Automatically falls back to live yfinance scan (NIFTY 500) when the
-    local SQLite intraday_ohlcv table is absent or stale.
+    Screen types:
+      Original : momentum, breakouts, vcp, supertrend, levels, all
+      New      : opening_range_breakout, gap_and_go, macd_crossover,
+                 rsi_divergence, bb_squeeze, vwap_reclaim
     """
     screen_key = screen_type.lower().strip()
-    supported = {"momentum", "breakouts", "vcp", "supertrend", "levels", "all"}
+    supported = {
+        # original
+        "momentum", "breakouts", "vcp", "supertrend", "levels", "all",
+        # new
+        "opening_range_breakout", "gap_and_go", "macd_crossover",
+        "rsi_divergence", "bb_squeeze", "vwap_reclaim",
+    }
     if screen_key not in supported:
         return {"error": f"Unknown intraday screener: {screen_type}", "supported": sorted(supported)}
 
     # ── SQLite unavailable → live yfinance fallback ─────────────────────────
     if not DB_PATH.exists() or not _sqlite_table_exists("intraday_ohlcv"):
         strategy_map = {
-            "breakouts":  ["ema", "volume", "macd"],
-            "momentum":   ["macd", "rsi", "supertrend"],
-            "vcp":        ["vcp", "volume"],
-            "supertrend": ["supertrend"],
-            "levels":     ["ema", "bollinger"],
-            "all":        None,
+            # original
+            "breakouts":              ["ema", "volume", "macd"],
+            "momentum":               ["macd", "rsi", "supertrend"],
+            "vcp":                    ["vcp", "volume"],
+            "supertrend":             ["supertrend"],
+            "levels":                 ["ema", "bollinger"],
+            "all":                    None,
+            # new intraday screeners
+            "opening_range_breakout": ["ema", "volume"],   # ORB = EMA crossover + volume
+            "gap_and_go":             ["volume", "macd"],  # gap continuation via vol + MACD
+            "macd_crossover":         ["macd"],            # pure MACD signal line cross
+            "rsi_divergence":         ["rsi", "bollinger"],# RSI extreme + Bollinger
+            "bb_squeeze":             ["bollinger", "volume"],  # BB bandwidth squeeze
+            "vwap_reclaim":           ["ema", "rsi"],      # VWAP proxy via short EMA + RSI
         }
+
+        _descriptions = {
+            "opening_range_breakout": "Opening Range Breakout — price breaks above/below first 15-30min range with volume",
+            "gap_and_go":             "Gap & Go — stocks gapping up/down continuing with volume + MACD momentum",
+            "macd_crossover":         "MACD Crossover — fresh MACD signal line cross (bullish or bearish)",
+            "rsi_divergence":         "RSI Divergence — RSI extreme reversal setup with Bollinger mean-reversion",
+            "bb_squeeze":             "Bollinger Squeeze — low-volatility band squeeze followed by expansion breakout",
+            "vwap_reclaim":           "VWAP Reclaim — price reclaiming short EMA (VWAP proxy) from below (bullish) or losing it (bearish)",
+            "momentum":               "MACD + RSI + Supertrend momentum alignment",
+            "breakouts":              "EMA crossover + volume + MACD breakout",
+            "vcp":                    "Volatility Contraction Pattern — tight consolidation before expansion",
+            "supertrend":             "Supertrend state flip or continuation",
+            "levels":                 "Support/Resistance levels with EMA + Bollinger context",
+            "all":                    "All strategies combined",
+        }
+
         strategies = strategy_map.get(screen_key)
         result = scan_intraday_market(
             index="NIFTY 500",
@@ -1174,9 +1287,10 @@ def run_intraday_screener(
             min_rr=1.3,
             top_n=top_n,
         )
-        result["screen_type"]  = screen_key
-        result["data_mode"]    = "live-yfinance-fallback"
-        result["fallback_note"] = (
+        result["screen_type"]    = screen_key
+        result["description"]    = _descriptions.get(screen_key, "")
+        result["data_mode"]      = "live-yfinance-fallback"
+        result["fallback_note"]  = (
             "SQLite intraday_ohlcv not available — ran live yfinance scan on NIFTY 500"
         )
         return result
@@ -2485,11 +2599,24 @@ TOOL_REGISTRY: dict[str, Any] = {
     ),
     "run_screener_query": (
         run_screener_query,
-        "Run a screener: stage2, breakouts, supertrend_buy, strong_buy, new_entrants",
+        (
+            "Run an EOD screener from DB snapshot data. "
+            "Original: stage2, breakouts, supertrend_buy, strong_buy, new_entrants. "
+            "New: momentum_52w (near-52W-high leaders), high_rs (top RS ≥ 1.15), "
+            "turnaround (recovery setups), stage1_base (basing/coiling), "
+            "tight_range (VCP-like consolidation), oversold_bounce (RSI < 40 in Stage 2 dip)."
+        ),
         {
             "type": "object",
             "properties": {
-                "screen_type": {"type": "string", "enum": ["stage2","breakouts","supertrend_buy","strong_buy","new_entrants"]},
+                "screen_type": {
+                    "type": "string",
+                    "enum": [
+                        "stage2", "breakouts", "supertrend_buy", "strong_buy", "new_entrants",
+                        "momentum_52w", "high_rs", "turnaround", "stage1_base",
+                        "tight_range", "oversold_bounce",
+                    ],
+                },
                 "top_n": {"type": "integer", "default": 10},
             },
             "required": ["screen_type"],
@@ -2597,15 +2724,28 @@ TOOL_REGISTRY: dict[str, Any] = {
     "run_intraday_screener": (
         run_intraday_screener,
         (
-            "Run a SQLite-backed intraday screener over symbols in intraday_ohlcv. "
-            "Screen types: momentum, breakouts, vcp, supertrend, levels, all. Returns "
-            "research-only setup labels, support/resistance, invalidation, target zones, "
-            "freshness, and source metadata."
+            "Run an intraday screener (SQLite-backed or live yfinance fallback). "
+            "Original types: momentum, breakouts, vcp, supertrend, levels, all. "
+            "New types: opening_range_breakout (ORB — first 15-30min range break + volume), "
+            "gap_and_go (gap continuation with MACD + volume), "
+            "macd_crossover (fresh MACD signal line cross only), "
+            "rsi_divergence (RSI extreme + Bollinger mean-reversion), "
+            "bb_squeeze (Bollinger Band squeeze breakout), "
+            "vwap_reclaim (short-EMA VWAP proxy reclaim or loss). "
+            "Returns setup labels, support/resistance, target zones, confidence."
         ),
         {
             "type": "object",
             "properties": {
-                "screen_type": {"type": "string", "enum": ["momentum", "breakouts", "vcp", "supertrend", "levels", "all"], "default": "momentum"},
+                "screen_type": {
+                    "type": "string",
+                    "enum": [
+                        "momentum", "breakouts", "vcp", "supertrend", "levels", "all",
+                        "opening_range_breakout", "gap_and_go", "macd_crossover",
+                        "rsi_divergence", "bb_squeeze", "vwap_reclaim",
+                    ],
+                    "default": "momentum",
+                },
                 "timeframe": {"type": "string", "enum": ["5m", "15m", "30m", "1h"], "default": "15m"},
                 "min_score": {"type": "number", "default": 55},
                 "top_n": {"type": "integer", "default": 10},

@@ -321,6 +321,23 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/scan NIFTY IT",    "Scan Nifty IT for intraday signals"),
     ("/scan NIFTY MIDCAP 100", "Scan Nifty Midcap 100"),
     ("/scan NIFTY PHARMA","Scan Nifty Pharma"),
+    # Intraday screener types
+    ("/scan orb",         "Opening Range Breakout — first 15-30m range break + volume"),
+    ("/scan gap",         "Gap & Go — gapping stocks with volume + MACD continuation"),
+    ("/scan macd",        "MACD Crossover — fresh MACD signal line cross"),
+    ("/scan rsi",         "RSI Divergence — RSI extreme + Bollinger mean-reversion"),
+    ("/scan bb",          "Bollinger Squeeze — low-volatility squeeze breakout"),
+    ("/scan vwap",        "VWAP Reclaim — price reclaiming/losing VWAP proxy"),
+    ("/scan vcp",         "VCP — Volatility Contraction Pattern intraday"),
+    ("/scan momentum",    "Momentum — MACD + RSI + Supertrend aligned"),
+    # EOD screener shortcuts
+    ("/screen stage2",    "Stage 2 uptrend stocks (Weinstein)"),
+    ("/screen momentum",  "Near-52W-high momentum leaders (RS ≥ 1.0)"),
+    ("/screen highrs",    "Top RS ≥ 1.15 market leaders"),
+    ("/screen turnaround","Turnaround recovery setups"),
+    ("/screen base",      "Stage 1 basing/coiling stocks"),
+    ("/screen tight",     "Tight weekly range VCP-like consolidations"),
+    ("/screen dip",       "Oversold bounce — RSI < 40 dip in Stage 2"),
     ("/monitor",          "Show active background alert monitors"),
     ("/monitor list",     "List all available monitor strategies"),
     ("/monitor status",   "Show status of all running monitors"),
@@ -372,6 +389,14 @@ _STARTER_PHRASES: list[tuple[str, str]] = [
     ("sector analysis",    "Sector breadth and leaders"),
     ("morning briefing",   "Full morning market briefing"),
     ("stage 2 breakouts",  "Weinstein Stage 2 screener"),
+    ("momentum leaders",   "Near-52W-high stocks with RS ≥ 1.0"),
+    ("high RS stocks",     "Top relative strength market leaders"),
+    ("turnaround stocks",  "Recovery dip setups"),
+    ("basing stocks",      "Stage 1 coiling stocks pre-breakout"),
+    ("opening range breakout","ORB — first 15-30min range + volume"),
+    ("gap and go",         "Gapping stocks with MACD continuation"),
+    ("VWAP reclaim",       "Stocks reclaiming VWAP proxy"),
+    ("Bollinger squeeze",  "BB squeeze before volatility expansion"),
     ("FII DII activity",   "Today's FII vs DII flow"),
     ("52 week high",       "Stocks near 52-week highs"),
     ("concall transcript", "Management commentary from screener.in"),
@@ -1141,8 +1166,27 @@ def _print_help() -> None:
             "  [blue]/eod[/blue]   or  [blue]/h[/blue]        — EOD / Historical (CSV + DB snapshot)\n"
             "  [white]/auto[/white]  or  [white]/a[/white]        — Auto-detect from query keywords\n\n"
             "[bold cyan]INTRADAY SCREENER[/bold cyan]\n"
-            "  [green]/scan[/green]                   — Scan NIFTY 50 for intraday signals\n"
-            "  [green]/scan NIFTY BANK[/green]        — Scan any index (NIFTY IT, PHARMA…)\n\n"
+            "  [green]/scan[/green]                   — Scan NIFTY 50 (all strategies, 15m)\n"
+            "  [green]/scan NIFTY BANK[/green]        — Scan any index (NIFTY IT, PHARMA…)\n"
+            "  [green]/scan orb[/green]               — Opening Range Breakout\n"
+            "  [green]/scan gap[/green]               — Gap & Go continuation\n"
+            "  [green]/scan macd[/green]              — MACD Crossover only\n"
+            "  [green]/scan rsi[/green]               — RSI Divergence + Bollinger\n"
+            "  [green]/scan bb[/green]                — Bollinger Band Squeeze\n"
+            "  [green]/scan vwap[/green]              — VWAP Reclaim/Loss\n"
+            "  [green]/scan vcp[/green]               — VCP Contraction Pattern\n"
+            "  [green]/scan momentum[/green]          — MACD + RSI + Supertrend aligned\n\n"
+            "[bold cyan]EOD SCREENER[/bold cyan]\n"
+            "  [cyan]/screen stage2[/cyan]            — Stage 2 uptrend stocks\n"
+            "  [cyan]/screen momentum[/cyan]          — Near-52W-high momentum leaders\n"
+            "  [cyan]/screen highrs[/cyan]            — Top RS ≥ 1.15 market leaders\n"
+            "  [cyan]/screen turnaround[/cyan]        — Dip recovery setups\n"
+            "  [cyan]/screen base[/cyan]              — Stage 1 basing/coiling\n"
+            "  [cyan]/screen tight[/cyan]             — Tight weekly range (VCP-like)\n"
+            "  [cyan]/screen dip[/cyan]               — Oversold bounce in Stage 2\n"
+            "  [cyan]/screen supertrend[/cyan]        — Supertrend BUY state\n"
+            "  [cyan]/screen strong[/cyan]            — STRONG_BUY signals\n"
+            "  [cyan]/screen new[/cyan]               — New Stage 2 entrants (14d)\n\n"
             "[bold magenta]BACKGROUND MONITORS 🔔[/bold magenta]\n"
             "  [magenta]/monitor list[/magenta]          — Show available strategies\n"
             "  [magenta]/monitor status[/magenta]        — Show active monitors\n"
@@ -1491,9 +1535,52 @@ def _chat_loop(agent, show_trace: bool) -> None:
         # ── /scan shortcut: run intraday screener ──────────────────────
         if text.lower().startswith("/scan"):
             parts = text.split(maxsplit=1)
-            idx   = parts[1].upper() if len(parts) > 1 else "NIFTY 50"
-            text  = f"Scan {idx} for intraday research setups using all strategies on 15m charts"
-            console.print(f"[dim]  → Intraday scan: {idx}[/dim]")
+            arg   = parts[1].strip() if len(parts) > 1 else ""
+            # Map short aliases to screener types
+            _scan_aliases = {
+                "orb":      ("opening_range_breakout", "Opening Range Breakout"),
+                "gap":      ("gap_and_go",             "Gap & Go"),
+                "macd":     ("macd_crossover",         "MACD Crossover"),
+                "rsi":      ("rsi_divergence",         "RSI Divergence"),
+                "bb":       ("bb_squeeze",             "Bollinger Squeeze"),
+                "vwap":     ("vwap_reclaim",           "VWAP Reclaim"),
+                "vcp":      ("vcp",                    "VCP"),
+                "momentum": ("momentum",               "Momentum"),
+            }
+            alias_key = arg.lower()
+            if alias_key in _scan_aliases:
+                st, st_label = _scan_aliases[alias_key]
+                text = f"Run intraday screener {st} on NIFTY 500 on 15m charts"
+                console.print(f"[dim]  → Intraday screener: {st_label}[/dim]")
+            else:
+                idx = arg.upper() if arg else "NIFTY 50"
+                text = f"Scan {idx} for intraday research setups using all strategies on 15m charts"
+                console.print(f"[dim]  → Intraday scan: {idx}[/dim]")
+
+        # ── /screen shortcut: run EOD screener ────────────────────────
+        if text.lower().startswith("/screen"):
+            parts = text.split(maxsplit=1)
+            arg   = parts[1].strip().lower() if len(parts) > 1 else "stage2"
+            _screen_aliases = {
+                "stage2":     ("stage2",          "Stage 2 Uptrend"),
+                "breakouts":  ("breakouts",       "Stage 2 Breakouts"),
+                "supertrend": ("supertrend_buy",  "Supertrend BUY"),
+                "strong":     ("strong_buy",      "Strong Buy"),
+                "new":        ("new_entrants",    "New Stage 2 Entrants"),
+                "momentum":   ("momentum_52w",    "52W High Momentum Leaders"),
+                "highrs":     ("high_rs",         "High RS Leaders"),
+                "turnaround": ("turnaround",      "Turnaround Recovery"),
+                "base":       ("stage1_base",     "Stage 1 Basing"),
+                "tight":      ("tight_range",     "Tight Range VCP"),
+                "dip":        ("oversold_bounce", "Oversold Bounce"),
+            }
+            if arg in _screen_aliases:
+                st, st_label = _screen_aliases[arg]
+                text = f"Run EOD screener {st} and show the top results with technical context"
+                console.print(f"[dim]  → EOD screener: {st_label}[/dim]")
+            else:
+                text = f"Run EOD screener {arg} and show top results"
+                console.print(f"[dim]  → EOD screener: {arg}[/dim]")
 
         # ── p<n> prompt library shortcut ───────────────────────────────
         import re as _re
