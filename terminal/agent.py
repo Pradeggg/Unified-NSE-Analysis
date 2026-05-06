@@ -64,6 +64,15 @@ You have access to these data tools (call them as needed):
                                         technical (stage, RSI, RS, scores, signals) AND
                                         fundamental (P/E, P/B, ROE, ROCE, div yield) metrics
 
+[Intraday screener tools — uses yfinance 5m/15m/30m/1h live candles]
+• get_intraday_analysis(symbol,       → Deep intraday analysis of ONE stock: runs all strategies,
+    interval, strategies)               returns BUY/SELL signals with entry/target/SL/R:R,
+                                        key support & resistance (pivot, swing, EMAs), indicators.
+                                        Strategies: MACD · RSI · Supertrend · Bollinger · EMA · VCP · Volume
+• scan_intraday_market(index,         → Scan ALL stocks in an index for intraday signals.
+    interval, strategies,               Returns ranked BUY/SELL signals sorted by R:R.
+    direction_filter, min_rr, top_n)    Shortcut: user types /scan
+
 [Web research tools — use for deep research, always return REAL URLs]
 • scrape_screener_in(symbol)          → screener.in: P/E, P/B, ROE, ROCE, pros/cons,
                                         quarterly results, annual P&L, shareholding,
@@ -79,7 +88,11 @@ You have access to these data tools (call them as needed):
 • find_portfolio_overlap(screener)    → Holdings that match a screener
 
 ━━━ TOOL SELECTION RULES ━━━
-• "current price / live / now / today / intraday" → call get_live_quote or get_live_market_overview FIRST
+• "intraday setup / entry target SL / should I buy X today / trading setup" → call get_intraday_analysis(symbol)
+• "intraday screener / scan for buy signals / best intraday stocks / momentum plays" → call scan_intraday_market(index)
+• "scan BANK NIFTY / scan IT stocks / scan pharma intraday" → scan_intraday_market with that index
+• "MACD signal / RSI signal / supertrend signal / VCP pattern" → get_intraday_analysis with that strategy
+• "current price / live / now / today" → call get_live_quote or get_live_market_overview FIRST
 • "top gainers / top losers / biggest movers / what's up / what's down" → call get_top_gainers_losers
 • "most active / highest volume / most traded" → call get_most_active_stocks
 • "52 week high / 52 week low / new highs / breakout candidates" → call get_52week_extremes

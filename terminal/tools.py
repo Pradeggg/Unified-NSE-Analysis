@@ -24,6 +24,13 @@ from terminal.web_research import (
     comprehensive_stock_research,
 )
 
+# ── Intraday screener engine ──────────────────────────────────────────────────
+from terminal.intraday import (
+    get_intraday_analysis,
+    run_intraday_screener as _run_intraday_screener,
+    get_intraday_candles,
+)
+
 # ── Paths ─────────────────────────────────────────────────────────────────────
 ROOT      = Path(__file__).parent.parent
 DB_PATH   = ROOT / "data" / "sector_rotation_tracker.db"
@@ -1287,6 +1294,54 @@ def compare_stocks(
         "stock_details":    rows,
     }
 
+
+
+# ── Intraday screener wrapper ────────────────────────────────────────────────
+
+def scan_intraday_market(
+    index: str = "NIFTY 50",
+    interval: str = "15m",
+    strategies: list[str] | None = None,
+    direction_filter: str = "all",
+    min_rr: float = 1.5,
+    top_n: int = 5,
+) -> dict:
+    """Scan all stocks in an NSE index for intraday trading signals.
+
+    Args:
+        index:            Index name: NIFTY 50, NIFTY BANK, NIFTY IT, NIFTY 500, NIFTY PHARMA...
+        interval:         Candle interval: 5m, 15m, 30m, 1h.
+        strategies:       Strategy keys: macd, rsi, supertrend, bollinger, ema, vcp, volume.
+        direction_filter: buy, sell, or all.
+        min_rr:           Minimum R:R ratio (default 1.5).
+        top_n:            Top signals to highlight.
+    """
+    try:
+        s = _get_live_session()
+        idx_param = index.upper().replace(" ", "%20")
+        r = s.get(
+            f"https://www.nseindia.com/api/equity-stockIndices?index={idx_param}",
+            timeout=10,
+        )
+        stocks = [x["symbol"] for x in r.json().get("data", []) if x.get("priority") != 1]
+    except Exception as e:
+        return {"error": f"Could not fetch {index} constituents: {e}"}
+
+    if not stocks:
+        return {"error": f"No stocks found for index: {index}"}
+
+    result = _run_intraday_screener(
+        symbols=stocks,
+        interval=interval,
+        strategies=strategies,
+        direction_filter=direction_filter,
+        min_rr=min_rr,
+    )
+    result["index"]    = index
+    result["top_buy"]  = result["buy_signals"][:top_n]
+    result["top_sell"] = result["sell_signals"][:top_n]
+    return result
+
 TOOL_REGISTRY: dict[str, Any] = {
     "get_live_quote": (
         get_live_quote,
@@ -1400,6 +1455,57 @@ TOOL_REGISTRY: dict[str, Any] = {
                 },
             },
             "required": ["symbols"],
+        },
+    ),
+    "get_intraday_analysis": (
+        get_intraday_analysis,
+        (
+            "Deep intraday technical analysis of a SINGLE NSE stock. "
+            "Computes: MACD crossover, RSI reversal, Supertrend direction, Bollinger Band bounce, "
+            "EMA 9/21 crossover, VCP pattern, Volume spike signals — each with entry price, "
+            "target, stop-loss, and Risk:Reward ratio. Also returns key support/resistance levels "
+            "(pivot points, swing highs/lows, EMAs), full indicator readings, and overall bias. "
+            "Use for: 'intraday setup for X', 'should I buy X today', 'entry target SL for X', "
+            "'technical signals X', 'trading strategy for X'."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbol":     {"type": "string"},
+                "interval":   {"type": "string", "enum": ["5m","15m","30m","1h"], "default": "15m"},
+                "strategies": {
+                    "type": "array",
+                    "items": {"type": "string",
+                              "enum": ["macd","rsi","supertrend","bollinger","ema","vcp","volume"]},
+                    "description": "Strategies to run. Default is all.",
+                },
+            },
+            "required": ["symbol"],
+        },
+    ),
+    "scan_intraday_market": (
+        scan_intraday_market,
+        (
+            "Scan ALL stocks in an NSE index for live intraday trading signals RIGHT NOW. "
+            "Runs MACD, RSI, Supertrend, Bollinger, EMA crossover, VCP, Volume spike strategies "
+            "across every constituent stock. Returns ranked BUY and SELL signals with entry/target/SL/R:R. "
+            "Use for: 'intraday screener', 'scan Nifty 50 for buy signals', 'which BANK NIFTY stocks "
+            "have buy signals', 'best intraday stocks today', 'top momentum plays', '/scan'."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "index":            {"type": "string", "default": "NIFTY 50",
+                                     "description": "NIFTY 50, NIFTY BANK, NIFTY IT, NIFTY 500, NIFTY PHARMA, etc."},
+                "interval":         {"type": "string", "enum": ["5m","15m","30m","1h"], "default": "15m"},
+                "strategies":       {"type": "array",
+                                     "items": {"type": "string",
+                                               "enum": ["macd","rsi","supertrend","bollinger","ema","vcp","volume"]}},
+                "direction_filter": {"type": "string", "enum": ["buy","sell","all"], "default": "all"},
+                "min_rr":           {"type": "number", "default": 1.5},
+                "top_n":            {"type": "integer", "default": 5},
+            },
+            "required": [],
         },
     ),
     "resolve_symbol": (

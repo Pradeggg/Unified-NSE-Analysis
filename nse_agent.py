@@ -264,12 +264,15 @@ def _print_help() -> None:
             "  [red]/live[/red]  or  [red]/l[/red]   — Live / Intraday  (real-time NSE API)\n"
             "  [blue]/eod[/blue]   or  [blue]/h[/blue]   — EOD / Historical (CSV + DB snapshot)\n"
             "  [white]/auto[/white]  or  [white]/a[/white]   — Auto-detect from query keywords\n\n"
+            "[bold cyan]INTRADAY SCREENER[/bold cyan]\n"
+            "  [green]/scan[/green]                    — Scan NIFTY 50 for intraday signals\n"
+            "  [green]/scan NIFTY BANK[/green]         — Scan any index (NIFTY IT, PHARMA…)\n\n"
             "[bold cyan]FOLLOW-UPS[/bold cyan]\n"
-            "  [yellow]1 / 2 / 3[/yellow]          — Ask the numbered follow-up question\n\n"
+            "  [yellow]1 / 2 / 3[/yellow]              — Ask the numbered follow-up question\n\n"
             "[bold cyan]OTHER[/bold cyan]\n"
-            "  [dim]/clear[/dim]             — Clear screen\n"
-            "  [dim]exit / quit[/dim]        — Exit Agent Adda\n"
-            "  [dim]Ctrl-C[/dim]             — Exit (same as quit)\n"
+            "  [dim]/clear[/dim]                 — Clear screen\n"
+            "  [dim]exit / quit[/dim]            — Exit Agent Adda\n"
+            "  [dim]Ctrl-C[/dim]                 — Exit (same as quit)\n"
         ),
         title="[bold cyan]Agent Adda Help[/bold cyan]",
         border_style="cyan",
@@ -386,6 +389,13 @@ def _chat_loop(agent, show_trace: bool) -> None:
             os.system("clear")
             print_banner()
             continue
+
+        # ── /scan shortcut: run intraday screener ──────────────────────
+        if text.lower().startswith("/scan"):
+            parts = text.split(maxsplit=1)
+            idx   = parts[1].upper() if len(parts) > 1 else "NIFTY 50"
+            text  = f"Scan {idx} for intraday buy and sell signals using all strategies on 15m charts"
+            console.print(f"[dim]  → Intraday scan: {idx}[/dim]")
 
         # ── Follow-up shortcut ─────────────────────────────────────────
         if text in ("1", "2", "3") and _followups:
