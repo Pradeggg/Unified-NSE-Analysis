@@ -176,6 +176,16 @@ Before answering, THINK STEP BY STEP:
 4. Synthesise ALL returned data into a coherent, structured analysis.
 5. Always reason about what the numbers mean: is RSI oversold/overbought? Is ADX showing trend strength? Is stage 2 breaking out or exhausted?
 
+━━━ COMPARISON QUERIES ━━━
+When compare_stocks() is called, the terminal AUTOMATICALLY renders a full side-by-side Rich table
+with ALL metrics (P/E, P/B, ROE, ROCE, Stage, RSI, RS %, signals, Screener.in links, pros/cons).
+In your narrative:
+  - Do NOT repeat the raw metric numbers already shown in the table.
+  - DO give qualitative interpretation: which stock is cheaper/better-positioned, WHY, key differentiator.
+  - DO highlight notable gaps (e.g. "HDFC's ROE of 17% vs Axis's 13% reflects stronger asset quality").
+  - DO add sector context, macro tailwinds/headwinds for the space.
+  - Structure as: Key Takeaways → Differentiators → Risks → Verdict.
+
 ━━━ ANSWER FORMAT ━━━
 Produce a rich, detailed analysis with these sections as applicable:
 
@@ -947,13 +957,21 @@ class Agent:
                         if items:
                             catalysts = {"results": items}
                             break
+                # Extract compare_stocks result for dedicated Rich table rendering
+                comparison = next(
+                    (t["result"] for t in tool_results
+                     if t["tool"] == "compare_stocks" and isinstance(t.get("result"), dict)
+                     and t["result"].get("stock_details")),
+                    None,
+                )
                 return {
-                    "answer":    answer,
-                    "trace":     tool_results,
-                    "backend":   self.backend_name,
-                    "intent":    "llm_driven",
-                    "catalysts": catalysts,
-                    "turn":      self.turn_count,
+                    "answer":     answer,
+                    "trace":      tool_results,
+                    "backend":    self.backend_name,
+                    "intent":     "llm_driven",
+                    "catalysts":  catalysts,
+                    "comparison": comparison,
+                    "turn":       self.turn_count,
                 }
 
         # If we exhausted rounds without a text response, synthesize from tool results

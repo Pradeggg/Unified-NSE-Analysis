@@ -866,6 +866,11 @@ def _print_response(result: dict) -> None:
     )
     console.print()
 
+    # ── Comparison table (rendered before narrative for immediate context) ─
+    comp = result.get("comparison")
+    if comp and comp.get("stock_details"):
+        _render_comparison_table(comp)
+
     # ── Body — Rich Markdown rendered to full terminal width ───────────────
     has_markup = backend != "Keyword (no LLM)" and any(c in clean for c in ["**", "##", "- ", "* ", "```"])
     if has_markup:
