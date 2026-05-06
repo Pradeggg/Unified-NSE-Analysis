@@ -25,6 +25,7 @@ pandas-ta>=0.3.14b
 
 # Terminal UI (nse_terminal.py Bloomberg-style CLI)
 rich>=13.0.0
+yfinance>=1.3.0
 
 # Reports: Excel export (working-sector comprehensive report)
 openpyxl>=3.1.0
@@ -47,7 +48,6 @@ ddgs>=9.0.0
 googlesearch-python>=1.2.3
 # Yahoo search via SerpAPI (optional): set SERPAPI_API_KEY to enable
 # pip install requests  # already present for agent
-
 
 
 

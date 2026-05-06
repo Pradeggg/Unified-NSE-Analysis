@@ -54,9 +54,7 @@ try:
     from rich import box
     from rich.columns import Columns
     from rich.rule import Rule
-    from rich.align import Align
     from rich.padding import Padding
-    from rich.markdown import Markdown
 except ImportError:
     print("Install rich:  pip install rich")
     sys.exit(1)
@@ -217,12 +215,6 @@ _FLASH_SECS = 4                           # seconds to hold the bright colour
 _narrative_cache: dict = {"text": "", "ts": 0.0}
 _narrative_lock   = threading.Lock()
 _NARRATIVE_TTL    = 5 * 60               # regenerate narrative every 5 minutes
-
-# ── NLP / Agent Adda state ───────────────────────────────────────────────────
-_nlp_state:   dict        = {"query": "", "response": "", "ts": "", "pending": False}
-_nlp_history: list[dict]  = []    # last 5 Q&A pairs [{query, response, ts}, ...]
-_nlp_lock     = threading.Lock()
-_NLP_HISTORY_MAX = 5
 
 def _get_nse_session(force: bool = False) -> requests.Session:
     """Return a live NSE session, renewing the cookie every _SESSION_TTL seconds."""
@@ -1123,38 +1115,6 @@ def build_narrative_panel(text: str) -> Panel:
     return Panel(t, height=3, style="on grey11")
 
 
-def build_nlp_panel(query: str, response: str, ts: str, pending: bool) -> Panel:
-    """Agent Adda inline Q&A panel shown at the bottom of the terminal."""
-    grid = Table.grid(expand=True, padding=(0, 1))
-    grid.add_column()
-
-    if pending:
-        grid.add_row(Text("  ⏳ Agent thinking…", style="bold yellow"))
-    elif query and response:
-        q_line = Text()
-        q_line.append("  ❓ ", style="bold cyan")
-        q_line.append(query, style="bold white")
-        a_line = Text()
-        a_line.append("  🤖 ", style="bold green")
-        a_line.append(response, style="white")
-        grid.add_row(q_line)
-        grid.add_row(a_line)
-    else:
-        grid.add_row(Text(
-            "  💬 Agent Adda ready  —  press [/] then type your query and hit Enter",
-            style="dim italic",
-        ))
-
-    hint = Text()
-    hint.append("  Press ", style="dim")
-    hint.append("[/]", style="bold cyan")
-    hint.append(" to query  │  ", style="dim")
-    if ts:
-        hint.append(f"last answered {ts}", style="dim")
-    return Panel(grid, title="[bold cyan]💬 Agent Adda[/bold cyan]",
-                 subtitle=hint, style="on grey7", height=6 if (query and response) else 4)
-
-
 def _chg_color(v: float) -> str:
     if v > 1.5:  return "bold green"
     if v > 0:    return "green"
@@ -1205,7 +1165,7 @@ def build_header(indices: dict, refresh_mins: int = 5) -> Panel:
     txt.append(f"{nv:,.0f}" if nv else "—", style=nv_clr)
     if nc != 0:
         txt.append(f"  {arrow} {abs(nc):,.0f}  ({np_:+.2f}%)", style=chg_clr)
-    txt.append(f"  │  🔄 /{refresh_mins}min  │  [/] to query", style="dim")
+    txt.append(f"  │  🔄 /{refresh_mins}min  │  commands: SYMBOL HEALTH PORT REFRESH", style="dim")
 
     return Panel(txt, style="on dark_blue", height=3)
 
@@ -1632,12 +1592,57 @@ def build_status_bar(last_update: str, hist_rows: int, signals: dict) -> Panel:
         f"[magenta]DARVAS:{len(signals.get('darvas_setups',[]))}[/magenta]",
         f"[bright_cyan]52MOM:{len(signals.get('momentum_52w',[]))}[/bright_cyan]",
     ])
-    hint = "[dim]/ query  │  SYMBOL drilldown  │  HEALTH  │  PORT  │  REFRESH[/dim]"
+    hint = "[dim]SYMBOL drilldown  │  HEALTH  │  PORT  │  REFRESH[/dim]"
     txt = (
         f"[dim]Last update:[/dim] [white]{last_update}[/white]  │  {counts}  │  "
         f"[dim]Price history: {hist_rows:,} rows[/dim]  │  {hint}"
     )
     return Panel(txt, height=3, style="on grey15")
+
+
+def build_pulse_bar(indices: dict, signals: dict) -> Panel:
+    """Compact full-width pulse strip for top-of-screen market context."""
+    breadth = signals.get("breadth", {})
+    adv = int(breadth.get("advances", 0) or 0)
+    dec = int(breadth.get("declines", 0) or 0)
+    ad_ratio = round(adv / dec, 2) if dec else 0.0
+    mco = breadth.get("mco")
+    trin = breadth.get("trin")
+    hi52 = breadth.get("near_52w_high", breadth.get("new_highs", 0))
+    pct200 = breadth.get("pct_above_200ma", breadth.get("above_200ma_pct", 0))
+
+    def _idx(label: str, key: str) -> Text:
+        d = indices.get(key.upper(), {})
+        price = _parse_price(d.get("lastPrice", 0))
+        pchg = _parse_price(d.get("pChange", 0))
+        arrow = "▲" if pchg >= 0 else "▼"
+        t = Text()
+        t.append(f"{label} ", style="bold white")
+        t.append(f"{price:,.0f}" if price else "—", style=_chg_color(pchg))
+        t.append(f" {arrow}{abs(pchg):.1f}%", style=_chg_color(pchg))
+        return t
+
+    line = Text()
+    line.append("  PULSE  ", style="bold cyan")
+    for part in [
+        _idx("NIFTY", "NIFTY 50"),
+        _idx("BANK", "NIFTY BANK"),
+        _idx("IT", "NIFTY IT"),
+        _idx("METAL", "NIFTY METAL"),
+    ]:
+        line.append_text(part)
+        line.append("  │  ", style="dim")
+    line.append(f"A/D {adv}/{dec} ({ad_ratio:.2f})", style="green" if ad_ratio >= 1 else "red")
+    line.append("  │  ", style="dim")
+    line.append(f"MCO {mco:+.0f}" if isinstance(mco, (int, float)) else "MCO —", style="yellow")
+    line.append("  │  ", style="dim")
+    line.append(f"TRIN {trin:.2f}" if isinstance(trin, (int, float)) else "TRIN —", style="yellow")
+    line.append("  │  ", style="dim")
+    line.append(f"52W {hi52}", style="cyan")
+    line.append("  │  ", style="dim")
+    line.append(f">200DMA {pct200:.0f}%" if isinstance(pct200, (int, float)) else ">200DMA —", style="cyan")
+
+    return Panel(line, title="[bold cyan]PULSE[/bold cyan]", border_style="cyan", height=3)
 
 
 def _adaptive_signal_rows(requested: int, has_watchlist: bool = False,
@@ -1647,153 +1652,15 @@ def _adaptive_signal_rows(requested: int, has_watchlist: bool = False,
         return requested
 
     term_h = terminal_height or console.size.height or 68
-    # fixed rows: header(3) + indices(3) + sector(4) + breadth(3) + status(3) + input_bar(3)
-    fixed_h = 3 + 3 + 4 + 3 + 3 + 3
+    # fixed rows: header(3) + pulse(3) + indices(3) + sector(4) + breadth(3) + status(3)
+    fixed_h = 3 + 3 + 3 + 4 + 3 + 3
     signal_sections = 3 + (1 if has_watchlist else 0)
 
     # Each signal panel section needs border/title/table-header/subtitle chrome
-    # around data rows. Rich renders this as about four non-data rows per section.
-    max_rows = ((term_h - fixed_h) // signal_sections) - 4
+    # around data rows. Rich renders this as about seven non-data rows per section.
+    max_rows = ((term_h - fixed_h) // signal_sections) - 7
     min_rows = min(3, requested)
     return max(min_rows, min(requested, max_rows))
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Right sidebar
-# ─────────────────────────────────────────────────────────────────────────────
-
-def build_right_sidebar(indices: dict, signals: dict, sector_breadth: dict,
-                        nlp_history: list[dict], nlp_pending: bool,
-                        narrative: str) -> Panel:
-    """Vertical right panel: Market Pulse stats (top) + Agent Adda chat (bottom)."""
-    grid = Table.grid(expand=True, padding=(0, 0))
-    grid.add_column()
-
-    # ── Market Pulse ─────────────────────────────────────────────────────────
-    breadth = signals.get("breadth", {})
-    adv     = breadth.get("advances", 0)
-    dec     = breadth.get("declines", 0)
-    mco     = breadth.get("mco", 0)
-    trin    = breadth.get("trin", 1.0)
-    hi52    = breadth.get("new_highs", 0)
-    ab200   = breadth.get("above_200ma_pct", 0)
-    ad_ratio = round(adv / dec, 2) if dec else 0
-
-    def _idx_row(key: str, label: str) -> Text:
-        d     = indices.get(key.upper(), {})
-        price = _parse_price(d.get("lastPrice", 0))
-        pchg  = _parse_price(d.get("pChange",   0))
-        flash = _update_flash(f"SB:{key}", price)
-        clr   = flash or _chg_color(pchg)
-        arrow = "▲" if pchg >= 0 else "▼"
-        t = Text()
-        t.append(f"{label:<10}", style="white")
-        t.append(f"{price:>8,.0f}  ", style=clr)
-        t.append(f"{arrow}{abs(pchg):.1f}%", style=clr)
-        return t
-
-    pulse_tbl = Table(box=None, padding=(0, 1), expand=True, show_header=False)
-    pulse_tbl.add_column("c", no_wrap=True)
-    for key, lbl in [("NIFTY 50","NIFTY"), ("NIFTY BANK","BANK"),
-                     ("NIFTY IT","IT"), ("NIFTY METAL","METAL"),
-                     ("INDIA VIX","VIX")]:
-        pulse_tbl.add_row(_idx_row(key, lbl))
-
-    pulse_tbl.add_row(Text("─" * 28, style="dim"))
-
-    def _stat(label: str, val, style: str = "white", suffix: str = "") -> Text:
-        t = Text()
-        t.append(f"{label:<14}", style="dim")
-        t.append(f"{val}{suffix}", style=style)
-        return t
-
-    mco_clr  = "bold bright_green" if mco > 20 else ("bold bright_red" if mco < -20 else "yellow")
-    trin_clr = "bold bright_green" if trin < 0.8 else ("bold bright_red" if trin > 1.2 else "yellow")
-    ad_clr   = "green" if ad_ratio >= 1 else "red"
-
-    pulse_tbl.add_row(_stat("Advances",  adv,  "green"))
-    pulse_tbl.add_row(_stat("Declines",  dec,  "red"))
-    pulse_tbl.add_row(_stat("A/D Ratio", f"{ad_ratio:.2f}", ad_clr))
-    pulse_tbl.add_row(_stat("MCO",       f"{mco:+.0f}", mco_clr))
-    pulse_tbl.add_row(_stat("TRIN",      f"{trin:.2f}",  trin_clr,
-                             " 🟢" if trin < 0.8 else (" 🔴" if trin > 1.2 else "")))
-    pulse_tbl.add_row(_stat("52W Highs", hi52, "cyan"))
-    pulse_tbl.add_row(_stat(">200 DMA",  f"{ab200:.0f}%", "cyan"))
-    pulse_tbl.add_row(Text("─" * 28, style="dim"))
-
-    # Sector heat rows
-    for sector, idx_label in SECTOR_INDEX_MAP.items():
-        idx_key = idx_label.upper().replace("NIFTY ", "NIFTY ")
-        d    = indices.get(idx_key, {})
-        pchg = _parse_price(d.get("pChange", 0))
-        sb   = sector_breadth.get(sector, {})
-        pct  = sb.get("pct_above_50dma", 0)
-        clr  = _chg_color(pchg)
-        arrow = "▲" if pchg >= 0 else "▼"
-        short = sector.split("&")[0].strip()[:9]
-        t = Text()
-        t.append(f"{short:<10}", style="dim white")
-        t.append(f"{arrow}{abs(pchg):.1f}% ", style=clr)
-        t.append(f"{pct:.0f}%", style="dim cyan")
-        pulse_tbl.add_row(t)
-
-    pulse_panel = Panel(pulse_tbl, title="[bold cyan]📊 PULSE[/bold cyan]",
-                        border_style="cyan", padding=(0, 0))
-    grid.add_row(pulse_panel)
-
-    # ── Narrative ─────────────────────────────────────────────────────────────
-    if narrative:
-        nt = Text(narrative, style="italic dim white")
-        nt.overflow = "fold"
-        grid.add_row(Panel(nt, title="[yellow]📰[/yellow]",
-                           border_style="yellow", padding=(0, 1), height=5))
-
-    # ── Agent Adda chat history ───────────────────────────────────────────────
-    chat_tbl = Table(box=None, padding=(0, 0), expand=True, show_header=False)
-    chat_tbl.add_column("c", no_wrap=False, overflow="fold")
-
-    if nlp_pending:
-        chat_tbl.add_row(Text("⏳ Agent thinking…", style="bold yellow"))
-    elif nlp_history:
-        for entry in nlp_history[-4:]:  # show last 4 exchanges
-            q = Text()
-            q.append("❓ ", style="bold cyan")
-            q.append(entry["query"][:60], style="white")
-            chat_tbl.add_row(q)
-            a = Text()
-            a.append("🤖 ", style="bold green")
-            a.append(entry["response"][:120], style="dim white")
-            chat_tbl.add_row(a)
-            chat_tbl.add_row(Text("·" * 26, style="dim"))
-    else:
-        chat_tbl.add_row(Text(
-            "No queries yet.\nType  /your question\nthen press Enter.",
-            style="dim italic",
-        ))
-
-    hint = Text()
-    hint.append("  [/] to query", style="bold cyan")
-    grid.add_row(Panel(chat_tbl, title="[bold cyan]💬 Agent Adda[/bold cyan]",
-                       subtitle=hint, border_style="cyan", padding=(0, 1)))
-
-    return Panel(grid, style="on grey7", padding=(0, 0))
-
-
-def build_input_bar(current_text: str) -> Panel:
-    """Persistent input bar at the bottom of the terminal.
-    Shows what the user is currently typing; green cursor when active."""
-    t = Text()
-    t.append("  ❯ ", style="bold cyan")
-    if current_text:
-        t.append(current_text, style="bold white")
-        t.append("▌", style="bold cyan blink")   # blinking cursor
-    else:
-        t.append("Type your query and press Enter  │  Esc to clear  │  Ctrl-U to erase line",
-                 style="dim italic")
-        t.append("  ▌", style="bold cyan blink")
-    return Panel(t, height=3, border_style="cyan",
-                 title="[bold cyan]💬 Agent Adda — Query Input[/bold cyan]",
-                 padding=(0, 0))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1806,13 +1673,8 @@ def build_full_layout(indices: dict, signals: dict, last_update: str,
                        hist: "pd.DataFrame | None" = None,
                        live_prices: dict | None = None,
                        db_data: dict | None = None,
-                       sector_breadth: dict | None = None,
-                       narrative: str = "",
-                       nlp_history: list[dict] | None = None,
-                       nlp_pending: bool = False,
-                       current_input: str = "") -> Layout:
-    """Compose the full terminal layout: left main content + right sidebar."""
-    nlp_history = nlp_history or []
+                       sector_breadth: dict | None = None) -> Layout:
+    """Compose the full Bloomberg-style terminal layout."""
     visible_top_n = _adaptive_signal_rows(top_n, has_watchlist=bool(watchlist))
 
     # ── Left column: all market content ──────────────────────────────────────
@@ -1820,6 +1682,7 @@ def build_full_layout(indices: dict, signals: dict, last_update: str,
     left_grid.add_column()
 
     left_grid.add_row(build_header(indices, refresh_mins))
+    left_grid.add_row(build_pulse_bar(indices, signals))
     left_grid.add_row(build_indices_bar(indices))
     left_grid.add_row(build_sector_table(indices, sector_breadth))
     left_grid.add_row(build_breadth_bar(signals.get("breadth", {}), signals.get("nifty_trend", [])))
@@ -1848,19 +1711,7 @@ def build_full_layout(indices: dict, signals: dict, last_update: str,
         left_grid.add_row(build_watchlist_panel(watchlist[:visible_top_n], live_prices, hist, db_data))
 
     left_grid.add_row(build_status_bar(last_update, hist_rows, signals))
-    left_grid.add_row(build_input_bar(current_input))      # always-visible input bar
-
-    # ── Right column: sidebar ─────────────────────────────────────────────────
-    right = build_right_sidebar(indices, signals, sector_breadth or {},
-                                nlp_history, nlp_pending, narrative)
-
-    # ── Use Layout (not Table.grid) so it fills terminal height correctly ─────
-    root = Layout()
-    root.split_row(
-        Layout(left_grid, name="left",  ratio=3),
-        Layout(right,     name="right", ratio=1),
-    )
-    return root
+    return Layout(left_grid, name="main")
 
 
 def _market_is_open() -> bool:
@@ -1868,7 +1719,7 @@ def _market_is_open() -> bool:
     return now.weekday() < 5 and 9 <= now.hour < 16
 
 
-def refresh_data(top_n: int) -> tuple[dict, dict, str, int, pd.DataFrame, dict, dict, dict]:
+def refresh_data(top_n: int, log: bool = True) -> tuple[dict, dict, str, int, pd.DataFrame, dict, dict, dict]:
     """Fetch all live data and compute signals.
     Returns (indices, signals, last_update, hist_rows, hist, live_prices, db_data, sector_breadth).
 
@@ -1877,9 +1728,13 @@ def refresh_data(top_n: int) -> tuple[dict, dict, str, int, pd.DataFrame, dict, 
       Today's OHLCV     → NSE API    (equity-stockIndices, market hours only)
       Index quotes      → NSE API    (allIndices, market hours) / local CSV fallback
     """
+    def _log(message: str) -> None:
+        if log:
+            console.log(message)
+
     market_open = _market_is_open()
 
-    console.log("[dim]Fetching index data from NSE…[/dim]")
+    _log("[dim]Fetching index data from NSE…[/dim]")
     indices = fetch_all_indices() if market_open else {}
 
     # Always load EOD for fallback; fill any missing/zero indices
@@ -1894,28 +1749,28 @@ def refresh_data(top_n: int) -> tuple[dict, dict, str, int, pd.DataFrame, dict, 
         if not live or _parse_price(live.get("lastPrice", 0)) == 0:
             indices[key] = eod   # use local EOD when NSE live is absent/zero
 
-    console.log("[dim]Loading historical price data from local CSV…[/dim]")
+    _log("[dim]Loading historical price data from local CSV…[/dim]")
     hist = load_price_history(days=400)
     hist_rows = len(hist)
 
     if market_open:
         # Fetch full OHLCV + volume from NSE for all available stocks
-        console.log("[dim]Fetching live OHLCV from NSE (equity-stockIndices)…[/dim]")
+        _log("[dim]Fetching live OHLCV from NSE (equity-stockIndices)…[/dim]")
         live_prices, live_ohlcv = fetch_live_ohlcv()
         # Patch today's live data into history so indicators reflect intraday price action
         if not live_ohlcv.empty:
-            console.log(f"[dim]Patching {len(live_ohlcv):,} live rows into history…[/dim]")
+            _log(f"[dim]Patching {len(live_ohlcv):,} live rows into history…[/dim]")
             hist = patch_live_ohlcv(hist, live_ohlcv)
     else:
-        console.log("[dim]Market closed — using local EOD prices…[/dim]")
+        _log("[dim]Market closed — using local EOD prices…[/dim]")
         live_prices = load_eod_stock_prices()
 
-    console.log("[dim]Running technical screener…[/dim]")
+    _log("[dim]Running technical screener…[/dim]")
     signals  = run_screener(hist, live_prices, top_n=top_n)
     db_data  = load_rs_from_db()
     signals["nifty_trend"] = load_nifty_trend(10)
 
-    console.log("[dim]Computing sector breadth…[/dim]")
+    _log("[dim]Computing sector breadth…[/dim]")
     sector_breadth = compute_sector_breadth(hist)
 
     ts = datetime.now().strftime("%H:%M:%S")
@@ -1939,7 +1794,6 @@ def _parse_input(raw: str) -> tuple[str, str]:
     """Classify terminal input into (cmd_type, arg).
 
     Returns one of:
-      ('nlp', query_text) — route to Agent Adda
       ('signal', SIGNAL)  — show full signal screen
       ('sector', NAME)    — sector drilldown
       ('health', '')      — data health screen
@@ -1954,10 +1808,8 @@ def _parse_input(raw: str) -> tuple[str, str]:
     if not raw:
         return ("ignore", "")
 
-    # /query prefix always → NLP (strip leading slashes)
     if raw.startswith("/"):
-        query_text = raw.lstrip("/").strip()
-        return ("nlp", query_text) if query_text else ("ignore", "")
+        return ("ignore", "")
 
     upper = raw.upper()
 
@@ -1983,8 +1835,7 @@ def _parse_input(raw: str) -> tuple[str, str]:
     if _SYMBOL_RE.match(upper) and upper not in _CMD_KEYWORDS:
         return ("symbol", upper)
 
-    # Everything else → NLP
-    return ("nlp", raw)
+    return ("ignore", "")
 
 
 def _load_symbol_db_extra(symbol: str) -> dict:
@@ -2422,42 +2273,6 @@ def _show_report_screen() -> None:
 # Entry point
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _run_agent_query(query: str) -> str:
-    """Run a query through Agent Adda and return the response string."""
-    try:
-        from terminal.agent import Agent
-        agent = Agent()
-        result = agent.query(query, show_trace=False)
-        if isinstance(result, dict):
-            return result.get("answer", str(result))
-        return str(result)
-    except Exception as e:
-        return f"Agent error: {e}"
-
-
-def _agent_response_panel(query: str, response: str, terminal_width: int | None = None) -> Panel:
-    """Build a readable, wrapped Agent Adda response panel for command mode."""
-    term_width = terminal_width or console.size.width
-    panel_width = max(50, min(120, term_width - 6 if term_width > 60 else term_width))
-
-    body = Table.grid(expand=True, padding=(0, 1))
-    body.add_column(no_wrap=False, overflow="fold")
-
-    q = Text()
-    q.append("❓ ", style="bold cyan")
-    q.append(query, style="bold white")
-    body.add_row(q)
-    body.add_row(Markdown(response))
-
-    return Panel(
-        body,
-        title="[bold cyan]💬 Agent Adda[/bold cyan]",
-        border_style="cyan",
-        padding=(1, 1),
-        width=panel_width,
-    )
-
-
 def main():
     parser = argparse.ArgumentParser(description="NSE Bloomberg Terminal")
     parser.add_argument("--once",      action="store_true", help="Run once, no live refresh")
@@ -2481,8 +2296,7 @@ def main():
 
     refresh_secs = args.refresh * 60
 
-    def _build(indices, signals, label, hist_rows, hist, live_prices, db_data, sector_breadth,
-               narrative="", nlp_hist=None, nlp_pending=False, current_input=""):
+    def _build(indices, signals, label, hist_rows, hist, live_prices, db_data, sector_breadth):
         return build_full_layout(
             indices, signals, label, hist_rows, args.top, args.refresh,
             watchlist=watchlist or None,
@@ -2490,19 +2304,13 @@ def main():
             live_prices=live_prices if watchlist else None,
             db_data=db_data if watchlist else None,
             sector_breadth=sector_breadth,
-            narrative=narrative,
-            nlp_history=nlp_hist or [],
-            nlp_pending=nlp_pending,
-            current_input=current_input,
         )
 
     if args.once:
         with console.status("[bold cyan]Loading NSE Terminal…"):
             res = refresh_data(args.top)
         indices, signals, last_update, hist_rows, hist, live_prices, db_data, sb = res
-        narrative = _rule_narrative(indices, signals.get("breadth", {}), signals)
-        layout = _build(indices, signals, last_update, hist_rows, hist, live_prices, db_data, sb,
-                        narrative=narrative)
+        layout = _build(indices, signals, last_update, hist_rows, hist, live_prices, db_data, sb)
         console.print(layout)
         return
 
@@ -2520,16 +2328,14 @@ def main():
         db_data: dict    = {}
         sector_breadth: dict = {}
         next_refresh     = 0.0
-        narrative        = ""
         _last_render_sec = -1     # track which second we last rendered data labels
 
         while True:
             now = time.time()
             if now >= next_refresh:
                 try:
-                    res = refresh_data(args.top)
+                    res = refresh_data(args.top, log=False)
                     indices, signals, last_update, hist_rows, hist, live_prices, db_data, sector_breadth = res
-                    narrative = _ensure_narrative(indices, signals.get("breadth", {}), signals)
                 except Exception as e:
                     last_update = f"ERROR: {e}"
                 next_refresh = time.time() + refresh_secs
@@ -2538,22 +2344,8 @@ def main():
             mins, secs_r = divmod(secs_left, 60)
             countdown = f"{last_update}  │  Next refresh in {mins:02d}:{secs_r:02d}"
 
-            with _nlp_lock:
-                nlp_hist    = list(_nlp_history)
-                nlp_pending = _nlp_state["pending"]
-
-            with _narrative_lock:
-                cached = _narrative_cache.get("text", "")
-                if cached:
-                    narrative = cached
-
-            with _input_lock:
-                cur_input = _current_input
-
             layout = _build(indices, signals, countdown, hist_rows, hist, live_prices,
-                            db_data, sector_breadth, narrative=narrative,
-                            nlp_hist=nlp_hist, nlp_pending=nlp_pending,
-                            current_input=cur_input)
+                            db_data, sector_breadth)
             live.update(layout)
 
             # Check for a submitted command (non-blocking)
@@ -2582,22 +2374,7 @@ def main():
                         except queue.Empty:
                             break
 
-                if cmd_type == "nlp":
-                    query = arg
-                    with _nlp_lock:
-                        _nlp_state["pending"] = True
-                    with console.status("[bold yellow]Agent thinking…[/bold yellow]"):
-                        response = _run_agent_query(query)
-                    console.print(Align.center(_agent_response_panel(query, response)))
-                    ts_str = datetime.now().strftime("%H:%M")
-                    with _nlp_lock:
-                        entry = {"query": query, "response": response, "ts": ts_str}
-                        _nlp_history.append(entry)
-                        if len(_nlp_history) > _NLP_HISTORY_MAX:
-                            _nlp_history.pop(0)
-                        _nlp_state["pending"] = False
-                    _wait_enter()
-                elif cmd_type == "symbol":
+                if cmd_type == "symbol":
                     _show_symbol_drilldown(arg, hist, live_prices, db_data,
                                            indices, sector_breadth)
                     _wait_enter()
