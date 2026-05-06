@@ -277,12 +277,18 @@ def _print_prompts_library(filter_key: str = "") -> None:
 
 
 
+# ASCII art generated with pyfiglet slant font (hardcoded for portability)
 _BANNER = [
-    (Fore.CYAN  + Style.BRIGHT, r"   _   ___ ___ _  _ _____      _   ___  ___   _   "),
-    (Fore.CYAN  + Style.BRIGHT, r"  /_\ / __| __| \| |_   _|    /_\ |   \|   \ /_\  "),
-    (Fore.GREEN + Style.BRIGHT, r" / _ \ (_ | _|| .` | | |     / _ \| |) | |) / _ \ "),
-    (Fore.YELLOW+ Style.BRIGHT, r"/_/ \_\___|___|_|\_| |_|    /_/ \_\___/|___/_/ \_|"),
+    (Fore.CYAN   + Style.BRIGHT, r"    ___   _____________   ________     ___    ____  ____  ___ "),
+    (Fore.CYAN   + Style.BRIGHT, r"   /   | / ____/ ____/ | / /_  __/    /   |  / __ \/ __ \/   |"),
+    (Fore.GREEN  + Style.BRIGHT, r"  / /| |/ / __/ __/ /  |/ / / /      / /| | / / / / / / / /| |"),
+    (Fore.YELLOW + Style.BRIGHT, r" / ___ / /_/ / /___/ /|  / / /      / ___ |/ /_/ / /_/ / ___ |"),
+    (Fore.YELLOW + Style.BRIGHT, r"/_/  |_\____/_____/_/ |_/ /_/      /_/  |_/_____/_____/_/  |_|"),
 ]
+
+# Box dimensions: art width = 62, box_w = 66, total visible = 70
+_BOX_W = 66
+_BOX_MID = _BOX_W - 4  # usable interior (after 2-space left + 2-space right margins)
 
 
 def _separator(title: str = "") -> None:
@@ -671,22 +677,26 @@ def _run_ric(agent, key: str, arg: str, show_trace: bool) -> None:
     console.print()
 
 
+def _box_row(mid_text: str, colour: str = "", reset: str = Style.RESET_ALL) -> str:
+    """Build a perfectly padded box row: '  ║  <mid_text><pad>  ║'."""
+    padding = " " * max(0, _BOX_MID - len(mid_text))
+    W = Fore.WHITE + Style.BRIGHT
+    return W + "  ║  " + colour + mid_text + padding + W + "  ║" + reset
+
+
 def print_banner() -> None:
     """Colorama ASCII banner printed to stdout before chat starts."""
     print()
     for colour, line in _BANNER:
         print(colour + line)
     print()
-    box_w = 58
-    print(Fore.WHITE + Style.BRIGHT + "  ╔" + "═" * box_w + "╗")
-    print(Fore.WHITE + Style.BRIGHT + "  ║" +
-          Fore.YELLOW + Style.BRIGHT + "  🏛  NSE Market Research  " +
-          Fore.WHITE + "│  " + Fore.GREEN + "AI-powered analysis" +
-          " " * 3 + Fore.WHITE + Style.BRIGHT + "  ║")
-    print(Fore.WHITE + Style.BRIGHT + "  ║" +
-          Fore.CYAN + "  stocks · sectors · signals · screeners · health" +
-          " " * 5 + Fore.WHITE + Style.BRIGHT + "  ║")
-    print(Fore.WHITE + Style.BRIGHT + "  ╚" + "═" * box_w + "╝")
+    W = Fore.WHITE + Style.BRIGHT
+    print(W + "  ╔" + "═" * _BOX_W + "╗")
+    print(_box_row("NSE Market Research Terminal  ·  AI-powered · Real-time",
+                   Fore.YELLOW + Style.BRIGHT))
+    print(_box_row("stocks · sectors · signals · screeners · intraday · RICs",
+                   Fore.CYAN))
+    print(W + "  ╚" + "═" * _BOX_W + "╝")
     print()
     for icon, colour, text in [
         ("💡", Fore.CYAN,    "How is the market today?"),
