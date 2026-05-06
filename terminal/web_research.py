@@ -285,8 +285,33 @@ def scrape_screener_in(symbol: str) -> dict:
         if href:
             annual_reports.append({"label": txt or "Annual Report", "url": href})
 
-    # ── Concalls note (loaded via JS — provide direct link) ─────────────────
+    # ── Concall transcripts — parsed from static HTML ────────────────────────
+    # screener.in summary page requires login but transcript PDFs, PPTs, and
+    # recording links are directly accessible without auth
+    concalls: list[dict] = []
     concalls_link = f"https://www.screener.in/company/{sym}/#concalls"
+    concall_div   = soup.find(class_="concalls")
+    if concall_div:
+        for li in concall_div.select("ul.list-links li")[:8]:
+            # Period label (e.g. "Feb 2026")
+            label_tag = li.find("div", class_=lambda c: c and "ink-600" in c)
+            period    = label_tag.get_text(strip=True) if label_tag else ""
+            entry: dict = {"period": period}
+            for a in li.select("a.concall-link"):
+                href  = a.get("href", "")
+                title = a.get_text(strip=True)
+                if "Transcript" in a.get("title", "") or title == "Transcript":
+                    entry["transcript_url"] = href
+                    entry["transcript_label"] = f"{period} Earnings Call Transcript"
+                elif title == "REC":
+                    entry["recording_url"] = href
+                elif title == "PPT":
+                    entry["ppt_url"] = href
+            # AI Summary button — note the title/url but it needs login
+            for btn in li.select("button.concall-link"):
+                entry["ai_summary_title"] = btn.get("data-title", "")
+            if entry.get("period"):
+                concalls.append(entry)
 
     # ── Enrich with yfinance when screener.in values are JS-rendered ────────
     # screener.in populates .number spans via JavaScript; static HTML has empty spans.
@@ -316,10 +341,12 @@ def scrape_screener_in(symbol: str) -> dict:
         "shareholding":   shareholding,
         "announcements":  announcements,
         "annual_reports": annual_reports,
+        "concalls":       concalls,
         "concalls_link":  concalls_link,
         "note": (
-            "Concall transcripts load dynamically — visit "
-            f"{concalls_link} for all concall notes and recordings."
+            f"Found {len(concalls)} concall entries. Transcript PDFs are directly accessible. "
+            "AI summaries on screener.in require login. "
+            f"Full concall list: {concalls_link}"
         ),
     }
 
