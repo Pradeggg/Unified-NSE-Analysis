@@ -1123,15 +1123,41 @@ def run_intraday_screener(
     top_n: int = 10,
     symbols: list[str] | None = None,
 ) -> dict:
-    """Run a SQLite-backed intraday screener with research-only setup labels."""
+    """Run a SQLite-backed intraday screener with research-only setup labels.
+
+    Automatically falls back to live yfinance scan (NIFTY 500) when the
+    local SQLite intraday_ohlcv table is absent or stale.
+    """
     screen_key = screen_type.lower().strip()
     supported = {"momentum", "breakouts", "vcp", "supertrend", "levels", "all"}
     if screen_key not in supported:
         return {"error": f"Unknown intraday screener: {screen_type}", "supported": sorted(supported)}
-    if not DB_PATH.exists():
-        return {"screen_type": screen_key, "data_mode": "intraday", "error": "Intraday SQLite database not found"}
-    if not _sqlite_table_exists("intraday_ohlcv"):
-        return {"screen_type": screen_key, "data_mode": "intraday", "error": "intraday_ohlcv table not found"}
+
+    # ── SQLite unavailable → live yfinance fallback ─────────────────────────
+    if not DB_PATH.exists() or not _sqlite_table_exists("intraday_ohlcv"):
+        strategy_map = {
+            "breakouts":  ["ema", "volume", "macd"],
+            "momentum":   ["macd", "rsi", "supertrend"],
+            "vcp":        ["vcp", "volume"],
+            "supertrend": ["supertrend"],
+            "levels":     ["ema", "bollinger"],
+            "all":        None,
+        }
+        strategies = strategy_map.get(screen_key)
+        result = scan_intraday_market(
+            index="NIFTY 500",
+            interval=timeframe if timeframe in ("5m","15m","30m","1h") else "15m",
+            strategies=strategies,
+            direction_filter="buy",
+            min_rr=1.3,
+            top_n=top_n,
+        )
+        result["screen_type"]  = screen_key
+        result["data_mode"]    = "live-yfinance-fallback"
+        result["fallback_note"] = (
+            "SQLite intraday_ohlcv not available — ran live yfinance scan on NIFTY 500"
+        )
+        return result
 
     if symbols is None:
         conn = _db_conn()

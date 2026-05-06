@@ -107,7 +107,8 @@ You have access to these data tools (call them as needed):
 • "intraday setup / technical target zones / invalidation / trading setup" → call explain_intraday_setup(symbol)
 • "intraday levels / support resistance / pivots / VWAP levels" → call get_intraday_levels(symbol)
 • "intraday data health / live table health / SQLite intraday" → call get_intraday_source_health
-• "intraday screener / scan / best intraday stocks / momentum plays" → call run_intraday_screener(screen_type="momentum")
+• "breakout stocks / live breakouts / breakouts last N minutes / stocks breaking out now / volume breakouts" → call scan_intraday_market(index="NIFTY 500", interval="15m", strategies=["ema","volume","macd"], direction_filter="buy")
+• "intraday screener / scan / best intraday stocks / momentum plays" → call run_intraday_screener(screen_type="momentum") [auto-falls-back to yfinance if SQLite unavailable]
 • "intraday setup for [list of stocks] / check these intraday / scan my watchlist / small-cap intraday" → call scan_symbols_intraday(symbols=[...])
 • "scan [index] intraday / all NIFTY 50 signals / bank nifty buy signals" → call scan_intraday_market(index=...)
 • "MACD signal / RSI signal / supertrend signal / VCP pattern" → call compute_intraday_indicators or explain_intraday_setup
