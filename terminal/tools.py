@@ -173,23 +173,26 @@ def _all_symbols_map() -> dict[str, str]:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def resolve_symbol(query: str) -> dict:
-    """Resolve a company name / partial name / alias to its NSE symbol."""
+    """Resolve a company name / partial name / alias to its NSE symbol.
+
+    Tries local DB first, then falls back to NSE live search API.
+    """
+    import requests as _req
     q = query.strip().upper()
     mapping = _all_symbols_map()
 
-    # Exact match first
+    # Exact match
     if q in mapping:
         sym = mapping[q]
         return {"symbol": sym, "confidence": "exact", "query": query}
 
-    # Fuzzy: find all keys containing the query as substring
-    hits: list[tuple[str, str]] = []  # (matched_key, symbol)
+    # Local fuzzy
+    hits: list[tuple[str, str]] = []
     for key, sym in mapping.items():
         if q in key:
             hits.append((key, sym))
 
     if hits:
-        # Sort by shortest match (most specific)
         hits.sort(key=lambda x: len(x[0]))
         best = hits[0][1]
         return {
@@ -198,6 +201,25 @@ def resolve_symbol(query: str) -> dict:
             "query":      query,
             "candidates": list({h[1] for h in hits[:5]}),
         }
+
+    # Fall back to NSE live search API
+    try:
+        s   = _get_live_session()
+        url = f"https://www.nseindia.com/api/search?q={_req.utils.quote(query)}&type=equity"
+        r   = s.get(url, timeout=10)
+        r.raise_for_status()
+        results = r.json().get("results", [])
+        if results:
+            top = results[0]
+            return {
+                "symbol":     top.get("symbol"),
+                "name":       top.get("symbol_info"),
+                "confidence": "nse-search",
+                "query":      query,
+                "candidates": [x.get("symbol") for x in results[:5]],
+            }
+    except Exception:
+        pass
 
     return {"symbol": None, "confidence": "none", "query": query,
             "error": f"No NSE symbol found for '{query}'"}
@@ -1520,7 +1542,8 @@ def _get_live_session():
 def get_live_quote(symbol: str) -> dict:
     """Fetch live intraday quote for a single NSE symbol from the NSE API.
 
-    Returns current price, day OHLC, volume, % change, and 52-week range.
+    Returns current price, VWAP, day OHLC, volume, % change, 52-week range,
+    circuit limits, sector P/E, and last-update timestamp — all from NSE live.
     """
     import requests
     sym = symbol.strip().upper()
@@ -1532,40 +1555,183 @@ def get_live_quote(symbol: str) -> dict:
         d   = r.json()
 
         info  = d.get("info", {})
+        meta  = d.get("metadata", {})
         price = d.get("priceInfo", {})
-        week  = d.get("priceInfo", {}).get("weekHighLow", {})
+        week  = price.get("weekHighLow", {})
+        idhl  = price.get("intraDayHighLow", {})
 
-        last   = price.get("lastPrice",        price.get("close", None))
-        open_  = price.get("open",             None)
-        high   = price.get("intraDayHighLow",  {}).get("max", None)
-        low    = price.get("intraDayHighLow",  {}).get("min", None)
-        prev   = price.get("previousClose",    None)
-        chg    = price.get("change",           None)
-        pchg   = price.get("pChange",          None)
-        vol    = d.get("marketDeptOrderBook",  {}).get("tradeInfo", {}).get("totalTradedVolume", None)
+        last   = price.get("lastPrice",     idhl.get("value"))
+        open_  = price.get("open",          None)
+        high   = idhl.get("max",            None)
+        low    = idhl.get("min",            None)
+        prev   = price.get("previousClose", None)
+        chg    = price.get("change",        None)
+        pchg   = price.get("pChange",       None)
+        vwap   = price.get("vwap",          None)
 
         if last is None:
             return {"symbol": sym, "error": "No price data returned"}
 
-        result = {
-            "symbol":         sym,
-            "name":           info.get("companyName", sym),
-            "last_price":     last,
-            "open":           open_,
-            "day_high":       high,
-            "day_low":        low,
-            "prev_close":     prev,
-            "change":         round(chg,  2) if chg  is not None else None,
-            "pct_change":     round(pchg, 2) if pchg is not None else None,
-            "volume":         vol,
-            "52w_high":       week.get("max"),
-            "52w_low":        week.get("min"),
-            "as_of":          datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "source":         "NSE live API",
+        # Fetch trade info (volume, value, market cap) via separate section call
+        vol_lakh = None; val_cr = None; mkt_cap_cr = None
+        try:
+            r2 = s.get(
+                f"https://www.nseindia.com/api/quote-equity?symbol={requests.utils.quote(sym)}&section=trade_info",
+                timeout=8,
+            )
+            ti = r2.json().get("marketDeptOrderBook", {}).get("tradeInfo", {})
+            vol_lakh   = ti.get("totalTradedVolume")   # in lakh shares
+            val_cr     = ti.get("totalTradedValue")    # in crores
+            mkt_cap_cr = ti.get("totalMarketCap")      # in crores
+        except Exception:
+            pass
+
+        return {
+            "symbol":          sym,
+            "name":            info.get("companyName", meta.get("symbol", sym)),
+            "series":          meta.get("series", "EQ"),
+            "last_price":      last,
+            "open":            open_,
+            "day_high":        high,
+            "day_low":         low,
+            "vwap":            vwap,
+            "prev_close":      prev,
+            "change":          round(chg,  2) if chg  is not None else None,
+            "pct_change":      round(pchg, 2) if pchg is not None else None,
+            "volume":          vol_lakh,        # in lakh shares
+            "volume_shares":   round(vol_lakh * 1e5) if vol_lakh else None,
+            "traded_value_cr": val_cr,
+            "market_cap_cr":   mkt_cap_cr,
+            "52w_high":        week.get("max"),
+            "52w_low":         week.get("min"),
+            "52w_high_date":   week.get("maxDate"),
+            "52w_low_date":    week.get("minDate"),
+            "lower_circuit":   price.get("lowerCP"),
+            "upper_circuit":   price.get("upperCP"),
+            "sector":          meta.get("industry"),
+            "sector_pe":       meta.get("pdSectorPe"),
+            "stock_pe":        meta.get("pdSymbolPe"),
+            "indices":         meta.get("pdSectorIndAll", [])[:5],
+            "as_of":           meta.get("lastUpdateTime",
+                                        datetime.now().strftime("%d-%b-%Y %H:%M:%S")),
+            "source":          "NSE live API (real-time)",
         }
-        return result
     except Exception as e:
         return {"symbol": sym, "error": str(e)}
+
+
+def get_nse_quotes(symbols: list[str]) -> dict:
+    """Fetch live NSE prices for multiple symbols in parallel.
+
+    Returns a dict keyed by symbol with price, % change, VWAP, volume.
+    Faster than calling get_live_quote() sequentially.
+    Use for: 'prices of RELIANCE, TCS, INFY', 'watchlist prices',
+    'how are these stocks doing: X, Y, Z'.
+
+    Args:
+        symbols: List of NSE tickers, up to 20.
+    """
+    import requests
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    syms    = [s.strip().upper() for s in symbols[:20] if s.strip()]
+    session = _get_live_session()
+
+    def _fetch(sym: str) -> tuple[str, dict]:
+        try:
+            url = f"https://www.nseindia.com/api/quote-equity?symbol={requests.utils.quote(sym)}"
+            r   = session.get(url, timeout=10)
+            r.raise_for_status()
+            d     = r.json()
+            meta  = d.get("metadata", {})
+            price = d.get("priceInfo", {})
+            idhl  = price.get("intraDayHighLow", {})
+            trade = d.get("marketDeptOrderBook", {}).get("tradeInfo", {})
+            last  = price.get("lastPrice", idhl.get("value"))
+            return sym, {
+                "symbol":     sym,
+                "name":       d.get("info", {}).get("companyName", sym),
+                "last_price": last,
+                "change":     round(price.get("change", 0), 2),
+                "pct_change": round(price.get("pChange", 0), 2),
+                "day_high":   idhl.get("max"),
+                "day_low":    idhl.get("min"),
+                "vwap":       price.get("vwap"),
+                "volume":     trade.get("totalTradedVolume"),
+                "prev_close": price.get("previousClose"),
+                "lower_circuit": price.get("lowerCP"),
+                "upper_circuit": price.get("upperCP"),
+                "sector":     meta.get("industry"),
+                "sector_pe":  meta.get("pdSectorPe"),
+                "stock_pe":   meta.get("pdSymbolPe"),
+                "as_of":      meta.get("lastUpdateTime"),
+            }
+        except Exception as e:
+            return sym, {"symbol": sym, "error": str(e)}
+
+    results: dict = {}
+    with ThreadPoolExecutor(max_workers=6) as ex:
+        futures = {ex.submit(_fetch, s): s for s in syms}
+        for fut in as_completed(futures):
+            sym, data = fut.result()
+            results[sym] = data
+
+    return {
+        "quotes":     results,
+        "count":      len(results),
+        "as_of":      datetime.now().strftime("%d-%b-%Y %H:%M:%S"),
+        "source":     "NSE live API (real-time, parallel fetch)",
+    }
+
+
+def nse_search(query: str, top_n: int = 5) -> dict:
+    """Search NSE by company name or partial symbol → returns matching stocks with live price.
+
+    Useful for: 'search for Tata companies', 'find steel stocks on NSE',
+    'what is the symbol for Adani Ports', 'price of Larsen and Toubro'.
+
+    Args:
+        query: Company name, partial name, or keyword (e.g. 'Tata Steel', 'HDFC').
+        top_n: Max results to return.
+    """
+    import requests
+    try:
+        s   = _get_live_session()
+        url = f"https://www.nseindia.com/api/search?q={requests.utils.quote(query)}&type=equity"
+        r   = s.get(url, timeout=10)
+        r.raise_for_status()
+        results = r.json().get("results", [])[:top_n]
+        if not results:
+            return {"query": query, "results": [], "error": "No matches found on NSE"}
+
+        # Enrich with live prices for top results
+        syms   = [x["symbol"] for x in results if x.get("symbol")]
+        prices = {}
+        if syms:
+            batch = get_nse_quotes(syms[:5])
+            prices = batch.get("quotes", {})
+
+        enriched = []
+        for item in results:
+            sym  = item.get("symbol", "")
+            info = item.get("symbol_info", "")
+            q    = prices.get(sym, {})
+            enriched.append({
+                "symbol":     sym,
+                "name":       info,
+                "last_price": q.get("last_price"),
+                "pct_change": q.get("pct_change"),
+                "sector":     q.get("sector"),
+                "series":     item.get("activeSeries", ["EQ"])[0],
+            })
+
+        return {
+            "query":   query,
+            "results": enriched,
+            "source":  "NSE search API + live prices",
+        }
+    except Exception as e:
+        return {"query": query, "error": str(e)}
 
 
 def get_live_market_overview() -> dict:
@@ -2068,8 +2234,49 @@ def scan_symbols_intraday(
 TOOL_REGISTRY: dict[str, Any] = {
     "get_live_quote": (
         get_live_quote,
-        "Fetch live intraday price quote for a single NSE symbol (real-time: last price, OHLC, % change, volume, 52w range). Use for 'current price', 'live', 'today', 'now' queries.",
+        (
+            "Fetch live NSE price for a single stock — returns last price, VWAP, day OHLC, "
+            "% change, volume, traded value, 52w high/low with dates, circuit limits (upper/lower), "
+            "sector P/E, stock P/E, and exact NSE last-update timestamp. "
+            "First-class NSE real-time data — no lag. "
+            "Use for: 'current price of X', 'live quote', 'what is X trading at', 'show me X price'."
+        ),
         {"type": "object", "properties": {"symbol": {"type": "string"}}, "required": ["symbol"]},
+    ),
+    "get_nse_quotes": (
+        get_nse_quotes,
+        (
+            "Fetch live NSE prices for MULTIPLE stocks in parallel — returns last price, VWAP, "
+            "% change, volume, circuit limits, and sector P/E for all symbols at once. "
+            "Much faster than calling get_live_quote() individually. "
+            "Use for: 'prices of RELIANCE, TCS, INFY', 'check my watchlist prices', "
+            "'how are these stocks doing: X Y Z', 'batch price check'."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbols": {"type": "array", "items": {"type": "string"},
+                            "description": "List of NSE tickers, up to 20"},
+            },
+            "required": ["symbols"],
+        },
+    ),
+    "nse_search": (
+        nse_search,
+        (
+            "Search NSE by company name or keyword to find the NSE symbol + live price. "
+            "Use when user asks for 'Larsen and Toubro price', 'find Adani companies', "
+            "'what is the NSE symbol for X', 'search for [company name]'. "
+            "Returns symbol, company name, current price, % change, and sector."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Company name or keyword, e.g. 'Tata Steel'"},
+                "top_n": {"type": "integer", "default": 5},
+            },
+            "required": ["query"],
+        },
     ),
     "get_live_market_overview": (
         get_live_market_overview,
