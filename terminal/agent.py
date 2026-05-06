@@ -60,6 +60,9 @@ You have access to these data tools (call them as needed):
 • run_screener_query(screen_type)     → Filtered lists: stage2/breakouts/supertrend_buy/strong_buy
 • get_index_snapshot(index_name)      → Index 10-day trend
 • get_market_breadth()                → Advance/decline, RS distribution, stage breakdown
+• compare_stocks(symbols, aspects)    → Side-by-side comparison of multiple stocks on BOTH
+                                        technical (stage, RSI, RS, scores, signals) AND
+                                        fundamental (P/E, P/B, ROE, ROCE, div yield) metrics
 
 [Web research tools — use for deep research, always return REAL URLs]
 • scrape_screener_in(symbol)          → screener.in: P/E, P/B, ROE, ROCE, pros/cons,
@@ -86,6 +89,9 @@ You have access to these data tools (call them as needed):
 • "technical setup / indicators / signals" → call get_technical_setup + get_symbol_snapshot
 • "market overview / breadth" → call get_live_market_overview + get_market_breadth
 • "screener / breakouts / stage 2 / buy signals" → call run_screener_query
+• "compare / vs / versus / rank / which is better / peer comparison" → call compare_stocks(symbols=[...], aspects=['both'])
+• "technical only comparison" → compare_stocks with aspects=['technical']
+• "fundamental comparison / ratios comparison" → compare_stocks with aspects=['fundamental']
 • "fundamentals / ratios / P/E / ROE / ROCE / valuation / book value" → call scrape_screener_in
 • "peers / peer comparison / sector peers" → call scrape_screener_in (has peer table)
 • "concall / transcript / conference call / management commentary" → call multi_source_web_search with extra_query="concall transcript"

@@ -1178,6 +1178,115 @@ def get_bulk_block_deals(top_n: int = 20) -> dict:
     except Exception as e:
         return {"error": str(e)}
 
+
+def _ratio_pb(ratios: dict) -> str | None:
+    """Derive P/B from Current Price and Book Value."""
+    price = ratios.get("Current Price", "").replace(",", "")
+    bv    = ratios.get("Book Value",    "").replace(",", "")
+    try:
+        return str(round(float(price) / float(bv), 1)) if price and bv else None
+    except (ValueError, ZeroDivisionError):
+        return None
+
+
+def compare_stocks(
+    symbols: list[str],
+    aspects: list[str] | None = None,
+) -> dict:
+    """Compare multiple NSE stocks side-by-side on technical AND fundamental metrics.
+
+    Combines EOD DB snapshot (stage, RS, RSI, signals, scores) with screener.in ratios
+    (P/E, ROE, ROCE, market cap, P/B, dividend yield) into one unified comparison table.
+
+    Args:
+        symbols: List of NSE ticker symbols, e.g. ['TCS', 'INFY', 'WIPRO'].
+        aspects: Optional list; 'technical', 'fundamental', or 'both' (default).
+    """
+    if not symbols:
+        return {"error": "No symbols provided"}
+
+    fetch_tech = True
+    fetch_fund = True
+    if aspects:
+        fetch_tech = any(a in ("technical", "both") for a in aspects)
+        fetch_fund = any(a in ("fundamental", "both") for a in aspects)
+
+    rows: list[dict] = []
+
+    for raw in symbols:
+        sym = raw.strip().upper()
+        row: dict = {"symbol": sym}
+
+        if fetch_tech:
+            try:
+                snap = get_symbol_snapshot(sym)
+                if not snap.get("error"):
+                    row.update({
+                        "company":          snap.get("company_name", sym),
+                        "stage":            snap.get("stage"),
+                        "rsi":              snap.get("rsi"),
+                        "rs_pct":           snap.get("rs_pct"),
+                        "technical_score":  snap.get("technical_score"),
+                        "investment_score": snap.get("investment_score"),
+                        "trading_signal":   snap.get("trading_signal"),
+                        "trend_signal":     snap.get("trend_signal"),
+                        "supertrend":       snap.get("supertrend_state"),
+                        "sector":           snap.get("sector"),
+                        "change_1d_pct":    snap.get("change_1d_pct"),
+                        "change_1w_pct":    snap.get("change_1w_pct"),
+                        "change_1m_pct":    snap.get("change_1m_pct"),
+                        "db_price":         snap.get("price"),
+                        "snapshot_date":    snap.get("snapshot_date"),
+                        "stance":           snap.get("stance"),
+                        "narrative":        snap.get("narrative"),
+                    })
+                else:
+                    row["tech_error"] = snap["error"]
+            except Exception as e:
+                row["tech_error"] = str(e)
+
+        if fetch_fund:
+            try:
+                sr = scrape_screener_in(sym)
+                if not sr.get("error"):
+                    ratios = sr.get("ratios", {})
+                    row.update({
+                        "pe":            ratios.get("Stock P/E"),
+                        "pb":            _ratio_pb(ratios),
+                        "roe":           ratios.get("ROE"),
+                        "roce":          ratios.get("ROCE"),
+                        "div_yield":     ratios.get("Dividend Yield"),
+                        "market_cap_cr": ratios.get("Market Cap"),
+                        "book_value":    ratios.get("Book Value"),
+                        "current_price": ratios.get("Current Price"),
+                        "high_low_52w":  ratios.get("High / Low"),
+                        "screener_url":  sr.get("source_url"),
+                        "pros":          sr.get("pros", [])[:3],
+                        "cons":          sr.get("cons", [])[:2],
+                    })
+                else:
+                    row["fund_error"] = sr["error"]
+            except Exception as e:
+                row["fund_error"] = str(e)
+
+        rows.append(row)
+
+    tech_cols = ["stage", "rsi", "rs_pct", "technical_score", "investment_score",
+                 "trading_signal", "trend_signal", "supertrend",
+                 "change_1d_pct", "change_1w_pct", "change_1m_pct"]
+    fund_cols = ["pe", "pb", "roe", "roce", "div_yield", "market_cap_cr"]
+    active_cols = (tech_cols if fetch_tech else []) + (fund_cols if fetch_fund else [])
+
+    comparison_table = {col: {r["symbol"]: r.get(col) for r in rows} for col in active_cols}
+
+    return {
+        "symbols":          [r["symbol"] for r in rows],
+        "as_of":            date.today().isoformat(),
+        "aspects":          aspects or ["both"],
+        "comparison_table": comparison_table,
+        "stock_details":    rows,
+    }
+
 TOOL_REGISTRY: dict[str, Any] = {
     "get_live_quote": (
         get_live_quote,
@@ -1263,6 +1372,34 @@ TOOL_REGISTRY: dict[str, Any] = {
             "type": "object",
             "properties": {"top_n": {"type": "integer", "default": 20}},
             "required": [],
+        },
+    ),
+    "compare_stocks": (
+        compare_stocks,
+        (
+            "Compare multiple NSE stocks SIDE-BY-SIDE on both technical AND fundamental metrics. "
+            "Technical: stage (Weinstein 1-4), RSI, Relative Strength %, technical score, "
+            "investment score, trading signal (BUY/SELL/HOLD), trend, supertrend, 1d/1w/1m returns. "
+            "Fundamental (from screener.in): P/E, P/B, ROE, ROCE, dividend yield, market cap, book value. "
+            "Returns a comparison_table dict and full stock_details list with pros/cons/narrative. "
+            "Use for: 'compare X vs Y', 'X vs Y vs Z', 'which is better: X or Y', "
+            "'peer comparison', 'compare IT stocks', 'TCS vs INFY', 'rank by ROE'."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbols": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of NSE symbols, e.g. ['TCS', 'INFY', 'WIPRO']",
+                },
+                "aspects": {
+                    "type": "array",
+                    "items": {"type": "string", "enum": ["technical", "fundamental", "both"]},
+                    "description": "What to compare. Default is both.",
+                },
+            },
+            "required": ["symbols"],
         },
     ),
     "resolve_symbol": (
