@@ -305,11 +305,12 @@ def print_banner() -> None:
         ("💡", Fore.GREEN,   "Show me Stage 2 breakout stocks"),
         ("💡", Fore.YELLOW,  "RELIANCE technical setup"),
         ("💡", Fore.MAGENTA, "Which sectors are leading right now?"),
+        ("💡", Fore.BLUE,    "Global market assessment for India"),
     ]:
         print(f"  {icon}  {colour}{Style.BRIGHT}{text}{Style.RESET_ALL}")
     print()
     print(Fore.WHITE + Style.DIM +
-          "  /live  /eod  /auto  │  /prompts  │  p<n> = run prompt  │  1 2 3 = follow-ups  │  /help  │  exit")
+          "  /live  /eod  /auto  │  /global  │  /prompts  │  p<n> = run prompt  │  1 2 3 = follow-ups  │  /help  │  exit")
     print()
     _separator()
     print()
@@ -346,14 +347,15 @@ def _mode_tag() -> str:
     return tags[_mode]
 
 
-def _build_prompt() -> ANSI:
+def _build_prompt(agent=None) -> ANSI:
     tag = {
         "auto":       "\x1b[2m[AUTO]\x1b[0m",
         "intraday":   "\x1b[1;31m[LIVE🔴]\x1b[0m",
         "historical": "\x1b[1;34m[EOD📚]\x1b[0m",
     }[_mode]
-    fup = (f"  \x1b[33m(follow-ups: 1·2·3)\x1b[0m" if _followups else "")
-    return ANSI(f"  {tag}{fup}\x1b[1;36m ❯ \x1b[0m")
+    fup   = (f"  \x1b[33m(follow-ups: 1·2·3)\x1b[0m" if _followups else "")
+    turns = (f"  \x1b[2mt{agent.turn_count}\x1b[0m" if agent and agent.turn_count > 0 else "")
+    return ANSI(f"  {tag}{fup}{turns}\x1b[1;36m ❯ \x1b[0m")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -383,7 +385,7 @@ def _print_response(result: dict) -> None:
     console.print()
 
     # ── Body — Rich Markdown rendered to full terminal width ───────────────
-    has_markup = any(c in clean for c in ["**", "##", "- ", "* ", "```", "\n"])
+    has_markup = backend != "Keyword (no LLM)" and any(c in clean for c in ["**", "##", "- ", "* ", "```"])
     if has_markup:
         console.print(Markdown(clean))
     else:
@@ -454,6 +456,52 @@ def _print_trace(trace: list[dict]) -> None:
                         border_style="dim"))
 
 
+def _print_context_summary(agent) -> None:
+    """Show current session conversation history summary."""
+    history = agent._history
+    turns   = agent.turn_count
+    chars   = sum(len(m.get("content") or "") for m in history)
+    budget  = agent._HISTORY_CHAR_BUDGET
+
+    if turns == 0:
+        console.print("[dim]  No conversation history yet in this session.[/dim]")
+        console.print()
+        return
+
+    tbl = Table(box=box.SIMPLE_HEAD, header_style="bold cyan", expand=True)
+    tbl.add_column("Turn", style="bold white", width=5, no_wrap=True)
+    tbl.add_column("You asked",     style="cyan",  min_width=30)
+    tbl.add_column("Agent replied", style="dim white")
+
+    user_turns = [(m["content"] for m in history if m["role"] == "user")]
+    asst_turns = [(m["content"] for m in history if m["role"] == "assistant")]
+
+    user_msgs = [m["content"] for m in history if m["role"] == "user"]
+    asst_msgs = [m["content"] for m in history if m["role"] == "assistant"]
+
+    for i, (u, a) in enumerate(zip(user_msgs, asst_msgs), 1):
+        u_short = u[:60] + "…" if len(u) > 60 else u
+        a_short = a[:70] + "…" if len(a) > 70 else a
+        tbl.add_row(str(i), u_short, a_short)
+
+    bar_filled = int(30 * chars / budget)
+    bar = "█" * bar_filled + "░" * (30 - bar_filled)
+    pct = min(100, int(100 * chars / budget))
+
+    console.print()
+    console.print(Panel(
+        tbl,
+        title=f"[bold cyan] 🧠  Session Context — {turns} turn{'s' if turns != 1 else ''} [/bold cyan]",
+        border_style="cyan",
+    ))
+    console.print(
+        f"  [dim]Context budget: [cyan]{bar}[/cyan] {pct}%  "
+        f"({chars:,} / {budget:,} chars)  ·  "
+        f"[bold]/new[/bold] to clear  ·  max {agent._HISTORY_MAX_TURNS} turns[/dim]"
+    )
+    console.print()
+
+
 def _print_help() -> None:
     print()
     console.print(Panel(
@@ -465,10 +513,16 @@ def _print_help() -> None:
             "[bold cyan]INTRADAY SCREENER[/bold cyan]\n"
             "  [green]/scan[/green]                   — Scan NIFTY 50 for intraday signals\n"
             "  [green]/scan NIFTY BANK[/green]        — Scan any index (NIFTY IT, PHARMA…)\n\n"
+            "[bold cyan]GLOBAL MARKET[/bold cyan]\n"
+            "  [green]/global[/green]                 — Global risk regime and India read-through\n"
+            "  [green]/global risk[/green]            — Overnight cues, commodities, FX, correlations\n\n"
             "[bold cyan]PROMPT LIBRARY[/bold cyan]\n"
-            "  [yellow]/prompts[/yellow]               — Browse all 50+ curated research prompts\n"
+            "  [yellow]/prompts[/yellow]               — Browse all 60 curated research prompts\n"
             "  [yellow]/prompts intraday[/yellow]      — Filter by category (market/technical/sector…)\n"
             "  [yellow]p<number>[/yellow]              — Run prompt by number  (e.g. p5, p23, p41)\n\n"
+            "[bold cyan]SESSION & CONTEXT[/bold cyan]\n"
+            "  [magenta]/context[/magenta]               — Show conversation history + context budget\n"
+            "  [magenta]/new[/magenta]  or  [magenta]/reset[/magenta]      — Start a fresh session (clears history)\n\n"
             "[bold cyan]FOLLOW-UPS[/bold cyan]\n"
             "  [yellow]1 / 2 / 3[/yellow]              — Ask the numbered follow-up question\n\n"
             "[bold cyan]OTHER[/bold cyan]\n"
@@ -701,12 +755,12 @@ def _chat_loop(agent, show_trace: bool) -> None:
     session = PromptSession(history=InMemoryHistory())
 
     console.print("[bold green]  ✓ Agent Adda ready[/bold green] — type your question and press Enter")
-    console.print("[dim]  Tip: /live  /eod  /auto  │  1·2·3 = follow-ups  │  /help  │  exit[/dim]")
+    console.print("[dim]  Tip: /live  /eod  /auto  │  /prompts  │  1·2·3 = follow-ups  │  /new = fresh session  │  /help  │  exit[/dim]")
     console.print()
 
     while True:
         try:
-            raw = session.prompt(_build_prompt())
+            raw = session.prompt(_build_prompt(agent))
         except KeyboardInterrupt:
             console.print()
             continue
@@ -744,6 +798,29 @@ def _chat_loop(agent, show_trace: bool) -> None:
             os.system("clear")
             print_banner()
             continue
+
+        # ── /new: reset conversation context ──────────────────────────
+        if text.lower() in ("/new", "/reset", "/fresh"):
+            n = agent.turn_count
+            agent.reset_history()
+            _followups = []
+            console.print(
+                f"[bold yellow]  🔄  New session started[/bold yellow]"
+                f"[dim]  (cleared {n} turn{'s' if n != 1 else ''} of context)[/dim]"
+            )
+            continue
+
+        # ── /context: show session summary ────────────────────────────
+        if text.lower() in ("/context", "/session", "/history"):
+            _print_context_summary(agent)
+            continue
+
+        # ── /global shortcut: run global assessment ───────────────────
+        if text.lower().startswith("/global"):
+            parts = text.split(maxsplit=1)
+            topic = parts[1].strip() if len(parts) > 1 else "market assessment for India"
+            text = f"global {topic}"
+            console.print(f"[dim]  → Global assessment: {topic}[/dim]")
 
         # ── /prompts library ───────────────────────────────────────────
         if text.lower().startswith("/prompts") or text.lower() == "/p":

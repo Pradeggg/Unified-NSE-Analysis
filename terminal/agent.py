@@ -60,6 +60,8 @@ You have access to these data tools (call them as needed):
 • run_screener_query(screen_type)     → Filtered lists: stage2/breakouts/supertrend_buy/strong_buy
 • get_index_snapshot(index_name)      → Index 10-day trend
 • get_market_breadth()                → Advance/decline, RS distribution, stage breakdown
+• get_global_market_assessment()      → Global risk regime, US/Asia/commodity/FX cues,
+                                        India sector read-through, correlations vs Nifty
 • compare_stocks(symbols, aspects)    → Side-by-side comparison of multiple stocks on BOTH
                                         technical (stage, RSI, RS, scores, signals) AND
                                         fundamental (P/E, P/B, ROE, ROCE, div yield) metrics
@@ -101,6 +103,7 @@ You have access to these data tools (call them as needed):
 • "sector analysis / how is [sector] / sector health" → ALWAYS call get_sector_context(sector_name), then get_index_snapshot for that sector index
 • "technical setup / indicators / signals" → call get_technical_setup + get_symbol_snapshot
 • "market overview / breadth" → call get_live_market_overview + get_market_breadth
+• "global market / overnight cues / US market / Asian market / crude / DXY / USDINR / global risk" → call get_global_market_assessment
 • "screener / breakouts / stage 2 / buy signals" → call run_screener_query
 • "compare / vs / versus / rank / which is better / peer comparison" → call compare_stocks(symbols=[...], aspects=['both'])
 • "technical only comparison" → compare_stocks with aspects=['technical']
@@ -312,6 +315,13 @@ def _keyword_intent(query: str) -> dict:
     """Detect intent and build a tool plan from keywords alone."""
     q = query.lower()
 
+    # Global market assessment
+    if _is_global_query(q):
+        return {
+            "intent": "global_market_assessment",
+            "plan": [("get_global_market_assessment", {})],
+        }
+
     # Index query
     index_words = ["nifty", "sensex", "bank nifty", "nifty it", "nifty 50"]
     if any(w in q for w in index_words):
@@ -428,6 +438,7 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict]) -> str:
     scr  = _get("run_screener_query")
     cat  = _get("search_latest_catalysts")
     res  = _get("resolve_symbol")
+    glob = _get("get_global_market_assessment")
 
     sym = (snap or {}).get("symbol") or (tech or {}).get("symbol") or ""
     cname = (snap or {}).get("company_name") or sym
@@ -501,6 +512,47 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict]) -> str:
         if sd:
             lines.append("  Stage dist: " + " | ".join(f"{k}: {v}" for k, v in sd.items()))
 
+    # 4b. Global market assessment
+    if glob and not glob.get("error"):
+        lines.append("\n▶ GLOBAL MARKET ASSESSMENT")
+        lines.append(f"  Risk regime: {glob.get('risk_regime', '—')}")
+        lines.append(f"  As of:        {glob.get('as_of', '—')}")
+        regions = glob.get("regions") or {}
+        if regions:
+            region_bits = []
+            for name, data in regions.items():
+                avg = data.get("avg_pct_change")
+                avg_s = f"{avg:+.2f}%" if isinstance(avg, (int, float)) else "n/a"
+                region_bits.append(f"{name}: {data.get('bias', '—')} ({avg_s})")
+            lines.append("  Regions:      " + " | ".join(region_bits))
+        moves = glob.get("moves") or {}
+        if moves:
+            key_moves = []
+            for asset in ["S&P 500", "Nasdaq", "Hang Seng", "Nikkei 225", "Crude Oil", "DXY", "USDINR"]:
+                if asset in moves:
+                    m = moves[asset]
+                    key_moves.append(f"{asset} {m.get('pct_change', 0):+.2f}%")
+            if key_moves:
+                lines.append("  Key moves:    " + " | ".join(key_moves))
+        readthrough = glob.get("india_readthrough") or []
+        if readthrough:
+            lines.append("  India read-through:")
+            for item in readthrough[:5]:
+                lines.append(f"    - {item}")
+        watch = glob.get("watch_items") or []
+        if watch:
+            lines.append("  Watch:")
+            for item in watch[:4]:
+                lines.append(f"    - {item}")
+        corrs = glob.get("correlations") or []
+        if corrs:
+            lines.append("  Correlation context:")
+            for c in corrs[:5]:
+                lines.append(
+                    f"    - {c.get('asset')}: 30d {c.get('corr_30d')} | "
+                    f"60d {c.get('corr_60d')} | {c.get('alert', '—')}"
+                )
+
     # 5. Screener results
     if scr:
         lines.append(f"\n▶ SCREENER: {scr.get('screen_type','').upper()}  ({scr.get('count',0)} results)")
@@ -556,18 +608,62 @@ _INTRADAY_KEYWORDS: frozenset[str] = frozenset(
     {"live", "current", "today", "now", "intraday", "real-time", "realtime"}
 )
 
+_GLOBAL_QUERY_PHRASES: tuple[str, ...] = (
+    "global", "overnight", "us market", "asian market", "asia market",
+    "europe market", "crude", "oil", "gold", "copper", "dxy", "usd/inr",
+    "usdinr", "dollar index", "risk on", "risk off", "global cues",
+)
+
+
+def _is_global_query(q: str) -> bool:
+    return any(phrase in q for phrase in _GLOBAL_QUERY_PHRASES)
+
 
 class Agent:
     """Agent Adda NLP Query Agent."""
 
+    # Approx token budget for rolling history (chars ÷ 4 ≈ tokens).
+    # At ~4 chars/token, 40_000 chars ≈ 10k tokens — safe headroom for most models.
+    _HISTORY_CHAR_BUDGET = 40_000
+    # Hard cap: never keep more than 20 turns (40 messages) regardless of size
+    _HISTORY_MAX_TURNS   = 20
+
     def __init__(self):
-        self.backend    = _detect_backend()
+        self.backend      = _detect_backend()
         self.tool_schemas = openai_tool_schemas()
         self.backend_name = (
             "OpenAI" if isinstance(self.backend, _OpenAIBackend) else
             "Ollama" if isinstance(self.backend, _OllamaBackend) else
             "Keyword (no LLM)"
         )
+        # Rolling conversation history: list of {"role": ..., "content": ...}
+        # Only user + assistant turns (no system, no tool messages).
+        self._history: list[dict] = []
+
+    @property
+    def turn_count(self) -> int:
+        """Number of completed user→assistant turns in current session."""
+        return sum(1 for m in self._history if m["role"] == "user")
+
+    def reset_history(self) -> None:
+        """Clear conversation history — start a fresh session."""
+        self._history = []
+
+    def _trim_history(self) -> list[dict]:
+        """Return a trimmed copy of history that fits within the char budget."""
+        history = list(self._history)
+        # Enforce turn cap (pairs of user+assistant = 2 messages per turn)
+        max_msgs = self._HISTORY_MAX_TURNS * 2
+        if len(history) > max_msgs:
+            history = history[-max_msgs:]
+        # Enforce char budget — drop oldest pairs until under budget
+        while history:
+            total = sum(len(m.get("content") or "") for m in history)
+            if total <= self._HISTORY_CHAR_BUDGET:
+                break
+            # Drop the oldest user+assistant pair (2 messages)
+            history = history[2:]
+        return history
 
     def query(self, user_input: str, show_trace: bool = False) -> dict:
         """Process a user query. Returns {"answer": str, "trace": list, "backend": str}.
@@ -588,19 +684,33 @@ class Agent:
             clean_input = user_input[len("/intraday "):].strip()
         else:
             words = set(re.split(r"\W+", user_input.lower()))
-            if words & _INTRADAY_KEYWORDS:
+            if _is_global_query(user_input.lower()):
+                mode = "global"
+            elif words & _INTRADAY_KEYWORDS:
                 mode = "intraday"
 
         mode_context = (
             f"Data mode: {mode}. "
-            + ("Use get_live_quote and get_live_market_overview for real-time data. "
-               "Prefer live tools first, then supplement with EOD snapshot tools."
-               if mode == "intraday"
-               else "Use EOD CSV and DB snapshot tools for historical/technical analysis.")
+            + (
+                "Use get_global_market_assessment for global indices, commodities, FX, "
+                "correlation context, and India read-through."
+                if mode == "global"
+                else (
+                    "Use get_live_quote and get_live_market_overview for real-time data. "
+                    "Prefer live tools first, then supplement with EOD snapshot tools."
+                    if mode == "intraday"
+                    else "Use EOD CSV and DB snapshot tools for historical/technical analysis."
+                )
+            )
         )
+        mode_sources = {
+            "global": "cached global indices + correlations",
+            "intraday": "NSE live API",
+            "historical": "EOD CSV + DB snapshot",
+        }
         mode_suffix = (
             f"\n\n_Mode: {mode.title()} | Sources: "
-            f"{'NSE live API' if mode == 'intraday' else 'EOD CSV + DB snapshot'}_"
+            f"{mode_sources.get(mode, 'EOD CSV + DB snapshot')}_"
         )
 
         trace: list[dict] = []
@@ -626,11 +736,15 @@ class Agent:
 
     def _llm_query(self, user_input: str, show_trace: bool,
                    mode_context: str = "") -> dict:
-        """Full LLM-powered agentic query loop."""
+        """Full LLM-powered agentic query loop with rolling conversation history."""
         system_content = (f"{mode_context}\n\n{SYSTEM_PROMPT}" if mode_context
                           else SYSTEM_PROMPT)
-        messages = [
+
+        # Build messages: system + trimmed history + current user turn
+        prior = self._trim_history()
+        messages: list[dict] = [
             {"role": "system", "content": system_content},
+            *prior,
             {"role": "user",   "content": user_input},
         ]
         tool_results: list[dict] = []
@@ -655,6 +769,12 @@ class Agent:
                 # Only append disclaimer if LLM didn't include it (check last 400 chars)
                 if "research and learning only" not in answer[-400:]:
                     answer += "\n\n━━━ Not investment advice. For research and learning only. ━━━"
+
+                # ── Persist this turn to conversation history ──────────────
+                # Store only user + final assistant text (no tool messages — keeps history compact)
+                self._history.append({"role": "user",      "content": user_input})
+                self._history.append({"role": "assistant", "content": answer})
+
                 # Extract news/catalyst results so they can be rendered with real URLs
                 # Priority: comprehensive_stock_research → search_latest_catalysts → search_yahoo_finance
                 _web_tools = ("comprehensive_stock_research", "search_latest_catalysts",
@@ -679,9 +799,13 @@ class Agent:
                     "backend":   self.backend_name,
                     "intent":    "llm_driven",
                     "catalysts": catalysts,
+                    "turn":      self.turn_count,
                 }
 
         # If we exhausted rounds without a text response, synthesize from tool results
         answer = _synthesize_no_llm("stock_brief", tool_results)
+        # Still save the turn so context is preserved
+        self._history.append({"role": "user",      "content": user_input})
+        self._history.append({"role": "assistant", "content": answer})
         return {"answer": answer, "trace": tool_results, "backend": self.backend_name,
-                "intent": "llm_driven_fallback"}
+                "intent": "llm_driven_fallback", "turn": self.turn_count}
