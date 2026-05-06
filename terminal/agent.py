@@ -66,14 +66,19 @@ You have access to these data tools (call them as needed):
                                         technical (stage, RSI, RS, scores, signals) AND
                                         fundamental (P/E, P/B, ROE, ROCE, div yield) metrics
 
-[Intraday screener tools — uses yfinance 5m/15m/30m/1h live candles]
-• get_intraday_analysis(symbol,       → Deep intraday analysis of ONE stock: runs all strategies,
-    interval, strategies)               returns BUY/SELL signals with entry/target/SL/R:R,
-                                        key support & resistance (pivot, swing, EMAs), indicators.
-                                        Strategies: MACD · RSI · Supertrend · Bollinger · EMA · VCP · Volume
-• scan_intraday_market(index,         → Scan ALL stocks in an index for intraday signals.
-    interval, strategies,               Returns ranked BUY/SELL signals sorted by R:R.
-    direction_filter, min_rr, top_n)    Shortcut: user types /scan
+[Intraday screener tools — primary path uses SQLite intraday/live tables; legacy yfinance tools remain available]
+• get_intraday_source_health()        → SQLite intraday table health and freshness
+• get_intraday_bars(symbol, timeframe)→ Raw SQLite intraday OHLCV bars
+• get_intraday_levels(symbol,         → Support, resistance, pivots, EMA levels from
+    timeframe)                          SQLite intraday_ohlcv; no EOD/yfinance fallback
+• compute_intraday_indicators(symbol) → RSI, MACD, Supertrend, EMA, ATR, volume ratio from SQLite bars
+• explain_intraday_setup(symbol)      → Research-only setup label, evidence, levels, target zones
+• run_intraday_screener(screen_type)  → SQLite-backed setup scanner: momentum, breakouts, vcp, supertrend
+• get_intraday_analysis(symbol,       → Legacy yfinance analysis of one stock when SQLite tables are absent
+    interval, strategies)               or explicitly requested; keep output research-only.
+• scan_intraday_market(index,         → Legacy yfinance index scan when explicitly requested.
+    interval, strategies,
+    direction_filter, min_rr, top_n)
 
 [Web research tools — use for deep research, always return REAL URLs]
 • scrape_screener_in(symbol)          → screener.in: P/E, P/B, ROE, ROCE, pros/cons,
@@ -90,10 +95,11 @@ You have access to these data tools (call them as needed):
 • find_portfolio_overlap(screener)    → Holdings that match a screener
 
 ━━━ TOOL SELECTION RULES ━━━
-• "intraday setup / entry target SL / should I buy X today / trading setup" → call get_intraday_analysis(symbol)
-• "intraday screener / scan for buy signals / best intraday stocks / momentum plays" → call scan_intraday_market(index)
-• "scan BANK NIFTY / scan IT stocks / scan pharma intraday" → scan_intraday_market with that index
-• "MACD signal / RSI signal / supertrend signal / VCP pattern" → get_intraday_analysis with that strategy
+• "intraday setup / technical target zones / invalidation / trading setup" → call explain_intraday_setup(symbol)
+• "intraday levels / support resistance / pivots / VWAP levels" → call get_intraday_levels(symbol)
+• "intraday data health / live table health / SQLite intraday" → call get_intraday_source_health
+• "intraday screener / scan / best intraday stocks / momentum plays" → call run_intraday_screener(screen_type="momentum")
+• "MACD signal / RSI signal / supertrend signal / VCP pattern" → call compute_intraday_indicators or explain_intraday_setup
 • "current price / live / now / today" → call get_live_quote or get_live_market_overview FIRST
 • "top gainers / top losers / biggest movers / what's up / what's down" → call get_top_gainers_losers
 • "most active / highest volume / most traded" → call get_most_active_stocks
@@ -168,8 +174,21 @@ Produce a rich, detailed analysis with these sections as applicable:
   2. <specific follow-up question>
   3. <specific follow-up question>
   ```
-  Make the questions specific to the data returned (e.g. if you showed RELIANCE, suggest
-  sector comparison, news catalysts, or portfolio overlap — not generic questions).
+  RULES FOR FOLLOW-UPS — they must be:
+  • SPECIFIC: mention the exact stock/sector/number from your response (e.g. "RELIANCE RSI at 71 — is it still a buy?" NOT "What is the RSI?")
+  • PROGRESSIVE: each question should dig deeper into something you already surfaced (e.g. if you mentioned INDUSINDBK had a Supertrend BUY, ask about its entry/target)
+  • ACTIONABLE: a trader should be able to act on the answer (entry/exit decisions, risk management, sector rotation)
+  • VARIED: cover 3 different angles — e.g. technical + fundamental + news, or stock + sector + macro
+  • NATURAL: phrase them as a curious analyst would — not as a checklist
+
+  BAD examples (too generic — never do this):
+    "Tell me about another stock."
+    "What is the market doing today?"
+    "Can you explain RSI?"
+  GOOD examples (specific to data returned):
+    "RELIANCE is at RSI 71 near 52W high — what does the Supertrend say on 15m?"
+    "HDFC Bank shows lower RS than ICICI — is there a rotation trade here?"
+    "FII sold ₹3,621 Cr today — which sectors saw the biggest outflows?"
 
 ━━━ MORNING BRIEFING SPECIAL FORMAT ━━━
 When asked for a "morning briefing" or "startup briefing", produce a comprehensive multi-section report:
@@ -311,7 +330,7 @@ def _detect_backend() -> _OpenAIBackend | _OllamaBackend | None:
 # Keyword-based intent router (no LLM fallback)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _keyword_intent(query: str) -> dict:
+def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
     """Detect intent and build a tool plan from keywords alone."""
     q = query.lower()
 
@@ -321,6 +340,37 @@ def _keyword_intent(query: str) -> dict:
             "intent": "global_market_assessment",
             "plan": [("get_global_market_assessment", {})],
         }
+
+    words = re.findall(r"[A-Za-z][A-Za-z0-9\-&\.]+", query)
+    skip  = {"show","me","the","latest","on","for","what","is","how","tell",
+              "about","give","setup","stock","NSE","India","market","today","brief",
+              "intraday","levels","level","support","resistance","screener","scan"}
+    candidates = [w for w in words if w.upper() not in skip and len(w) >= 2]
+
+    # SQLite-backed intraday routing. No EOD/yfinance fallback in this path.
+    if data_mode == "intraday":
+        if any(w in q for w in ["data health", "source health", "live table", "sqlite", "stale", "fresh"]):
+            return {"intent": "intraday_health", "plan": [("get_intraday_source_health", {})]}
+        if any(w in q for w in ["breakout", "breakouts"]):
+            return {"intent": "intraday_screener", "plan": [("run_intraday_screener", {"screen_type": "breakouts"})]}
+        if any(w in q for w in ["vcp", "contraction"]):
+            return {"intent": "intraday_screener", "plan": [("run_intraday_screener", {"screen_type": "vcp"})]}
+        if any(w in q for w in ["supertrend", "super trend"]):
+            return {"intent": "intraday_screener", "plan": [("run_intraday_screener", {"screen_type": "supertrend"})]}
+        if any(w in q for w in ["momentum", "movers", "leaders", "scan", "screener"]):
+            return {"intent": "intraday_screener", "plan": [("run_intraday_screener", {"screen_type": "momentum"})]}
+        if any(w in q for w in ["level", "levels", "support", "resistance", "pivot"]):
+            sym_q = candidates[0] if candidates else ""
+            return {"intent": "intraday_levels", "plan": [
+                ("resolve_symbol", {"query": sym_q}),
+                ("get_intraday_levels", {"symbol": sym_q}),
+            ]}
+        if candidates:
+            sym_q = candidates[0]
+            return {"intent": "intraday_setup", "plan": [
+                ("resolve_symbol", {"query": sym_q}),
+                ("explain_intraday_setup", {"symbol": sym_q}),
+            ]}
 
     # Index query
     index_words = ["nifty", "sensex", "bank nifty", "nifty it", "nifty 50"]
@@ -366,11 +416,6 @@ def _keyword_intent(query: str) -> dict:
             return {"intent": "sector_scan", "plan": [("get_sector_context", {"sector_or_symbol": sector})]}
 
     # Stock-specific query — extract likely symbol
-    words = re.findall(r"[A-Za-z][A-Za-z0-9\-&\.]+", query)
-    skip  = {"show","me","the","latest","on","for","what","is","how","tell",
-              "about","give","setup","stock","NSE","India","market","today","brief"}
-    candidates = [w for w in words if w.upper() not in skip and len(w) >= 2]
-
     if candidates:
         sym_q = candidates[0]
         plan = [
@@ -439,6 +484,10 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict]) -> str:
     cat  = _get("search_latest_catalysts")
     res  = _get("resolve_symbol")
     glob = _get("get_global_market_assessment")
+    intra_setup = _get("explain_intraday_setup")
+    intra_screen = _get("run_intraday_screener")
+    intra_levels = _get("get_intraday_levels")
+    intra_ind = _get("compute_intraday_indicators")
 
     sym = (snap or {}).get("symbol") or (tech or {}).get("symbol") or ""
     cname = (snap or {}).get("company_name") or sym
@@ -560,6 +609,61 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict]) -> str:
             rs_str = f"RS:{s['rs_pct']:+.0f}%" if s.get("rs_pct") is not None else ""
             lines.append(f"  {s['symbol']:<12}  ₹{s.get('price',0):>8,.0f}  "
                          f"{rs_str:<8}  {s.get('trading_signal','—')}")
+
+    # 5b. SQLite intraday setup and screeners
+    if intra_setup and not intra_setup.get("error"):
+        lines.append("\n▶ INTRADAY SETUP")
+        lines.append(f"  Symbol:      {intra_setup.get('symbol', '—')}")
+        lines.append(f"  Timeframe:   {intra_setup.get('timeframe', '—')}")
+        lines.append(f"  Setup label: {intra_setup.get('setup_label', '—')}")
+        lines.append(f"  Score:       {intra_setup.get('score', '—')}")
+        lines.append(f"  Price:       ₹{intra_setup.get('latest_close', '—')}")
+        lines.append(f"  Freshness:   {intra_setup.get('latest_timestamp', '—')}")
+        ind = intra_setup.get("indicators") or {}
+        lines.append(
+            f"  Indicators:  RSI {ind.get('rsi', '—')} | MACD hist {ind.get('macd_hist', '—')} | "
+            f"Supertrend dir {ind.get('supertrend_dir', '—')}"
+        )
+        levels = intra_setup.get("levels") or {}
+        lines.append(
+            f"  Levels:      Support {(levels.get('supports') or ['—'])[0]} | "
+            f"Resistance {(levels.get('resistances') or ['—'])[0]}"
+        )
+        lines.append(f"  Invalidation level: {intra_setup.get('invalidation_level', '—')}")
+        lines.append(f"  Technical target zones: {intra_setup.get('technical_target_zones') or '—'}")
+        lines.append("  Framing:     Research setup only; not a buy/sell recommendation.")
+
+    if intra_levels and not intra_levels.get("error"):
+        lines.append("\n▶ INTRADAY LEVELS")
+        lines.append(f"  Symbol:      {intra_levels.get('symbol', '—')}")
+        lines.append(f"  Timeframe:   {intra_levels.get('timeframe', '—')}")
+        lines.append(f"  Price:       ₹{intra_levels.get('latest_close', '—')}")
+        lines.append(f"  Supports:    {intra_levels.get('supports') or '—'}")
+        lines.append(f"  Resistances: {intra_levels.get('resistances') or '—'}")
+        lines.append(f"  Pivot:       {intra_levels.get('pivot', '—')}")
+
+    if intra_ind and not intra_ind.get("error"):
+        lines.append("\n▶ INTRADAY INDICATORS")
+        ind = intra_ind.get("indicators") or {}
+        lines.append(f"  Symbol:      {intra_ind.get('symbol', '—')}")
+        lines.append(f"  Timeframe:   {intra_ind.get('timeframe', '—')}")
+        lines.append(f"  Score:       {intra_ind.get('score', '—')}")
+        lines.append(f"  RSI:         {ind.get('rsi', '—')}")
+        lines.append(f"  MACD hist:   {ind.get('macd_hist', '—')}")
+        lines.append(f"  Supertrend:  {ind.get('supertrend_dir', '—')}")
+
+    if intra_screen and not intra_screen.get("error"):
+        lines.append(
+            f"\n▶ INTRADAY SCREENER: {intra_screen.get('screen_type', '').upper()} "
+            f"({intra_screen.get('count', 0)} results)"
+        )
+        for row in (intra_screen.get("results") or [])[:10]:
+            lines.append(
+                f"  {row.get('symbol','—'):<12} {row.get('setup_label','—'):<12} "
+                f"score {row.get('score','—')} price ₹{row.get('price','—')} "
+                f"S {row.get('support','—')} R {row.get('resistance','—')}"
+            )
+        lines.append("  Framing: Research-only setup labels; not buy/sell recommendations.")
 
     # 6. Catalysts
     if cat and cat.get("results"):
@@ -696,8 +800,10 @@ class Agent:
                 "correlation context, and India read-through."
                 if mode == "global"
                 else (
-                    "Use get_live_quote and get_live_market_overview for real-time data. "
-                    "Prefer live tools first, then supplement with EOD snapshot tools."
+               "Use get_intraday_source_health first for calculations, then SQLite-backed "
+               "get_intraday_bars, compute_intraday_indicators, get_intraday_levels, "
+               "explain_intraday_setup, and run_intraday_screener. Do not silently use "
+               "EOD data for intraday calculations."
                     if mode == "intraday"
                     else "Use EOD CSV and DB snapshot tools for historical/technical analysis."
                 )
@@ -705,7 +811,7 @@ class Agent:
         )
         mode_sources = {
             "global": "cached global indices + correlations",
-            "intraday": "NSE live API",
+            "intraday": "SQLite intraday/live tables",
             "historical": "EOD CSV + DB snapshot",
         }
         mode_suffix = (
@@ -724,7 +830,7 @@ class Agent:
             return result
 
         # ── Keyword fallback path ──────────────────────────────────────────────
-        intent_plan = _keyword_intent(clean_input)
+        intent_plan = _keyword_intent(clean_input, data_mode=mode)
         trace.append({"step": "intent", "result": intent_plan})
 
         tool_results = _execute_plan(intent_plan["plan"])

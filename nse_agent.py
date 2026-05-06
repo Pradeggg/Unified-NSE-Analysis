@@ -51,6 +51,9 @@ from rich import box
 from prompt_toolkit import PromptSession
 from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.formatted_text import ANSI
+from prompt_toolkit.completion import Completer, Completion
+from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
+from prompt_toolkit.styles import Style as PTStyle
 
 colorama.init(autoreset=True)
 
@@ -93,13 +96,13 @@ PROMPT_LIBRARY = [
         "key": "intraday",
         "color": "red",
         "prompts": [
-            ("Bank Nifty Scan",      "Scan NIFTY BANK for intraday buy and sell signals using all strategies on 15m charts. Show entry, target, SL and R:R."),
+            ("Bank Nifty Scan",      "Scan NIFTY BANK for intraday research setups using all strategies on 15m charts. Show technical target zones, invalidation levels, and risk context."),
             ("Nifty 50 Scan",        "Scan NIFTY 50 for the best intraday setups right now — momentum, breakouts, and mean-reversion on 15m candles."),
             ("Nifty IT Scan",        "Scan NIFTY IT index for intraday signals. Focus on MACD and EMA crossovers."),
-            ("RELIANCE Intraday",    "Intraday trading setup for RELIANCE on 15m — entry, target, stoploss, R:R, pivot levels, and key indicators."),
+            ("RELIANCE Intraday",    "Intraday research setup for RELIANCE on 15m — setup label, technical target zones, invalidation level, pivot levels, and key indicators."),
             ("VCP Pattern Hunt",     "Scan NIFTY 500 for VCP (Volatility Contraction Pattern) stocks ready for intraday breakout on 15m."),
             ("Volume Spike Alert",   "Which NIFTY 50 or BANK NIFTY stocks are showing 2x+ volume spikes with price confirmation right now?"),
-            ("Supertrend BUY List",  "Scan NIFTY MIDCAP 100 for stocks with active Supertrend BUY signals on 15m with R:R above 1.5."),
+            ("Supertrend Setups",    "Scan NIFTY MIDCAP 100 for stocks with active Supertrend research setups on 15m with clear invalidation levels."),
         ],
     },
     # ── 3. Technical Analysis ─────────────────────────────────────────────────
@@ -281,6 +284,349 @@ _BANNER = [
 def _separator(title: str = "") -> None:
     """Thin horizontal rule, optional centred title."""
     console.rule(title, style="dim")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Input autocomplete
+# ─────────────────────────────────────────────────────────────────────────────
+
+# All slash commands with a brief hint shown in the completion menu
+_SLASH_COMMANDS: list[tuple[str, str]] = [
+    ("/prompts",          "Browse 60 curated research prompts"),
+    ("/prompts market",   "Market overview prompts"),
+    ("/prompts intraday", "Intraday trading prompts"),
+    ("/prompts technical","Technical analysis prompts"),
+    ("/prompts sector",   "Sector analysis prompts"),
+    ("/prompts screener", "Screener prompts"),
+    ("/prompts fundamentals", "Fundamentals & valuation prompts"),
+    ("/prompts stock",    "Stock deep-dive prompts"),
+    ("/prompts news",     "News & catalysts prompts"),
+    ("/prompts portfolio","Portfolio prompts"),
+    ("/prompts global",   "Global & macro prompts"),
+    ("/ric",              "Show RIC library (8 investigative recipes)"),
+    ("/ric sherlock",           "5-step: quote→technicals→fundamentals→news→trade  [SYMBOL]"),
+    ("/ric sector-xray",        "4-step: sector breadth→leaders→laggards→entries  [SECTOR]"),
+    ("/ric breakout-hunter",    "5-step: breadth→stage2→RS→VCP→final picks"),
+    ("/ric earnings-playbook",  "5-step: results→ratios→peers→concall→setup  [SYMBOL]"),
+    ("/ric index-pulse",        "4-step: technicals→breadth→top stocks→intraday  [INDEX]"),
+    ("/ric peer-battle",        "4-step: fundamentals→technicals→news→verdict  [SYM,SYM,…]"),
+    ("/ric risk-radar",         "4-step: macro→FII→breadth extremes→vulnerable stocks"),
+    ("/ric morning-intel",      "5-step: global→yesterday→breadth→FII→watchlist"),
+    ("/scan",             "Scan NIFTY 50 for intraday signals"),
+    ("/scan NIFTY BANK",  "Scan Bank Nifty for intraday signals"),
+    ("/scan NIFTY IT",    "Scan Nifty IT for intraday signals"),
+    ("/scan NIFTY MIDCAP 100", "Scan Nifty Midcap 100"),
+    ("/scan NIFTY PHARMA","Scan Nifty Pharma"),
+    ("/live",             "Switch to LIVE mode (real-time NSE API)"),
+    ("/eod",              "Switch to EOD mode (historical CSV/DB)"),
+    ("/auto",             "Switch to AUTO mode (keyword detect)"),
+    ("/global",           "Global market assessment + India read-through"),
+    ("/context",          "Show conversation history & context budget"),
+    ("/new",              "Start a fresh session (clear history)"),
+    ("/reset",            "Start a fresh session (clear history)"),
+    ("/clear",            "Clear the screen"),
+    ("/help",             "Show all commands"),
+]
+
+# Well-known NSE symbols & index names for stock query completion
+_KNOWN_SYMBOLS: list[str] = [
+    "RELIANCE", "TCS", "INFY", "HDFCBANK", "ICICIBANK", "SBIN", "AXISBANK",
+    "KOTAKBANK", "INDUSINDBK", "BAJFINANCE", "BAJAJFINSV", "HINDUNILVR",
+    "NESTLEIND", "ITC", "TITAN", "ASIANPAINT", "MARUTI", "TATAMOTORS",
+    "TATASTEEL", "ONGC", "NTPC", "POWERGRID", "COALINDIA", "ADANIENT",
+    "ADANIPORTS", "ADANIGREEN", "WIPRO", "HCLTECH", "TECHM", "LTIM",
+    "SUNPHARMA", "DRREDDY", "CIPLA", "DIVISLAB", "APOLLOHOSP",
+    "TRENT", "ZOMATO", "NYKAA", "PAYTM", "DMART",  "COFORGE",
+    "PERSISTENT", "MPHASIS", "LTTS", "KPIT",
+    "NIFTY 50", "NIFTY BANK", "NIFTY IT", "NIFTY PHARMA",
+    "NIFTY MIDCAP 100", "NIFTY SMALLCAP 100", "NIFTY AUTO",
+    "NIFTY FMCG", "NIFTY METAL", "NIFTY REALTY", "NIFTY INFRA",
+]
+
+# Prompt-starter phrases (for when the user types a word, not a /)
+_STARTER_PHRASES: list[tuple[str, str]] = [
+    ("market overview",    "Live indices, breadth, FII/DII"),
+    ("intraday setup for", "Research setup, target zones, invalidation"),
+    ("scan",               "Intraday screener (then add index name)"),
+    ("top gainers",        "Live top gainers in NIFTY 50"),
+    ("top losers",         "Live top losers in NIFTY 50"),
+    ("technical setup for","Full technicals for a stock"),
+    ("compare",            "Side-by-side stock comparison"),
+    ("sector analysis",    "Sector breadth and leaders"),
+    ("morning briefing",   "Full morning market briefing"),
+    ("stage 2 breakouts",  "Weinstein Stage 2 screener"),
+    ("FII DII activity",   "Today's FII vs DII flow"),
+    ("52 week high",       "Stocks near 52-week highs"),
+    ("concall transcript", "Management commentary from screener.in"),
+    ("global markets",     "Overnight US/Asian/SGX context"),
+]
+
+
+class _AgentCompleter(Completer):
+    """Three-tier completion:
+      /…       → slash commands
+      p<digit> → prompt library entries
+      word     → starter phrases + known stock symbols
+    """
+
+    def get_completions(self, document, complete_event):
+        text = document.text_before_cursor
+
+        # ── Tier 1: slash commands ──────────────────────────────────────
+        if text.startswith("/"):
+            for cmd, hint in _SLASH_COMMANDS:
+                if cmd.lower().startswith(text.lower()):
+                    yield Completion(
+                        cmd[len(text):],
+                        start_position=0,
+                        display=cmd,
+                        display_meta=hint,
+                    )
+            return
+
+        # ── Tier 2: p<n> prompt library shortcuts ───────────────────────
+        if re.match(r"^p\d{0,3}$", text.lower()):
+            prefix_n = text[1:] if len(text) > 1 else ""
+            for n, (cat, title, _query) in _PROMPT_INDEX.items():
+                if str(n).startswith(prefix_n):
+                    yield Completion(
+                        f"p{n}"[len(text):],
+                        start_position=0,
+                        display=f"p{n}  {title}",
+                        display_meta=cat,
+                    )
+            return
+
+        # ── Tier 3: starter phrases + known symbols ──────────────────────
+        word = text.lower().strip()
+        if len(word) >= 2:
+            for phrase, hint in _STARTER_PHRASES:
+                if phrase.lower().startswith(word):
+                    yield Completion(
+                        phrase[len(text.strip()):],
+                        start_position=0,
+                        display=phrase,
+                        display_meta=hint,
+                    )
+            for sym in _KNOWN_SYMBOLS:
+                if sym.lower().startswith(word):
+                    yield Completion(
+                        sym[len(text.strip()):],
+                        start_position=0,
+                        display=sym,
+                        display_meta="NSE symbol / index",
+                    )
+
+
+# prompt_toolkit style for the completion menu
+_COMPLETER_STYLE = PTStyle.from_dict({
+    "completion-menu.completion":         "bg:#1a1a2e fg:#c0c0e0",
+    "completion-menu.completion.current": "bg:#16213e fg:#00d4ff bold",
+    "completion-menu.meta.completion":    "bg:#0f0f1a fg:#607080",
+    "completion-menu.meta.completion.current": "bg:#16213e fg:#80c0ff",
+    "scrollbar.background":               "bg:#1a1a2e",
+    "scrollbar.button":                   "bg:#00d4ff",
+})
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# RIC — Recursive Investigative Conversations
+# Pre-built multi-step analysis recipes that chain queries automatically
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Each RIC is a list of step dicts:
+#   label    : short display name shown before the step runs
+#   prompt   : the query sent to the agent ({symbol}, {sector}, {index} are substituted)
+#   required : whether a symbol/sector/index arg is needed
+
+RIC_LIBRARY: dict[str, dict] = {
+    "sherlock": {
+        "name":    "🔍 Stock Sherlock",
+        "desc":    "Complete 5-step stock investigation: live quote → technicals → fundamentals → news → intraday trade setup",
+        "arg":     "symbol",
+        "example": "/ric sherlock RELIANCE",
+        "steps": [
+            {"label": "Live Quote",      "prompt": "Live price and quote for {symbol} — current price, % change, volume, day high/low vs 52-week range."},
+            {"label": "Technical Setup", "prompt": "Full technical setup for {symbol} — Weinstein stage, RSI, ADX, MACD, supertrend direction, position vs 20/50/200 MA, RS rank vs Nifty 50."},
+            {"label": "Fundamentals",    "prompt": "Fundamental analysis of {symbol} from screener.in — P/E, P/B, ROE, ROCE, debt/equity, revenue growth, pros and cons."},
+            {"label": "News & Catalysts","prompt": "Latest news and catalysts for {symbol} — recent announcements, results, management commentary, analyst views."},
+            {"label": "Trade Setup",     "prompt": "Intraday trading setup for {symbol} on 15m — entry price, target, stoploss, R:R ratio, key support/resistance levels, recommended strategy."},
+        ],
+    },
+    "sector-xray": {
+        "name":    "🏭 Sector X-Ray",
+        "desc":    "4-step sector deep dive: breadth → leaders → laggards → entry opportunities",
+        "arg":     "sector",
+        "example": "/ric sector-xray IT",
+        "steps": [
+            {"label": "Sector Overview",  "prompt": "Sector overview for {sector} — breadth, stage distribution, RS vs Nifty 50, overall trend and health."},
+            {"label": "Leaders",          "prompt": "Top 5 performing stocks in {sector} right now — stage, RSI, RS rank, 1-month returns and what's driving them."},
+            {"label": "Laggards & Risks", "prompt": "Weakest stocks in {sector} sector — Stage 3/4 names, high RSI divergences, names to avoid or watch for reversal."},
+            {"label": "Entry Opportunities", "prompt": "Best entry opportunities in {sector} sector right now — stocks with Supertrend BUY, high RS, Stage 2, near support. Give specific setups."},
+        ],
+    },
+    "breakout-hunter": {
+        "name":    "🎯 Breakout Hunter",
+        "desc":    "5-step hunt for imminent breakouts: breadth → stage2 screener → high RS → VCP scan → final picks",
+        "arg":     None,
+        "example": "/ric breakout-hunter",
+        "steps": [
+            {"label": "Market Conditions", "prompt": "Current market breadth and conditions — is this a good environment for breakout trades? Advance/decline, stage distribution, FII flow."},
+            {"label": "Stage 2 Universe",  "prompt": "Run the Stage 2 screener — show top 15 stocks in advancing stage with strongest RS rank and technical scores."},
+            {"label": "High RS Leaders",   "prompt": "Top 10 stocks by Relative Strength percentage vs Nifty 50. These are the market leaders — show their current technical stage."},
+            {"label": "VCP Scan",          "prompt": "Scan NIFTY 500 for VCP (Volatility Contraction Pattern) on 15m — stocks showing tight range contraction near pivot with volume drying up."},
+            {"label": "Final Picks",       "prompt": "Based on the breakout analysis above, give your top 3 breakout candidates with specific entry triggers, targets, and stoploss levels."},
+        ],
+    },
+    "earnings-playbook": {
+        "name":    "📋 Earnings Playbook",
+        "desc":    "5-step earnings analysis: results → ratios → peers → management commentary → trade setup",
+        "arg":     "symbol",
+        "example": "/ric earnings-playbook TCS",
+        "steps": [
+            {"label": "Latest Results",     "prompt": "Latest quarterly results for {symbol} — revenue, PAT, margins, YoY and QoQ growth. Were they above or below estimates?"},
+            {"label": "Financial Ratios",   "prompt": "Key financial ratios for {symbol} — P/E, EV/EBITDA, ROE, ROCE, operating margin trend over last 4 quarters."},
+            {"label": "Peer Comparison",    "prompt": "Compare {symbol} with its top 3 sector peers on P/E, ROE, ROCE, revenue growth, and margin. Who has the best fundamentals?"},
+            {"label": "Management Commentary", "prompt": "Management guidance and commentary for {symbol} — get the concall transcript highlights from screener.in. What did management say about growth outlook?"},
+            {"label": "Post-Earnings Setup","prompt": "Post-earnings trade setup for {symbol} — technical reaction to results, current stage, intraday levels for entry/target/SL if trading the move."},
+        ],
+    },
+    "index-pulse": {
+        "name":    "📊 Index Pulse",
+        "desc":    "4-step index analysis: technicals → breadth → top stocks → intraday levels",
+        "arg":     "index",
+        "example": "/ric index-pulse NIFTY BANK",
+        "steps": [
+            {"label": "Index Technicals",  "prompt": "Full technical setup for {index} — RSI, MACD, supertrend, key support/resistance, position vs 20/50/200 MA, ADX trend strength."},
+            {"label": "Breadth & Flow",    "prompt": "Market breadth and FII/DII flow for {index} — advance/decline, stage distribution, institutional buying/selling today."},
+            {"label": "Top Stocks",        "prompt": "Top 5 performing and bottom 5 performing stocks in {index} today — what's driving the index move?"},
+            {"label": "Intraday Levels",   "prompt": "Intraday scan of {index} on 15m — scan for buy/sell signals, pivot levels, key support/resistance, expected range for today."},
+        ],
+    },
+    "peer-battle": {
+        "name":    "⚔️  Peer Battle",
+        "desc":    "4-step head-to-head comparison: fundamentals → technicals → news → verdict",
+        "arg":     "symbols (comma-separated)",
+        "example": "/ric peer-battle TCS,INFY,WIPRO",
+        "steps": [
+            {"label": "Fundamental Battle", "prompt": "Compare {symbol} on fundamentals — P/E, P/B, ROE, ROCE, revenue growth, debt. Show as a table. Who wins on value and quality?"},
+            {"label": "Technical Battle",   "prompt": "Compare {symbol} on technicals — Weinstein stage, RSI, RS rank, 1-month/1-week returns, ADX. Show as a table. Who has the best chart?"},
+            {"label": "News & Sentiment",   "prompt": "Compare {symbol} — recent news, analyst ratings, management tone. Any recent positive or negative surprises?"},
+            {"label": "Verdict",            "prompt": "Final verdict on {symbol} — given all the above, which stock is the best buy right now and why? Give a ranked order with brief rationale for each."},
+        ],
+    },
+    "risk-radar": {
+        "name":    "⚠️  Risk Radar",
+        "desc":    "4-step risk assessment: macro → institutional flow → breadth extremes → vulnerable stocks",
+        "arg":     None,
+        "example": "/ric risk-radar",
+        "steps": [
+            {"label": "Macro Environment",  "prompt": "Current macro risk environment — global cues, RBI stance, FII trend, USD/INR, crude. Is the market in risk-on or risk-off mode?"},
+            {"label": "Institutional Flow", "prompt": "FII and DII activity this week — net buying/selling, which sectors saw outflows, bulk/block deals showing exits."},
+            {"label": "Breadth Extremes",   "prompt": "Market breadth extremes — stocks near 52-week lows, Stage 4 stock count, RSI < 30 names, advance/decline at extremes? Any divergences?"},
+            {"label": "Vulnerable Stocks",  "prompt": "Top 10 most vulnerable stocks right now — Stage 3/4, negative RS, high short interest, approaching 52W lows. Names to avoid or watch for shorts."},
+        ],
+    },
+    "morning-intel": {
+        "name":    "☀️  Morning Intel",
+        "desc":    "5-step pre-market intelligence: global → previous day → current breadth → FII → watchlist",
+        "arg":     None,
+        "example": "/ric morning-intel",
+        "steps": [
+            {"label": "Global Overnight",   "prompt": "Global market context for today — US markets close, Asian markets open, SGX Nifty, key macro news overnight. What's the cue for India?"},
+            {"label": "Yesterday Recap",    "prompt": "NSE previous day recap — how did NIFTY 50 and BANK NIFTY close? Top 3 gainers, top 3 losers, sectors that moved."},
+            {"label": "Current Breadth",    "prompt": "Current live market breadth — NIFTY 50/BANK/IT/MID/SMALL levels right now, advance/decline ratio, stage distribution update."},
+            {"label": "FII/DII Today",      "prompt": "FII and DII activity today so far — buying/selling in crores, net flow, which sectors, and what it signals for market direction."},
+            {"label": "Today's Watchlist",  "prompt": "Give me 5 stocks to watch today — based on technical setups, news catalysts, FII flow, and intraday signal quality. For each: why watch it and key levels."},
+        ],
+    },
+}
+
+
+def _print_ric_library() -> None:
+    """Show all available RICs in a formatted panel."""
+    table = Table(
+        show_header=True, header_style="bold yellow",
+        box=box.SIMPLE_HEAD, padding=(0, 1), expand=True,
+    )
+    table.add_column("Command",  style="bold yellow", no_wrap=True, min_width=28)
+    table.add_column("RIC Name", style="bold white",  min_width=22, no_wrap=True)
+    table.add_column("Steps", style="dim white", width=6, no_wrap=True)
+    table.add_column("What it does", style="dim white")
+    for key, ric in RIC_LIBRARY.items():
+        table.add_row(
+            ric["example"],
+            ric["name"],
+            str(len(ric["steps"])),
+            ric["desc"],
+        )
+    console.print()
+    console.print(Panel(
+        table,
+        title="[bold yellow] 🔁  RIC Library — Recursive Investigative Conversations [/bold yellow]",
+        border_style="yellow",
+        padding=(0, 1),
+    ))
+    console.print(
+        "[dim]  Usage: [bold white]/ric <name>[/bold white] or "
+        "[bold white]/ric <name> SYMBOL[/bold white]  ·  "
+        "Each step runs automatically and builds on the previous[/dim]"
+    )
+    console.print()
+
+
+def _run_ric(agent, key: str, arg: str, show_trace: bool) -> None:
+    """Execute a named RIC step by step, each result feeding context."""
+    ric = RIC_LIBRARY.get(key)
+    if not ric:
+        console.print(f"[red]  ✗  Unknown RIC '{key}'. Type /ric to see the library.[/red]")
+        return
+
+    # Validate arg requirement
+    if ric["arg"] and not arg:
+        console.print(
+            f"[yellow]  ⚠  {ric['name']} needs a {ric['arg'].upper()}.  "
+            f"Example: [bold]{ric['example']}[/bold][/yellow]"
+        )
+        return
+
+    symbol = arg.strip().upper() if arg else ""
+    n_steps = len(ric["steps"])
+
+    console.print()
+    console.rule(
+        f"[bold yellow] 🔁  {ric['name']} [/bold yellow]"
+        f"[dim]  {symbol or ''}  ·  {n_steps} steps [/dim]",
+        style="yellow",
+    )
+    console.print(f"[dim]  {ric['desc']}[/dim]")
+    console.print()
+
+    for i, step in enumerate(ric["steps"], 1):
+        label  = step["label"]
+        prompt = step["prompt"].replace("{symbol}", symbol)\
+                               .replace("{sector}", symbol)\
+                               .replace("{index}",  symbol)
+
+        console.print(
+            f"[bold yellow]  Step {i}/{n_steps}[/bold yellow]"
+            f"[dim]  {label}[/dim]"
+        )
+        console.print("[dim cyan]  ⏳  Running…[/dim cyan]")
+
+        try:
+            result = agent.query(prompt, show_trace=show_trace)
+            _print_response(result)
+        except Exception as e:
+            console.print(f"[red]  ✗  Step {i} failed: {e}[/red]")
+            console.print()
+
+    console.rule(
+        f"[bold yellow] ✅  {ric['name']} complete [/bold yellow]"
+        f"[dim]  {symbol or ''}  ·  all {n_steps} steps done [/dim]",
+        style="yellow",
+    )
+    console.print()
 
 
 def print_banner() -> None:
@@ -544,21 +890,28 @@ def _print_help() -> None:
             "  [green]/scan[/green]                   — Scan NIFTY 50 for intraday signals\n"
             "  [green]/scan NIFTY BANK[/green]        — Scan any index (NIFTY IT, PHARMA…)\n\n"
             "[bold cyan]GLOBAL MARKET[/bold cyan]\n"
-            "  [green]/global[/green]                 — Global risk regime and India read-through\n"
-            "  [green]/global risk[/green]            — Overnight cues, commodities, FX, correlations\n\n"
+            "  [green]/global[/green]                 — Global risk regime and India read-through\n\n"
             "[bold cyan]PROMPT LIBRARY[/bold cyan]\n"
-            "  [yellow]/prompts[/yellow]               — Browse all 60 curated research prompts\n"
-            "  [yellow]/prompts intraday[/yellow]      — Filter by category (market/technical/sector…)\n"
-            "  [yellow]p<number>[/yellow]              — Run prompt by number  (e.g. p5, p23, p41)\n\n"
+            "  [yellow]/prompts[/yellow]               — Browse 60 curated prompts\n"
+            "  [yellow]/prompts intraday[/yellow]      — Filter by category\n"
+            "  [yellow]p<number>[/yellow]              — Run prompt by number  (e.g. p7, p23)\n\n"
+            "[bold cyan]RIC — RECURSIVE INVESTIGATIONS[/bold cyan]\n"
+            "  [bold yellow]/ric[/bold yellow]                    — Show all 8 prebuilt RICs\n"
+            "  [bold yellow]/ric sherlock RELIANCE[/bold yellow]  — 5-step stock investigation\n"
+            "  [bold yellow]/ric sector-xray IT[/bold yellow]     — 4-step sector deep dive\n"
+            "  [bold yellow]/ric earnings-playbook TCS[/bold yellow] — 5-step earnings analysis\n"
+            "  [bold yellow]/ric breakout-hunter[/bold yellow]    — 5-step breakout scan\n"
+            "  [bold yellow]/ric morning-intel[/bold yellow]      — 5-step morning briefing\n"
+            "  [bold yellow]/ric risk-radar[/bold yellow]         — 4-step risk assessment\n"
+            "  [bold yellow]/ric index-pulse NIFTY BANK[/bold yellow] — 4-step index analysis\n"
+            "  [bold yellow]/ric peer-battle TCS,INFY,WIPRO[/bold yellow] — 4-step comparison\n\n"
             "[bold cyan]SESSION & CONTEXT[/bold cyan]\n"
-            "  [magenta]/context[/magenta]               — Show conversation history + context budget\n"
-            "  [magenta]/new[/magenta]  or  [magenta]/reset[/magenta]      — Start a fresh session (clears history)\n\n"
+            "  [magenta]/context[/magenta]               — Show conversation history + budget\n"
+            "  [magenta]/new[/magenta]  or  [magenta]/reset[/magenta]      — Fresh session (clears history)\n\n"
             "[bold cyan]FOLLOW-UPS[/bold cyan]\n"
             "  [yellow]1 / 2 / 3[/yellow]              — Ask the numbered follow-up question\n\n"
             "[bold cyan]OTHER[/bold cyan]\n"
-            "  [dim]/clear[/dim]                  — Clear screen\n"
-            "  [dim]exit / quit[/dim]             — Exit Agent Adda\n"
-            "  [dim]Ctrl-C[/dim]                  — Exit (same as quit)\n"
+            "  [dim]/clear[/dim]  [dim]exit / quit[/dim]  [dim]Ctrl-C[/dim]\n"
         ),
         title="[bold cyan]Agent Adda Help[/bold cyan]",
         border_style="cyan",
@@ -769,10 +1122,16 @@ def _single_query(agent, query: str, show_trace: bool) -> None:
 def _chat_loop(agent, show_trace: bool) -> None:
     global _mode, _followups
 
-    session = PromptSession(history=InMemoryHistory())
+    session = PromptSession(
+        history=InMemoryHistory(),
+        completer=_AgentCompleter(),
+        complete_while_typing=True,
+        auto_suggest=AutoSuggestFromHistory(),
+        style=_COMPLETER_STYLE,
+    )
 
     console.print("[bold green]  ✓ Agent Adda ready[/bold green] — type your question and press Enter")
-    console.print("[dim]  Tip: /live  /eod  /auto  │  /prompts  │  1·2·3 = follow-ups  │  /new = fresh session  │  /help  │  exit[/dim]")
+    console.print("[dim]  Tip: /live  /eod  /auto  │  /prompts  │  /ric  │  1·2·3 = follow-ups  │  /new  │  /help  │  exit[/dim]")
     console.print()
 
     while True:
@@ -827,6 +1186,17 @@ def _chat_loop(agent, show_trace: bool) -> None:
             )
             continue
 
+        # ── /ric: recursive investigative conversation ─────────────────
+        if text.lower().startswith("/ric"):
+            parts = text.split(maxsplit=2)
+            if len(parts) == 1:
+                _print_ric_library()
+            else:
+                ric_key = parts[1].lower()
+                ric_arg = parts[2] if len(parts) > 2 else ""
+                _run_ric(agent, ric_key, ric_arg, show_trace)
+            continue
+
         # ── /context: show session summary ────────────────────────────
         if text.lower() in ("/context", "/session", "/history"):
             _print_context_summary(agent)
@@ -850,7 +1220,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
         if text.lower().startswith("/scan"):
             parts = text.split(maxsplit=1)
             idx   = parts[1].upper() if len(parts) > 1 else "NIFTY 50"
-            text  = f"Scan {idx} for intraday buy and sell signals using all strategies on 15m charts"
+            text  = f"Scan {idx} for intraday research setups using all strategies on 15m charts"
             console.print(f"[dim]  → Intraday scan: {idx}[/dim]")
 
         # ── p<n> prompt library shortcut ───────────────────────────────
