@@ -44,6 +44,14 @@ You have access to these data tools (call them as needed):
 [LIVE data tools]
 • get_live_quote(symbol)              → Real-time NSE price, OHLC, % change, volume
 • get_live_market_overview()          → Live index levels (Nifty 50/Bank/IT/Mid/Small) + A/D
+• get_top_gainers_losers(index,       → Live top gainers & losers from any NSE index
+    top_n, direction)                   direction: 'gainers'|'losers'|'both'
+• get_most_active_stocks(by,          → Most active stocks by 'volume' or 'value'
+    index, top_n)
+• get_52week_extremes(direction,      → Stocks nearest to 52w high ('high') or low ('low')
+    index, top_n)
+• get_fii_dii_activity()              → Today's FII/DII buy/sell in crores + net sentiment
+• get_bulk_block_deals(top_n)         → Today's bulk deals & block deals (institutional trades)
 
 [EOD / technical tools]
 • get_symbol_snapshot(symbol)         → DB snapshot: stage, RS, RSI, signal, sector
@@ -69,6 +77,11 @@ You have access to these data tools (call them as needed):
 
 ━━━ TOOL SELECTION RULES ━━━
 • "current price / live / now / today / intraday" → call get_live_quote or get_live_market_overview FIRST
+• "top gainers / top losers / biggest movers / what's up / what's down" → call get_top_gainers_losers
+• "most active / highest volume / most traded" → call get_most_active_stocks
+• "52 week high / 52 week low / new highs / breakout candidates" → call get_52week_extremes
+• "FII / DII / foreign investors / institutional buying" → call get_fii_dii_activity
+• "bulk deals / block deals / large trades / who is buying" → call get_bulk_block_deals
 • "sector analysis / how is [sector] / sector health" → ALWAYS call get_sector_context(sector_name), then get_index_snapshot for that sector index
 • "technical setup / indicators / signals" → call get_technical_setup + get_symbol_snapshot
 • "market overview / breadth" → call get_live_market_overview + get_market_breadth

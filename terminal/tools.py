@@ -812,11 +812,13 @@ _live_session_ts: float = 0.0
 def _get_live_session():
     import requests, time as _time
     global _live_session, _live_session_ts
-    if _live_session is None or (_time.time() - _live_session_ts) > 600:
+    if _live_session is None or (_time.time() - _live_session_ts) > 180:
         s = requests.Session()
         s.headers.update(_NSE_HEADERS)
         try:
             s.get("https://www.nseindia.com/", timeout=8)
+            # Second warmup required for equity-stockIndices and gated endpoints
+            s.get("https://www.nseindia.com/market-data/live-equity-market?symbol=NIFTY+50", timeout=8)
         except Exception:
             pass
         _live_session = s
@@ -921,9 +923,260 @@ def get_live_market_overview() -> dict:
         return {"error": str(e)}
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Tool registry — name → (function, description, param_schema)
-# ─────────────────────────────────────────────────────────────────────────────
+def get_top_gainers_losers(
+    index: str = "NIFTY 500",
+    top_n: int = 10,
+    direction: str = "both",
+) -> dict:
+    """Return top gaining and/or losing stocks from an NSE index right now.
+
+    Args:
+        index: Index name — 'NIFTY 50', 'NIFTY BANK', 'NIFTY IT', 'NIFTY 500',
+               'NIFTY MIDCAP 100', 'NIFTY SMALLCAP 100', etc.
+        top_n: Number of stocks to return in each list (default 10).
+        direction: 'gainers', 'losers', or 'both' (default 'both').
+    """
+    try:
+        s = _get_live_session()
+        # Use the NSE built-in variations endpoint for Nifty/BankNifty (faster)
+        _BUILTIN_KEYS = {
+            "NIFTY 50":       "NIFTY",
+            "NIFTY BANK":     "BANKNIFTY",
+            "NIFTY NEXT 50":  "NIFTYNEXT50",
+        }
+        builtin_key = _BUILTIN_KEYS.get(index.upper())
+
+        if builtin_key:
+            g_url = "https://www.nseindia.com/api/live-analysis-variations?index=gainers"
+            l_url = "https://www.nseindia.com/api/live-analysis-variations?index=losers"
+            g_data = s.get(g_url, timeout=10).json()
+            gainers_raw = g_data.get(builtin_key, {}).get("data", [])[:top_n]
+            # losers endpoint may be missing — try allIndices losers from NIFTY 500 instead
+            l_data = s.get(l_url, timeout=10).json()
+            losers_raw = l_data.get(builtin_key, {}).get("data", [])
+            if not losers_raw:
+                losers_raw = []
+        else:
+            gainers_raw = []
+            losers_raw  = []
+
+        # For broad indexes or if built-in losers is empty, fetch from equity-stockIndices
+        idx_param = index.upper().replace(" ", "%20")
+        r2 = s.get(
+            f"https://www.nseindia.com/api/equity-stockIndices?index={idx_param}",
+            timeout=10,
+        )
+        stocks = r2.json().get("data", [])
+        # Remove index summary row (priority=1, symbol matches index name). Keep all stocks (priority=0).
+        stocks = [x for x in stocks if x.get("symbol") and x.get("priority") != 1]
+
+        sorted_asc  = sorted(stocks, key=lambda x: float(x.get("pChange", 0) or 0))
+        sorted_desc = sorted(stocks, key=lambda x: float(x.get("pChange", 0) or 0), reverse=True)
+
+        def _fmt(x: dict) -> dict:
+            return {
+                "symbol":     x.get("symbol"),
+                "last_price": x.get("lastPrice"),
+                "change":     round(float(x.get("change",  0) or 0), 2),
+                "pct_change": round(float(x.get("pChange", 0) or 0), 2),
+                "volume":     x.get("totalTradedVolume"),
+                "day_high":   x.get("dayHigh"),
+                "day_low":    x.get("dayLow"),
+                "year_high":  x.get("yearHigh"),
+                "year_low":   x.get("yearLow"),
+            }
+
+        result: dict = {
+            "index":  index,
+            "as_of":  datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "source": "NSE live API",
+        }
+        if direction in ("gainers", "both"):
+            result["gainers"] = [_fmt(x) for x in sorted_desc[:top_n]]
+        if direction in ("losers", "both"):
+            result["losers"]  = [_fmt(x) for x in sorted_asc[:top_n]]
+        return result
+    except Exception as e:
+        return {"error": str(e), "index": index}
+
+
+def get_most_active_stocks(
+    by: str = "value",
+    index: str = "NIFTY 500",
+    top_n: int = 10,
+) -> dict:
+    """Return most actively traded stocks by volume or traded value.
+
+    Args:
+        by: 'volume' or 'value' (default 'value').
+        index: NSE index to scan (default 'NIFTY 500').
+        top_n: Number of results (default 10).
+    """
+    try:
+        s = _get_live_session()
+        idx_param = index.upper().replace(" ", "%20")
+        r = s.get(
+            f"https://www.nseindia.com/api/equity-stockIndices?index={idx_param}",
+            timeout=10,
+        )
+        stocks = r.json().get("data", [])
+        stocks = [x for x in stocks if x.get("symbol") and x.get("priority") != 1]
+        sort_key = "totalTradedVolume" if by == "volume" else "totalTradedValue"
+        sorted_stocks = sorted(
+            stocks,
+            key=lambda x: float(x.get(sort_key, 0) or 0),
+            reverse=True,
+        )[:top_n]
+
+        return {
+            "by":     by,
+            "index":  index,
+            "as_of":  datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "source": "NSE live API",
+            "stocks": [
+                {
+                    "symbol":       x.get("symbol"),
+                    "last_price":   x.get("lastPrice"),
+                    "pct_change":   round(float(x.get("pChange", 0) or 0), 2),
+                    "volume":       x.get("totalTradedVolume"),
+                    "traded_value": x.get("totalTradedValue"),
+                }
+                for x in sorted_stocks
+            ],
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def get_52week_extremes(
+    direction: str = "high",
+    index: str = "NIFTY 500",
+    top_n: int = 15,
+) -> dict:
+    """Return stocks near their 52-week high or low from an NSE index.
+
+    Args:
+        direction: 'high' (near 52w high) or 'low' (near 52w low).
+        index: NSE index name (default 'NIFTY 500').
+        top_n: Number of stocks to return (default 15).
+    """
+    try:
+        s = _get_live_session()
+        idx_param = index.upper().replace(" ", "%20")
+        r = s.get(
+            f"https://www.nseindia.com/api/equity-stockIndices?index={idx_param}",
+            timeout=10,
+        )
+        stocks = r.json().get("data", [])
+        stocks = [x for x in stocks if x.get("symbol") and x.get("priority") != 1
+                  and x.get("yearHigh") and x.get("lastPrice")]
+
+        results = []
+        for x in stocks:
+            ltp   = float(x.get("lastPrice",  0) or 0)
+            y_hi  = float(x.get("yearHigh",   0) or 0)
+            y_lo  = float(x.get("yearLow",    0) or 0)
+            if y_hi <= 0 or ltp <= 0:
+                continue
+            pct_from_high = round((ltp - y_hi) / y_hi * 100, 1)
+            pct_from_low  = round((ltp - y_lo) / y_lo * 100, 1) if y_lo > 0 else None
+            results.append({
+                "symbol":         x.get("symbol"),
+                "last_price":     ltp,
+                "52w_high":       y_hi,
+                "52w_low":        y_lo,
+                "pct_from_high":  pct_from_high,
+                "pct_from_low":   pct_from_low,
+                "pct_change_day": round(float(x.get("pChange", 0) or 0), 2),
+            })
+
+        if direction == "high":
+            # closest to 52w high → pct_from_high nearest 0 (from below)
+            filtered = sorted(results, key=lambda x: abs(x["pct_from_high"]))
+        else:
+            # nearest 52w low → smallest pct_from_low
+            filtered = sorted(results, key=lambda x: (x["pct_from_low"] or 999))
+
+        return {
+            "direction": direction,
+            "index":     index,
+            "as_of":     datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "source":    "NSE live API",
+            "stocks":    filtered[:top_n],
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def get_fii_dii_activity() -> dict:
+    """Fetch today's FII (Foreign Institutional Investors) and DII (Domestic)
+    buy/sell activity from NSE. Returns net values in crores.
+    """
+    try:
+        s = _get_live_session()
+        r = s.get("https://www.nseindia.com/api/fiidiiTradeReact", timeout=10)
+        raw = r.json()
+        result: dict = {"as_of": datetime.now().strftime("%Y-%m-%d"), "data": []}
+        for entry in raw:
+            buy  = float(entry.get("buyValue",  0) or 0)
+            sell = float(entry.get("sellValue", 0) or 0)
+            net  = float(entry.get("netValue",  buy - sell) or 0)
+            result["data"].append({
+                "category":   entry.get("category"),
+                "date":       entry.get("date"),
+                "buy_crore":  round(buy,  2),
+                "sell_crore": round(sell, 2),
+                "net_crore":  round(net,  2),
+                "sentiment":  "BUYING" if net > 0 else "SELLING",
+            })
+        return result
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def get_bulk_block_deals(top_n: int = 20) -> dict:
+    """Fetch today's bulk deals and block deals from NSE.
+
+    Bulk deals (> 0.5% of total shares) and block deals (≥ 5 lakh shares
+    or ≥ ₹5 crore in value) indicate institutional activity.
+
+    Args:
+        top_n: Max number of deals to return (default 20).
+    """
+    try:
+        import time as _time
+        s = _get_live_session()
+        # Extra warm-up hit needed for this endpoint to return session-gated data
+        s.get("https://www.nseindia.com/market-data/bulk-deals", timeout=8)
+        _time.sleep(0.5)
+        r = s.get(
+            "https://www.nseindia.com/api/snapshot-capital-market-largedeal",
+            timeout=10,
+        )
+        d = r.json()
+        bulk  = d.get("BULK_DEALS_DATA",  [])[:top_n]
+        block = d.get("BLOCK_DEALS_DATA", [])[:top_n]   # block deals
+
+        def _fmt(x: dict) -> dict:
+            return {
+                "date":        x.get("date"),
+                "symbol":      x.get("symbol"),
+                "company":     x.get("name"),
+                "client":      x.get("clientName"),
+                "buy_sell":    x.get("buySell"),
+                "qty":         x.get("qty"),
+                "price":       x.get("watp"),   # weighted average trade price
+                "remarks":     x.get("remarks"),
+            }
+
+        return {
+            "as_of":       d.get("as_on_date", datetime.now().strftime("%Y-%m-%d")),
+            "source":      "NSE live API",
+            "bulk_deals":  [_fmt(x) for x in bulk],
+            "block_deals": [_fmt(x) for x in block],
+        }
+    except Exception as e:
+        return {"error": str(e)}
 
 TOOL_REGISTRY: dict[str, Any] = {
     "get_live_quote": (
@@ -935,6 +1188,82 @@ TOOL_REGISTRY: dict[str, Any] = {
         get_live_market_overview,
         "Fetch live NSE index levels (Nifty 50, Bank Nifty, IT, Midcap, Smallcap) plus advances/declines. Use for 'how is the market', 'market today', 'live market' queries.",
         {"type": "object", "properties": {}, "required": []},
+    ),
+    "get_top_gainers_losers": (
+        get_top_gainers_losers,
+        (
+            "Get top gaining and/or losing stocks from an NSE index RIGHT NOW (live). "
+            "Returns symbol, LTP, % change, volume, 52w range for each stock. "
+            "Use for 'top gainers', 'top losers', 'biggest movers', 'what is up/down today'. "
+            "index can be: 'NIFTY 50', 'NIFTY BANK', 'NIFTY IT', 'NIFTY 500', "
+            "'NIFTY MIDCAP 100', 'NIFTY SMALLCAP 100', 'NIFTY PHARMA', etc."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "index":     {"type": "string", "default": "NIFTY 500"},
+                "top_n":     {"type": "integer", "default": 10},
+                "direction": {"type": "string", "enum": ["gainers", "losers", "both"], "default": "both"},
+            },
+            "required": [],
+        },
+    ),
+    "get_most_active_stocks": (
+        get_most_active_stocks,
+        (
+            "Get the most actively traded stocks by volume or traded value from an NSE index. "
+            "Use for 'most active', 'highest volume', 'most traded', 'activity leaders'. "
+            "'by' can be 'volume' or 'value'."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "by":    {"type": "string", "enum": ["volume", "value"], "default": "value"},
+                "index": {"type": "string", "default": "NIFTY 500"},
+                "top_n": {"type": "integer", "default": 10},
+            },
+            "required": [],
+        },
+    ),
+    "get_52week_extremes": (
+        get_52week_extremes,
+        (
+            "Find stocks nearest to their 52-week high or low in a given index. "
+            "Use for '52-week high', '52-week low', 'new highs', 'new lows', "
+            "'near 52w high', 'breakout candidates', 'stocks at lows'. "
+            "direction: 'high' or 'low'."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "direction": {"type": "string", "enum": ["high", "low"], "default": "high"},
+                "index":     {"type": "string", "default": "NIFTY 500"},
+                "top_n":     {"type": "integer", "default": 15},
+            },
+            "required": [],
+        },
+    ),
+    "get_fii_dii_activity": (
+        get_fii_dii_activity,
+        (
+            "Fetch today's FII (Foreign Institutional Investors) and DII (Domestic Institutional) "
+            "buy/sell activity from NSE. Returns net buy/sell values in crores and sentiment. "
+            "Use for 'FII', 'DII', 'institutional activity', 'foreign investors', 'FII buying/selling'."
+        ),
+        {"type": "object", "properties": {}, "required": []},
+    ),
+    "get_bulk_block_deals": (
+        get_bulk_block_deals,
+        (
+            "Fetch today's bulk deals (> 0.5% of shares) and block deals from NSE. "
+            "Shows which institutional clients bought or sold large stakes. "
+            "Use for 'bulk deals', 'block deals', 'institutional trades', 'large trades', 'who is buying'."
+        ),
+        {
+            "type": "object",
+            "properties": {"top_n": {"type": "integer", "default": 20}},
+            "required": [],
+        },
     ),
     "resolve_symbol": (
         resolve_symbol,
