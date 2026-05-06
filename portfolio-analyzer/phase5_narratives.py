@@ -334,3 +334,4 @@ def run_phase5() -> dict:
 if __name__ == "__main__":
     run_phase5()
     print("Phase 5 done.", STOCK_NARRATIVES_JSON, STOCK_NARRATIVES_MD)
+

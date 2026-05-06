@@ -1,24 +1,24 @@
 SECTOR_NAME,MACRO_TAILWIND,MACRO_DETAIL
-FMCG,0.21,India VIX(+0.2)
-Pharma,0.21,India VIX(+0.2)
-Healthcare,0.21,India VIX(+0.2)
-Auto,-0.15,India VIX(-0.2)
-Automobile,-0.15,India VIX(-0.2)
-IT,-0.15,India VIX(-0.2)
-Technology,-0.15,India VIX(-0.2)
-Defence & Shipbuilding,-0.2,India VIX(-0.2)
-Energy,-0.2,India VIX(-0.2)
-Defence,-0.2,India VIX(-0.2)
-Telecom,-0.2,India VIX(-0.2)
-Consumer Discretionary,-0.2,India VIX(-0.2)
-Oil & Gas,-0.2,India VIX(-0.2)
-Chemicals,-0.21,India VIX(-0.2)
-Capital Goods,-0.22,India VIX(-0.2)
-Metals & Mining,-0.22,India VIX(-0.2)
-Infrastructure,-0.22,India VIX(-0.2)
-Media & Entertainment,-0.25,India VIX(-0.3)
-Realty,-0.26,India VIX(-0.3)
-PSU Bank,-0.3,India VIX(-0.3)
-Private Bank,-0.3,India VIX(-0.3)
-Financial Services,-0.3,India VIX(-0.3)
-Banking & Finance,-0.3,India VIX(-0.3)
+Capital Goods,1.43,"Copper (USD/MT)(+0.1), Brent Crude(+0.8), India VIX(-0.1), US 10Y Treasury(+0.6)"
+Telecom,1.05,"India VIX(-0.1), Nifty 50(+0.1), Brent Crude(+0.4), USD/INR(+0.6)"
+FMCG,1.01,"India VIX(+0.1), India CPI Index(+0.4), Brent Crude(+0.6)"
+Auto,0.96,"Brent Crude(+0.9), Copper (USD/MT)(+0.1)"
+Automobile,0.96,"Brent Crude(+0.9), Copper (USD/MT)(+0.1)"
+Financial Services,0.74,"India VIX(-0.1), Nifty 50(+0.1), Brent Crude(+0.4), USD/INR(+0.3)"
+Banking & Finance,0.74,"India VIX(-0.1), Nifty 50(+0.1), Brent Crude(+0.4), USD/INR(+0.3)"
+Defence,0.68,"Nifty 50(+0.1), India VIX(-0.1), Copper (USD/MT)(+0.1), USD/INR(+0.6)"
+Defence & Shipbuilding,0.68,"Nifty 50(+0.1), India VIX(-0.1), Copper (USD/MT)(+0.1), USD/INR(+0.6)"
+Infrastructure,0.66,"Copper (USD/MT)(+0.1), Brent Crude(+0.6), India VIX(-0.1)"
+Consumer Discretionary,0.64,"India CPI Index(+0.3), India VIX(-0.1), Nifty 50(+0.1), Brent Crude(+0.3)"
+Private Bank,0.59,"India VIX(-0.1), Nifty 50(+0.1), Brent Crude(+0.3), USD/INR(+0.3)"
+PSU Bank,0.59,"India VIX(-0.1), Nifty 50(+0.1), Brent Crude(+0.3), USD/INR(+0.3)"
+Realty,0.58,"India VIX(-0.1), USD/INR(+0.6)"
+Metals & Mining,0.4,"Copper (USD/MT)(+0.2), Brent Crude(-0.4), USD/INR(+0.8), India VIX(-0.1)"
+Media & Entertainment,0.35,"India VIX(-0.1), Nifty 50(+0.1), India CPI Index(+0.3)"
+Chemicals,0.22,"Brent Crude(-0.6), Copper (USD/MT)(+0.1), USD/INR(+0.8), India VIX(-0.1)"
+IT,-0.3,"USD/INR(-1.2), US 10Y Treasury(+0.6), Brent Crude(+0.3)"
+Technology,-0.3,"USD/INR(-1.2), US 10Y Treasury(+0.6), Brent Crude(+0.3)"
+Pharma,-0.44,"USD/INR(-0.9), India VIX(+0.1), Brent Crude(+0.4)"
+Healthcare,-0.44,"USD/INR(-0.9), India VIX(+0.1), Brent Crude(+0.4)"
+Energy,-0.6,"Brent Crude(-1.2), USD/INR(+0.6), India VIX(-0.1), Nifty 50(+0.1)"
+Oil & Gas,-0.6,"Brent Crude(-1.2), USD/INR(+0.6), India VIX(-0.1), Nifty 50(+0.1)"

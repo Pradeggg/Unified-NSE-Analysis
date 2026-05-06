@@ -35,7 +35,6 @@ import argparse
 import html
 import json
 import math
-import os
 import sqlite3
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -174,44 +173,6 @@ def _load_price_history() -> pd.DataFrame:
     df = pd.read_csv(STOCK_CSV, usecols=["SYMBOL", "TIMESTAMP", "OPEN", "HIGH", "LOW", "CLOSE"])
     df["TIMESTAMP"] = pd.to_datetime(df["TIMESTAMP"])
     return df
-
-
-def _compute_rs_map(hist: pd.DataFrame) -> dict[str, float]:
-    """Compute RS (stock return - Nifty 500 return) over last 50 trading days for all symbols."""
-    if hist.empty:
-        return {}
-
-    INDEX_CSV = ROOT / "data" / "nse_index_data.csv"
-    if not INDEX_CSV.exists():
-        return {}
-    try:
-        idx_df = pd.read_csv(INDEX_CSV, usecols=["SYMBOL", "TIMESTAMP", "CLOSE"])
-        idx_df["TIMESTAMP"] = pd.to_datetime(idx_df["TIMESTAMP"])
-        nifty500 = idx_df[idx_df["SYMBOL"].str.strip().str.lower() == "nifty 500"].sort_values("TIMESTAMP")
-        if len(nifty500) < 50:
-            return {}
-        n500_now  = float(nifty500["CLOSE"].iloc[-1])
-        n500_old  = float(nifty500["CLOSE"].iloc[-50])
-        if n500_old == 0:
-            return {}
-        idx_ret = (n500_now / n500_old) - 1.0
-    except Exception:
-        return {}
-
-    rs_map: dict[str, float] = {}
-    for sym, grp in hist.groupby("SYMBOL"):
-        grp = grp.sort_values("TIMESTAMP")
-        if len(grp) < 50:
-            continue
-        try:
-            s_now = float(grp["CLOSE"].iloc[-1])
-            s_old = float(grp["CLOSE"].iloc[-50])
-            if s_old == 0:
-                continue
-            rs_map[sym] = round((s_now / s_old - 1.0) - idx_ret, 4)
-        except Exception:
-            pass
-    return rs_map
 
 
 def _compute_supertrend_for_symbols(hist: pd.DataFrame, symbols: list) -> dict:
@@ -457,10 +418,6 @@ def write_snapshot(
     hist = _load_price_history()
     screener_df = _run_screener(analysis, hist)
 
-    # Pre-compute RS from price history as fallback for when CSV has NULLs
-    rs_map = _compute_rs_map(hist)
-    print(f"  RS computed from price history: {len(rs_map)} symbols")
-
     live_prices: dict[str, float] = {}
     if fetch_live:
         live_prices = _fetch_live_prices(screener_df["SYMBOL"].tolist())
@@ -504,7 +461,7 @@ def write_snapshot(
             "rsi": _f(r.get("RSI")),
             "trading_signal": str(r.get("TRADING_SIGNAL", "") or ""),
             "trend_signal": str(r.get("TREND_SIGNAL", "") or ""),
-            "relative_strength": _f(r.get("RELATIVE_STRENGTH")) or rs_map.get(sym),
+            "relative_strength": _f(r.get("RELATIVE_STRENGTH")),
             "change_1d_pct": _f(r.get("CHANGE_1D")),
             "change_1w_pct": _f(r.get("CHANGE_1W")),
             "change_1m_pct": _f(r.get("CHANGE_1M")),
@@ -529,21 +486,6 @@ def write_snapshot(
                 "ratios_summary": fc_row.get("ratios_summary"),
             }
         base["fund_details"] = json.dumps(fund_details_dict) if fund_details_dict else None
-
-        # Fill missing enhanced fund scores from scraped fund_details
-        needs_scores = (
-            fund_details_dict
-            and (
-                base.get("enhanced_fund_score") is None
-                or (isinstance(base.get("enhanced_fund_score"), float) and base["enhanced_fund_score"] != base["enhanced_fund_score"])  # NaN
-            )
-        )
-        if needs_scores:
-            computed = _scores_from_fund_details(fund_details_dict)
-            for k, v in computed.items():
-                if base.get(k) is None or (isinstance(base.get(k), float) and base[k] != base[k]):
-                    base[k] = v
-
         base["investment_score"] = _investment_score(base)
         narrative_text, stance_val = _generate_narrative(base, fund_details_dict)
         base["narrative"] = narrative_text
@@ -645,85 +587,6 @@ def _build_sector_map() -> dict[str, str]:
         pass
     _SECTOR_MAP_CACHE = result
     return result
-
-
-def _scores_from_fund_details(fd: dict) -> dict:
-    """
-    Derive enhanced_fund_score, earnings_quality, sales_growth,
-    financial_strength, institutional_backing from scraped fund_details.
-    Returns dict with those keys (0-100 scale).
-    """
-    import re
-
-    def _extract_num(text, pattern: str) -> float | None:
-        if not isinstance(text, str):
-            return None
-        m = re.search(pattern, text, re.IGNORECASE)
-        if m:
-            try:
-                return float(m.group(1).replace(",", ""))
-            except Exception:
-                pass
-        return None
-
-    pnl    = fd.get("pnl_summary", "")           if fd else ""
-    ratios = fd.get("ratios_summary", "")         if fd else ""
-    bs     = fd.get("balance_sheet_summary", "")  if fd else ""
-    pnl    = pnl    if isinstance(pnl, str)    else ""
-    ratios = ratios if isinstance(ratios, str) else ""
-    bs     = bs     if isinstance(bs, str)     else ""
-
-    # Sales YoY → sales_growth score (0-100)
-    sales_yoy = _extract_num(pnl, r"Sales.*?YoY\s*([+\-]?\d+\.?\d*)%")
-    if sales_yoy is None:
-        sales_growth_score = 50.0
-    else:
-        # +30% → 100, 0% → 60, -20% → 20
-        sales_growth_score = max(0.0, min(100.0, 60 + sales_yoy * 1.3))
-
-    # Net Profit YoY → earnings_quality score
-    np_yoy = _extract_num(pnl, r"NetProfit.*?YoY\s*([+\-]?\d+\.?\d*)%")
-    if np_yoy is None:
-        earnings_quality = 50.0
-    else:
-        earnings_quality = max(0.0, min(100.0, 60 + np_yoy * 0.8))
-
-    # ROCE → financial_strength
-    roce = _extract_num(ratios, r"ROCE[:\s]*([0-9.]+)")
-    npm = _extract_num(ratios, r"NPM[:\s]*([0-9.]+)")
-    debt_cr = _extract_num(bs, r"Debt[:\s]*([\d,]+)")
-    assets_cr = _extract_num(bs, r"Assets[:\s]*([\d,]+)")
-    if roce is not None:
-        fs = max(0.0, min(100.0, roce * 2.5))   # ROCE 20% → 50, 40% → 100
-    elif npm is not None:
-        fs = max(0.0, min(100.0, npm * 5))
-    else:
-        fs = 50.0
-    # Penalise high debt/assets ratio
-    if debt_cr and assets_cr and assets_cr > 0:
-        debt_ratio = debt_cr / assets_cr
-        fs = max(0.0, fs - debt_ratio * 30)
-    financial_strength = fs
-
-    # institutional_backing: no per-stock data from screener; use moderate default
-    institutional_backing = 50.0
-
-    # Composite enhanced_fund_score
-    enhanced_fund_score = round(
-        sales_growth_score * 0.30
-        + earnings_quality * 0.35
-        + financial_strength * 0.25
-        + institutional_backing * 0.10,
-        1,
-    )
-
-    return {
-        "enhanced_fund_score": enhanced_fund_score,
-        "earnings_quality": round(earnings_quality, 1),
-        "sales_growth": round(sales_growth_score, 1),
-        "financial_strength": round(financial_strength, 1),
-        "institutional_backing": round(institutional_backing, 1),
-    }
 
 
 def _investment_score(r: dict) -> float:
@@ -901,28 +764,6 @@ def _compute_changes(conn: sqlite3.Connection, date_new: str, date_old: str) -> 
     return len(rows)
 
 
-def _change_live_prices_stale(conn: sqlite3.Connection, date_new: str, date_old: str) -> bool:
-    """Return True when cached change rows are missing newer snapshot live prices."""
-    row = conn.execute(
-        """
-        SELECT COUNT(*)
-        FROM stage_changes c
-        JOIN stage_snapshots s
-          ON s.snapshot_date = c.change_date
-         AND s.symbol = c.symbol
-        WHERE c.change_date = ?
-          AND c.compare_date = ?
-          AND s.live_price IS NOT NULL
-          AND (
-                c.live_price IS NULL
-             OR ABS(COALESCE(c.live_price, 0) - s.live_price) > 0.001
-          )
-        """,
-        (date_new, date_old),
-    ).fetchone()
-    return bool(row and row[0])
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Change report
 # ─────────────────────────────────────────────────────────────────────────────
@@ -964,7 +805,7 @@ def build_change_report(
             "SELECT COUNT(*) FROM stage_changes WHERE change_date=? AND compare_date=?",
             (today_snap, prev_snap)
         ).fetchone()[0]
-        if not existing or _change_live_prices_stale(conn, today_snap, prev_snap):
+        if not existing:
             _compute_changes(conn, today_snap, prev_snap)
 
         chg = pd.read_sql_query(
@@ -986,7 +827,7 @@ def build_change_report(
                     "SELECT COUNT(*) FROM stage_changes WHERE change_date=? AND compare_date=?",
                     (today_snap, week_snap)
                 ).fetchone()[0]
-                if not ex2 or _change_live_prices_stale(conn, today_snap, week_snap):
+                if not ex2:
                     _compute_changes(conn, today_snap, week_snap)
                 chg_w = pd.read_sql_query(
                     "SELECT * FROM stage_changes WHERE change_date=? AND compare_date=? ORDER BY change_type",
@@ -1034,219 +875,8 @@ def build_change_report(
     top_picks = sorted(result["stage2_now"], key=lambda r: float(r.get("investment_score") or 0), reverse=True)[:15]
     result["top_picks"] = top_picks
 
-    # Trend data across last 10 snapshots
-    result["trend"] = _build_trend_data(conn, today_snap)
-
     conn.close()
     return result
-
-
-def _build_trend_data(conn: sqlite3.Connection, snap_date: str) -> dict:
-    """Query last 10 snapshots for trend charts: breadth, sector, avg metrics."""
-    # Last 10 dates up to snap_date
-    rows = conn.execute(
-        "SELECT DISTINCT snapshot_date FROM stage_snapshots "
-        "WHERE snapshot_date <= ? ORDER BY snapshot_date DESC LIMIT 10",
-        (snap_date,)
-    ).fetchall()
-    dates = [r[0] for r in reversed(rows)]
-
-    # Stage counts per day
-    breadth = []
-    for d in dates:
-        r = conn.execute(
-            "SELECT "
-            "  SUM(CASE WHEN stage='STAGE_1' THEN 1 ELSE 0 END),"
-            "  SUM(CASE WHEN stage='STAGE_2' THEN 1 ELSE 0 END),"
-            "  SUM(CASE WHEN stage='STAGE_3' THEN 1 ELSE 0 END),"
-            "  SUM(CASE WHEN stage='STAGE_4' THEN 1 ELSE 0 END),"
-            "  COUNT(*)"
-            " FROM stage_snapshots WHERE snapshot_date=?", (d,)
-        ).fetchone()
-        breadth.append({"date": d, "s1": r[0] or 0, "s2": r[1] or 0, "s3": r[2] or 0, "s4": r[3] or 0, "total": r[4] or 0})
-
-    # Avg metrics for Stage 2 per day
-    metrics = []
-    for d in dates:
-        r = conn.execute(
-            "SELECT ROUND(AVG(CAST(technical_score AS REAL)),1),"
-            "       ROUND(AVG(CAST(rsi AS REAL)),1),"
-            "       ROUND(AVG(CAST(change_1m_pct AS REAL)),1),"
-            "       ROUND(AVG(CAST(investment_score AS REAL)),1)"
-            " FROM stage_snapshots WHERE snapshot_date=? AND stage='STAGE_2'", (d,)
-        ).fetchone()
-        metrics.append({"date": d, "avg_tech": r[0], "avg_rsi": r[1], "avg_1m": r[2], "avg_inv": r[3]})
-
-    # Sector breakdown for Stage 2 today
-    sec_rows = conn.execute(
-        "SELECT sector, COUNT(*) cnt FROM stage_snapshots "
-        "WHERE snapshot_date=? AND stage='STAGE_2' "
-        "GROUP BY sector ORDER BY cnt DESC", (snap_date,)
-    ).fetchall()
-    sectors = [{"sector": r[0] or "Unknown", "count": r[1]} for r in sec_rows]
-
-    # Entries/exits for snap_date vs previous
-    prev_date_row = conn.execute(
-        "SELECT MAX(snapshot_date) FROM stage_snapshots WHERE snapshot_date < ?", (snap_date,)
-    ).fetchone()
-    prev_date = prev_date_row[0] if prev_date_row else None
-    entries, exits = [], []
-    if prev_date:
-        e_rows = conn.execute(
-            "SELECT sc.symbol, ss.sector, ss.live_price, ss.rsi, ss.change_1m_pct "
-            "FROM stage_changes sc "
-            "JOIN stage_snapshots ss ON sc.symbol=ss.symbol AND ss.snapshot_date=? "
-            "WHERE sc.change_date=? AND sc.compare_date=? AND sc.change_type='NEW_STAGE2' "
-            "GROUP BY sc.symbol",
-            (snap_date, snap_date, prev_date)
-        ).fetchall()
-        entries = [{"symbol": r[0], "sector": r[1] or "Other", "price": r[2], "rsi": r[3], "chg_1m": r[4]} for r in e_rows]
-        x_rows = conn.execute(
-            "SELECT sc.symbol, ss.sector, ss.live_price, ss.rsi, sc.stage_now "
-            "FROM stage_changes sc "
-            "JOIN stage_snapshots ss ON sc.symbol=ss.symbol AND ss.snapshot_date=? "
-            "WHERE sc.change_date=? AND sc.compare_date=? AND sc.change_type='EXIT_STAGE2' "
-            "GROUP BY sc.symbol",
-            (snap_date, snap_date, prev_date)
-        ).fetchall()
-        exits = [{"symbol": r[0], "sector": r[1] or "Other", "price": r[2], "rsi": r[3], "now_stage": r[4]} for r in x_rows]
-
-    return {
-        "dates": dates,
-        "breadth": breadth,
-        "metrics": metrics,
-        "sectors": sectors,
-        "entries": entries,
-        "exits": exits,
-    }
-
-
-def _top_symbols(rows: list[dict], limit: int = 5) -> str:
-    syms = [str(r.get("symbol") or "").strip() for r in rows if str(r.get("symbol") or "").strip()]
-    return ", ".join(syms[:limit]) if syms else "none"
-
-
-def _rule_based_change_summary(report: dict) -> dict:
-    summ = report.get("summary", {})
-    trend = report.get("trend", {}) or {}
-    sectors = trend.get("sectors", []) or []
-    top_sectors = ", ".join(
-        f"{s.get('sector', 'Unknown')} ({s.get('count', 0)})"
-        for s in sectors[:3]
-    ) or "sector mix unavailable"
-
-    total_s2 = int(summ.get("total_stage2") or len(report.get("stage2_now", [])) or 0)
-    day_new = int(summ.get("new_entrants_day") or len(report.get("new_stage2", [])) or 0)
-    day_exit = int(summ.get("exits_day") or len(report.get("exit_stage2", [])) or 0)
-    week_new = len(report.get("week_new_stage2", []) or [])
-    week_exit = len(report.get("week_exit_stage2", []) or [])
-    stage_changes = int(summ.get("stage_changes_day") or 0)
-    stage_counts = summ.get("stage_counts", {}) or {}
-
-    new_names = _top_symbols(report.get("new_stage2", []) or [])
-    exit_names = _top_symbols(report.get("exit_stage2", []) or [])
-
-    live_rows = report.get("stage2_now", []) or []
-    live_count = sum(1 for r in live_rows if r.get("live_price") is not None)
-    live_text = (
-        f"Live prices are available for {live_count}/{len(live_rows)} Stage 2 names."
-        if live_rows else
-        "Live-price coverage is unavailable for this report snapshot."
-    )
-
-    return {
-        "source": "rules",
-        "headline": (
-            f"Stage 2 breadth stands at {total_s2} stocks, with {day_new} new entrants "
-            f"and {day_exit} exits versus {report.get('prev_date', 'the previous snapshot')}."
-        ),
-        "bullets": [
-            f"Daily churn: {stage_changes} total stage changes; weekly Stage 2 flow is {week_new} entrants and {week_exit} exits.",
-            f"New Stage 2 names to review: {new_names}. Exits to reassess: {exit_names}.",
-            f"Leadership is concentrated in {top_sectors}; current stage counts are S1 {stage_counts.get('STAGE_1', 0)}, S2 {stage_counts.get('STAGE_2', total_s2)}, S3 {stage_counts.get('STAGE_3', 0)}, S4 {stage_counts.get('STAGE_4', 0)}.",
-            live_text,
-        ],
-        "note": "Research and learning summary only. Not investment advice.",
-    }
-
-
-def _change_summary_prompt(report: dict, fallback: dict) -> str:
-    def compact_rows(rows: list[dict], keys: list[str], limit: int = 8) -> list[dict]:
-        out = []
-        for row in rows[:limit]:
-            out.append({k: row.get(k) for k in keys})
-        return out
-
-    payload = {
-        "snapshot": report.get("snap_date"),
-        "previous_snapshot": report.get("prev_date"),
-        "week_snapshot": report.get("week_snap"),
-        "summary": report.get("summary", {}),
-        "top_stage2_sectors": (report.get("trend", {}) or {}).get("sectors", [])[:8],
-        "new_stage2": compact_rows(report.get("new_stage2", []) or [], ["symbol", "company_name", "live_price", "live_vs_prev_pct", "stage_score_now"]),
-        "exit_stage2": compact_rows(report.get("exit_stage2", []) or [], ["symbol", "company_name", "stage_now", "live_price", "live_vs_prev_pct"]),
-        "weekly_new_stage2_count": len(report.get("week_new_stage2", []) or []),
-        "weekly_exit_stage2_count": len(report.get("week_exit_stage2", []) or []),
-        "fallback_summary": fallback,
-    }
-    return (
-        "Write a concise top-of-report summary for an Indian NSE Stage 2 tracker. "
-        "Use only the JSON data provided. Avoid buy/sell recommendation language; use research, watch, reassess, leadership, breadth, risk. "
-        "Return valid JSON only with keys: headline (one sentence), bullets (array of 3-4 short bullets). "
-        f"\n\nDATA:\n{json.dumps(payload, ensure_ascii=False)}"
-    )
-
-
-def _default_llm_change_summary(prompt: str) -> Optional[dict]:
-    try:
-        from sector_rotation_report import _llm_call, _load_env_key
-    except Exception:
-        return None
-
-    api_key = (
-        os.environ.get("OPENAI_API_KEY")
-        or _load_env_key("OPENAI_API_KEY")
-        or _load_env_key("AGENTIC_HARNESS_API_KEY")
-    )
-    if not api_key:
-        return None
-
-    model = (
-        os.environ.get("SHUNYAAI_ASSISTANT_MODEL")
-        or _load_env_key("SHUNYAAI_ASSISTANT_MODEL")
-        or "gpt-5.5"
-    )
-    print(f"  Generating LLM Stage 2 change summary via OpenAI {model}...")
-    return _llm_call(
-        api_key,
-        model,
-        "You are an NSE India market research assistant. Return valid JSON only.",
-        prompt,
-        max_tokens=2048,
-        timeout=90,
-    )
-
-
-def generate_change_summary(report: dict, llm_func=None) -> dict:
-    """Generate a short report-top change narrative with deterministic fallback."""
-    fallback = _rule_based_change_summary(report)
-    llm_func = llm_func or _default_llm_change_summary
-    try:
-        llm_result = llm_func(_change_summary_prompt(report, fallback))
-        if isinstance(llm_result, dict):
-            headline = str(llm_result.get("headline") or "").strip()
-            bullets_raw = llm_result.get("bullets") or []
-            bullets = [str(b).strip() for b in bullets_raw if str(b).strip()]
-            if headline and bullets:
-                return {
-                    "source": "llm",
-                    "headline": headline,
-                    "bullets": bullets[:4],
-                    "note": fallback["note"],
-                }
-    except Exception as exc:
-        print(f"  LLM Stage 2 summary skipped ({type(exc).__name__}); using rule-based summary.")
-    return fallback
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1272,8 +902,6 @@ def _pct_cell(v) -> str:
         return '<td style="color:#94a3b8">—</td>'
     try:
         fv = float(v)
-        if math.isnan(fv) or math.isinf(fv):  # Guard against NaN/Inf from pandas
-            return '<td style="color:#94a3b8">—</td>'
         color = "#16a34a" if fv > 0 else ("#dc2626" if fv < 0 else "#64748b")
         arrow = "▲" if fv > 0 else ("▼" if fv < 0 else "")
         return f'<td style="color:{color};font-weight:500;text-align:right">{arrow}{abs(fv):.2f}%</td>'
@@ -1285,10 +913,7 @@ def _price_cell(v) -> str:
     if v is None:
         return '<td style="color:#94a3b8">—</td>'
     try:
-        fv = float(v)
-        if math.isnan(fv) or math.isinf(fv):  # Guard against NaN/Inf from pandas
-            return '<td style="color:#94a3b8">—</td>'
-        return f'<td style="text-align:right">₹{fv:,.2f}</td>'
+        return f'<td style="text-align:right">₹{float(v):,.2f}</td>'
     except (TypeError, ValueError):
         return '<td style="color:#94a3b8">—</td>'
 
@@ -1301,13 +926,6 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f1f5f9;color:#0f172
 .app-bar h1{font-size:1.4rem;font-weight:700}
 .app-bar p{font-size:0.82rem;opacity:.8;margin-top:4px}
 .container{max-width:1600px;margin:0 auto;padding:20px 16px}
-.change-summary{background:#fff;border-radius:10px;border:1px solid #bbf7d0;border-left:5px solid #059669;box-shadow:0 1px 3px rgba(0,0,0,.08);padding:16px 18px;margin-bottom:20px}
-.change-summary .cs-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
-.change-summary h2{font-size:1rem;font-weight:750;color:#064e3b}
-.change-summary p{font-size:.9rem;line-height:1.55;color:#0f172a;margin-bottom:8px}
-.change-summary ul{margin-left:18px;color:#334155;font-size:.84rem;line-height:1.55}
-.change-summary li{margin:3px 0}
-.change-summary .cs-note{font-size:.74rem;color:#64748b;margin-top:10px}
 .summary-grid{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px}
 .sum-card{background:#fff;border-radius:8px;padding:14px 20px;box-shadow:0 1px 3px rgba(0,0,0,.08);min-width:140px;border-top:3px solid transparent}
 .sum-card .sc-val{font-size:2rem;font-weight:700;line-height:1}
@@ -1464,214 +1082,12 @@ tr.row-sell{background:rgba(220,38,38,.03)}
 </style>"""
 
 
-def _build_trend_html(trend: dict, snap_date: str) -> str:
-    """Build a Market Trends panel with Chart.js charts."""
-    if not trend or not trend.get("dates"):
-        return ""
-
-    import json as _json
-
-    dates     = trend["dates"]
-    breadth   = trend["breadth"]
-    metrics   = trend["metrics"]
-    sectors   = trend["sectors"]
-    entries   = trend["entries"]
-    exits     = trend["exits"]
-
-    # Short date labels e.g. "Apr 21"
-    def short_date(d: str) -> str:
-        try:
-            from datetime import datetime as _dt
-            return _dt.fromisoformat(d).strftime("%b %d")
-        except Exception:
-            return d
-
-    labels_js   = _json.dumps([short_date(d) for d in dates])
-    s2_counts   = _json.dumps([b["s2"] for b in breadth])
-    s1_counts   = _json.dumps([b["s1"] for b in breadth])
-    s3_counts   = _json.dumps([b["s3"] for b in breadth])
-    s4_counts   = _json.dumps([b["s4"] for b in breadth])
-    rsi_vals    = _json.dumps([m["avg_rsi"]  for m in metrics])
-    tech_vals   = _json.dumps([m["avg_tech"] for m in metrics])
-    chg1m_vals  = _json.dumps([m["avg_1m"]   for m in metrics])
-
-    sec_labels  = _json.dumps([s["sector"] for s in sectors])
-    sec_counts  = _json.dumps([s["count"]  for s in sectors])
-
-    # Entries/exits table rows
-    def entry_rows():
-        rows = ""
-        for e in entries:
-            rsi_v = f'{e["rsi"]:.0f}' if e["rsi"] else "—"
-            chg   = f'{e["chg_1m"]:.1f}%' if e["chg_1m"] is not None else "—"
-            price = f'₹{e["price"]:,.2f}' if e["price"] else "—"
-            rows += f'<tr><td><strong>{_H(e["symbol"])}</strong></td><td>{_H(e["sector"])}</td><td>{price}</td><td>{rsi_v}</td><td style="color:#16a34a;font-weight:600">{chg}</td></tr>\n'
-        return rows or '<tr><td colspan="5" style="text-align:center;color:#94a3b8">No entries</td></tr>'
-
-    def exit_rows():
-        rows = ""
-        for e in exits:
-            price = f'₹{e["price"]:,.2f}' if e["price"] else "—"
-            rsi_v = f'{e["rsi"]:.0f}' if e["rsi"] else "—"
-            rows += f'<tr><td><strong>{_H(e["symbol"])}</strong></td><td>{_H(e["sector"])}</td><td>{price}</td><td>{rsi_v}</td><td><span style="background:#fee2e2;color:#991b1b;padding:1px 7px;border-radius:4px;font-size:.75rem">{_H(e["now_stage"])}</span></td></tr>\n'
-        return rows or '<tr><td colspan="5" style="text-align:center;color:#94a3b8">No exits</td></tr>'
-
-    # Colour palette for sector donut
-    palette = ["#0ea5e9","#16a34a","#7c3aed","#f59e0b","#ef4444","#06b6d4","#84cc16","#ec4899","#6366f1","#14b8a6","#f97316","#a855f7"]
-    bg_colors = _json.dumps((palette * 4)[:len(sectors)])
-
-    return f"""
-<div class="section" style="margin-bottom:20px">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-    <h2 style="font-size:1.05rem;font-weight:700;color:#0f172a;margin:0">📊 Market Trends &nbsp;<span style="font-size:.8rem;font-weight:400;color:#64748b">Last {len(dates)} trading days</span></h2>
-  </div>
-
-  <!-- Row 1: Breadth + Sector donut -->
-  <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px">
-
-    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px">
-      <div style="font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#64748b;margin-bottom:10px">Market Breadth — Stage Distribution</div>
-      <div style="position:relative;height:220px"><canvas id="breadthChart"></canvas></div>
-    </div>
-
-    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px">
-      <div style="font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#64748b;margin-bottom:10px">Stage 2 Sectors — Today</div>
-      <div style="position:relative;height:220px"><canvas id="sectorChart"></canvas></div>
-    </div>
-
-  </div>
-
-  <!-- Row 2: RSI + Tech + 1m perf line charts -->
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px">
-
-    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px">
-      <div style="font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#64748b;margin-bottom:10px">Avg RSI — Stage 2</div>
-      <div style="position:relative;height:160px"><canvas id="rsiChart"></canvas></div>
-    </div>
-
-    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px">
-      <div style="font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#64748b;margin-bottom:10px">Avg Tech Score — Stage 2</div>
-      <div style="position:relative;height:160px"><canvas id="techChart"></canvas></div>
-    </div>
-
-    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px">
-      <div style="font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#64748b;margin-bottom:10px">Avg 1-Month Return — Stage 2</div>
-      <div style="position:relative;height:160px"><canvas id="chg1mChart"></canvas></div>
-    </div>
-
-  </div>
-
-  <!-- Row 3: Entries / Exits tables -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-
-    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:16px">
-      <div style="font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#15803d;margin-bottom:10px">🟢 New Stage 2 Entries ({len(entries)})</div>
-      <table style="width:100%;font-size:.78rem;border-collapse:collapse">
-        <thead><tr style="color:#64748b;border-bottom:1px solid #e2e8f0">
-          <th style="text-align:left;padding:4px 6px">Symbol</th>
-          <th style="text-align:left;padding:4px 6px">Sector</th>
-          <th style="text-align:right;padding:4px 6px">Price</th>
-          <th style="text-align:right;padding:4px 6px">RSI</th>
-          <th style="text-align:right;padding:4px 6px">1M Chg</th>
-        </tr></thead>
-        <tbody>{entry_rows()}</tbody>
-      </table>
-    </div>
-
-    <div style="background:#fff5f5;border:1px solid #fecaca;border-radius:10px;padding:16px">
-      <div style="font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#991b1b;margin-bottom:10px">🔴 Stage 2 Exits ({len(exits)})</div>
-      <table style="width:100%;font-size:.78rem;border-collapse:collapse">
-        <thead><tr style="color:#64748b;border-bottom:1px solid #e2e8f0">
-          <th style="text-align:left;padding:4px 6px">Symbol</th>
-          <th style="text-align:left;padding:4px 6px">Sector</th>
-          <th style="text-align:right;padding:4px 6px">Price</th>
-          <th style="text-align:right;padding:4px 6px">RSI</th>
-          <th style="text-align:right;padding:4px 6px">Now</th>
-        </tr></thead>
-        <tbody>{exit_rows()}</tbody>
-      </table>
-    </div>
-
-  </div>
-</div>
-
-<script>
-(function(){{
-  var labels = {labels_js};
-  var s2 = {s2_counts}, s1 = {s1_counts}, s3 = {s3_counts}, s4 = {s4_counts};
-
-  // Breadth stacked bar
-  new Chart(document.getElementById('breadthChart'), {{
-    type: 'bar',
-    data: {{
-      labels: labels,
-      datasets: [
-        {{label:'Stage 2 ✅', data: s2, backgroundColor:'#16a34a', stack:'a'}},
-        {{label:'Stage 1',    data: s1, backgroundColor:'#f59e0b', stack:'a'}},
-        {{label:'Stage 3',    data: s3, backgroundColor:'#f97316', stack:'a'}},
-        {{label:'Stage 4 ❌', data: s4, backgroundColor:'#dc2626', stack:'a'}},
-      ]
-    }},
-    options: {{responsive:true, maintainAspectRatio:false,
-      plugins:{{legend:{{position:'bottom', labels:{{font:{{size:10}}}}}}}},
-      scales:{{x:{{stacked:true, ticks:{{font:{{size:10}}}}}}, y:{{stacked:true, ticks:{{font:{{size:10}}}}}}}}
-    }}
-  }});
-
-  // Sector donut
-  new Chart(document.getElementById('sectorChart'), {{
-    type: 'doughnut',
-    data: {{
-      labels: {sec_labels},
-      datasets: [{{data: {sec_counts}, backgroundColor: {bg_colors}, borderWidth: 1}}]
-    }},
-    options: {{responsive:true, maintainAspectRatio:false,
-      plugins:{{legend:{{position:'right', labels:{{font:{{size:10}}, boxWidth:10}}}}, tooltip:{{callbacks:{{label: function(ctx){{ return ctx.label + ': ' + ctx.raw; }}}}}}}}
-    }}
-  }});
-
-  function lineChart(id, data, color, label, minY, maxY) {{
-    new Chart(document.getElementById(id), {{
-      type: 'line',
-      data: {{labels: labels, datasets: [{{label: label, data: data,
-        borderColor: color, backgroundColor: color + '22',
-        fill: true, tension: 0.3, pointRadius: 4, pointHoverRadius: 6}}]}},
-      options: {{responsive:true, maintainAspectRatio:false,
-        plugins:{{legend:{{display:false}}}},
-        scales:{{
-          x:{{ticks:{{font:{{size:10}}}}}},
-          y:{{min: minY, max: maxY, ticks:{{font:{{size:10}}}}}}
-        }}
-      }}
-    }});
-  }}
-
-  var rsiData  = {rsi_vals};
-  var techData = {tech_vals};
-  var chgData  = {chg1m_vals};
-
-  var rsiMin  = Math.max(0,  Math.min.apply(null, rsiData.filter(function(v){{return v!=null;}})) - 5);
-  var rsiMax  = Math.min(100,Math.max.apply(null, rsiData.filter(function(v){{return v!=null;}})) + 5);
-  var techMin = Math.max(0,  Math.min.apply(null, techData.filter(function(v){{return v!=null;}})) - 5);
-  var techMax = Math.min(100,Math.max.apply(null, techData.filter(function(v){{return v!=null;}})) + 5);
-  var chgMin  = Math.min.apply(null, chgData.filter(function(v){{return v!=null;}})) - 2;
-  var chgMax  = Math.max.apply(null, chgData.filter(function(v){{return v!=null;}})) + 2;
-
-  lineChart('rsiChart',   rsiData,  '#0891b2', 'Avg RSI',        rsiMin,  rsiMax);
-  lineChart('techChart',  techData, '#7c3aed', 'Avg Tech Score', techMin, techMax);
-  lineChart('chg1mChart', chgData,  '#16a34a', 'Avg 1M Chg %',  chgMin,  chgMax);
-}})();
-</script>
-"""
-
-
 def build_html_report(report: dict) -> str:
     snap = report.get("snap_date", "N/A")
     prev = report.get("prev_date", "N/A")
     week = report.get("week_snap", "N/A")
     summ = report.get("summary", {})
     now_ts = datetime.now().strftime("%Y-%m-%d %H:%M")
-    trend = report.get("trend", {})
 
     s2_list   = report.get("stage2_now", [])
     new_s2    = report.get("new_stage2", [])
@@ -1680,7 +1096,6 @@ def build_html_report(report: dict) -> str:
     w_new     = report.get("week_new_stage2", [])
     w_exit    = report.get("week_exit_stage2", [])
     w_price   = report.get("week_price_changes", [])
-    change_summary = report.get("change_summary") or generate_change_summary(report)
 
     # ── helpers ──────────────────────────────────────────────────────────────
     _SIG_MAP = {
@@ -1703,8 +1118,6 @@ def build_html_report(report: dict) -> str:
     def score_bar(v, max_v: float = 100, color: str = "#059669") -> str:
         try:
             fv = float(v)
-            if fv != fv:  # NaN check
-                return "—"
             w = min(100, max(0, fv / max_v * 100))
             return (f'<div class="score-bar"><span class="sb-num">{fv:.0f}</span>'
                     f'<div class="sb-track"><div class="sb-fill" style="width:{w}%;background:{color}"></div></div></div>')
@@ -1747,8 +1160,6 @@ def build_html_report(report: dict) -> str:
         def _sb(v, color="#059669"):
             try:
                 fv = float(v)
-                if fv != fv:  # NaN check
-                    return "—"
                 w = min(100, max(0, fv))
                 return (f'<div class="score-bar"><span class="sb-num">{fv:.0f}</span>'
                         f'<div class="sb-track"><div class="sb-fill" style="width:{w}%;background:{color}"></div></div></div>')
@@ -2072,21 +1483,6 @@ def build_html_report(report: dict) -> str:
         f'<div class="sum-card"><div class="sc-val sc-red">{len(w_exit)}</div><div class="sc-lbl">Exits (week)</div></div>'
     )
 
-    def _change_summary_html(summary: dict) -> str:
-        bullets = "".join(f"<li>{_H(str(b))}</li>" for b in summary.get("bullets", [])[:4])
-        return (
-            '<div class="change-summary">'
-            '<div class="cs-top">'
-            '<h2>What Changed</h2>'
-            '</div>'
-            f'<p>{_H(str(summary.get("headline") or ""))}</p>'
-            f'<ul>{bullets}</ul>'
-            f'<div class="cs-note">{_H(str(summary.get("note") or "Research and learning summary only. Not investment advice."))}</div>'
-            '</div>'
-        )
-
-    change_summary_html = _change_summary_html(change_summary)
-
     # ── Top Picks ─────────────────────────────────────────────────────────────
     top_picks = report.get("top_picks", [])
     def top_picks_html(picks):
@@ -2163,9 +1559,6 @@ def build_html_report(report: dict) -> str:
             '</div>'
         )
     picks_section = top_picks_html(top_picks)
-
-    # ── Trend Section ─────────────────────────────────────────────────────────
-    trend_section = _build_trend_html(trend, snap)
 
     # ── Tabs ─────────────────────────────────────────────────────────────────
     help_tab_content = """
@@ -2498,12 +1891,6 @@ function showPickModal(idx) {
   var liveStr     = pk.live_price ? '₹' + pk.live_price.toLocaleString('en-IN', {maximumFractionDigits:2}) : '—';
 
   function mbar(lbl, val, color) {
-    if (val === null || val === undefined || isNaN(val)) {
-      return '<div class="mfund-row">'
-        + '<span class="mfund-lbl">'+lbl+'</span>'
-        + '<span class="mfund-num" style="color:#9ca3af">—</span>'
-        + '</div>';
-    }
     var w = Math.min(100, Math.max(0, val));
     return '<div class="mfund-row">'
       + '<span class="mfund-lbl">'+lbl+'</span>'
@@ -2553,7 +1940,6 @@ function closePickModal() {
 <html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Stage 2 Tracker – {snap}</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 {CSS}
 </head>
 <body>
@@ -2563,9 +1949,7 @@ function closePickModal() {
      &nbsp;·&nbsp; Week vs: <strong>{week}</strong> &nbsp;·&nbsp; Generated: {now_ts}</p>
 </div>
 <div class="container">
-  {change_summary_html}
   <div class="summary-grid">{cards}</div>
-  {trend_section}
   {trans_html}
   {picks_section}
   <div class="section">

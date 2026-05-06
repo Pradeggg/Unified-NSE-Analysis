@@ -34,24 +34,17 @@ except ImportError:
 # Configuration
 # =============================================================================
 
-# Set paths — use script location so this works from any directory
-BASE_DIR = Path(__file__).resolve().parent
-NSE_DATA_DIR = BASE_DIR / 'data'   # nse_sec_full_data.csv and nse_index_data.csv live here
+# Set paths
+BASE_DIR = Path('/Users/pgorai/Library/CloudStorage/OneDrive-Deloitte(O365D)/Documents/Data Visualization/Analytics/Financial Markets/Unified-NSE-Analysis')
+NSE_DATA_DIR = Path('/Users/pgorai/Library/CloudStorage/OneDrive-Deloitte(O365D)/Documents/Data Visualization/Analytics/Financial Markets/NSE-index')
 DATA_DIR = BASE_DIR / 'data'
 REPORTS_DIR = BASE_DIR / 'reports'
 REPORTS_DIR.mkdir(exist_ok=True, parents=True)
-GENERATED_CSV_DIR = BASE_DIR / 'reports' / 'generated_csv'
-GENERATED_CSV_DIR.mkdir(exist_ok=True, parents=True)
-
-# Legacy fallback: OneDrive location for nse_sec_full_data.csv
-_ONEDRIVE_NSE = Path('/Users/pgorai/Library/CloudStorage/OneDrive-Deloitte(O365D)/Documents/Data Visualization/Analytics/Financial Markets/NSE-index')
 
 # Database path
 DB_PATH = BASE_DIR / 'nse_analysis.db'
 
-# PG: Guard print so it only fires when run directly, not on import
-if __name__ == "__main__":
-    print("Starting ENHANCED NSE Universe Analysis (Python)...")
+print("Starting ENHANCED NSE Universe Analysis (Python)...")
 
 # =============================================================================
 # Database Functions
@@ -138,14 +131,12 @@ def load_stock_data():
     """Load NSE stock data from CSV"""
     print("Loading NSE stock data with enhanced error handling...")
     
-    # Search order: local data/, then OneDrive legacy location
-    candidates = [
-        DATA_DIR / 'nse_sec_full_data.csv',
-        _ONEDRIVE_NSE / 'nse_sec_full_data.csv',
-    ]
-    stock_file = next((p for p in candidates if p.exists()), None)
-    if stock_file is None:
-        raise FileNotFoundError(f"nse_sec_full_data.csv not found in {DATA_DIR} or OneDrive fallback")
+    stock_file = DATA_DIR / 'nse_sec_full_data.csv'
+    if not stock_file.exists():
+        # Try alternative location
+        stock_file = NSE_DATA_DIR / 'nse_sec_full_data.csv'
+        if not stock_file.exists():
+            raise FileNotFoundError(f"Stock data file not found: {stock_file}")
     
     try:
         # Read CSV
@@ -187,13 +178,11 @@ def load_index_data():
     """Load NSE index data from CSV"""
     print("Loading comprehensive NSE index data...")
     
-    candidates = [
-        DATA_DIR / 'nse_index_data.csv',
-        _ONEDRIVE_NSE / 'nse_index_data.csv',
-    ]
-    index_file = next((p for p in candidates if p.exists()), None)
-    if index_file is None:
-        raise FileNotFoundError(f"nse_index_data.csv not found in {DATA_DIR} or OneDrive fallback")
+    index_file = DATA_DIR / 'nse_index_data.csv'
+    if not index_file.exists():
+        index_file = NSE_DATA_DIR / 'nse_index_data.csv'
+        if not index_file.exists():
+            raise FileNotFoundError(f"Index data file not found: {index_file}")
     
     try:
         df = pd.read_csv(index_file, encoding='utf-8', low_memory=False)
@@ -211,8 +200,6 @@ def load_fundamental_data():
     print("Loading fundamental scores database...")
     
     fund_file = DATA_DIR / 'fundamental_scores_database.csv'
-    if not fund_file.exists():
-        fund_file = _ONEDRIVE_NSE / 'fundamental_scores_database.csv'
     if not fund_file.exists():
         print("Fundamental scores file not found, continuing without fundamental data")
         return None
@@ -232,8 +219,7 @@ def load_company_names():
     # Try multiple possible locations
     possible_files = [
         DATA_DIR / 'company_names_mapping.csv',
-        BASE_DIR / 'archive' / 'company_names_mapping.csv',
-        _ONEDRIVE_NSE / 'company_names_mapping.csv',
+        BASE_DIR / 'archive' / 'company_names_mapping.csv'
     ]
     
     for file_path in possible_files:
@@ -618,11 +604,7 @@ def analyze_stocks(stock_data, index_data, fundamental_data, company_names, late
     error_count = 0
     
     # Get NIFTY500 index data for relative strength calculation
-    # Index CSV uses 'Nifty 500' (mixed case) — match case-insensitively
-    nifty500_data = None
-    if 'SYMBOL' in index_data.columns:
-        mask = index_data['SYMBOL'].str.strip().str.lower() == 'nifty 500'
-        nifty500_data = index_data[mask].copy() if mask.any() else None
+    nifty500_data = index_data[index_data['SYMBOL'] == 'NIFTY 500'].copy() if 'SYMBOL' in index_data.columns else None
     
     for idx, stock_row in filtered_stocks.iterrows():
         symbol = stock_row['SYMBOL']
@@ -1173,7 +1155,7 @@ if __name__ == "__main__":
         # Save results to CSV
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         date_str = latest_date.strftime("%d%m%Y")
-        output_file = GENERATED_CSV_DIR / f"comprehensive_nse_enhanced_{date_str}_{timestamp}.csv"
+        output_file = REPORTS_DIR / f"comprehensive_nse_enhanced_{date_str}_{timestamp}.csv"
         results.to_csv(output_file, index=False)
         print(f"\nResults saved to: {output_file}")
         

@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Apex Resilience Screener · 2026-04-22</title>
+<style>
+:root {
+  --bg: #0b1220;
+  --panel: #131d2e;
+  --panel2: #0f172a;
+  --border: #2d3f5c;
+  --text: #e8eef7;
+  --muted: #8b9cb8;
+  --accent: #38bdf8;
+  --accent2: #a78bfa;
+  --ok: #34d399;
+  font-family: "Inter", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: radial-gradient(1200px 600px at 10% -10%, #1e3a5f22, transparent),
+    radial-gradient(800px 400px at 90% 0%, #4c1d9522, transparent), var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 28px 20px 48px;
+}
+.wrap { max-width: 1280px; margin: 0 auto; }
+.brand {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px 20px;
+  margin-bottom: 8px;
+}
+.brand h1 {
+  font-size: 1.65rem; font-weight: 700; letter-spacing: -0.02em; margin: 0;
+  background: linear-gradient(120deg, #e8eef7, var(--accent));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.badge {
+  font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em;
+  color: var(--accent); border: 1px solid var(--border); padding: 4px 10px; border-radius: 999px;
+}
+.sub { color: var(--muted); font-size: 0.95rem; max-width: 720px; line-height: 1.5; margin: 0 0 20px; }
+.meta-bar {
+  display: flex; flex-wrap: wrap; gap: 16px; font-size: 0.88rem; color: var(--muted);
+  margin-bottom: 22px;
+}
+.meta-bar strong { color: var(--text); }
+.card {
+  background: linear-gradient(165deg, #152238f0, #0f172acc);
+  border: 1px solid var(--border); border-radius: 16px;
+  padding: 18px 20px 20px;
+  box-shadow: 0 24px 60px rgba(0,0,0,.35);
+}
+.card h2 { font-size: 1rem; margin: 0 0 10px; font-weight: 600; }
+.legend { font-size: 0.8rem; color: var(--muted); margin-bottom: 12px; line-height: 1.45; }
+.scroll { overflow: auto; max-height: min(72vh, 900px); border-radius: 10px; border: 1px solid var(--border); }
+table { width: 100%; border-collapse: collapse; font-size: 0.81rem; }
+thead th {
+  position: sticky; top: 0; z-index: 2;
+  background: #1a2740; color: #cbd5e1; font-weight: 600;
+  padding: 10px 8px; text-align: left; border-bottom: 2px solid var(--border);
+}
+thead th.sortable { cursor: pointer; user-select: none; }
+thead th.sortable:hover { color: var(--accent); }
+tbody td {
+  padding: 9px 8px;
+  border-bottom: 1px solid #243047;
+  vertical-align: middle;
+}
+tbody tr.row-head { border-left: 3px solid transparent; }
+tbody tr.row-head:hover { background: #1e293b66; border-left-color: var(--accent); }
+.sym { font-weight: 600; color: #f1f5f9; }
+.muted { color: var(--muted); }
+.btn-sm {
+  font-size: 0.76rem; padding: 6px 10px; border-radius: 8px;
+  border: 1px solid var(--border); background: #1e293b; color: var(--text);
+  cursor: pointer;
+}
+.btn-sm:hover { border-color: var(--accent); color: var(--accent); }
+.actions { white-space: nowrap; }
+.row-detail { display: none; background: #0c1524; }
+.row-detail.open { display: table-row; }
+.detail-shell { padding: 16px 16px 18px; }
+.detail-inner { max-width: 100%; }
+.detail-tags { margin: 0 0 12px; font-size: 0.88rem; }
+.detail-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;
+}
+.dl-block h4 {
+  margin: 0 0 8px; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted);
+}
+.dl-block dl { margin: 0; font-size: 0.82rem; }
+.dl-block dl > div {
+  display: flex; justify-content: space-between; gap: 12px;
+  padding: 5px 0; border-bottom: 1px dashed #243047;
+}
+.dl-block dt { color: var(--muted); }
+.dl-block dd { margin: 0; font-variant-numeric: tabular-nums; }
+dialog {
+  border: 1px solid var(--border); border-radius: 14px; padding: 0;
+  background: var(--panel); color: var(--text); max-width: 560px; width: calc(100% - 32px);
+}
+dialog::backdrop { background: rgba(0,0,0,.55); }
+.modal-hd {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 18px; border-bottom: 1px solid var(--border);
+}
+.modal-hd h3 { margin: 0; font-size: 1rem; }
+.modal-bd { padding: 16px 18px 20px; font-size: 0.9rem; line-height: 1.55; max-height: min(65vh, 520px); overflow-y: auto; }
+.disclaimer { font-size: 0.75rem; color: var(--muted); margin-top: 18px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="brand">
+    <h1>Apex Resilience Screener</h1>
+    <span class="badge">Recover faster · Hold structure</span>
+  </header>
+  <p class="sub">Pullback-tough leaders — relative strength vs Nifty 500, shallow peak drawdowns, recovery &amp; volume, above 50-DMA, fundamental quality proxy. Not investment advice — verify fundamentals from filings.</p>
+  <div class="meta-bar">
+    <span><strong>As of</strong> 22 Apr 2026</span>
+    <span><strong>Universe</strong> Mid Select · Nifty 500 · India Defence · CPSE · Microcap 250</span>
+    <span><strong>Names shown</strong> 3</span>
+  </div>
+  <section class="card">
+    <h2>Lead table</h2>
+    <p class="legend">
+      <strong>vs 52W</strong> = drawdown vs trailing 252-session high ·
+      <strong>RS·60d</strong> = excess return vs Nifty 500 (percentage points) ·
+      <strong>Vol×</strong> = recent 10d avg volume vs prior ~50 sessions ·
+      <strong>Apex</strong> = composite model score. Click column headers to sort.
+    </p>
+    <div class="scroll">
+      <table id="screenTable">
+        <thead>
+          <tr>
+            <th class="sortable">#</th>
+            <th class="sortable">Symbol</th>
+            <th class="sortable">Basket</th>
+            <th class="sortable">Price</th>
+            <th class="sortable">vs 52W</th>
+            <th class="sortable">vs 50d</th>
+            <th class="sortable">RS·60d</th>
+            <th class="sortable">Recover</th>
+            <th class="sortable">Vol×</th>
+            <th class="sortable">Fund</th>
+            <th class="sortable">Apex</th>
+            <th class="nosort" aria-label="Actions"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="row-head"><td data-sort="1.0">1</td><td data-sort=""><span class="sym">ARE&amp;M</span></td><td data-sort="">500</td><td data-sort="898.7">₹898.7</td><td data-sort="-18.96">-19.0%</td><td data-sort="12.77">+12.8%</td><td data-sort="4.8461">4.8 pp</td><td data-sort="33.65">+33.6%</td><td data-sort="10.2699">10.27×</td><td data-sort="54.31">54</td><td data-sort="1.429938169586693">1.43</td><td class="actions" data-sort="0"><button type="button" class="btn-details btn-sm" data-target="detail-ARE_M" aria-expanded="false">Details</button> <span class="muted">—</span></td></tr>
+<tr class="row-detail" id="detail-ARE_M"><td colspan="12"><div class="detail-shell"><div class="detail-inner"><p class="detail-tags"><strong>ARE&amp;M</strong> · <span class="muted">NIFTY 500</span></p><div class="detail-grid"><div class="dl-block"><h4>Technical</h4><dl><div><dt>52W peak (₹)</dt><dd>1109.00</dd></div><div><dt>Close (₹)</dt><dd>898.70</dd></div><div><dt>Drawdown vs 52W peak</dt><dd>-19.0%</dd></div><div><dt>% of 52W high</dt><dd>81.0%</dd></div><div><dt>Cushion vs 50-DMA</dt><dd>+12.8%</dd></div><div><dt>RS vs Nifty (≈60d)</dt><dd>4.8 pp</dd></div><div><dt>Recovery from trough</dt><dd>+33.6%</dd></div><div><dt>Recovery velocity</dt><dd>2.4033</dd></div><div><dt>Vol ratio 10d/50d</dt><dd>10.27×</dd></div><div><dt>Slow-pullback score</dt><dd>31.53</dd></div><div><dt>Worst 1-day drop (60d)</dt><dd>-9.5%</dd></div></dl></div><div class="dl-block"><h4>Fundamental (proxy)</h4><dl><div><dt>Enhanced fund score</dt><dd>54.3</dd></div><div><dt>Sales growth score</dt><dd>51.0</dd></div><div><dt>Earnings quality</dt><dd>51.3</dd></div></dl></div><div class="dl-block"><h4>Model ranks</h4><dl><div><dt>Z: RS</dt><dd>-0.460</dd></div><div><dt>Z: Recovery</dt><dd>2.207</dd></div><div><dt>Z: Volume</dt><dd>7.823</dd></div><div><dt>Z: Slow PB</dt><dd>0.139</dd></div><div><dt>Z: Fund</dt><dd>-0.613</dd></div><div><dt>Z: Peak</dt><dd>-0.516</dd></div><div><dt>Composite</dt><dd>1.430</dd></div></dl></div></div></div></div></td></tr>
+<tr class="row-head"><td data-sort="2.0">2</td><td data-sort=""><span class="sym">ASTRAMICRO</span></td><td data-sort="">DEF·µ250</td><td data-sort="1129.75">₹1129.8</td><td data-sort="-5.53">-5.5%</td><td data-sort="17.01">+17.0%</td><td data-sort="26.913">26.9 pp</td><td data-sort="32.03">+32.0%</td><td data-sort="1.2865">1.29×</td><td data-sort="71.97">72</td><td data-sort="1.0634373149602483">1.06</td><td class="actions" data-sort="0"><button type="button" class="btn-details btn-sm" data-target="detail-ASTRAMICRO" aria-expanded="false">Details</button> <span class="muted">—</span></td></tr>
+<tr class="row-detail" id="detail-ASTRAMICRO"><td colspan="12"><div class="detail-shell"><div class="detail-inner"><p class="detail-tags"><strong>ASTRAMICRO</strong> · <span class="muted">NIFTY INDIA DEFENCE,NIFTY MICROCAP 250</span></p><div class="detail-grid"><div class="dl-block"><h4>Technical</h4><dl><div><dt>52W peak (₹)</dt><dd>1195.90</dd></div><div><dt>Close (₹)</dt><dd>1129.75</dd></div><div><dt>Drawdown vs 52W peak</dt><dd>-5.5%</dd></div><div><dt>% of 52W high</dt><dd>94.5%</dd></div><div><dt>Cushion vs 50-DMA</dt><dd>+17.0%</dd></div><div><dt>RS vs Nifty (≈60d)</dt><dd>26.9 pp</dd></div><div><dt>Recovery from trough</dt><dd>+32.0%</dd></div><div><dt>Recovery velocity</dt><dd>2.2876</dd></div><div><dt>Vol ratio 10d/50d</dt><dd>1.29×</dd></div><div><dt>Slow-pullback score</dt><dd>49.32</dd></div><div><dt>Worst 1-day drop (60d)</dt><dd>-17.0%</dd></div></dl></div><div class="dl-block"><h4>Fundamental (proxy)</h4><dl><div><dt>Enhanced fund score</dt><dd>72.0</dd></div><div><dt>Sales growth score</dt><dd>94.0</dd></div><div><dt>Earnings quality</dt><dd>73.9</dd></div></dl></div><div class="dl-block"><h4>Model ranks</h4><dl><div><dt>Z: RS</dt><dd>0.671</dd></div><div><dt>Z: Recovery</dt><dd>2.016</dd></div><div><dt>Z: Volume</dt><dd>0.040</dd></div><div><dt>Z: Slow PB</dt><dd>0.474</dd></div><div><dt>Z: Fund</dt><dd>2.275</dd></div><div><dt>Z: Peak</dt><dd>0.904</dd></div><div><dt>Composite</dt><dd>1.063</dd></div></dl></div></div></div></div></td></tr>
+<tr class="row-head"><td data-sort="3.0">3</td><td data-sort=""><span class="sym">AVANTIFEED</span></td><td data-sort="">µ250</td><td data-sort="1442.7">₹1442.7</td><td data-sort="-9.48">-9.5%</td><td data-sort="13.18">+13.2%</td><td data-sort="92.5384">92.5 pp</td><td data-sort="93.22">+93.2%</td><td data-sort="1.2253">1.23×</td><td data-sort="60.0">60</td><td data-sort="0.9837407024435767">0.98</td><td class="actions" data-sort="0"><button type="button" class="btn-details btn-sm" data-target="detail-AVANTIFEED" aria-expanded="false">Details</button> <span class="muted">—</span></td></tr>
+<tr class="row-detail" id="detail-AVANTIFEED"><td colspan="12"><div class="detail-shell"><div class="detail-inner"><p class="detail-tags"><strong>AVANTIFEED</strong> · <span class="muted">NIFTY MICROCAP 250</span></p><div class="detail-grid"><div class="dl-block"><h4>Technical</h4><dl><div><dt>52W peak (₹)</dt><dd>1593.80</dd></div><div><dt>Close (₹)</dt><dd>1442.70</dd></div><div><dt>Drawdown vs 52W peak</dt><dd>-9.5%</dd></div><div><dt>% of 52W high</dt><dd>90.5%</dd></div><div><dt>Cushion vs 50-DMA</dt><dd>+13.2%</dd></div><div><dt>RS vs Nifty (≈60d)</dt><dd>92.5 pp</dd></div><div><dt>Recovery from trough</dt><dd>+93.2%</dd></div><div><dt>Recovery velocity</dt><dd>1.5801</dd></div><div><dt>Vol ratio 10d/50d</dt><dd>1.23×</dd></div><div><dt>Slow-pullback score</dt><dd>36.13</dd></div><div><dt>Worst 1-day drop (60d)</dt><dd>-15.4%</dd></div></dl></div><div class="dl-block"><h4>Fundamental (proxy)</h4><dl><div><dt>Enhanced fund score</dt><dd>60.0</dd></div><div><dt>Sales growth score</dt><dd>56.0</dd></div><div><dt>Earnings quality</dt><dd>68.8</dd></div></dl></div><div class="dl-block"><h4>Model ranks</h4><dl><div><dt>Z: RS</dt><dd>4.037</dd></div><div><dt>Z: Recovery</dt><dd>0.849</dd></div><div><dt>Z: Volume</dt><dd>-0.013</dd></div><div><dt>Z: Slow PB</dt><dd>0.226</dd></div><div><dt>Z: Fund</dt><dd>0.317</dd></div><div><dt>Z: Peak</dt><dd>0.487</dd></div><div><dt>Composite</dt><dd>0.984</dd></div></dl></div></div></div></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="disclaimer">Fundamental columns use the project&apos;s scores database as a proxy, not audited quarterly statements.</p>
+  </section>
+</div>
+
+<dialog id="thesisModal">
+  <div class="modal-hd">
+    <h3 id="modalTitle">Thesis</h3>
+    <button type="button" class="btn-sm" id="closeModal">Close</button>
+  </div>
+  <div class="modal-bd" id="modalBody"></div>
+</dialog>
+
+<script type="application/json" id="thesis-data">{}</script>
+<script>
+window.THESIS_JSON = {};
+try {
+  const el = document.getElementById('thesis-data');
+  if (el && el.textContent) window.THESIS_JSON = JSON.parse(el.textContent);
+} catch (e) { console.warn(e); }
+</script>
+<script>
+
+(function () {
+  const tbody = document.querySelector("#screenTable tbody");
+  if (!tbody) return;
+
+  document.querySelectorAll(".btn-details").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const id = btn.getAttribute("data-target");
+      const row = document.getElementById(id);
+      if (!row) return;
+      const open = row.classList.toggle("open");
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+      btn.textContent = open ? "Hide" : "Details";
+    });
+  });
+
+  document.querySelectorAll(".btn-thesis").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const sym = btn.getAttribute("data-symbol");
+      const raw = (window.THESIS_JSON && window.THESIS_JSON[sym]) || "";
+      document.getElementById("modalTitle").textContent = sym + " — investment thesis";
+      document.getElementById("modalBody").innerHTML = raw || "<p class='muted'>No thesis for this row. Regenerate with --llm-top and OLLAMA_MODEL.</p>";
+      document.getElementById("thesisModal").showModal();
+    });
+  });
+
+  document.getElementById("closeModal").addEventListener("click", () => {
+    document.getElementById("thesisModal").close();
+  });
+
+  document.querySelectorAll("#screenTable thead th.sortable").forEach((th, idx) => {
+    th.addEventListener("click", () => {
+      const asc = !th.dataset.asc || th.dataset.asc === "desc";
+      th.dataset.asc = asc ? "asc" : "desc";
+      const pairs = [];
+      tbody.querySelectorAll("tr.row-head").forEach((head) => {
+        const det = head.nextElementSibling;
+        pairs.push({ head, detail: det && det.classList.contains("row-detail") ? det : null });
+      });
+      pairs.sort((a, b) => {
+        const ca = a.head.cells[idx];
+        const cb = b.head.cells[idx];
+        const sa = ca.getAttribute("data-sort");
+        const sb = cb.getAttribute("data-sort");
+        const na = parseFloat(sa);
+        const nb = parseFloat(sb);
+        let cmp = 0;
+        if (sa !== null && sb !== null && sa !== "" && sb !== ""
+            && !Number.isNaN(na) && !Number.isNaN(nb)) cmp = na - nb;
+        else cmp = (ca.textContent || "").localeCompare(cb.textContent || "");
+        return asc ? cmp : -cmp;
+      });
+      pairs.forEach(({ head, detail }) => {
+        tbody.appendChild(head);
+        if (detail) tbody.appendChild(detail);
+      });
+    });
+  });
+})();
+
+</script>
+</body>
+</html>

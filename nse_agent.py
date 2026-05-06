@@ -925,6 +925,144 @@ def _print_trace(trace: list[dict]) -> None:
                         border_style="dim"))
 
 
+def _render_comparison_table(comp: dict) -> None:
+    """Render a side-by-side comparison table from compare_stocks() result."""
+    symbols = comp.get("symbols", [])
+    details = {d["symbol"]: d for d in comp.get("stock_details", [])}
+    aspects = comp.get("aspects", ["both"])
+    fetch_fund = any(a in ("fundamental", "both") for a in aspects)
+    fetch_tech = any(a in ("technical", "both") for a in aspects)
+
+    if not symbols:
+        return
+
+    def _v(val, suffix="", na="—") -> str:
+        if val is None or val == "":
+            return na
+        return f"{val}{suffix}"
+
+    def _pct(val, na="—") -> str:
+        if val is None:
+            return na
+        try:
+            return f"{float(val):.1f}%"
+        except (TypeError, ValueError):
+            return str(val)
+
+    def _sig_style(sig: str | None) -> str:
+        if not sig:
+            return "dim"
+        s = sig.upper()
+        if "STRONG_BUY" in s:
+            return "bold green"
+        if "BUY" in s:
+            return "green"
+        if "STRONG_SELL" in s or "SELL" in s:
+            return "red"
+        if "HOLD" in s:
+            return "yellow"
+        return "dim"
+
+    def _stage_style(stage: str | None) -> str:
+        if not stage:
+            return "dim"
+        s = stage.upper()
+        if "2" in s:
+            return "bold green"
+        if "1" in s:
+            return "cyan"
+        if "3" in s:
+            return "yellow"
+        if "4" in s:
+            return "red"
+        return "dim"
+
+    tbl = Table(
+        box=box.SIMPLE_HEAD,
+        header_style="bold cyan",
+        show_lines=True,
+        expand=True,
+    )
+    tbl.add_column("Metric", style="bold white", min_width=22, no_wrap=True)
+    for sym in symbols:
+        name = (details.get(sym) or {}).get("company", sym)
+        short = name[:18] + "…" if len(name) > 20 else name
+        tbl.add_column(f"{sym}\n[dim]{short}[/dim]", justify="right", min_width=14)
+
+    def _row(label: str, extractor, style_fn=None):
+        cells = [label]
+        for sym in symbols:
+            d = details.get(sym) or {}
+            raw = extractor(d)
+            txt = raw if isinstance(raw, str) else _v(raw)
+            if style_fn:
+                st = style_fn(raw)
+                cells.append(Text(txt, style=st))
+            else:
+                cells.append(txt)
+        tbl.add_row(*cells)
+
+    # ── Fundamental section ──────────────────────────────────────────────
+    if fetch_fund:
+        tbl.add_section()
+        tbl.add_row("[bold cyan]── Fundamental ──[/bold cyan]", *["" for _ in symbols])
+        _row("Market Cap (Cr)",   lambda d: d.get("market_cap_cr"))
+        _row("Current Price (₹)", lambda d: d.get("current_price") or d.get("db_price"))
+        _row("P/E",               lambda d: d.get("pe"))
+        _row("P/B",               lambda d: d.get("pb"))
+        _row("Book Value (₹)",    lambda d: d.get("book_value"))
+        _row("ROE",               lambda d: _pct(d.get("roe")))
+        _row("ROCE",              lambda d: _pct(d.get("roce")))
+        _row("Div Yield",         lambda d: _pct(d.get("div_yield")))
+        _row("52W High/Low",      lambda d: d.get("high_low_52w") or "—")
+
+    # ── Technical section ────────────────────────────────────────────────
+    if fetch_tech:
+        tbl.add_section()
+        tbl.add_row("[bold cyan]── Technical ──[/bold cyan]", *["" for _ in symbols])
+        _row("Stage",            lambda d: d.get("stage") or "—",       _stage_style)
+        _row("Trading Signal",   lambda d: d.get("trading_signal") or "—", _sig_style)
+        _row("Supertrend",       lambda d: d.get("supertrend") or "—",
+             lambda v: "bold green" if v == "BUY" else ("bold red" if v == "SELL" else "dim"))
+        _row("RSI",              lambda d: _v(d.get("rsi")))
+        _row("RS %tile",         lambda d: _v(d.get("rs_pct"), "%"))
+        _row("Tech Score",       lambda d: _v(d.get("technical_score")))
+        _row("Invest Score",     lambda d: _v(d.get("investment_score")))
+        _row("Chg 1D",           lambda d: _pct(d.get("change_1d_pct")))
+        _row("Chg 1W",           lambda d: _pct(d.get("change_1w_pct")))
+        _row("Chg 1M",           lambda d: _pct(d.get("change_1m_pct")))
+
+    # ── Screener.in links ────────────────────────────────────────────────
+    tbl.add_section()
+    tbl.add_row("[bold cyan]── Links ──[/bold cyan]", *["" for _ in symbols])
+    links = []
+    for sym in symbols:
+        d = details.get(sym) or {}
+        url = d.get("screener_url") or f"https://www.screener.in/company/{sym}/"
+        links.append(url)
+    tbl.add_row("Screener.in", *links)
+
+    title_syms = " vs ".join(symbols)
+    console.print()
+    console.rule(f"[bold cyan] 📊  Comparison: {title_syms} [/bold cyan]", style="cyan dim")
+    console.print(tbl)
+
+    # ── Pros / Cons digest ───────────────────────────────────────────────
+    for sym in symbols:
+        d = details.get(sym) or {}
+        pros = d.get("pros", [])
+        cons = d.get("cons", [])
+        if pros or cons:
+            console.print(f"\n  [bold cyan]{sym}[/bold cyan]")
+            for p in pros[:3]:
+                console.print(f"    [green]✔[/green] {p}")
+            for c in cons[:2]:
+                console.print(f"    [red]✘[/red] {c}")
+    console.print()
+
+
+
+
 def _print_context_summary(agent) -> None:
     """Show current session conversation history summary."""
     history = agent._history

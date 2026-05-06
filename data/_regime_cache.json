@@ -1,0 +1,17 @@
+{
+  "current_regime": "ROTATION",
+  "confidence": 0.675,
+  "regime_duration_days": 1,
+  "previous_regime": "UNKNOWN",
+  "weights": {
+    "momentum": 1.2,
+    "sector_rs": 2.0,
+    "mean_revert": 0.8,
+    "fundamental": 1.5,
+    "defensive": 0.8
+  },
+  "regime_history": [],
+  "cached_at": "2026-05-04T12:24:41.838544",
+  "method": "hmm",
+  "breadth_override": false
+}
