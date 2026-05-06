@@ -28,6 +28,7 @@ Mode commands (in chat):
 from __future__ import annotations
 
 import argparse
+import html
 import itertools
 import os
 import re
@@ -69,6 +70,9 @@ console = Console(highlight=False, force_terminal=True)
 # ── Global chat state ─────────────────────────────────────────────────────────
 _mode             = "auto"   # "auto" | "intraday" | "historical"
 _followups: list[str] = []   # current follow-up suggestions (up to 3)
+
+# ── Background monitor (lazy import to avoid startup cost) ────────────────────
+from terminal.monitor import get_monitor, STRATEGIES as MONITOR_STRATEGIES
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -317,6 +321,19 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/scan NIFTY IT",    "Scan Nifty IT for intraday signals"),
     ("/scan NIFTY MIDCAP 100", "Scan Nifty Midcap 100"),
     ("/scan NIFTY PHARMA","Scan Nifty Pharma"),
+    ("/monitor",          "Show active background alert monitors"),
+    ("/monitor list",     "List all available monitor strategies"),
+    ("/monitor status",   "Show status of all running monitors"),
+    ("/monitor start",    "Start a background monitor (e.g. /monitor start breakout NIFTY 500 15 buy)"),
+    ("/monitor start breakout",   "Start breakout alert monitor (EMA+volume) — default 15m, NIFTY 500"),
+    ("/monitor start volume_surge","Start volume surge alert monitor"),
+    ("/monitor start reversal",   "Start RSI/Bollinger reversal alert monitor"),
+    ("/monitor start momentum",   "Start MACD+RSI momentum alert monitor"),
+    ("/monitor start supertrend", "Start Supertrend flip alert monitor"),
+    ("/monitor start vcp",        "Start VCP contraction pattern alert monitor"),
+    ("/monitor start all",        "Start ALL strategy alerts combined"),
+    ("/monitor stop",    "Stop a monitor (e.g. /monitor stop breakout)"),
+    ("/monitor stop all","Stop ALL active monitors"),
     ("/live",             "Switch to LIVE mode (real-time NSE API)"),
     ("/eod",              "Switch to EOD mode (historical CSV/DB)"),
     ("/auto",             "Switch to AUTO mode (keyword detect)"),
@@ -709,18 +726,71 @@ def _build_prompt(agent=None) -> ANSI:
 # ─────────────────────────────────────────────────────────────────────────────
 
 _URL_RE = re.compile(r'(https?://[^\s\)\]>,"\']+)')
+_HTML_LINK_RE = re.compile(
+    r'<a\s+[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)</a>',
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+def _strip_html_tags(text: str) -> str:
+    return re.sub(r"<[^>]+>", "", text)
+
+
+def _html_links_to_visible_urls(text: str) -> str:
+    """Convert HTML anchors into visible labels plus raw URLs.
+
+    Raw URLs are intentionally visible because some terminal apps do not support
+    OSC-8 hyperlinks but do auto-detect plain https:// text.
+    """
+    def _replace(match: re.Match) -> str:
+        url = html.unescape(match.group(1).strip())
+        label = html.unescape(_strip_html_tags(match.group(2))).strip() or url
+        return url if label == url else f"{label} ({url})"
+
+    return _HTML_LINK_RE.sub(_replace, text)
+
 
 def _linkify_markdown(text: str) -> str:
-    """Convert bare https://... URLs in LLM text to Markdown link syntax so
-    Rich's Markdown renderer makes them OSC-8 clickable hyperlinks."""
-    # Don't touch URLs already wrapped in []() or already in a markup tag
-    def _replace(m: re.Match) -> str:
-        url = m.group(1).rstrip(".,;)")
-        # Already a markdown link like [text](url) — skip
-        if text[max(0, m.start()-1)] == "(":
-            return m.group(0)
-        return f"[{url}]({url})"
-    return _URL_RE.sub(_replace, text)
+    """Make HTML anchors visible while leaving raw URLs as plain text.
+
+    We intentionally avoid Markdown `[label](url)` conversion here because
+    Rich renders that as OSC-8 metadata, which is not clickable in every
+    terminal. Plain visible URLs are more widely auto-detected.
+    """
+    return _html_links_to_visible_urls(text)
+
+
+def _append_bare_url_links(target: Text, text: str) -> None:
+    """Append text while keeping raw URLs visible and contiguous."""
+    pos = 0
+    for match in _URL_RE.finditer(text):
+        if match.start() > pos:
+            target.append(text[pos:match.start()])
+        raw = match.group(1)
+        url = raw.rstrip(".,;)")
+        trailing = raw[len(url):]
+        target.append(url)
+        if trailing:
+            target.append(trailing)
+        pos = match.end()
+    if pos < len(text):
+        target.append(text[pos:])
+
+
+def _text_with_links(text: str) -> Text:
+    """Create Rich Text that preserves line breaks and exposes raw URLs."""
+    out = Text()
+    pos = 0
+    for match in _HTML_LINK_RE.finditer(text):
+        if match.start() > pos:
+            _append_bare_url_links(out, text[pos:match.start()])
+        url = html.unescape(match.group(1).strip())
+        label = html.unescape(_strip_html_tags(match.group(2))).strip() or url
+        out.append(url if label == url else f"{label} ({url})")
+        pos = match.end()
+    if pos < len(text):
+        _append_bare_url_links(out, text[pos:])
+    return out
 
 
 def _render_news_item(r: dict, cap: int = 140) -> None:
@@ -734,15 +804,13 @@ def _render_news_item(r: dict, cap: int = 140) -> None:
     if source:
         console.print(f"  [dim cyan][{source}][/dim cyan]")
 
-    # Title — clickable OSC-8 link if URL is present, else plain bold
-    if title and url:
-        console.print(f"  [bold][link={url}]{title}[/link][/bold]")
-    elif title:
+    # Title is visible text; URL is printed plainly below for terminal auto-detect.
+    if title:
         console.print(f"  [bold]{title}[/bold]")
 
-    # URL as a secondary dim clickable line (for copy-reference)
+    # URL as raw visible text. Avoid OSC-8-only links for terminal compatibility.
     if url:
-        console.print(f"  [dim][link={url}]{url}[/link][/dim]")
+        console.print(f"  {url}")
 
     # Snippet
     if snippet:
@@ -778,7 +846,7 @@ def _print_response(result: dict) -> None:
     if has_markup:
         console.print(Markdown(_linkify_markdown(clean)))
     else:
-        console.print(clean, style="white")
+        console.print(_text_with_links(clean), style="white")
 
     # ── Direct catalysts / news render (bypasses LLM formatting) ─────────
     cats = result.get("catalysts")
@@ -878,6 +946,192 @@ def _print_context_summary(agent) -> None:
     console.print()
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Background monitor — alert rendering + queue drain
+# ─────────────────────────────────────────────────────────────────────────────
+
+_ALERT_DIR_STYLE = {"BUY": "bold green", "SELL": "bold red", "WATCH": "bold yellow"}
+_CONF_COLOURS    = {"high": "green", "medium": "yellow", "low": "dim white"}
+
+
+def _render_alert_batch(event: dict) -> None:
+    """Render a batch of alerts from a background monitor worker."""
+    from terminal.monitor import Alert
+    alerts: list[Alert] = event.get("alerts", [])
+    strategy = event["strategy"].upper()
+    index    = event["index"]
+    as_of    = event["as_of"]
+    run_n    = event.get("run_n", "?")
+
+    # Build table
+    tbl = Table(
+        box=box.SIMPLE_HEAD,
+        show_header=True,
+        header_style="bold cyan",
+        expand=False,
+        padding=(0, 1),
+    )
+    tbl.add_column("",        width=2)
+    tbl.add_column("Symbol",  style="bold white", min_width=12)
+    tbl.add_column("Signal",  style="cyan",       min_width=20)
+    tbl.add_column("Dir",     min_width=5)
+    tbl.add_column("Entry",   justify="right",    min_width=8)
+    tbl.add_column("Target",  justify="right",    min_width=8)
+    tbl.add_column("SL",      justify="right",    min_width=8)
+    tbl.add_column("R:R",     justify="right",    min_width=4)
+    tbl.add_column("Conf",    min_width=5)
+
+    for a in alerts[:10]:
+        dir_style  = _ALERT_DIR_STYLE.get(a.direction, "white")
+        conf_style = _CONF_COLOURS.get(a.confidence, "white")
+        tbl.add_row(
+            a.emoji,
+            a.symbol,
+            a.signal[:22],
+            f"[{dir_style}]{a.direction}[/{dir_style}]",
+            f"₹{a.entry:.1f}"   if a.entry    else "—",
+            f"₹{a.target:.1f}"  if a.target   else "—",
+            f"₹{a.stoploss:.1f}" if a.stoploss else "—",
+            f"[{conf_style}]{a.rr:.1f}[/{conf_style}]" if a.rr else "—",
+            f"[{conf_style}]{a.confidence_bar}[/{conf_style}]",
+        )
+
+    console.print()
+    console.print(Rule(
+        f"[bold magenta]🔔 MONITOR ALERT  [{strategy}]  {index}  ·  {as_of}  ·  scan #{run_n}[/bold magenta]",
+        style="magenta",
+    ))
+    console.print(tbl)
+    console.print("[dim]  ━ Not investment advice. Research only. ━[/dim]")
+    console.print()
+
+
+def _render_monitor_heartbeat(event: dict) -> None:
+    """Print a quiet heartbeat line (no signals found this cycle)."""
+    strategy = event["strategy"]
+    index    = event["index"]
+    as_of    = event["as_of"]
+    run_n    = event.get("run_n", "?")
+    console.print(
+        f"[dim]  ⏱  Monitor [{strategy}] — scan #{run_n} complete, no new signals  "
+        f"({index} @ {as_of})[/dim]"
+    )
+
+
+def _check_monitor_alerts() -> None:
+    """Drain and render any queued monitor alerts. Called in the chat loop."""
+    mon = get_monitor()
+    if not mon.any_active():
+        return
+    events = mon.drain_alerts()
+    for ev in events:
+        if ev.get("type") == "alerts":
+            _render_alert_batch(ev)
+        elif ev.get("type") == "heartbeat":
+            _render_monitor_heartbeat(ev)
+        elif ev.get("type") == "error":
+            console.print(
+                f"[dim red]  ⚠  Monitor [{ev.get('strategy')}] error: {ev.get('message')}[/dim red]"
+            )
+
+
+def _print_monitor_status() -> None:
+    """Show status table for all running monitors."""
+    mon = get_monitor()
+    workers = mon.status()
+    if not workers:
+        console.print("[dim]  No monitors active. Use /monitor start [strategy] to activate.[/dim]")
+        return
+
+    tbl = Table(box=box.SIMPLE_HEAD, header_style="bold cyan", expand=False)
+    tbl.add_column("Strategy",  style="bold white")
+    tbl.add_column("Index",     style="cyan")
+    tbl.add_column("Interval")
+    tbl.add_column("Status")
+    tbl.add_column("Last Run",  style="dim")
+    tbl.add_column("Scans",     justify="right")
+    tbl.add_column("Signals",   justify="right")
+    tbl.add_column("Errors",    justify="right")
+
+    for w in workers:
+        status_str = "[bold green]● LIVE[/bold green]" if w["running"] else "[dim]○ stopped[/dim]"
+        tbl.add_row(
+            w["strategy"], w["index"], w["interval"],
+            status_str, w["last_run"],
+            str(w["run_count"]), str(w["last_count"]), str(w["errors"]),
+        )
+
+    console.print()
+    console.print(Panel(tbl, title="[bold magenta]🔔 Background Monitors[/bold magenta]", expand=False))
+    console.print()
+
+
+def _handle_monitor_command(parts: list[str]) -> None:
+    """Handle /monitor [start|stop|status|list] [strategy] [index]."""
+    mon = get_monitor()
+    sub = parts[1].lower() if len(parts) > 1 else "status"
+
+    if sub == "list":
+        tbl = Table(box=box.SIMPLE_HEAD, header_style="bold cyan", expand=False)
+        tbl.add_column("Strategy", style="bold white", min_width=12)
+        tbl.add_column("Description", style="dim")
+        for k, v in MONITOR_STRATEGIES.items():
+            tbl.add_row(k, v["description"])
+        console.print()
+        console.print(Panel(tbl, title="[bold cyan]Available Monitor Strategies[/bold cyan]", expand=False))
+        console.print("[dim]  Usage: /monitor start breakout [NIFTY 500] [15] [buy|sell|all][/dim]")
+        console.print()
+        return
+
+    if sub == "status":
+        _print_monitor_status()
+        return
+
+    if sub == "stop":
+        strategy = parts[2].lower() if len(parts) > 2 else "all"
+        index    = " ".join(parts[3:]).upper() if len(parts) > 3 else None
+        msg      = mon.stop(strategy, index)
+        console.print(f"  {msg}")
+        return
+
+    if sub == "start":
+        strategy     = parts[2].lower()  if len(parts) > 2 else "all"
+        # Parse: /monitor start [strategy] [index] [interval_min] [direction]
+        # Example: /monitor start breakout NIFTY 500 15 buy
+        idx_parts = []
+        interval  = 15
+        direction = "all"
+
+        # Consume remaining args: digits → interval, buy/sell/all → direction, rest → index
+        remaining = parts[3:] if len(parts) > 3 else []
+        for tok in remaining:
+            if tok.isdigit():
+                interval = int(tok)
+            elif tok.lower() in ("buy", "sell", "all"):
+                direction = tok.lower()
+            else:
+                idx_parts.append(tok.upper())
+        index = " ".join(idx_parts) if idx_parts else "NIFTY 500"
+
+        msg = mon.start(
+            strategy     = strategy,
+            index        = index,
+            interval_min = interval,
+            direction    = direction,
+        )
+        console.print()
+        console.print(f"  {msg}")
+        console.print(f"  [dim]Scanning: {index}  ·  Interval: {interval}m  ·  Direction: {direction}[/dim]")
+        console.print()
+        return
+
+    # Unknown subcommand
+    console.print(
+        "[dim]  Usage: /monitor [start|stop|status|list]  strategy  [index]  [interval_min]  [buy|sell|all][/dim]\n"
+        "[dim]  Example: /monitor start breakout NIFTY 500 15 buy[/dim]"
+    )
+
+
 def _print_help() -> None:
     print()
     console.print(Panel(
@@ -889,6 +1143,15 @@ def _print_help() -> None:
             "[bold cyan]INTRADAY SCREENER[/bold cyan]\n"
             "  [green]/scan[/green]                   — Scan NIFTY 50 for intraday signals\n"
             "  [green]/scan NIFTY BANK[/green]        — Scan any index (NIFTY IT, PHARMA…)\n\n"
+            "[bold magenta]BACKGROUND MONITORS 🔔[/bold magenta]\n"
+            "  [magenta]/monitor list[/magenta]          — Show available strategies\n"
+            "  [magenta]/monitor status[/magenta]        — Show active monitors\n"
+            "  [magenta]/monitor start breakout[/magenta] — Start breakout alert every 15m\n"
+            "  [magenta]/monitor start all 15 buy[/magenta] — All strategies, 15m, BUY only\n"
+            "  [magenta]/monitor start momentum NIFTY BANK 10[/magenta] — Custom index + interval\n"
+            "  [magenta]/monitor stop breakout[/magenta] — Stop a specific monitor\n"
+            "  [magenta]/monitor stop all[/magenta]      — Stop all monitors\n"
+            "  [dim]Strategies: breakout · volume_surge · reversal · momentum · supertrend · vcp · all[/dim]\n\n"
             "[bold cyan]GLOBAL MARKET[/bold cyan]\n"
             "  [green]/global[/green]                 — Global risk regime and India read-through\n\n"
             "[bold cyan]PROMPT LIBRARY[/bold cyan]\n"
@@ -1065,9 +1328,9 @@ def _print_briefing_response(result: dict) -> None:
     console.print()
     has_markup = any(c in clean for c in ["**", "##", "- ", "* ", "```", "\n"])
     if has_markup:
-        console.print(Markdown(clean))
+        console.print(Markdown(_linkify_markdown(clean)))
     else:
-        console.print(clean, style="white")
+        console.print(_text_with_links(clean), style="white")
 
     # Inline news/catalysts
     cats = result.get("catalysts")
@@ -1135,6 +1398,9 @@ def _chat_loop(agent, show_trace: bool) -> None:
     console.print()
 
     while True:
+        # ── Drain background monitor alerts before each prompt ─────────
+        _check_monitor_alerts()
+
         try:
             raw = session.prompt(_build_prompt(agent))
         except KeyboardInterrupt:
@@ -1184,6 +1450,12 @@ def _chat_loop(agent, show_trace: bool) -> None:
                 f"[bold yellow]  🔄  New session started[/bold yellow]"
                 f"[dim]  (cleared {n} turn{'s' if n != 1 else ''} of context)[/dim]"
             )
+            continue
+
+        # ── /monitor: background alert workers ────────────────────────
+        if text.lower().startswith("/monitor"):
+            parts = text.split()
+            _handle_monitor_command(parts)
             continue
 
         # ── /ric: recursive investigative conversation ─────────────────
