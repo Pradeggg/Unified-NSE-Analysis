@@ -325,6 +325,159 @@ def _run_with_spinner(agent, query: str, show_trace: bool, animated: bool = True
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Startup briefing  (runs once on interactive launch)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _greeting() -> str:
+    h = datetime.now().hour
+    if h < 12:
+        return "Good Morning"
+    elif h < 17:
+        return "Good Afternoon"
+    return "Good Evening"
+
+
+def _run_startup_briefing(agent, show_trace: bool) -> None:
+    """Investigative morning/session briefing printed before the chat loop starts."""
+    now  = datetime.now()
+    hour = now.hour
+    date_str = now.strftime("%A, %d %B %Y")
+    time_str = now.strftime("%H:%M IST")
+
+    # Determine session context
+    if hour < 9:
+        session_ctx = "pre-market"
+    elif hour < 15 or (hour == 15 and now.minute < 31):
+        session_ctx = "live market"
+    else:
+        session_ctx = "post-market"
+
+    greeting = _greeting()
+
+    console.print()
+    console.rule(
+        f"[bold yellow] ☀️  Morning Briefing  [/bold yellow]"
+        f"[dim]  {date_str}  ·  {time_str} [/dim]",
+        style="yellow",
+    )
+    console.print(
+        f"[bold yellow]  {greeting}![/bold yellow]"
+        f"[dim]  Loading your market intelligence… ({session_ctx})[/dim]"
+    )
+    console.print()
+
+    briefing_prompt = f"""
+You are starting a new trading session on {date_str} at {time_str} ({session_ctx}).
+Give a comprehensive, investigative morning briefing in this EXACT order:
+
+## {greeting} — Market Intelligence Briefing  ({date_str})
+
+### 🌍 Global Overnight Context
+- US markets: what happened in the last session (S&P500, NASDAQ, Dow direction + % change if known)
+- Asian markets: Nikkei, Hang Seng, Shanghai status
+- SGX Nifty / GIFT Nifty: pre-open cue for India
+- Key macro events or news overnight that affect Indian markets
+- USD/INR direction, crude oil price
+(use multi_source_web_search or search_latest_catalysts to get current global data)
+
+### 📅 Previous Trading Day Recap (NSE)
+- How did NIFTY 50 and NIFTY BANK close yesterday — gain/loss, % change
+- Top 3 gainers and top 3 losers from NIFTY 50 yesterday
+- Key sectors that outperformed / underperformed
+- Any significant corporate news or events from yesterday
+(use get_live_market_overview and any EOD tools available)
+
+### 📊 Current Market Status ({time_str})
+- Live NIFTY 50 and NIFTY BANK levels with change
+- Market breadth: advances vs declines
+- FII/DII activity today
+- Top gainers and losers so far today
+(use get_live_market_overview, get_top_gainers_losers, get_fii_dii_activity)
+
+### 🎯 Today's Watchlist & Themes
+- 3–4 stocks or sectors to watch based on technicals and news flow
+- Any important events today: RBI announcements, earnings results, F&O expiry
+- Key support/resistance levels for NIFTY 50 intraday
+
+### 🔬 Analyst's Take
+- One paragraph synthesis: overall market bias (bullish/bearish/neutral) and recommended approach for today
+
+End with 3 sharp follow-up questions the user might want to explore next.
+"""
+
+    console.print("[dim cyan]  ⏳  Compiling briefing…[/dim cyan]")
+    try:
+        result = agent.query(briefing_prompt, show_trace=show_trace)
+        _print_briefing_response(result)
+    except Exception as e:
+        console.print(f"[dim red]  ⚠️  Briefing skipped: {e}[/dim red]")
+        console.print()
+
+
+def _print_briefing_response(result: dict) -> None:
+    """Print startup briefing with special styling (wider rule, no 'Agent Adda' header)."""
+    global _followups
+    answer  = result.get("answer", "")
+    if not answer:
+        return
+
+    clean, _followups = _parse_followups(answer)
+
+    console.print()
+    has_markup = any(c in clean for c in ["**", "##", "- ", "* ", "```", "\n"])
+    if has_markup:
+        console.print(Markdown(clean))
+    else:
+        console.print(clean, style="white")
+
+    # Inline news/catalysts
+    cats = result.get("catalysts")
+    if cats:
+        items = cats.get("results") or cats.get("items") or cats.get("news_articles") or []
+        if isinstance(items, dict):
+            flat = []
+            for source, hits in items.items():
+                if isinstance(hits, list):
+                    for h in hits:
+                        if isinstance(h, dict):
+                            h = dict(h)
+                            h.setdefault("source", source)
+                            flat.append(h)
+            items = flat
+        items = [r for r in items if isinstance(r, dict) and (r.get("title") or r.get("url"))]
+        if items:
+            console.print()
+            console.rule("[bold cyan] 📰  News & Catalysts [/bold cyan]", style="dim cyan")
+            for r in items[:6]:  # cap to 6 on startup
+                title   = r.get("title") or r.get("name") or ""
+                url     = r.get("url")   or r.get("link") or ""
+                snippet = r.get("snippet") or r.get("body") or ""
+                source  = r.get("source", "")
+                if source:
+                    console.print(f"[dim cyan]  [{source}][/dim cyan]", end=" ")
+                if title:
+                    console.print(f"  [bold]{title}[/bold]")
+                if url:
+                    console.print(f"  [dim cyan]{url}[/dim cyan]")
+                if snippet:
+                    console.print(f"  [dim]{snippet[:120]}…[/dim]" if len(snippet) > 120
+                                  else f"  [dim]{snippet}[/dim]")
+                console.print()
+
+    # Follow-up suggestions
+    if _followups:
+        console.print()
+        console.rule("[bold yellow] 💬  Start your session [/bold yellow]",
+                     style="dim yellow")
+        for i, q in enumerate(_followups, 1):
+            console.print(f"  [bold yellow]{i}[/bold yellow]  {q}")
+        console.print("[dim]  Reply 1 · 2 · 3 or ask your own question[/dim]")
+
+    console.print()
+    _separator()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Single-query mode  (no TUI, just print result and exit)
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -443,6 +596,8 @@ def main() -> None:
     parser.add_argument("--mode",  "-m", default="auto",
                         choices=["auto", "intraday", "historical"],
                         help="Default data mode (default: auto)")
+    parser.add_argument("--no-briefing", "-nb", action="store_true",
+                        help="Skip the startup market briefing")
     args = parser.parse_args()
 
     global _mode
@@ -462,6 +617,10 @@ def main() -> None:
     if args.query:
         _single_query(agent, args.query, args.trace)
         return
+
+    # ── Startup briefing (skip with --no-briefing or -nb) ─────────────────
+    if not args.no_briefing:
+        _run_startup_briefing(agent, args.trace)
 
     _chat_loop(agent, args.trace)
 
