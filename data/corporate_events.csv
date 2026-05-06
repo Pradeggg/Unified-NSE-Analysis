@@ -1,0 +1,395 @@
+SYMBOL,EVENT_TYPE,EVENT_DATE,PURPOSE_RAW,DETAIL,SOURCE
+OFSS,CORPORATE_ACTION,2026-05-07,,,NSE_CORP_ACTION
+PRUDENT,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+PILITA,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+PIDILITIND,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+PARAGMILK,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+ODIGMA,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Other business matters,Financial Results/Other business matters,NSE_EVENT_CALENDAR
+NRBBEARING,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+NOCIL,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+NILASPACES,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+MRF,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+MGL,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+MARALOVER,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+MANCREDIT,BOARD_MEETING,2026-05-07,Fund Raising,Fund Raising,NSE_EVENT_CALENDAR
+MANAKALUCO,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+LUPIN,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+KPEL,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+KARURVYSYA,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+JARO,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+INVENTURE,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Other business matters,Financial Results/Other business matters,NSE_EVENT_CALENDAR
+ROUTE,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+RSSOFTWARE,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+RTNPOWER,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+SANDUMA,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+WONDERLA,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+WESTLIFE,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+VTL,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+VMART,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+VIKRAMSOLR,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+VIJAYA,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+VESUVIUS,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+THYROCARE,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+THERMAX,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+INNOVACAP,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Other business matters,Financial Results/Other business matters,NSE_EVENT_CALENDAR
+TARACHAND,EX_DIVIDEND,2026-05-07,Dividend,Dividend,NSE_EVENT_CALENDAR
+SURYODAY,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Dividend/Fund Raising,Financial Results/Dividend/Fund Raising,NSE_EVENT_CALENDAR
+SURAJLTD,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+SUNDROP,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+STYLAMIND,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+STLNETWORK,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+SOTL,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+SONATSOFTW,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+SIRCA,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+SHAKTIPUMP,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+TARACHAND,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+INDOTHAI,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+KRYSTAL,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+IIFLCAPS,BOARD_MEETING,2026-05-07,Fund Raising/Other business matters,Fund Raising/Other business matters,NSE_EVENT_CALENDAR
+ABLBL,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+ACMESOLAR,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+ALLDIGI,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+APOLLOPIPE,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+BAJAJHLDNG,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+EFCIL,CORPORATE_ACTION,2026-05-07,,,NSE_CORP_ACTION
+BIOCON,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+BIOCON,BOARD_MEETING,2026-05-07,Fund Raising,Fund Raising,NSE_EVENT_CALENDAR
+BRITANNIA,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+BSE,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+CARTRADE,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+CEIGALL,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+BHARATFORG,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+CRAFTSMAN,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+IGL,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+COROMANDEL,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+HARSHA,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Dividend/Fund Raising,Financial Results/Dividend/Fund Raising,NSE_EVENT_CALENDAR
+GRAVITA,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+GLOBUSSPR,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+GOACARBON,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+GFSTEELS,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+GATEWAY,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+ESCORTS,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+ESCORTS,EX_DIVIDEND,2026-05-07,Dividend,Dividend,NSE_EVENT_CALENDAR
+DABUR,RESULT_ANNOUNCEMENT,2026-05-07,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+KALYANKJIL,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+KSL,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+KSHITIJPOL,BOARD_MEETING,2026-05-08,Fund Raising/Other business matters,Fund Raising/Other business matters,NSE_EVENT_CALENDAR
+KANPRPLA,BOARD_MEETING,2026-05-08,Other business matters,Other business matters,NSE_EVENT_CALENDAR
+LAGNAM,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+JSWINFRA,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+HYUNDAI,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+INTELLECT,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+INSPIRISYS,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+IMPAL,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+GRINDWELL,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+GNA,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+GARFIBRES,BUYBACK,2026-05-08,Buyback,Buyback,NSE_EVENT_CALENDAR
+IRMENERGY,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+URBANCO,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+OBEROIRLTY,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results/Dividend/Fund Raising,Financial Results/Dividend/Fund Raising,NSE_EVENT_CALENDAR
+TITAN,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+CHOLAHLDNG,EX_DIVIDEND,2026-05-08,Dividend,Dividend,NSE_EVENT_CALENDAR
+LLOYDSENT,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+MANYAVAR,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+MUTHOOTCAP,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+NIVABUPA,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+OBEROIRLTY,BOARD_MEETING,2026-05-08,Fund Raising,Fund Raising,NSE_EVENT_CALENDAR
+ORIENTELEC,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+RAIN,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+RENUKA,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+SASKEN,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+SBIN,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+SCI,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+SWIGGY,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+TATACONSUM,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+TIPSFILMS,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+UJJIVANSFB,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results/Fund Raising,Financial Results/Fund Raising,NSE_EVENT_CALENDAR
+CHOLAHLDNG,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+CREDITACC,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+BOMDYEING,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+CERA,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+SOMANYCERA,CORPORATE_ACTION,2026-05-08,,,NSE_CORP_ACTION
+QUESS,CORPORATE_ACTION,2026-05-08,,,NSE_CORP_ACTION
+LAURUSLABS,CORPORATE_ACTION,2026-05-08,,,NSE_CORP_ACTION
+824GS2033,CORPORATE_ACTION,2026-05-08,,,NSE_CORP_ACTION
+761GS2030,CORPORATE_ACTION,2026-05-08,,,NSE_CORP_ACTION
+KSB,CORPORATE_ACTION,2026-05-08,,,NSE_CORP_ACTION
+CENTRALBK,CORPORATE_ACTION,2026-05-08,,,NSE_CORP_ACTION
+OMAXAUTO,CORPORATE_ACTION,2026-05-08,,,NSE_CORP_ACTION
+SUNDRMFAST,CORPORATE_ACTION,2026-05-08,,,NSE_CORP_ACTION
+RKFORGE,CORPORATE_ACTION,2026-05-08,,,NSE_CORP_ACTION
+NATIONALUM,CORPORATE_ACTION,2026-05-08,,,NSE_CORP_ACTION
+3IINFOLTD,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results/Other business matters,Financial Results/Other business matters,NSE_EVENT_CALENDAR
+PREMIERENE,CORPORATE_ACTION,2026-05-08,,,NSE_CORP_ACTION
+ADVANCE,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+ABB,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+BANKINDIA,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+BANKBARODA,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+BANKBARODA,BOARD_MEETING,2026-05-08,Fund Raising,Fund Raising,NSE_EVENT_CALENDAR
+BALKRISIND,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+BAJAJHCARE,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+AVL,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+ARIS,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+ARTEMISMED,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+AMRUTANJAN,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+AERONEU,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+ARCHIDPLY,RESULT_ANNOUNCEMENT,2026-05-08,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+DLINKINDIA,RESULT_ANNOUNCEMENT,2026-05-09,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+ORIENTPPR,RESULT_ANNOUNCEMENT,2026-05-09,Financial Results/Other business matters,Financial Results/Other business matters,NSE_EVENT_CALENDAR
+PRAXIS,RESULT_ANNOUNCEMENT,2026-05-09,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+PREMIERPOL,RESULT_ANNOUNCEMENT,2026-05-09,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+SHREERAMA,RESULT_ANNOUNCEMENT,2026-05-09,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+MOL,RESULT_ANNOUNCEMENT,2026-05-09,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+SHREMINVIT,RESULT_ANNOUNCEMENT,2026-05-09,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+KKCL,RESULT_ANNOUNCEMENT,2026-05-09,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+WINDMACHIN,RESULT_ANNOUNCEMENT,2026-05-09,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+BLUEDART,RESULT_ANNOUNCEMENT,2026-05-09,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+GAEL,RESULT_ANNOUNCEMENT,2026-05-09,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+ADVENZYMES,RESULT_ANNOUNCEMENT,2026-05-09,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+AARTISURF,EX_DIVIDEND,2026-05-09,Dividend,Dividend,NSE_EVENT_CALENDAR
+AARTISURF,RESULT_ANNOUNCEMENT,2026-05-09,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+BIRLACORPN,RESULT_ANNOUNCEMENT,2026-05-09,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+PAISALO,RESULT_ANNOUNCEMENT,2026-05-10,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+JSWENERGY,RESULT_ANNOUNCEMENT,2026-05-11,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+JTLIND,RESULT_ANNOUNCEMENT,2026-05-11,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+MAGADSUGAR,RESULT_ANNOUNCEMENT,2026-05-11,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+NDRAUTO,RESULT_ANNOUNCEMENT,2026-05-11,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+NIACL,RESULT_ANNOUNCEMENT,2026-05-11,Financial Results/Other business matters,Financial Results/Other business matters,NSE_EVENT_CALENDAR
+NUVAMA,RESULT_ANNOUNCEMENT,2026-05-11,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+PARADEEP,RESULT_ANNOUNCEMENT,2026-05-11,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+PNGSREVA,RESULT_ANNOUNCEMENT,2026-05-11,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+UPL,RESULT_ANNOUNCEMENT,2026-05-11,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+PRIVISCL,RESULT_ANNOUNCEMENT,2026-05-11,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+PVRINOX,RESULT_ANNOUNCEMENT,2026-05-11,Financial Results/Other business matters,Financial Results/Other business matters,NSE_EVENT_CALENDAR
+ROSSTECH,RESULT_ANNOUNCEMENT,2026-05-11,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+SYRMA,RESULT_ANNOUNCEMENT,2026-05-11,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+SUDARCOLOR,RESULT_ANNOUNCEMENT,2026-05-11,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+SRGHFL,RESULT_ANNOUNCEMENT,2026-05-11,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+SHYAMMETL,RESULT_ANNOUNCEMENT,2026-05-11,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+SHRIPISTON,RESULT_ANNOUNCEMENT,2026-05-11,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+SATIN,RESULT_ANNOUNCEMENT,2026-05-11,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+JBMA,RESULT_ANNOUNCEMENT,2026-05-11,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+PONNIERODE,RESULT_ANNOUNCEMENT,2026-05-11,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+JBCHEPHARM,RESULT_ANNOUNCEMENT,2026-05-11,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+CORONA,RESULT_ANNOUNCEMENT,2026-05-11,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+INDHOTEL,RESULT_ANNOUNCEMENT,2026-05-11,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+IRISDOREME,RESULT_ANNOUNCEMENT,2026-05-11,Financial Results/Other business matters,Financial Results/Other business matters,NSE_EVENT_CALENDAR
+MANAPPURAM,CORPORATE_ACTION,2026-05-11,,,NSE_CORP_ACTION
+KOTHARIPET,CORPORATE_ACTION,2026-05-11,,,NSE_CORP_ACTION
+ARFIN,RESULT_ANNOUNCEMENT,2026-05-11,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+AURIONPRO,RESULT_ANNOUNCEMENT,2026-05-11,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+BUTTERFLY,RESULT_ANNOUNCEMENT,2026-05-11,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+CANBK,RESULT_ANNOUNCEMENT,2026-05-11,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+DBCORP,RESULT_ANNOUNCEMENT,2026-05-11,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+ANANTRAJ,RESULT_ANNOUNCEMENT,2026-05-11,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+GARUDA,RESULT_ANNOUNCEMENT,2026-05-11,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+GILLANDERS,RESULT_ANNOUNCEMENT,2026-05-11,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+GREENPOWER,RESULT_ANNOUNCEMENT,2026-05-11,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+GRINFRA,RESULT_ANNOUNCEMENT,2026-05-11,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+GVPIL,RESULT_ANNOUNCEMENT,2026-05-11,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+HERITGFOOD,RESULT_ANNOUNCEMENT,2026-05-11,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+FRACTAL,RESULT_ANNOUNCEMENT,2026-05-11,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+HEXATRADEX,RESULT_ANNOUNCEMENT,2026-05-11,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+PLATIND,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+PFIZER,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+PATINTLOG,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+NXST,BOARD_MEETING,2026-05-12,Other business matters,Other business matters,NSE_EVENT_CALENDAR
+NRAIL,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+NAZARA,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results/Other business matters,Financial Results/Other business matters,NSE_EVENT_CALENDAR
+NEULANDLAB,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+MOBIKWIK,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+MFSL,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+RAJTV,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+NIITMTS,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+RUSTOMJEE,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results/Other business matters,Financial Results/Other business matters,NSE_EVENT_CALENDAR
+THOMASCOOK,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+SESHAPAPER,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+SILINV,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+SKFINDUS,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+STOVEKRAFT,BOARD_MEETING,2026-05-12,Other business matters,Other business matters,NSE_EVENT_CALENDAR
+STOVEKRAFT,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+SUBEXLTD,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+TATAPOWER,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+KROSS,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results/Other business matters,Financial Results/Other business matters,NSE_EVENT_CALENDAR
+UGARSUGAR,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+VGUARD,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+VINATIORGA,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+WORTHPERI,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+SAURASHCEM,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+KPRMILL,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+BLISSGVS,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+INOXINDIA,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+AAKASH,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results/Other business matters,Financial Results/Other business matters,NSE_EVENT_CALENDAR
+ALBERTDAVD,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+AVADHSUGAR,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+BBL,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+BERGEPAINT,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+BORORENEW,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results/Fund Raising,Financial Results/Fund Raising,NSE_EVENT_CALENDAR
+BPCL,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+CLEANMAX,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+DIXON,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+DRREDDY,EX_DIVIDEND,2026-05-12,Dividend,Dividend,NSE_EVENT_CALENDAR
+JITFINFRA,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+DRREDDY,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+DYCL,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+ETHOSLTD,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+FOSECOIND,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+GOPAL,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+GTLINFRA,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+HLVLTD,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+INDRAMEDCO,RESULT_ANNOUNCEMENT,2026-05-12,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+LICHSGFIN,RESULT_ANNOUNCEMENT,2026-05-13,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+MANINFRA,RESULT_ANNOUNCEMENT,2026-05-13,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+NITCO,RESULT_ANNOUNCEMENT,2026-05-13,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+OIL,RESULT_ANNOUNCEMENT,2026-05-13,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+PFC,RESULT_ANNOUNCEMENT,2026-05-13,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+QPOWER,RESULT_ANNOUNCEMENT,2026-05-13,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+TMCV,RESULT_ANNOUNCEMENT,2026-05-13,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+SMARTLINK,RESULT_ANNOUNCEMENT,2026-05-13,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+TIINDIA,RESULT_ANNOUNCEMENT,2026-05-13,Financial Results/Dividend/Fund Raising,Financial Results/Dividend/Fund Raising,NSE_EVENT_CALENDAR
+KAYNES,RESULT_ANNOUNCEMENT,2026-05-13,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+TVSMOTOR,RESULT_ANNOUNCEMENT,2026-05-13,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+SHARDACROP,RESULT_ANNOUNCEMENT,2026-05-13,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+JSWDULUX,RESULT_ANNOUNCEMENT,2026-05-13,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+TVSHLTD,RESULT_ANNOUNCEMENT,2026-05-13,Financial Results/Fund Raising,Financial Results/Fund Raising,NSE_EVENT_CALENDAR
+GLAXO,RESULT_ANNOUNCEMENT,2026-05-13,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+IKS,RESULT_ANNOUNCEMENT,2026-05-13,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+ACL,RESULT_ANNOUNCEMENT,2026-05-13,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+BALAMINES,RESULT_ANNOUNCEMENT,2026-05-13,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+BHARTIARTL,RESULT_ANNOUNCEMENT,2026-05-13,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+BHARTIHEXA,RESULT_ANNOUNCEMENT,2026-05-13,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+SAGCEM,RESULT_ANNOUNCEMENT,2026-05-13,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+CIPLA,RESULT_ANNOUNCEMENT,2026-05-13,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+CARERATING,RESULT_ANNOUNCEMENT,2026-05-13,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+DCMSHRIRAM,RESULT_ANNOUNCEMENT,2026-05-13,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+EXPLEOSOL,RESULT_ANNOUNCEMENT,2026-05-13,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+CROMPTON,RESULT_ANNOUNCEMENT,2026-05-13,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+VRAJ,RESULT_ANNOUNCEMENT,2026-05-14,Financial Results/Other business matters,Financial Results/Other business matters,NSE_EVENT_CALENDAR
+WANBURY,RESULT_ANNOUNCEMENT,2026-05-14,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+JTEKTINDIA,RESULT_ANNOUNCEMENT,2026-05-14,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+MUKANDLTD,RESULT_ANNOUNCEMENT,2026-05-14,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+PITTIENG,RESULT_ANNOUNCEMENT,2026-05-14,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+PRICOLLTD,RESULT_ANNOUNCEMENT,2026-05-14,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+HAL,RESULT_ANNOUNCEMENT,2026-05-14,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+SETL,RESULT_ANNOUNCEMENT,2026-05-14,Financial Results/Other business matters,Financial Results/Other business matters,NSE_EVENT_CALENDAR
+TIMKEN,RESULT_ANNOUNCEMENT,2026-05-14,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+TMPV,RESULT_ANNOUNCEMENT,2026-05-14,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+UNITDSPR,RESULT_ANNOUNCEMENT,2026-05-14,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+VENKEYS,RESULT_ANNOUNCEMENT,2026-05-14,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+SAILIFE,RESULT_ANNOUNCEMENT,2026-05-14,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+SAREGAMA,RESULT_ANNOUNCEMENT,2026-05-14,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+JSWSTEEL,RESULT_ANNOUNCEMENT,2026-05-14,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+FIBERWEB,RESULT_ANNOUNCEMENT,2026-05-14,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+679GS2027,CORPORATE_ACTION,2026-05-14,,,NSE_CORP_ACTION
+GESHIP,RESULT_ANNOUNCEMENT,2026-05-14,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+ALLCARGO,RESULT_ANNOUNCEMENT,2026-05-14,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+ANDHRAPAP,RESULT_ANNOUNCEMENT,2026-05-14,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+APOLLOTYRE,RESULT_ANNOUNCEMENT,2026-05-14,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+ATLASCYCLE,RESULT_ANNOUNCEMENT,2026-05-14,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+GAYAPROJ,RESULT_ANNOUNCEMENT,2026-05-14,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+BTML,BOARD_MEETING,2026-05-14,Fund Raising/Other business matters,Fund Raising/Other business matters,NSE_EVENT_CALENDAR
+CARBORUNIV,RESULT_ANNOUNCEMENT,2026-05-14,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+CHAMBLFERT,RESULT_ANNOUNCEMENT,2026-05-14,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+CLEAN,RESULT_ANNOUNCEMENT,2026-05-14,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+ENDURANCE,RESULT_ANNOUNCEMENT,2026-05-14,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+BORANA,RESULT_ANNOUNCEMENT,2026-05-14,Financial Results/Other business matters,Financial Results/Other business matters,NSE_EVENT_CALENDAR
+GICHSGFIN,RESULT_ANNOUNCEMENT,2026-05-15,Financial Results/Dividend/Fund Raising/Other business matters,Financial Results/Dividend/Fund Raising/Other business matters,NSE_EVENT_CALENDAR
+GLAND,RESULT_ANNOUNCEMENT,2026-05-15,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+GOKULAGRO,RESULT_ANNOUNCEMENT,2026-05-15,Financial Results/Other business matters,Financial Results/Other business matters,NSE_EVENT_CALENDAR
+GPIL,RESULT_ANNOUNCEMENT,2026-05-15,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+KIMS,RESULT_ANNOUNCEMENT,2026-05-15,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+GANGOTRI,RESULT_ANNOUNCEMENT,2026-05-15,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+NIPPOBATRY,RESULT_ANNOUNCEMENT,2026-05-15,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+NOIDATOLL,RESULT_ANNOUNCEMENT,2026-05-15,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+RANEHOLDIN,RESULT_ANNOUNCEMENT,2026-05-15,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+TVTODAY,RESULT_ANNOUNCEMENT,2026-05-15,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+NCC,RESULT_ANNOUNCEMENT,2026-05-15,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+SANATHAN,RESULT_ANNOUNCEMENT,2026-05-15,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+EMKAY,RESULT_ANNOUNCEMENT,2026-05-15,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+CUPID,RESULT_ANNOUNCEMENT,2026-05-15,Financial Results/Other business matters,Financial Results/Other business matters,NSE_EVENT_CALENDAR
+DEEPAKNTR,RESULT_ANNOUNCEMENT,2026-05-15,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+ANANDRATHI,CORPORATE_ACTION,2026-05-15,,,NSE_CORP_ACTION
+AETHER,RESULT_ANNOUNCEMENT,2026-05-15,Financial Results/Other business matters,Financial Results/Other business matters,NSE_EVENT_CALENDAR
+APLLTD,RESULT_ANNOUNCEMENT,2026-05-15,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+IEX,CORPORATE_ACTION,2026-05-15,,,NSE_CORP_ACTION
+BALMLAWRIE,RESULT_ANNOUNCEMENT,2026-05-15,Financial Results/Dividend/Buyback/Other business matters,Financial Results/Dividend/Buyback/Other business matters,NSE_EVENT_CALENDAR
+BALMLAWRIE,BOARD_MEETING,2026-05-15,Bonus,Bonus,NSE_EVENT_CALENDAR
+CUBEXTUB,RESULT_ANNOUNCEMENT,2026-05-15,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+AROGRANITE,RESULT_ANNOUNCEMENT,2026-05-15,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+ATULAUTO,RESULT_ANNOUNCEMENT,2026-05-16,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+PRECOT,RESULT_ANNOUNCEMENT,2026-05-16,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+NELCAST,RESULT_ANNOUNCEMENT,2026-05-18,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+ZYDUSWELL,RESULT_ANNOUNCEMENT,2026-05-18,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+ONMOBILE,RESULT_ANNOUNCEMENT,2026-05-18,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+KMSUGAR,RESULT_ANNOUNCEMENT,2026-05-18,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+MANBA,RESULT_ANNOUNCEMENT,2026-05-18,Financial Results/Dividend/Fund Raising,Financial Results/Dividend/Fund Raising,NSE_EVENT_CALENDAR
+GVT&D,RESULT_ANNOUNCEMENT,2026-05-18,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+GNFC,RESULT_ANNOUNCEMENT,2026-05-18,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+ATLANTAA,RESULT_ANNOUNCEMENT,2026-05-18,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+ARVEE,RESULT_ANNOUNCEMENT,2026-05-18,Financial Results/Other business matters,Financial Results/Other business matters,NSE_EVENT_CALENDAR
+IOC,RESULT_ANNOUNCEMENT,2026-05-18,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+RITES,RESULT_ANNOUNCEMENT,2026-05-19,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+PTC,RESULT_ANNOUNCEMENT,2026-05-19,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+NEPHROPLUS,RESULT_ANNOUNCEMENT,2026-05-19,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+MINDTECK,RESULT_ANNOUNCEMENT,2026-05-19,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+HCG,RESULT_ANNOUNCEMENT,2026-05-19,Financial Results/Other business matters,Financial Results/Other business matters,NSE_EVENT_CALENDAR
+GSFC,RESULT_ANNOUNCEMENT,2026-05-19,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+FINEORG,RESULT_ANNOUNCEMENT,2026-05-19,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+DREDGECORP,RESULT_ANNOUNCEMENT,2026-05-19,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+DCMFINSERV,RESULT_ANNOUNCEMENT,2026-05-19,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+BOSCH-HCIL,RESULT_ANNOUNCEMENT,2026-05-19,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+BASF,RESULT_ANNOUNCEMENT,2026-05-19,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+MOTHERSON,RESULT_ANNOUNCEMENT,2026-05-20,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+LMW,RESULT_ANNOUNCEMENT,2026-05-20,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+MURUDCERA,RESULT_ANNOUNCEMENT,2026-05-20,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+LMW,EX_DIVIDEND,2026-05-20,Dividend,Dividend,NSE_EVENT_CALENDAR
+LENSKART,RESULT_ANNOUNCEMENT,2026-05-20,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+MEDPLUS,RESULT_ANNOUNCEMENT,2026-05-20,Financial Results/Other business matters,Financial Results/Other business matters,NSE_EVENT_CALENDAR
+HONAUT,RESULT_ANNOUNCEMENT,2026-05-20,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+GRASIM,RESULT_ANNOUNCEMENT,2026-05-20,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+BOSCHLTD,RESULT_ANNOUNCEMENT,2026-05-20,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+APOLLOHOSP,RESULT_ANNOUNCEMENT,2026-05-20,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+JUBLFOOD,RESULT_ANNOUNCEMENT,2026-05-20,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+TREJHARA,RESULT_ANNOUNCEMENT,2026-05-21,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+PAGEIND,RESULT_ANNOUNCEMENT,2026-05-21,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+MTNL,RESULT_ANNOUNCEMENT,2026-05-21,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+IXIGO,RESULT_ANNOUNCEMENT,2026-05-21,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+ICRA,RESULT_ANNOUNCEMENT,2026-05-21,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+LXCHEM,RESULT_ANNOUNCEMENT,2026-05-21,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+ENGINERSIN,RESULT_ANNOUNCEMENT,2026-05-21,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+EMAMILTD,RESULT_ANNOUNCEMENT,2026-05-21,Financial Results/Other business matters,Financial Results/Other business matters,NSE_EVENT_CALENDAR
+CENTRUM,RESULT_ANNOUNCEMENT,2026-05-21,Financial Results/Fund Raising/Other business matters,Financial Results/Fund Raising/Other business matters,NSE_EVENT_CALENDAR
+BIKAJI,RESULT_ANNOUNCEMENT,2026-05-21,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+GMBREW,CORPORATE_ACTION,2026-05-21,,,NSE_CORP_ACTION
+HYBRIDFIN,RESULT_ANNOUNCEMENT,2026-05-21,Financial Results/Other business matters,Financial Results/Other business matters,NSE_EVENT_CALENDAR
+HINDALCO,RESULT_ANNOUNCEMENT,2026-05-22,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+INDIGOPNTS,RESULT_ANNOUNCEMENT,2026-05-22,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+JUBLPHARMA,RESULT_ANNOUNCEMENT,2026-05-22,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+PDMJEPAPER,RESULT_ANNOUNCEMENT,2026-05-22,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+TTKPRESTIG,RESULT_ANNOUNCEMENT,2026-05-22,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+HBLENGINE,RESULT_ANNOUNCEMENT,2026-05-23,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+IPL,RESULT_ANNOUNCEMENT,2026-05-23,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+NESCO,RESULT_ANNOUNCEMENT,2026-05-25,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+WIPL,RESULT_ANNOUNCEMENT,2026-05-25,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+KSHINTL,RESULT_ANNOUNCEMENT,2026-05-25,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+ARE&M,RESULT_ANNOUNCEMENT,2026-05-25,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+GAYAHWS,RESULT_ANNOUNCEMENT,2026-05-25,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+CONCOR,RESULT_ANNOUNCEMENT,2026-05-25,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+IFBIND,RESULT_ANNOUNCEMENT,2026-05-25,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+JUBLINGREA,RESULT_ANNOUNCEMENT,2026-05-26,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+PGHL,RESULT_ANNOUNCEMENT,2026-05-26,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+TCI,RESULT_ANNOUNCEMENT,2026-05-26,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+ESABINDIA,RESULT_ANNOUNCEMENT,2026-05-27,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+GILLETTE,RESULT_ANNOUNCEMENT,2026-05-27,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+COFFEEDAY,RESULT_ANNOUNCEMENT,2026-05-27,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+CUMMINSIND,RESULT_ANNOUNCEMENT,2026-05-27,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+APARINDS,RESULT_ANNOUNCEMENT,2026-05-28,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+BANCOINDIA,RESULT_ANNOUNCEMENT,2026-05-28,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+GPPL,RESULT_ANNOUNCEMENT,2026-05-28,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
+INSECTICID,RESULT_ANNOUNCEMENT,2026-05-28,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+MBECL,RESULT_ANNOUNCEMENT,2026-05-28,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+PGHH,RESULT_ANNOUNCEMENT,2026-05-28,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+TIIL,RESULT_ANNOUNCEMENT,2026-05-28,Financial Results,Financial Results,NSE_EVENT_CALENDAR
+ASIANPAINT,RESULT_ANNOUNCEMENT,2026-05-29,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+KOTHARIPRO,RESULT_ANNOUNCEMENT,2026-05-29,Financial Results/Dividend,Financial Results/Dividend,NSE_EVENT_CALENDAR
+JAICORPLTD,RESULT_ANNOUNCEMENT,2026-05-30,Financial Results/Dividend/Other business matters,Financial Results/Dividend/Other business matters,NSE_EVENT_CALENDAR
