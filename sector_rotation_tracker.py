@@ -35,6 +35,7 @@ import argparse
 import html
 import json
 import math
+import os
 import sqlite3
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -900,6 +901,28 @@ def _compute_changes(conn: sqlite3.Connection, date_new: str, date_old: str) -> 
     return len(rows)
 
 
+def _change_live_prices_stale(conn: sqlite3.Connection, date_new: str, date_old: str) -> bool:
+    """Return True when cached change rows are missing newer snapshot live prices."""
+    row = conn.execute(
+        """
+        SELECT COUNT(*)
+        FROM stage_changes c
+        JOIN stage_snapshots s
+          ON s.snapshot_date = c.change_date
+         AND s.symbol = c.symbol
+        WHERE c.change_date = ?
+          AND c.compare_date = ?
+          AND s.live_price IS NOT NULL
+          AND (
+                c.live_price IS NULL
+             OR ABS(COALESCE(c.live_price, 0) - s.live_price) > 0.001
+          )
+        """,
+        (date_new, date_old),
+    ).fetchone()
+    return bool(row and row[0])
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Change report
 # ─────────────────────────────────────────────────────────────────────────────
@@ -941,7 +964,7 @@ def build_change_report(
             "SELECT COUNT(*) FROM stage_changes WHERE change_date=? AND compare_date=?",
             (today_snap, prev_snap)
         ).fetchone()[0]
-        if not existing:
+        if not existing or _change_live_prices_stale(conn, today_snap, prev_snap):
             _compute_changes(conn, today_snap, prev_snap)
 
         chg = pd.read_sql_query(
@@ -963,7 +986,7 @@ def build_change_report(
                     "SELECT COUNT(*) FROM stage_changes WHERE change_date=? AND compare_date=?",
                     (today_snap, week_snap)
                 ).fetchone()[0]
-                if not ex2:
+                if not ex2 or _change_live_prices_stale(conn, today_snap, week_snap):
                     _compute_changes(conn, today_snap, week_snap)
                 chg_w = pd.read_sql_query(
                     "SELECT * FROM stage_changes WHERE change_date=? AND compare_date=? ORDER BY change_type",
@@ -1098,6 +1121,134 @@ def _build_trend_data(conn: sqlite3.Connection, snap_date: str) -> dict:
     }
 
 
+def _top_symbols(rows: list[dict], limit: int = 5) -> str:
+    syms = [str(r.get("symbol") or "").strip() for r in rows if str(r.get("symbol") or "").strip()]
+    return ", ".join(syms[:limit]) if syms else "none"
+
+
+def _rule_based_change_summary(report: dict) -> dict:
+    summ = report.get("summary", {})
+    trend = report.get("trend", {}) or {}
+    sectors = trend.get("sectors", []) or []
+    top_sectors = ", ".join(
+        f"{s.get('sector', 'Unknown')} ({s.get('count', 0)})"
+        for s in sectors[:3]
+    ) or "sector mix unavailable"
+
+    total_s2 = int(summ.get("total_stage2") or len(report.get("stage2_now", [])) or 0)
+    day_new = int(summ.get("new_entrants_day") or len(report.get("new_stage2", [])) or 0)
+    day_exit = int(summ.get("exits_day") or len(report.get("exit_stage2", [])) or 0)
+    week_new = len(report.get("week_new_stage2", []) or [])
+    week_exit = len(report.get("week_exit_stage2", []) or [])
+    stage_changes = int(summ.get("stage_changes_day") or 0)
+    stage_counts = summ.get("stage_counts", {}) or {}
+
+    new_names = _top_symbols(report.get("new_stage2", []) or [])
+    exit_names = _top_symbols(report.get("exit_stage2", []) or [])
+
+    live_rows = report.get("stage2_now", []) or []
+    live_count = sum(1 for r in live_rows if r.get("live_price") is not None)
+    live_text = (
+        f"Live prices are available for {live_count}/{len(live_rows)} Stage 2 names."
+        if live_rows else
+        "Live-price coverage is unavailable for this report snapshot."
+    )
+
+    return {
+        "source": "rules",
+        "headline": (
+            f"Stage 2 breadth stands at {total_s2} stocks, with {day_new} new entrants "
+            f"and {day_exit} exits versus {report.get('prev_date', 'the previous snapshot')}."
+        ),
+        "bullets": [
+            f"Daily churn: {stage_changes} total stage changes; weekly Stage 2 flow is {week_new} entrants and {week_exit} exits.",
+            f"New Stage 2 names to review: {new_names}. Exits to reassess: {exit_names}.",
+            f"Leadership is concentrated in {top_sectors}; current stage counts are S1 {stage_counts.get('STAGE_1', 0)}, S2 {stage_counts.get('STAGE_2', total_s2)}, S3 {stage_counts.get('STAGE_3', 0)}, S4 {stage_counts.get('STAGE_4', 0)}.",
+            live_text,
+        ],
+        "note": "Research and learning summary only. Not investment advice.",
+    }
+
+
+def _change_summary_prompt(report: dict, fallback: dict) -> str:
+    def compact_rows(rows: list[dict], keys: list[str], limit: int = 8) -> list[dict]:
+        out = []
+        for row in rows[:limit]:
+            out.append({k: row.get(k) for k in keys})
+        return out
+
+    payload = {
+        "snapshot": report.get("snap_date"),
+        "previous_snapshot": report.get("prev_date"),
+        "week_snapshot": report.get("week_snap"),
+        "summary": report.get("summary", {}),
+        "top_stage2_sectors": (report.get("trend", {}) or {}).get("sectors", [])[:8],
+        "new_stage2": compact_rows(report.get("new_stage2", []) or [], ["symbol", "company_name", "live_price", "live_vs_prev_pct", "stage_score_now"]),
+        "exit_stage2": compact_rows(report.get("exit_stage2", []) or [], ["symbol", "company_name", "stage_now", "live_price", "live_vs_prev_pct"]),
+        "weekly_new_stage2_count": len(report.get("week_new_stage2", []) or []),
+        "weekly_exit_stage2_count": len(report.get("week_exit_stage2", []) or []),
+        "fallback_summary": fallback,
+    }
+    return (
+        "Write a concise top-of-report summary for an Indian NSE Stage 2 tracker. "
+        "Use only the JSON data provided. Avoid buy/sell recommendation language; use research, watch, reassess, leadership, breadth, risk. "
+        "Return valid JSON only with keys: headline (one sentence), bullets (array of 3-4 short bullets). "
+        f"\n\nDATA:\n{json.dumps(payload, ensure_ascii=False)}"
+    )
+
+
+def _default_llm_change_summary(prompt: str) -> Optional[dict]:
+    try:
+        from sector_rotation_report import _llm_call, _load_env_key
+    except Exception:
+        return None
+
+    api_key = (
+        os.environ.get("OPENAI_API_KEY")
+        or _load_env_key("OPENAI_API_KEY")
+        or _load_env_key("AGENTIC_HARNESS_API_KEY")
+    )
+    if not api_key:
+        return None
+
+    model = (
+        os.environ.get("SHUNYAAI_ASSISTANT_MODEL")
+        or _load_env_key("SHUNYAAI_ASSISTANT_MODEL")
+        or "gpt-5.5"
+    )
+    print(f"  Generating LLM Stage 2 change summary via OpenAI {model}...")
+    return _llm_call(
+        api_key,
+        model,
+        "You are an NSE India market research assistant. Return valid JSON only.",
+        prompt,
+        max_tokens=2048,
+        timeout=90,
+    )
+
+
+def generate_change_summary(report: dict, llm_func=None) -> dict:
+    """Generate a short report-top change narrative with deterministic fallback."""
+    fallback = _rule_based_change_summary(report)
+    llm_func = llm_func or _default_llm_change_summary
+    try:
+        llm_result = llm_func(_change_summary_prompt(report, fallback))
+        if isinstance(llm_result, dict):
+            headline = str(llm_result.get("headline") or "").strip()
+            bullets_raw = llm_result.get("bullets") or []
+            bullets = [str(b).strip() for b in bullets_raw if str(b).strip()]
+            if headline and bullets:
+                return {
+                    "source": "llm",
+                    "headline": headline,
+                    "bullets": bullets[:4],
+                    "note": fallback["note"],
+                }
+    except Exception as exc:
+        print(f"  LLM Stage 2 summary skipped ({type(exc).__name__}); using rule-based summary.")
+    return fallback
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # HTML report builder
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1121,6 +1272,8 @@ def _pct_cell(v) -> str:
         return '<td style="color:#94a3b8">—</td>'
     try:
         fv = float(v)
+        if math.isnan(fv) or math.isinf(fv):  # Guard against NaN/Inf from pandas
+            return '<td style="color:#94a3b8">—</td>'
         color = "#16a34a" if fv > 0 else ("#dc2626" if fv < 0 else "#64748b")
         arrow = "▲" if fv > 0 else ("▼" if fv < 0 else "")
         return f'<td style="color:{color};font-weight:500;text-align:right">{arrow}{abs(fv):.2f}%</td>'
@@ -1132,7 +1285,10 @@ def _price_cell(v) -> str:
     if v is None:
         return '<td style="color:#94a3b8">—</td>'
     try:
-        return f'<td style="text-align:right">₹{float(v):,.2f}</td>'
+        fv = float(v)
+        if math.isnan(fv) or math.isinf(fv):  # Guard against NaN/Inf from pandas
+            return '<td style="color:#94a3b8">—</td>'
+        return f'<td style="text-align:right">₹{fv:,.2f}</td>'
     except (TypeError, ValueError):
         return '<td style="color:#94a3b8">—</td>'
 
@@ -1145,6 +1301,13 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f1f5f9;color:#0f172
 .app-bar h1{font-size:1.4rem;font-weight:700}
 .app-bar p{font-size:0.82rem;opacity:.8;margin-top:4px}
 .container{max-width:1600px;margin:0 auto;padding:20px 16px}
+.change-summary{background:#fff;border-radius:10px;border:1px solid #bbf7d0;border-left:5px solid #059669;box-shadow:0 1px 3px rgba(0,0,0,.08);padding:16px 18px;margin-bottom:20px}
+.change-summary .cs-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.change-summary h2{font-size:1rem;font-weight:750;color:#064e3b}
+.change-summary p{font-size:.9rem;line-height:1.55;color:#0f172a;margin-bottom:8px}
+.change-summary ul{margin-left:18px;color:#334155;font-size:.84rem;line-height:1.55}
+.change-summary li{margin:3px 0}
+.change-summary .cs-note{font-size:.74rem;color:#64748b;margin-top:10px}
 .summary-grid{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px}
 .sum-card{background:#fff;border-radius:8px;padding:14px 20px;box-shadow:0 1px 3px rgba(0,0,0,.08);min-width:140px;border-top:3px solid transparent}
 .sum-card .sc-val{font-size:2rem;font-weight:700;line-height:1}
@@ -1517,6 +1680,7 @@ def build_html_report(report: dict) -> str:
     w_new     = report.get("week_new_stage2", [])
     w_exit    = report.get("week_exit_stage2", [])
     w_price   = report.get("week_price_changes", [])
+    change_summary = report.get("change_summary") or generate_change_summary(report)
 
     # ── helpers ──────────────────────────────────────────────────────────────
     _SIG_MAP = {
@@ -1907,6 +2071,21 @@ def build_html_report(report: dict) -> str:
         f'<div class="sum-card"><div class="sc-val sc-blue">{len(w_new)}</div><div class="sc-lbl">New entrants (week)</div></div>'
         f'<div class="sum-card"><div class="sc-val sc-red">{len(w_exit)}</div><div class="sc-lbl">Exits (week)</div></div>'
     )
+
+    def _change_summary_html(summary: dict) -> str:
+        bullets = "".join(f"<li>{_H(str(b))}</li>" for b in summary.get("bullets", [])[:4])
+        return (
+            '<div class="change-summary">'
+            '<div class="cs-top">'
+            '<h2>What Changed</h2>'
+            '</div>'
+            f'<p>{_H(str(summary.get("headline") or ""))}</p>'
+            f'<ul>{bullets}</ul>'
+            f'<div class="cs-note">{_H(str(summary.get("note") or "Research and learning summary only. Not investment advice."))}</div>'
+            '</div>'
+        )
+
+    change_summary_html = _change_summary_html(change_summary)
 
     # ── Top Picks ─────────────────────────────────────────────────────────────
     top_picks = report.get("top_picks", [])
@@ -2384,6 +2563,7 @@ function closePickModal() {
      &nbsp;·&nbsp; Week vs: <strong>{week}</strong> &nbsp;·&nbsp; Generated: {now_ts}</p>
 </div>
 <div class="container">
+  {change_summary_html}
   <div class="summary-grid">{cards}</div>
   {trend_section}
   {trans_html}

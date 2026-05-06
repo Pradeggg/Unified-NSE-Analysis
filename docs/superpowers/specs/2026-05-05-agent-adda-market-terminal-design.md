@@ -37,6 +37,10 @@ Proposed modules:
 - `terminal/adapters/`: free NSE/Yahoo provider first; broker/live-feed provider interface later.
 - `terminal/agent/`: natural-language query router, intent detection, entity resolution, tool planning, safe execution, and response synthesis.
 - `terminal/tools/`: allowlisted callable tools used by both deterministic commands and the natural-language agent.
+- `terminal/session.py`: session persistence for query turns, active context, follow-up resolution, and audit trail.
+- `terminal/planner.py`: multi-step agent loop for assessment, planning, tool execution, sufficiency checks, fallback, and synthesis.
+- `terminal/context.py`: session context reducer for active mode, last symbols, last sector, last screener, last result set, and source freshness.
+- `terminal/sandbox.py`: constrained read-only analysis runtime for generated dataframe/SQLite code.
 - Existing engines remain the source of analytics truth: `download_nse_bhavcopy.py`, `daily_refresh.py`, `sector_rotation_tracker.py`, `market_breadth.py`, `index_intelligence.py`, `sector_rotation_report.py`, `portfolio-analyzer`.
 
 The UI should read from cached snapshots where possible. Heavy computations and EOD downloads should run as explicit jobs with logs and status records, not inside the per-second render loop.
@@ -60,8 +64,74 @@ Natural-language flow:
 3. **Intent detection:** classify the request into a known intent such as `stock_latest_brief`, `stock_technical_setup`, `sector_scan`, `index_status`, `portfolio_question`, `report_lookup`, `data_health`, `web_catalyst_search`, or `custom_readonly_analysis`.
 4. **Entity resolution:** resolve names and aliases such as "Reliance" to `RELIANCE`, "Nifty Bank" to the correct index name, and sector phrases to canonical sector labels.
 5. **Tool plan:** create a small auditable execution plan using approved tools first. Every market-data or calculation tool receives the resolved `data_mode`.
-6. **Execution:** execute the plan through the tool registry. Generated code is allowed only for read-only dataframe analysis when deterministic tools cannot answer the request.
-7. **Synthesis:** produce a balanced, sourced response with data freshness and no-investment-advice framing.
+6. **Execution:** execute the plan through the tool registry. Tools return both result data and structured gaps such as `missing_intraday_table`, `unsupported_screen`, or `insufficient_data`.
+7. **Sufficiency check:** inspect whether the tool results answer the question. If not, choose the next fallback path instead of inventing an answer.
+8. **Fallback:** use approved local search, read-only generated dataframe/SQLite analysis, or sourced external catalyst search depending on the gap and user intent.
+9. **Synthesis:** produce a balanced, sourced response with data freshness, source trail, session-context notes, and no-investment-advice framing.
+
+### Planner And Fallback Loop
+
+The query agent should behave like a small planner, not a single prompt-response call.
+
+For every query it creates a `QuerySessionTurn` record:
+
+- `session_id`, `turn_id`, timestamp, raw query, cleaned query, and selected `data_mode`.
+- situation assessment, intent, resolved entities, and any context reused from prior turns.
+- planned tool calls, executed tool calls, result summaries, structured gaps, fallback actions, and final answer.
+- source freshness for every file, table, API response, report, and web result used.
+
+Execution loop:
+
+```text
+assess situation
+detect data mode
+detect intent
+resolve entities and context
+create approved tool plan
+execute tools
+judge sufficiency
+if insufficient:
+  search approved local reports/docs/data catalog
+  or run read-only generated dataframe/SQLite analysis
+  or run sourced web catalyst search when latest external context is requested
+synthesize answer
+persist turn and update session context
+```
+
+Fallback order:
+
+1. Approved deterministic tools.
+2. Approved local search over reports, generated markdown/HTML summaries, docs, and the data catalog.
+3. Read-only generated code against approved CSV files and SQLite read queries.
+4. Web/news catalyst search only when the user asks for latest/external context or catalysts.
+
+Generated analysis may run automatically only inside the constrained read-only sandbox. It must not import network clients, `os`, `subprocess`, filesystem mutation APIs, secret loaders, or database write operations. The answer must disclose when fallback was used, for example: "Tool result was insufficient, so I ran read-only local analysis over `stage_snapshots` and `nse_sec_full_data.csv`."
+
+### Session Context
+
+The chat is session-managed. The terminal keeps enough context to answer follow-ups without making the user repeat themselves.
+
+Tracked context:
+
+- active `data_mode`, including whether it was explicit or inferred.
+- last resolved symbols, sector, index, portfolio subset, screener type, and result set.
+- last time range, ranking metric, filters, and source freshness.
+- unresolved questions and tool gaps from the prior turn.
+
+Examples:
+
+```text
+User: breakout stocks
+Agent: returns breakout candidates and stores result_set=breakouts.
+
+User: show only banks
+Agent: reuses previous result_set=breakouts and filters to banking/financial names.
+
+User: switch to intraday
+Agent: updates data_mode=intraday and reruns the last relevant plan against live tables.
+```
+
+The agent should explicitly say when it reuses context: "Using previous result set: breakout stocks." Context must never override an explicit `/historical` or `/intraday` prefix.
 
 ### Data Modes
 

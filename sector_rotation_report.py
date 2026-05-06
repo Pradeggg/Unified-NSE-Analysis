@@ -73,6 +73,47 @@ ROTATING_INDEXES = {
     "Nifty Pharma": "Pharma & Healthcare",
 }
 
+# PG: Thematic indexes for thematic rotation tab — separate from core sector rotation
+THEMATIC_INDEXES = {
+    "Nifty CPSE": "CPSE / PSU",
+    "Nifty PSE": "Public Sector Enterprises",
+    "Nifty MNC": "Multinational Corps",
+    "Nifty Infra": "Infrastructure",
+    "Nifty Consumption": "Consumption",
+    "Nifty GrowSect 15": "Growth Sectors",
+    "Nifty Multi Infra": "Multi-cap Infra",
+    "Nifty Multi Mfg": "Multi-cap Manufacturing",
+    "Nifty Tata 25 Cap": "Tata Group",
+    "Nifty Housing": "Housing",
+    "Nifty IPO": "IPO",
+    "Nifty Mobility": "Mobility",
+    "Nifty Rural": "Rural Economy",
+    "Nifty Ind Tourism": "Tourism",
+    "Nifty Trans Logis": "Transport & Logistics",
+    "Nifty New Consump": "New Age Consumption",
+    "Nifty NonCyc Cons": "Non-Cyclical Consumption",
+    "Nifty Corp MAATR": "Corporate Groups (MAATR)",
+    "Nifty CoreHousing": "Core Housing",
+    "Nifty SME Emerge": "SME Emerge",
+}
+
+# PG: Maps thematic index display names → index_stock_mapping.csv INDEX_NAME values
+# Some thematic indexes don't have constituent data in the mapping file
+THEMATIC_INDEX_MAPPING: dict[str, str] = {
+    "Nifty CPSE": "NIFTY CPSE",
+    "Nifty PSE": "NIFTY PSE",
+    "Nifty Infra": "NIFTY INFRASTRUCTURE",
+    "Nifty Consumption": "NIFTY INDIA CONSUMPTION",
+    "Nifty Housing": "NIFTY HOUSING",
+    "Nifty Rural": "NIFTY RURAL",
+    "Nifty Ind Tourism": "NIFTY INDIA TOURISM",
+    "Nifty Ind Defence": "NIFTY INDIA DEFENCE",
+    "Nifty Trans Logis": "NIFTY TRANSPORTATION & LOGISTICS",
+    "Nifty CoreHousing": "NIFTY CORE HOUSING",
+    "Nifty Corp MAATR": "NIFTY INDIA SELECT 5 CORPORATE GROUPS (MAATR)",
+    "Nifty SME Emerge": "Nifty Sme Emerge",
+}
+
 INDEX_CATEGORIES: dict[str, str] = {
     # Broad Market
     "Nifty 50": "Broad Market", "Nifty 100": "Broad Market",
@@ -685,6 +726,69 @@ def load_index_rotation() -> pd.DataFrame:
     ranked = rank_rotating_sectors(metrics, benchmark_symbol="Nifty 500")
     ranked["SECTOR_NAME"] = ranked["SYMBOL"].map(ROTATING_INDEXES)
     return ranked.dropna(subset=["SECTOR_NAME"])
+
+
+# PG: Thematic rotation — same mechanics as sector rotation but for thematic indexes
+def load_thematic_rotation() -> pd.DataFrame:
+    """Load and rank thematic indexes vs Nifty 500, mirroring sector rotation logic."""
+    index_data = pd.read_csv(INDEX_DATA_CSV, usecols=["SYMBOL", "CLOSE", "TIMESTAMP"])
+    symbols = ["Nifty 500", *THEMATIC_INDEXES.keys()]
+    metrics = build_index_metrics(index_data, symbols)
+    if metrics.empty:
+        return pd.DataFrame()
+    ranked = rank_rotating_sectors(metrics, benchmark_symbol="Nifty 500")
+    ranked["THEME_NAME"] = ranked["SYMBOL"].map(THEMATIC_INDEXES)
+    return ranked.dropna(subset=["THEME_NAME"])
+
+
+# PG: Load top-N stocks per thematic index using index_stock_mapping + comprehensive CSV
+def load_thematic_top_stocks(top_n: int = 10) -> dict[str, pd.DataFrame]:
+    """
+    For each thematic index that has constituent data in index_stock_mapping.csv,
+    return top N stocks ranked by TECHNICAL_SCORE from the latest comprehensive CSV.
+    Returns dict: thematic_index_display_name -> DataFrame of top stocks.
+    """
+    mapping_csv = ROOT / "data" / "index_stock_mapping.csv"
+    if not mapping_csv.exists():
+        return {}
+
+    mapping = pd.read_csv(mapping_csv)
+    try:
+        analysis, _ = load_comprehensive_analysis()
+    except FileNotFoundError:
+        return {}
+
+    # Build lookup: SYMBOL -> row from comprehensive analysis
+    analysis["_KEY"] = analysis["SYMBOL"].astype(str).str.strip().str.upper()
+    analysis_lookup = analysis.set_index("_KEY")
+
+    result: dict[str, pd.DataFrame] = {}
+    for display_name, mapping_name in THEMATIC_INDEX_MAPPING.items():
+        # Get constituent symbols for this thematic index
+        constituents = mapping[mapping["INDEX_NAME"] == mapping_name]["STOCK_SYMBOL"].tolist()
+        if not constituents:
+            continue
+
+        # Match constituents against comprehensive analysis
+        matched_rows = []
+        for sym in constituents:
+            key = sym.strip().upper()
+            if key in analysis_lookup.index:
+                matched_rows.append(analysis_lookup.loc[key])
+
+        if not matched_rows:
+            continue
+
+        stocks_df = pd.DataFrame(matched_rows)
+        # Rank by TECHNICAL_SCORE descending, take top N
+        score_col = "TECHNICAL_SCORE"
+        if score_col in stocks_df.columns:
+            stocks_df[score_col] = pd.to_numeric(stocks_df[score_col], errors="coerce")
+            stocks_df = stocks_df.sort_values(score_col, ascending=False)
+
+        result[display_name] = stocks_df.head(top_n).reset_index(drop=True)
+
+    return result
 
 
 def load_all_index_metrics() -> pd.DataFrame:
@@ -2278,6 +2382,13 @@ tr:hover td{background:#f0f7ff}
 .rot-wrap{display:flex;align-items:center;gap:8px}
 .rot-track{width:70px;height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden;flex-shrink:0}
 .rot-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,#1e3a5f,#3b82f6)}
+/* PG: Thematic expandable stock rows */
+.theme-parent{cursor:pointer;transition:background 0.15s}.theme-parent:hover{background:#f0f4ff !important}
+.theme-expand-icon{display:inline-block;transition:transform 0.2s;color:#64748b}
+.theme-detail td{border-top:none !important}
+.theme-stocks-tbl{border-collapse:collapse}.theme-stocks-tbl th{background:#e2e8f0;padding:4px 8px;text-align:left;font-size:0.82em}
+.theme-stocks-tbl td{padding:3px 8px;border-bottom:1px solid #f1f5f9}
+.theme-stocks-tbl tr:hover{background:#f0f9ff}
 /* PG: macro tailwind badges (P1-6) */
 .mtw-badge{display:inline-block;padding:2px 7px;border-radius:10px;font-size:11px;font-weight:600}
 .mtw-pos{background:#dcfce7;color:#166534}.mtw-neg{background:#fee2e2;color:#991b1b}.mtw-neu{background:#f1f5f9;color:#64748b}
@@ -2871,6 +2982,23 @@ def build_indices_tab_html(all_metrics: pd.DataFrame | None) -> str:
     });
   });
   if(idxSearch)idxSearch.addEventListener('input',filterIdx);
+
+  /* PG: Thematic expandable top-10 stocks toggle */
+  document.querySelectorAll('.theme-parent').forEach(function(row){
+    row.addEventListener('click',function(){
+      var tid=row.getAttribute('data-theme-id');
+      var detail=document.getElementById(tid);
+      if(!detail)return;
+      var icon=row.querySelector('.theme-expand-icon');
+      if(detail.style.display==='none'){
+        detail.style.display='';
+        if(icon)icon.textContent='▼';
+      }else{
+        detail.style.display='none';
+        if(icon)icon.textContent='▶';
+      }
+    });
+  });
 })();
 </script>"""
 
@@ -2915,6 +3043,8 @@ def render_html_interactive(
     seasonal_calendar_html: str = "",
     global_corr_table_html: str = "",
     all_index_metrics: pd.DataFrame | None = None,
+    thematic_rank: pd.DataFrame | None = None,
+    thematic_top_stocks: dict | None = None,
 ) -> str:
     gen_date = generated_at.strftime("%Y-%m-%d")
     data_date = (
@@ -3180,6 +3310,111 @@ def render_html_interactive(
         + (f'<div class="card" style="margin:12px 0">{global_corr_table_html}</div>' if global_corr_table_html else "")
         + sec_narr_html
     )
+
+    # ---- BUILD THEMATIC ROTATION TAB ----
+    # PG: mirrors the sector rotation table structure for thematic indexes
+    # PG: Enhanced with expandable top-10 stocks per theme using index_stock_mapping + comprehensive CSV
+    _tstocks = thematic_top_stocks or {}
+    thematic_html = ""
+    if thematic_rank is not None and not thematic_rank.empty:
+        _tscores = [float(r.get("ROTATION_SCORE", 0) or 0) for _, r in thematic_rank.iterrows()]
+        _tmax = max(_tscores) if _tscores else 1
+        _trows = ""
+        for _trank, (_, _tr) in enumerate(thematic_rank.iterrows(), start=1):
+            _tsym = _h(_tr.get("SYMBOL", ""))
+            _tname = _h(_tr.get("THEME_NAME", ""))
+            _tclose = _fmth(_tr.get("CLOSE"), digits=2)
+            _tr5d = _ret_cell(_tr.get("RET_5D"))
+            _tr1m = _ret_cell(_tr.get("RET_1M"))
+            _tr3m = _ret_cell(_tr.get("RET_3M"))
+            _tr6m = _ret_cell(_tr.get("RET_6M"))
+            _trs1m = _ret_cell(_tr.get("RS_1M"))
+            _tscore_raw = float(_tr.get("ROTATION_SCORE", 0) or 0)
+            _tbar_w = int(_tscore_raw / _tmax * 100) if _tmax > 0 else 0
+            _tscore_html = (
+                f'<div class="rot-wrap">'
+                f'<span style="font-weight:700;min-width:32px;text-align:right">{_tscore_raw:.1f}</span>'
+                f'<div class="rot-track"><div class="rot-fill" style="width:{_tbar_w}%"></div></div>'
+                f'</div>'
+            )
+            # PG: Check if this theme has top stocks data
+            _sym_key = _tr.get("SYMBOL", "")
+            _has_stocks = _sym_key in _tstocks and not _tstocks[_sym_key].empty
+            _expand_icon = '<span class="theme-expand-icon" style="cursor:pointer;margin-right:4px;font-size:0.85em">▶</span>' if _has_stocks else ''
+            _row_cls = ' class="theme-parent"' if _has_stocks else ''
+            _trows += (
+                f'<tr{_row_cls} data-theme-id="theme-{_trank}">'
+                f'<td class="num" data-val="{_trank}"><span class="rank-num">{_trank}</span></td>'
+                f'<td>{_expand_icon}{_tsym}</td>'
+                f'<td><strong>{_tname}</strong></td>'
+                f'<td class="num" data-val="{_fmth(_tr.get("CLOSE"), digits=2)}">{_tclose}</td>'
+                f'<td class="num" data-val="{_fmth(_tr.get("RET_5D"))}">{_tr5d}</td>'
+                f'<td class="num" data-val="{_fmth(_tr.get("RET_1M"))}">{_tr1m}</td>'
+                f'<td class="num" data-val="{_fmth(_tr.get("RET_3M"))}">{_tr3m}</td>'
+                f'<td class="num" data-val="{_fmth(_tr.get("RET_6M"))}">{_tr6m}</td>'
+                f'<td class="num" data-val="{_fmth(_tr.get("RS_1M"))}">{_trs1m}</td>'
+                f'<td data-val="{_tscore_raw:.2f}">{_tscore_html}</td>'
+                f'</tr>'
+            )
+            # PG: Render expandable top-10 stocks sub-row for this theme
+            if _has_stocks:
+                _sdf = _tstocks[_sym_key]
+                _stock_rows = ""
+                for _si, (_, _sr) in enumerate(_sdf.iterrows(), start=1):
+                    _s_sym = _h(str(_sr.get("SYMBOL", "")))
+                    _s_name = _h(str(_sr.get("COMPANY_NAME", ""))[:30])
+                    _s_price = _fmth(_sr.get("CURRENT_PRICE"), digits=2)
+                    _s_chg1d = _ret_cell(_sr.get("CHANGE_1D"))
+                    _s_chg1w = _ret_cell(_sr.get("CHANGE_1W"))
+                    _s_chg1m = _ret_cell(_sr.get("CHANGE_1M"))
+                    _s_tech = float(_sr.get("TECHNICAL_SCORE", 0) or 0)
+                    _s_rsi = float(_sr.get("RSI", 0) or 0)
+                    _s_signal = _h(str(_sr.get("TREND_SIGNAL", "")))
+                    _stock_rows += (
+                        f'<tr>'
+                        f'<td class="num">{_si}</td>'
+                        f'<td><strong>{_s_sym}</strong></td>'
+                        f'<td>{_s_name}</td>'
+                        f'<td class="num">{_s_price}</td>'
+                        f'<td class="num">{_s_chg1d}</td>'
+                        f'<td class="num">{_s_chg1w}</td>'
+                        f'<td class="num">{_s_chg1m}</td>'
+                        f'<td class="num" style="font-weight:700">{_s_tech:.0f}</td>'
+                        f'<td class="num">{_s_rsi:.0f}</td>'
+                        f'<td>{_s_signal}</td>'
+                        f'</tr>'
+                    )
+                _trows += (
+                    f'<tr class="theme-detail" id="theme-{_trank}" style="display:none">'
+                    f'<td colspan="10" style="padding:4px 12px 12px 24px;background:#f8f9fa">'
+                    f'<div style="font-weight:600;margin-bottom:6px;color:#1e3a5f">Top {len(_sdf)} Stocks by Technical Score</div>'
+                    f'<table class="theme-stocks-tbl" style="width:100%;font-size:0.88em">'
+                    f'<thead><tr><th>#</th><th>Symbol</th><th>Company</th><th class="num">Price</th>'
+                    f'<th class="num">1D</th><th class="num">1W</th><th class="num">1M</th>'
+                    f'<th class="num">Tech</th><th class="num">RSI</th><th>Signal</th></tr></thead>'
+                    f'<tbody>{_stock_rows}</tbody></table>'
+                    f'</td></tr>'
+                )
+        _ttable = (
+            f'<div class="tbl-wrap"><table class="thematic-tbl"><thead><tr>'
+            f'<th>#</th><th>Index</th><th>Theme</th><th class="num">Close</th>'
+            f'<th class="num">5D</th><th class="num">1M</th><th class="num">3M</th><th class="num">6M</th>'
+            f'<th class="num">RS 1M</th><th>Score</th>'
+            f'</tr></thead><tbody>{_trows}</tbody></table></div>'
+        )
+        _themes_with_stocks = sum(1 for k in _tstocks if not _tstocks[k].empty)
+        _stock_note = f' Click ▶ on {_themes_with_stocks} themes to see top-10 stocks.' if _themes_with_stocks else ''
+        thematic_html = (
+            f'<div class="sec-title">Thematic Index Rotation</div>'
+            f'<div class="sec-sub">NSE thematic indexes ranked by composite rotation score vs Nifty 500. '
+            f'{len(thematic_rank)} themes tracked.{_stock_note} Click column headers to sort.</div>'
+            + _ttable
+        )
+    else:
+        thematic_html = (
+            '<div class="sec-title">Thematic Index Rotation</div>'
+            '<div class="sec-sub">No thematic index data available.</div>'
+        )
 
     # ---- BUILD CANDIDATES TAB ----
     # Sector filter pills
@@ -3894,6 +4129,7 @@ def render_html_interactive(
         '<nav class="main-nav"><div class="nav-inner">',
         '<button class="nav-btn" data-tab="overview">Overview</button>',
         '<button class="nav-btn" data-tab="rotation">Sector Rotation</button>',
+        '<button class="nav-btn" data-tab="thematic">Thematic Rotation</button>',
         '<button class="nav-btn" data-tab="candidates">Investment Candidates</button>',
         '<button class="nav-btn" data-tab="screeners">Screeners</button>',
         '<button class="nav-btn" data-tab="resilience">Peak Resilience</button>',
@@ -3905,6 +4141,7 @@ def render_html_interactive(
         '<main class="content">',
         f'<section id="tab-overview" class="tab-pane">{overview_html}</section>',
         f'<section id="tab-rotation" class="tab-pane">{rotation_html}</section>',
+        f'<section id="tab-thematic" class="tab-pane">{thematic_html}</section>',
         f'<section id="tab-candidates" class="tab-pane">{candidates_html}</section>',
         f'<section id="tab-screeners" class="tab-pane">{_build_screener_tab(candidates)}</section>',
         f'<section id="tab-resilience" class="tab-pane">{resilience_html}</section>',
@@ -4211,6 +4448,26 @@ def generate_report(top_n_sectors: int = 6, top_n_per_sector: int = 8) -> Report
     analysis, source_file = load_comprehensive_analysis()
     sector_rank = load_index_rotation()
     all_index_metrics = load_all_index_metrics()
+    # PG: Load thematic rotation rankings
+    try:
+        _thematic_rank = load_thematic_rotation()
+        if not _thematic_rank.empty:
+            print(f"  Thematic rotation: {len(_thematic_rank)} themes ranked.")
+        else:
+            _thematic_rank = None
+    except Exception as exc:
+        print(f"  Thematic rotation skipped ({exc}).")
+        _thematic_rank = None
+
+    # PG: Load top-10 stocks per thematic index
+    _thematic_top_stocks = None
+    try:
+        _thematic_top_stocks = load_thematic_top_stocks(top_n=10)
+        if _thematic_top_stocks:
+            print(f"  Thematic top stocks: {len(_thematic_top_stocks)} themes with constituent data.")
+    except Exception as exc:
+        print(f"  Thematic top stocks skipped ({exc}).")
+
     _macro_sig = pd.DataFrame()
 
     # Enrich sector rankings with macro tailwind scores (P1-6)
@@ -4441,7 +4698,7 @@ def generate_report(top_n_sectors: int = 6, top_n_per_sector: int = 8) -> Report
             _global_corr_table_html = render_correlation_table_html(_gcorr)
     except Exception:
         pass
-    html_text = render_html_interactive(sector_rank, candidates, peak_resilience, source_file, generated_at, narratives, regime_info=regime_info, flow_info=flow_info, cycle_info=cycle_info, macro_context=_macro_ctx, seasonal_calendar_html=_seasonal_calendar_html, global_corr_table_html=_global_corr_table_html, all_index_metrics=all_index_metrics)
+    html_text = render_html_interactive(sector_rank, candidates, peak_resilience, source_file, generated_at, narratives, regime_info=regime_info, flow_info=flow_info, cycle_info=cycle_info, macro_context=_macro_ctx, seasonal_calendar_html=_seasonal_calendar_html, global_corr_table_html=_global_corr_table_html, all_index_metrics=all_index_metrics, thematic_rank=_thematic_rank, thematic_top_stocks=_thematic_top_stocks)
     for path, text in [
         (paths.markdown, md),
         (paths.html, html_text),
