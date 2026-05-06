@@ -362,6 +362,49 @@ def _build_prompt(agent=None) -> ANSI:
 # Display helpers  (all print to stdout; terminal scrolls naturally)
 # ─────────────────────────────────────────────────────────────────────────────
 
+_URL_RE = re.compile(r'(https?://[^\s\)\]>,"\']+)')
+
+def _linkify_markdown(text: str) -> str:
+    """Convert bare https://... URLs in LLM text to Markdown link syntax so
+    Rich's Markdown renderer makes them OSC-8 clickable hyperlinks."""
+    # Don't touch URLs already wrapped in []() or already in a markup tag
+    def _replace(m: re.Match) -> str:
+        url = m.group(1).rstrip(".,;)")
+        # Already a markdown link like [text](url) — skip
+        if text[max(0, m.start()-1)] == "(":
+            return m.group(0)
+        return f"[{url}]({url})"
+    return _URL_RE.sub(_replace, text)
+
+
+def _render_news_item(r: dict, cap: int = 140) -> None:
+    """Render one news/research item with an OSC-8 clickable title + dim snippet."""
+    title   = r.get("title") or r.get("name") or ""
+    url     = r.get("url")   or r.get("link") or ""
+    snippet = r.get("snippet") or r.get("body") or ""
+    source  = r.get("source", "")
+
+    # Source badge
+    if source:
+        console.print(f"  [dim cyan][{source}][/dim cyan]")
+
+    # Title — clickable OSC-8 link if URL is present, else plain bold
+    if title and url:
+        console.print(f"  [bold][link={url}]{title}[/link][/bold]")
+    elif title:
+        console.print(f"  [bold]{title}[/bold]")
+
+    # URL as a secondary dim clickable line (for copy-reference)
+    if url:
+        console.print(f"  [dim][link={url}]{url}[/link][/dim]")
+
+    # Snippet
+    if snippet:
+        body = snippet[:cap] + "…" if len(snippet) > cap else snippet
+        console.print(f"  [dim]{body}[/dim]")
+    console.print()
+
+
 def _print_user(query: str) -> None:
     console.print()
     console.rule(f"[bold cyan]❯[/bold cyan]  [bold]{query}[/bold]  [dim]{_ts()}[/dim]",
@@ -387,7 +430,7 @@ def _print_response(result: dict) -> None:
     # ── Body — Rich Markdown rendered to full terminal width ───────────────
     has_markup = backend != "Keyword (no LLM)" and any(c in clean for c in ["**", "##", "- ", "* ", "```"])
     if has_markup:
-        console.print(Markdown(clean))
+        console.print(Markdown(_linkify_markdown(clean)))
     else:
         console.print(clean, style="white")
 
@@ -412,20 +455,7 @@ def _print_response(result: dict) -> None:
             console.print()
             console.rule("[bold cyan] 📰  News & Catalysts [/bold cyan]", style="dim cyan")
             for r in items:
-                title   = r.get("title") or r.get("name") or ""
-                url     = r.get("url")   or r.get("link") or ""
-                snippet = r.get("snippet") or r.get("body") or ""
-                source  = r.get("source", "")
-                if source:
-                    console.print(f"[dim cyan]  [{source}][/dim cyan]", end=" ")
-                if title:
-                    console.print(f"  [bold]{title}[/bold]")
-                if url:
-                    console.print(f"  [dim cyan]{url}[/dim cyan]")
-                if snippet:
-                    console.print(f"  [dim]{snippet[:140]}…[/dim]" if len(snippet) > 140
-                                  else f"  [dim]{snippet}[/dim]")
-                console.print()
+                _render_news_item(r)
 
     # ── Follow-up suggestions ─────────────────────────────────────────────
     if _followups:
@@ -705,20 +735,7 @@ def _print_briefing_response(result: dict) -> None:
             console.print()
             console.rule("[bold cyan] 📰  News & Catalysts [/bold cyan]", style="dim cyan")
             for r in items[:6]:  # cap to 6 on startup
-                title   = r.get("title") or r.get("name") or ""
-                url     = r.get("url")   or r.get("link") or ""
-                snippet = r.get("snippet") or r.get("body") or ""
-                source  = r.get("source", "")
-                if source:
-                    console.print(f"[dim cyan]  [{source}][/dim cyan]", end=" ")
-                if title:
-                    console.print(f"  [bold]{title}[/bold]")
-                if url:
-                    console.print(f"  [dim cyan]{url}[/dim cyan]")
-                if snippet:
-                    console.print(f"  [dim]{snippet[:120]}…[/dim]" if len(snippet) > 120
-                                  else f"  [dim]{snippet}[/dim]")
-                console.print()
+                _render_news_item(r, cap=120)
 
     # Follow-up suggestions
     if _followups:
