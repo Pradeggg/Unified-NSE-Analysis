@@ -1402,7 +1402,14 @@ def _handle_us_global_command(text: str) -> bool:
             return True
 
         bundle = build_us_market_bundle(result["prices"], warnings=result.get("warnings", []))
-        report_result = render_us_market_report(bundle)
+        report_bundle = bundle
+        if request.get("symbols"):
+            full_result = loader.load(symbols=None, force=False, lookback_days=365)
+            if full_result.get("status") in {"ok", "empty"}:
+                full_prices = full_result.get("prices")
+                if full_prices is not None and not getattr(full_prices, "empty", False):
+                    report_bundle = build_us_market_bundle(full_prices, warnings=full_result.get("warnings", []))
+        report_result = render_us_market_report(report_bundle)
         console.print(Markdown(_format_us_global_terminal_summary(request, bundle, report_result)))
     except Exception as exc:
         console.print(f"[bold red]  ❌  US/global command failed: {exc}[/bold red]")
