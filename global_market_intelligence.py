@@ -9,6 +9,7 @@ implemented in later backlog tasks.
 from __future__ import annotations
 
 import argparse
+import html
 import json
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
@@ -709,12 +710,189 @@ def build_india_readthrough(metrics: pd.DataFrame) -> dict:
     }
 
 
+AGENT_BRAND = "Agent Adda - Market Intelligence Agent"
+DISCLAIMER = (
+    "Not investment advice. For research and learning only. Do not use this "
+    "material as trading, investment, or recommendation guidance."
+)
+
+
+def build_us_market_bundle(prices: pd.DataFrame, warnings: list[str] | None = None) -> dict:
+    metrics = compute_technical_metrics(prices)
+    return {
+        "metrics": metrics,
+        "stage2": screen_stage2_leaders(metrics),
+        "vcp": screen_vcp_setups(metrics),
+        "sector_rotation": rank_sector_rotation(metrics),
+        "risk_dashboard": build_risk_dashboard(metrics),
+        "india_readthrough": build_india_readthrough(metrics),
+        "warnings": warnings or [],
+    }
+
+
+def _fmt(value: object, digits: int = 2) -> str:
+    if value is None or pd.isna(value):
+        return "-"
+    if isinstance(value, (int, float)):
+        return f"{float(value):,.{digits}f}"
+    return html.escape(str(value))
+
+
+def _table_html(df: pd.DataFrame, columns: list[str], empty_text: str) -> str:
+    if df is None or df.empty:
+        return f'<p class="empty">{html.escape(empty_text)}</p>'
+    existing = [col for col in columns if col in df.columns]
+    if not existing:
+        return f'<p class="empty">{html.escape(empty_text)}</p>'
+    head = "".join(f"<th>{html.escape(col)}</th>" for col in existing)
+    rows = []
+    for _, row in df.head(20).iterrows():
+        cells = "".join(f"<td>{_fmt(row.get(col))}</td>" for col in existing)
+        rows.append(f"<tr>{cells}</tr>")
+    return f"<table><thead><tr>{head}</tr></thead><tbody>{''.join(rows)}</tbody></table>"
+
+
+def _readthrough_html(readthrough: dict) -> str:
+    items = readthrough.get("india_sector_implications", []) if isinstance(readthrough, dict) else []
+    if not items:
+        return '<p class="empty">No India read-through signals available.</p>'
+    rows = []
+    for item in items:
+        symbols = ", ".join(item.get("symbols", []))
+        rows.append(
+            "<tr>"
+            f"<td>{html.escape(str(item.get('nse_sector', '-')))}</td>"
+            f"<td><span class=\"badge {html.escape(str(item.get('stance', 'watch')))}\">{html.escape(str(item.get('stance', 'watch')).upper())}</span></td>"
+            f"<td>{html.escape(str(item.get('thesis', '-')))}</td>"
+            f"<td>{html.escape(symbols)}</td>"
+            f"<td>{html.escape(str(item.get('confidence', '-')))}</td>"
+            "</tr>"
+        )
+    return (
+        "<table><thead><tr><th>NSE Sector</th><th>Stance</th><th>Thesis</th><th>Sources</th><th>Confidence</th></tr></thead>"
+        f"<tbody>{''.join(rows)}</tbody></table>"
+    )
+
+
+def render_us_market_report(
+    bundle: dict,
+    output_dir: Path | str = Path("reports") / "global",
+    latest_dir: Path | str = Path("reports") / "latest",
+    report_date: str | None = None,
+) -> dict:
+    """Render standalone US/global market report and latest pointer."""
+    output = Path(output_dir)
+    latest = Path(latest_dir)
+    output.mkdir(parents=True, exist_ok=True)
+    latest.mkdir(parents=True, exist_ok=True)
+    as_of = report_date or datetime.now().strftime("%Y-%m-%d")
+    filename_date = as_of.replace("-", "")
+    report_path = output / f"us_market_report_{filename_date}.html"
+    latest_path = latest / "us_market_report.html"
+
+    metrics = bundle.get("metrics", pd.DataFrame())
+    index_symbols = {"^GSPC", "^IXIC", "^NDX", "^DJI", "^RUT", "^VIX", "SPY", "QQQ", "DIA", "IWM"}
+    index_tape = metrics[metrics["SYMBOL"].astype(str).str.upper().isin(index_symbols)].copy() if not metrics.empty else pd.DataFrame()
+    risk = bundle.get("risk_dashboard", {})
+    readthrough = bundle.get("india_readthrough", {})
+    warnings = bundle.get("warnings", [])
+    warnings_html = "".join(f"<li>{html.escape(str(w))}</li>" for w in warnings) if warnings else "<li>No data warnings.</li>"
+
+    html_doc = f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>US / Global Market Context - {html.escape(as_of)}</title>
+  <style>
+    body {{ margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background:#f3f6fb; color:#0f172a; }}
+    header {{ background:#08111f; color:#e5f0ff; padding:28px 36px; }}
+    main {{ max-width:1180px; margin:0 auto; padding:24px; }}
+    h1 {{ margin:0 0 8px; font-size:30px; }}
+    h2 {{ margin:0 0 14px; font-size:18px; }}
+    .brand {{ color:#8dd3ff; font-weight:700; font-size:13px; letter-spacing:.04em; text-transform:uppercase; }}
+    .grid {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:16px; }}
+    .card {{ background:#fff; border:1px solid #dbe3ef; border-radius:8px; box-shadow:0 1px 2px rgba(15,23,42,.05); padding:18px; margin-bottom:16px; }}
+    .metric {{ font-size:30px; font-weight:800; text-transform:capitalize; }}
+    .muted {{ color:#64748b; }}
+    table {{ width:100%; border-collapse:collapse; font-size:13px; }}
+    th,td {{ padding:9px 8px; border-bottom:1px solid #e2e8f0; text-align:left; vertical-align:top; }}
+    th {{ color:#475569; background:#f8fafc; font-size:12px; text-transform:uppercase; letter-spacing:.03em; }}
+    .badge {{ display:inline-block; padding:3px 8px; border-radius:999px; font-size:11px; font-weight:800; }}
+    .positive {{ background:#dcfce7; color:#166534; }}
+    .negative {{ background:#fee2e2; color:#991b1b; }}
+    .watch {{ background:#fef3c7; color:#92400e; }}
+    .empty {{ color:#64748b; font-style:italic; }}
+    .disclaimer {{ background:#fff7ed; border-color:#fed7aa; color:#7c2d12; }}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">{AGENT_BRAND}</div>
+    <h1>Global / US Market Context</h1>
+    <div class="muted">As of {html.escape(as_of)} · Daily US/global research layer</div>
+  </header>
+  <main>
+    <section class="grid">
+      <div class="card">
+        <h2>Risk Regime</h2>
+        <div class="metric">{html.escape(str(risk.get("regime", "unavailable")))}</div>
+        <p class="muted">Score: {_fmt(risk.get("score"), 0)}</p>
+      </div>
+      <div class="card">
+        <h2>Source Signals</h2>
+        <ul>{"".join(f"<li>{html.escape(str(s))}</li>" for s in risk.get("signals", [])) or "<li>No risk signals available.</li>"}</ul>
+      </div>
+    </section>
+    <section class="card">
+      <h2>US Index Tape</h2>
+      {_table_html(index_tape, ["SYMBOL", "CLOSE", "RET_1D", "RET_1M", "SMA_ALIGNMENT", "MACD_SIGNAL", "STAGE"], "No US index tape available.")}
+    </section>
+    <section class="card">
+      <h2>Sector ETF Rotation</h2>
+      {_table_html(bundle.get("sector_rotation", pd.DataFrame()), ["SYMBOL", "RET_1M", "RET_3M", "RS_SPY_3M", "ROTATION_SCORE", "SMA_ALIGNMENT", "MACD_SIGNAL"], "No sector ETF rotation available.")}
+    </section>
+    <section class="card">
+      <h2>Stage 2 Leaders</h2>
+      {_table_html(bundle.get("stage2", pd.DataFrame()), ["SYMBOL", "RET_1M", "RS_SPY_3M", "RSI_14", "STAGE", "SCREENER_SCORE"], "No Stage 2 leaders available.")}
+    </section>
+    <section class="card">
+      <h2>VCP Setups</h2>
+      {_table_html(bundle.get("vcp", pd.DataFrame()), ["SYMBOL", "SETUP", "RET_1M", "RS_SPY_3M", "DIST_52W_HIGH_PCT", "SCREENER_SCORE"], "No VCP setups available.")}
+    </section>
+    <section class="card">
+      <h2>India Read-Through</h2>
+      {_readthrough_html(readthrough)}
+    </section>
+    <section class="card">
+      <h2>Data Freshness & Warnings</h2>
+      <ul>{warnings_html}</ul>
+    </section>
+    <section class="card disclaimer">
+      <h2>Disclaimer</h2>
+      <p>{DISCLAIMER}</p>
+    </section>
+  </main>
+</body>
+</html>
+"""
+    report_path.write_text(html_doc)
+    latest_path.write_text(html_doc)
+    return {
+        "status": "ok",
+        "report_path": str(report_path),
+        "latest_path": str(latest_path),
+        "report_date": as_of,
+    }
+
+
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Agent Adda US/global market intelligence")
     parser.add_argument("--root-dir", default=str(DEFAULT_ROOT))
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--lookback-days", type=int, default=365)
     parser.add_argument("--symbols", nargs="*", default=None)
+    parser.add_argument("--report", action="store_true", help="Render the standalone US/global HTML report")
     return parser
 
 
@@ -722,6 +900,10 @@ def main(argv: list[str] | None = None) -> int:
     args = build_arg_parser().parse_args(argv)
     loader = GlobalMarketDataLoader(root_dir=Path(args.root_dir))
     result = loader.load(symbols=args.symbols, force=args.force, lookback_days=args.lookback_days)
+    report_result = None
+    if args.report and result["status"] in {"ok", "empty"}:
+        bundle = build_us_market_bundle(result["prices"], warnings=result["warnings"])
+        report_result = render_us_market_report(bundle)
     payload = {
         "status": result["status"],
         "source": result["source"],
@@ -732,6 +914,9 @@ def main(argv: list[str] | None = None) -> int:
         "snapshot_path": result["snapshot_path"],
         "universe_path": result["universe_path"],
     }
+    if report_result:
+        payload["report_path"] = report_result["report_path"]
+        payload["latest_path"] = report_result["latest_path"]
     print(json.dumps(payload, indent=2, sort_keys=True))
     return 0 if result["status"] in {"ok", "empty"} else 1
 

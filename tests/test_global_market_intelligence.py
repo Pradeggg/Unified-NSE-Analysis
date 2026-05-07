@@ -12,6 +12,7 @@ from global_market_intelligence import (
     compute_technical_metrics,
     normalize_ohlcv,
     rank_sector_rotation,
+    render_us_market_report,
     screen_stage2_leaders,
     screen_vcp_setups,
     universe_records,
@@ -266,6 +267,50 @@ class GlobalMarketIntelligenceTests(unittest.TestCase):
         self.assertTrue(any(item["stance"] == "positive" and item["nse_sector"] == "Energy - Oil & Gas" for item in implications))
         self.assertTrue(any(item["stance"] == "negative" and item["nse_sector"] == "Aviation / Paints / Tyres" for item in implications))
         self.assertTrue(any(item["stance"] == "negative" and item["nse_sector"] == "High Beta / Smallcaps" for item in implications))
+
+    def test_render_us_market_report_writes_dated_and_latest_html(self):
+        metrics = pd.DataFrame(
+            [
+                {"SYMBOL": "SPY", "CLOSE": 500.0, "RET_1M": 3.0, "SMA_ALIGNMENT": "BULLISH", "MACD_SIGNAL": "BULLISH", "STAGE": "STAGE_2"},
+                {"SYMBOL": "QQQ", "CLOSE": 450.0, "RET_1M": 8.0, "SMA_ALIGNMENT": "BULLISH", "MACD_SIGNAL": "BULLISH", "STAGE": "STAGE_2"},
+                {"SYMBOL": "SMH", "CLOSE": 250.0, "RET_1M": 14.0, "RET_3M": 25.0, "RS_SPY_3M": 12.0, "SMA_ALIGNMENT": "BULLISH", "MACD_SIGNAL": "BULLISH", "STAGE": "STAGE_2", "SCREENER_SCORE": 31.0, "ROTATION_SCORE": 40.0},
+            ]
+        )
+        bundle = {
+            "metrics": metrics,
+            "stage2": metrics[metrics["STAGE"] == "STAGE_2"].copy(),
+            "vcp": pd.DataFrame([{"SYMBOL": "SMH", "SETUP": "VCP", "SCREENER_SCORE": 20.0, "RET_1M": 14.0, "RS_SPY_3M": 12.0}]),
+            "sector_rotation": pd.DataFrame([{"SYMBOL": "SMH", "RET_1M": 14.0, "RET_3M": 25.0, "RS_SPY_3M": 12.0, "ROTATION_SCORE": 40.0}]),
+            "risk_dashboard": {"regime": "risk-on", "score": 3, "signals": ["QQQ vs SPY 1M: +5.00pp"]},
+            "india_readthrough": {
+                "global_regime": "risk-on",
+                "india_sector_implications": [
+                    {"nse_sector": "IT & Technology", "stance": "positive", "thesis": "Nasdaq strength supports IT.", "symbols": ["QQQ"], "confidence": "medium"}
+                ],
+                "source_signals": [{"theme": "nasdaq_growth", "symbols": ["QQQ"], "direction": "positive"}],
+            },
+            "warnings": [],
+        }
+
+        with TemporaryDirectory() as td:
+            result = render_us_market_report(
+                bundle,
+                output_dir=Path(td) / "global",
+                latest_dir=Path(td) / "latest",
+                report_date="2026-05-08",
+            )
+            html = Path(result["report_path"]).read_text()
+
+            self.assertEqual(result["status"], "ok")
+            self.assertTrue(Path(result["report_path"]).exists())
+            self.assertTrue(Path(result["latest_path"]).exists())
+            self.assertIn("Agent Adda - Market Intelligence Agent", html)
+            self.assertIn("Global / US Market Context", html)
+            self.assertIn("US Index Tape", html)
+            self.assertIn("Sector ETF Rotation", html)
+            self.assertIn("Stage 2 Leaders", html)
+            self.assertIn("India Read-Through", html)
+            self.assertIn("Not investment advice", html)
 
 
 if __name__ == "__main__":
