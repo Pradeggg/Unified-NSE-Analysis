@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Agent Adda — Daily NSE Data Refresh LaunchAgent
+  ================================================
+  Runs daily_refresh.py on weekdays at 16:15 IST (10:45 UTC)
+  — 45 minutes after NSE market close (15:30 IST).
+
+  Install:
+    cp com.agentadda.daily_refresh.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/com.agentadda.daily_refresh.plist
+
+  Check status:
+    launchctl list | grep agentadda
+
+  View logs:
+    tail -f /tmp/agentadda_daily_refresh.log
+
+  Uninstall:
+    launchctl unload ~/Library/LaunchAgents/com.agentadda.daily_refresh.plist
+    rm ~/Library/LaunchAgents/com.agentadda.daily_refresh.plist
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.agentadda.daily_refresh</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/pgorai/Documents/Projects/Unified-NSE-Analysis/.venv/bin/python3</string>
+        <string>/Users/pgorai/Documents/Projects/Unified-NSE-Analysis/daily_refresh.py</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/pgorai/Documents/Projects/Unified-NSE-Analysis</string>
+
+    <!-- 16:15 IST = 10:45 UTC. Weekdays only (Mon=1 … Fri=5) -->
+    <key>StartCalendarInterval</key>
+    <array>
+        <dict>
+            <key>Hour</key>   <integer>10</integer>
+            <key>Minute</key> <integer>45</integer>
+            <key>Weekday</key><integer>1</integer>
+        </dict>
+        <dict>
+            <key>Hour</key>   <integer>10</integer>
+            <key>Minute</key> <integer>45</integer>
+            <key>Weekday</key><integer>2</integer>
+        </dict>
+        <dict>
+            <key>Hour</key>   <integer>10</integer>
+            <key>Minute</key> <integer>45</integer>
+            <key>Weekday</key><integer>3</integer>
+        </dict>
+        <dict>
+            <key>Hour</key>   <integer>10</integer>
+            <key>Minute</key> <integer>45</integer>
+            <key>Weekday</key><integer>4</integer>
+        </dict>
+        <dict>
+            <key>Hour</key>   <integer>10</integer>
+            <key>Minute</key> <integer>45</integer>
+            <key>Weekday</key><integer>5</integer>
+        </dict>
+    </array>
+
+    <key>StandardOutPath</key>
+    <string>/tmp/agentadda_daily_refresh.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/tmp/agentadda_daily_refresh_err.log</string>
+
+    <!-- Retry once if it fails -->
+    <key>StartInterval</key>
+    <integer>0</integer>
+
+    <!-- Don't run if on battery to save power -->
+    <key>ProcessType</key>
+    <string>Background</string>
+
+    <!-- Environment: ensure correct locale and PATH -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/Users/pgorai/Documents/Projects/Unified-NSE-Analysis/.venv/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <key>PYTHONPATH</key>
+        <string>/Users/pgorai/Documents/Projects/Unified-NSE-Analysis</string>
+        <key>PYTHONUNBUFFERED</key>
+        <string>1</string>
+    </dict>
+</dict>
+</plist>
