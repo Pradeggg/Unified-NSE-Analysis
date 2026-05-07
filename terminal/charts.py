@@ -183,7 +183,7 @@ def render_chart(
 
     w = width or _terminal_width()
 
-    show_volume = "volume" in indicators and vols
+    show_volume = "volume" in indicators and len(vols) > 0
     show_rsi    = "rsi" in indicators
     show_macd   = "macd" in indicators
 
