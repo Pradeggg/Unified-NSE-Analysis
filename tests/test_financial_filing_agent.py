@@ -265,6 +265,44 @@ class FinancialFilingAgentTests(unittest.TestCase):
             self.assertEqual(result["status"], "ok")
             self.assertEqual(stdout.getvalue(), "")
 
+    def test_parse_pdf_filing_marks_image_only_pdf_as_ocr_required(self):
+        class ImageOnlyPage:
+            def get_text(self, mode):
+                return ""
+
+            def get_images(self, full=False):
+                return [("image-xref",)]
+
+        class FakeDocument:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+            def __len__(self):
+                return 1
+
+            def __iter__(self):
+                return iter([ImageOnlyPage()])
+
+        class FakeBackend:
+            @staticmethod
+            def open(path):
+                return FakeDocument()
+
+        with TemporaryDirectory() as td:
+            pdf_path = Path(td) / "scan.pdf"
+            pdf_path.write_bytes(b"%PDF sample")
+
+            result = parse_pdf_filing(pdf_path, backend_loader=lambda: FakeBackend)
+
+            self.assertEqual(result["status"], "partial")
+            self.assertEqual(result["error_code"], "OCR_REQUIRED")
+            self.assertEqual(result["scanned_page_count"], 1)
+            self.assertEqual(result["pages"][0]["image_count"], 1)
+            self.assertIn("OCR", result["warnings"][0])
+
     def test_parse_registered_filing_reads_manifest_and_writes_parsed_json(self):
         with TemporaryDirectory() as td:
             ingest = ingest_filing_url(

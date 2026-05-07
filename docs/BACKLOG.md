@@ -209,6 +209,7 @@ Every external and internal data source the platform uses or will use. Items mar
 | F2 NSE/BSE Filing Discovery | 🔜 READY | — | Auto-discover latest financial-results filings by symbol/quarter; prefer Integrated Filing XBRL/iXBRL |
 | F3 XBRL/iXBRL Parser + Canonical Facts | 🔜 READY | — | Parse structured tags into canonical financial facts with contexts/units |
 | F4 Multi-Page PDF Extractor + Evidence Map | ✅ DONE | Codex | PyMuPDF page text + detected table extraction with page/table/cell evidence trail; Blue Star PDF parsed |
+| F4a Image-Only Filing OCR Fallback | 🔜 READY | — | HDFC Bank FY26 Q4 official results PDF is image-only; add OCR or alternate filing-source fallback before LLM analysis |
 | F5 Reconciliation + Verification Agent | 🔜 READY | — | Reconcile XBRL facts against PDF tables; mark verified/partial/conflict |
 | F6 LLM-Based Filing Analysis Agents | 🔜 READY | — | Numbers, balance sheet, cash flow, segment, risk, narrative agents over canonical evidence |
 | F7 HTML + Markdown Filing Report Generator | 🔜 READY | — | Self-contained reports with evidence-backed metrics and disclaimer |
@@ -2296,6 +2297,20 @@ def parse_pdf_filing(path: str) -> dict:
 - `financial_filing_agent.py parse <manifest>` writes `parsed/filing_parse.json`.
 - PyMuPDF is used for page text and detected tables; dependency is listed in `requirements.txt`.
 - Blue Star FY26 Q4 filing smoke parse produced 23 pages, 12 detected tables, and 749 evidence items.
+- Additional smoke tests: Reliance FY26 Q4 media release parsed 42 pages / 28 tables / 1227 evidence items; Infosys FY26 Q4 consolidated statements parsed 39 pages / 6 tables / 49 evidence items; HDFC Bank FY26 Q4 results was correctly flagged `partial` + `OCR_REQUIRED` because all 23 pages are image-only.
+
+#### F4a — Image-Only Filing OCR Fallback
+**Size:** M | **Priority:** High | **Status:** 🔜 READY
+
+**What to build:**
+- Detect image-only financial-result PDFs and route them to OCR.
+- Prefer local OCR if available; otherwise allow an LLM vision/OCR provider behind explicit configuration.
+- Preserve page evidence and confidence level so extracted figures are not treated as verified facts until reconciled.
+
+**Acceptance criteria:**
+- HDFC Bank FY26 Q4 results produces page text evidence instead of only `OCR_REQUIRED`.
+- OCR output records page number, text excerpt, backend used, and confidence.
+- Pipeline keeps working when OCR backend is absent by returning actionable setup guidance.
 
 #### F5 — Reconciliation + Verification Agent
 **Size:** M | **Priority:** Critical | **Status:** 🔜 READY

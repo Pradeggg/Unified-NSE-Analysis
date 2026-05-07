@@ -288,6 +288,15 @@ def _extract_page_tables(page: object, page_number: int) -> tuple[list[dict], li
     return tables, evidence
 
 
+def _page_image_count(page: object) -> int:
+    if not hasattr(page, "get_images"):
+        return 0
+    try:
+        return len(page.get_images(full=True))
+    except Exception:
+        return 0
+
+
 def parse_pdf_filing(
     pdf_path: Path | str,
     backend_loader: Callable[[], object | None] | None = None,
@@ -318,10 +327,12 @@ def parse_pdf_filing(
         with backend.open(source_path) as document:
             for page_index, page in enumerate(document, start=1):
                 text = str(page.get_text("text") or "").strip()
+                image_count = _page_image_count(page)
                 pages.append(
                     {
                         "page_number": page_index,
                         "char_count": len(text),
+                        "image_count": image_count,
                         "text": text,
                     }
                 )
@@ -341,12 +352,19 @@ def parse_pdf_filing(
     except Exception as exc:
         return _empty_parse_error("PDF_PARSE_FAILED", str(exc), source_path)
 
+    scanned_page_count = sum(1 for page in pages if page.get("char_count") == 0 and page.get("image_count", 0) > 0)
+    ocr_required = page_count > 0 and scanned_page_count == page_count and not evidence
+    if ocr_required:
+        warnings.append("OCR required: all PDF pages appear to be image-only and no text/table evidence was extracted.")
+
     return {
-        "status": "ok",
-        "error": None,
+        "status": "partial" if ocr_required else "ok",
+        "error_code": "OCR_REQUIRED" if ocr_required else None,
+        "error": "Image-only PDF requires OCR extraction." if ocr_required else None,
         "document_type": "pdf",
         "source_path": str(source_path),
         "page_count": page_count,
+        "scanned_page_count": scanned_page_count,
         "pages": pages,
         "tables": tables,
         "evidence": evidence,
