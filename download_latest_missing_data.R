@@ -12,10 +12,14 @@ suppressPackageStartupMessages({
   library(readr)
   library(lubridate)
   library(httr)
+  library(jsonlite)
 })
 
 cat("=== DOWNLOADING LATEST MISSING NSE DATA ===\n")
 cat("Date:", format(Sys.Date(), "%B %d, %Y"), "\n\n")
+
+# Project cache target used by nse_agent.py, sector rotation, and tracker
+project_data_dir <- "/Users/pgorai/Documents/Projects/Unified-NSE-Analysis/data"
 
 # Set working directory to NSE data location
 nse_data_path <- "/Users/pgorai/Library/CloudStorage/OneDrive-Deloitte(O365D)/Documents/Data Visualization/Analytics/Financial Markets/NSE-index"
@@ -76,12 +80,19 @@ download_stock_data_for_date <- function(target_date) {
                          httr::add_headers(`User-Agent` = "Mozilla/5.0"))
     
     if(response$status_code == 200) {
-      # Extract the Pd*.csv file
-      unzip(tempzip, tempfilename, overwrite = TRUE)
+      # Extract the stock CSV from zip (filename format can vary by case/date style)
+      zip_members <- unzip(tempzip, list = TRUE)$Name
+      stock_member <- zip_members[grepl("^[Pp][Dd].*\\.csv$", zip_members)][1]
+      if (is.na(stock_member) || !nzchar(stock_member)) {
+        stock_member <- zip_members[grepl("[Pp][Dd].*\\.csv$", zip_members)][1]
+      }
+      if (!is.na(stock_member) && nzchar(stock_member)) {
+        unzip(tempzip, files = stock_member, overwrite = TRUE)
+      }
       
-      if(file.exists(tempfilename)) {
+      if(!is.na(stock_member) && nzchar(stock_member) && file.exists(stock_member)) {
         # Read the data
-        raw_data <- read.csv(tempfilename, stringsAsFactors = FALSE)
+        raw_data <- read.csv(stock_member, stringsAsFactors = FALSE)
         
         # Filter for equity stocks only
         stock_data <- raw_data %>% 
@@ -125,7 +136,7 @@ download_stock_data_for_date <- function(target_date) {
           cat("✅ Successfully downloaded", nrow(processed_data), "stock records for", as.character(target_date), "\n")
           
           # Clean up temporary files
-          if(file.exists(tempfilename)) file.remove(tempfilename)
+          if(file.exists(stock_member)) file.remove(stock_member)
           if(file.exists(tempzip)) file.remove(tempzip)
           
           return(TRUE)
@@ -134,7 +145,7 @@ download_stock_data_for_date <- function(target_date) {
           return(FALSE)
         }
       } else {
-        cat("❌ Could not extract data file for", as.character(target_date), "\n")
+        cat("❌ Could not extract stock CSV from zip for", as.character(target_date), "\n")
         return(FALSE)
       }
     } else {
@@ -169,12 +180,19 @@ download_index_data_for_date <- function(target_date) {
                          httr::add_headers(`User-Agent` = "Mozilla/5.0"))
     
     if(response$status_code == 200) {
-      # Extract the Pr*.csv file (index data file)
-      unzip(tempzip, tempfilename, overwrite = TRUE)
+      # Extract the index CSV from zip (filename format can vary by case/date style)
+      zip_members <- unzip(tempzip, list = TRUE)$Name
+      index_member <- zip_members[grepl("^[Pp][Rr].*\\.csv$", zip_members)][1]
+      if (is.na(index_member) || !nzchar(index_member)) {
+        index_member <- zip_members[grepl("[Pp][Rr].*\\.csv$", zip_members)][1]
+      }
+      if (!is.na(index_member) && nzchar(index_member)) {
+        unzip(tempzip, files = index_member, overwrite = TRUE)
+      }
       
-      if(file.exists(tempfilename)) {
+      if(!is.na(index_member) && nzchar(index_member) && file.exists(index_member)) {
         # Read the data
-        raw_data <- read.csv(tempfilename, stringsAsFactors = FALSE)
+        raw_data <- read.csv(index_member, stringsAsFactors = FALSE)
         
         # Filter for index data only (IND_SEC=="Y" & MKT == "Y")
         index_data <- raw_data %>% 
@@ -222,7 +240,7 @@ download_index_data_for_date <- function(target_date) {
           cat("✅ Successfully downloaded", nrow(processed_data), "index records for", as.character(target_date), "\n")
           
           # Clean up temporary files
-          if(file.exists(tempfilename)) file.remove(tempfilename)
+          if(file.exists(index_member)) file.remove(index_member)
           if(file.exists(tempzip)) file.remove(tempzip)
           
           return(TRUE)
@@ -231,7 +249,7 @@ download_index_data_for_date <- function(target_date) {
           return(FALSE)
         }
       } else {
-        cat("❌ Could not extract index data file for", as.character(target_date), "\n")
+        cat("❌ Could not extract index CSV from zip for", as.character(target_date), "\n")
         return(FALSE)
       }
     } else {
@@ -254,15 +272,16 @@ if(length(missing_dates) > 0) {
   successful_downloads <- 0
   
   for(date in missing_dates) {
+    target_date <- as.Date(date, origin = "1970-01-01")
     cat("\n==================================================\n")
-    cat("Processing date:", as.character(date), "\n")
+    cat("Processing date:", as.character(target_date), "\n")
     cat("==================================================\n")
     
     # Download stock data
-    stock_success <- download_stock_data_for_date(date)
+    stock_success <- download_stock_data_for_date(target_date)
     
     # Download index data
-    index_success <- download_index_data_for_date(date)
+    index_success <- download_index_data_for_date(target_date)
     
     if(stock_success || index_success) {
       successful_downloads <- successful_downloads + 1
@@ -282,7 +301,6 @@ if(length(missing_dates) > 0) {
 
 # Update project cache
 cat("\n=== UPDATING PROJECT CACHE ===\n")
-project_data_dir <- "/Users/pgorai/Library/CloudStorage/OneDrive-Deloitte(O365D)/Documents/Data Visualization/Analytics/Financial Markets/Unified-NSE-Analysis/data"
 
 # Load updated data
 if(file.exists("nse_sec_full_data.csv")) {

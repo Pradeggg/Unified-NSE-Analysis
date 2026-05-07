@@ -417,6 +417,15 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/events",                           "E4 Upcoming corporate events — dividends, splits, results, AGMs"),
     ("/events NIFTY 50",                  "Event calendar for NIFTY 50 stocks (next 14 days)"),
     ("/events RELIANCE",                  "Upcoming events for a specific stock"),
+    # ── Seasonal / macro / new commands ─────────────────────────────────────
+    ("/heat",                             "B3 Sector seasonal heatmap — current-month TAILWIND/HEADWIND"),
+    ("/heat 5",                           "Sector heat calendar for May"),
+    ("/cycle",                            "B5 Economic cycle phase + preferred/avoid sectors"),
+    ("/scenario RELIANCE",                "P2-2 What-if price scenarios for RELIANCE"),
+    ("/narrative",                        "P2-4 Portfolio narratives — bull/bear thesis per stock"),
+    ("/narrative TCS INFY",               "Investment narratives for specific stocks"),
+    ("/voice",                            "P3-2 Generate daily voice briefing (MP3, needs OpenAI key)"),
+    ("/concall TCS",                      "D4 Concall NLP — sentiment, themes, risk flags"),
     ("/live",             "Switch to LIVE mode (real-time NSE API)"),
     ("/eod",              "Switch to EOD mode (historical CSV/DB)"),
     ("/auto",             "Switch to AUTO mode (keyword detect)"),
@@ -790,7 +799,7 @@ def print_banner() -> None:
         print(f"  {icon}  {colour}{Style.BRIGHT}{text}{Style.RESET_ALL}")
     print()
     print(Fore.WHITE + Style.DIM +
-          "  /live  /eod  /auto  │  /global  │  /prompts  │  p<n> = run prompt  │  1 2 3 = follow-ups  │  /help  │  exit")
+          "  /live  /eod  /auto  │  /global  │  /heat  /cycle  /scenario  /narrative  │  /prompts  │  /help  │  exit")
     print()
     _separator()
     print()
@@ -1521,6 +1530,15 @@ def _print_help() -> None:
             "  [yellow]/events NIFTY 50[/yellow]         — Dividends, splits, results, AGMs, board meetings\n"
             "  [yellow]/events RELIANCE[/yellow]         — Upcoming events for a specific stock\n"
             "  [yellow]/events NIFTY 50 30[/yellow]      — Extend window to 30 days\n\n"
+            "[bold blue]SEASONAL & MACRO 🌡[/bold blue]\n"
+            "  [blue]/heat[/blue]                    — Sector seasonal heatmap (current month signals)\n"
+            "  [blue]/heat 3[/blue]                  — Seasonal signals for March\n"
+            "  [blue]/cycle[/blue]                   — Economic cycle phase + sector positioning\n"
+            "  [blue]/scenario TCS[/blue]             — What-if price scenarios for TCS\n"
+            "  [blue]/narrative[/blue]               — Portfolio investment narratives\n"
+            "  [blue]/narrative TCS INFY[/blue]       — Narratives for specific stocks\n"
+            "  [blue]/voice[/blue]                   — Generate daily voice briefing (MP3)\n"
+            "  [blue]/concall TCS[/blue]              — Concall NLP: sentiment + themes + guidance\n\n"
             "[bold cyan]GLOBAL MARKET[/bold cyan]\n"
             "  [green]/global[/green]                 — Global risk regime and India read-through\n\n"
             "[bold cyan]PROMPT LIBRARY[/bold cyan]\n"
@@ -2078,6 +2096,310 @@ def _chat_loop(agent, show_trace: bool) -> None:
                     f"List all upcoming corporate events: dividends, results, board meetings, "
                     f"AGMs, splits, bonuses. Include ex-dates and days-until countdown."
                 )
+
+        # ── /heat [month] — sector seasonal heatmap (direct render) ─────
+        elif text.lower().startswith("/heat"):
+            parts = text.split()
+            month_arg = None
+            for p in parts[1:]:
+                try:
+                    month_arg = int(p)
+                except ValueError:
+                    pass
+            month_str = f" month={month_arg}" if month_arg else " (current month)"
+            console.print(f"[dim]  → Sector Heat Calendar{month_str}[/dim]")
+            try:
+                from terminal.tools import get_sector_heat_calendar
+                from rich.table import Table
+                args = {"month": month_arg} if month_arg else {}
+                heat = get_sector_heat_calendar(**args)
+                if heat.get("error"):
+                    console.print(f"[red]  ❌  {heat['error']}[/red]")
+                else:
+                    _mn = heat["current_month"]
+                    _sig = heat["current_month_signals"]
+                    _src = heat.get("source", "")
+                    # Current-month signal table
+                    t = Table(title=f"🌡  Sector Seasonal Signals — {_mn}", box=None, padding=(0, 2))
+                    t.add_column("Sector",  style="bold")
+                    t.add_column("Signal",  justify="center")
+                    t.add_column("Avg Return", justify="right")
+                    heat_hm = heat.get("heatmap", {})
+                    rows_sig = sorted(_sig.items(), key=lambda x: heat_hm.get(x[0], {}).get(_mn, 0), reverse=True)
+                    for sec, sig in rows_sig:
+                        avg = heat_hm.get(sec, {}).get(_mn, 0)
+                        if sig == "TAILWIND":
+                            colour = "bold green"
+                            icon   = "🟢 TAILWIND"
+                        elif sig == "HEADWIND":
+                            colour = "bold red"
+                            icon   = "🔴 HEADWIND"
+                        else:
+                            colour = "dim"
+                            icon   = "⚪ NEUTRAL"
+                        t.add_row(sec, f"[{colour}]{icon}[/{colour}]", f"[{colour}]{avg:+.1f}%[/{colour}]")
+                    console.print()
+                    console.print(t)
+                    # 12-month heatmap
+                    mnths = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+                    t2 = Table(title="📅  12-Month Heatmap (avg monthly return %)", box=None, padding=(0, 1))
+                    t2.add_column("Sector", style="bold")
+                    for mn in mnths:
+                        t2.add_column(mn, justify="right", min_width=5)
+                    for sec in sorted(heat_hm.keys()):
+                        row_vals = []
+                        for mn in mnths:
+                            v = heat_hm[sec].get(mn, 0)
+                            colour = "green" if v > 2 else ("red" if v < -1 else "")
+                            cell = f"[{colour}]{v:+.1f}[/{colour}]" if colour else f"{v:+.1f}"
+                            row_vals.append(cell)
+                        t2.add_row(sec, *row_vals)
+                    console.print()
+                    console.print(t2)
+                    console.print(f"[dim]  Source: {_src}[/dim]")
+                    console.print()
+                    # Follow-up LLM narrative
+                    text = (
+                        f"The sector heat calendar for {_mn} shows: "
+                        f"TAILWIND sectors: {heat['tailwinds']}; "
+                        f"NEUTRAL: {heat['neutral']}. "
+                        f"Data source: {_src}. "
+                        f"Give 3-4 bullet actionable insights: which sectors to rotate into, "
+                        f"which to underweight, and how this aligns with the current market environment."
+                    )
+            except Exception as _e:
+                console.print(f"[bold red]  ❌  Heat calendar error: {_e}[/bold red]")
+                text = f"Sector heat calendar error: {_e}"
+
+        # ── /cycle — economic cycle assessment (direct render) ────────
+        elif text.lower().startswith("/cycle"):
+            console.print("[dim]  → Economic Cycle Assessment[/dim]")
+            try:
+                from terminal.tools import get_economic_cycle_assessment, get_sector_heat_calendar
+                from rich.table import Table
+                cycle = get_economic_cycle_assessment()
+                if cycle.get("error"):
+                    console.print(f"[red]  ❌  {cycle['error']}[/red]")
+                else:
+                    phase   = cycle["cycle_phase"]
+                    conf    = cycle["confidence"]
+                    pref    = cycle["preferred_sectors"]
+                    avoid   = cycle["avoid_sectors"]
+                    macro   = cycle.get("macro_snapshot", {})
+                    defn    = cycle.get("definition", "")
+                    _PHASE_COLOUR = {
+                        "EARLY_EXPANSION": "green",
+                        "LATE_EXPANSION":  "yellow",
+                        "SLOWDOWN":        "red",
+                        "RECOVERY":        "cyan",
+                    }
+                    pc = _PHASE_COLOUR.get(phase, "white")
+                    console.print()
+                    console.print(f"  📊  Economic Cycle Phase: [bold {pc}]{phase}[/bold {pc}]  "
+                                  f"[dim](confidence {conf:.0%})[/dim]")
+                    console.print(f"  [dim]{defn}[/dim]")
+                    console.print()
+                    console.print(f"  [bold green]Preferred sectors:[/bold green] {', '.join(pref)}")
+                    console.print(f"  [bold red]Avoid sectors:[/bold red]     {', '.join(avoid)}")
+                    # Macro table
+                    if macro:
+                        t = Table(title="🌐  Macro Signal Snapshot", box=None, padding=(0, 2))
+                        t.add_column("Indicator", style="bold")
+                        t.add_column("Signal",    justify="center")
+                        t.add_column("Value",     justify="right")
+                        t.add_column("Direction", justify="center")
+                        for ind, d in macro.items():
+                            sig  = d.get("signal", "")
+                            val  = d.get("value", "")
+                            dirn = d.get("direction", "")
+                            sig_colour = "green" if "bull" in sig.lower() or "low" in sig.lower() else \
+                                         "red" if "bear" in sig.lower() or "high" in sig.lower() else ""
+                            t.add_row(
+                                ind,
+                                f"[{sig_colour}]{sig}[/{sig_colour}]" if sig_colour else sig,
+                                val, dirn
+                            )
+                        console.print()
+                        console.print(t)
+                    console.print()
+                    text = (
+                        f"Economic cycle is {phase} with {conf:.0%} confidence. "
+                        f"Preferred sectors: {pref}. Avoid: {avoid}. "
+                        f"Definition: {defn}. "
+                        f"Give actionable sector rotation strategy: what to buy, "
+                        f"what to trim, and 2 stock ideas in the preferred sectors."
+                    )
+            except Exception as _e:
+                console.print(f"[bold red]  ❌  Cycle assessment error: {_e}[/bold red]")
+                text = f"Cycle assessment error: {_e}"
+
+        # ── /scenario <symbol> [prices...] — scenario engine (direct) ─
+        elif text.lower().startswith("/scenario"):
+            parts = text.split()
+            sym   = parts[1].upper() if len(parts) > 1 else ""
+            if not sym:
+                console.print("[bold red]  Usage: /scenario SYMBOL [price1 price2 ...][/bold red]")
+            else:
+                prices_raw = []
+                for p in parts[2:]:
+                    try:
+                        prices_raw.append(float(p))
+                    except ValueError:
+                        pass
+                console.print(f"[dim]  → Scenario Analysis: {sym}[/dim]")
+                try:
+                    from terminal.tools import run_scenario_analysis
+                    from rich.table import Table
+                    args = {"symbol": sym}
+                    if prices_raw:
+                        args["price_scenarios"] = prices_raw
+                    scen = run_scenario_analysis(**args)
+                    if scen.get("error"):
+                        console.print(f"[red]  ❌  {scen['error']}[/red]")
+                    else:
+                        kl = scen["key_levels"]
+                        console.print()
+                        console.print(f"  [bold]{sym}[/bold]  Current: [bold]₹{scen['current_price']:,.0f}[/bold]  "
+                                      f"Stage: [cyan]{scen['current_stage']}[/cyan]  RSI: {scen['current_rsi']:.1f}")
+                        console.print(f"  Support ₹{kl['support']:,.0f}  │  Resistance ₹{kl['resistance']:,.0f}  "
+                                      f"│  50-DMA ₹{kl['ma50']:,.0f}  │  200-DMA ₹{kl['ma200']:,.0f}")
+                        t = Table(title=f"📐  What-If Scenarios — {sym}", box=None, padding=(0, 2))
+                        t.add_column("Scenario",  style="bold")
+                        t.add_column("Price",     justify="right")
+                        t.add_column("% Chg",     justify="right")
+                        t.add_column("RSI est.",  justify="right")
+                        t.add_column("Stage Implication")
+                        t.add_column("Notes", style="dim")
+                        for s in scen["scenarios"]:
+                            pct = s["pct_change"]
+                            pc = "green" if pct > 0 else ("red" if pct < 0 else "")
+                            pct_str = f"[{pc}]{pct:+.1f}%[/{pc}]" if pc else f"{pct:+.1f}%"
+                            t.add_row(
+                                s["label"], f"₹{s['price']:,.0f}", pct_str,
+                                f"{s['rsi_estimate']:.0f}",
+                                s["stage_implication"], s["notes"],
+                            )
+                        console.print()
+                        console.print(t)
+                        console.print()
+                        text = (
+                            f"{sym} scenario analysis: current ₹{scen['current_price']:,.0f}, "
+                            f"stage {scen['current_stage']}, RSI {scen['current_rsi']:.1f}. "
+                            f"Key levels: support ₹{kl['support']:,.0f}, resistance ₹{kl['resistance']:,.0f}. "
+                            f"Give: (1) where to set a stop-loss, (2) which scenario is most likely "
+                            f"given current market conditions, (3) risk/reward at current entry."
+                        )
+                except Exception as _e:
+                    console.print(f"[bold red]  ❌  Scenario error: {_e}[/bold red]")
+                    text = f"Scenario analysis error for {sym}: {_e}"
+
+        # ── /narrative [symbol ...] — portfolio narratives (direct) ───
+        elif text.lower().startswith("/narrative"):
+            parts = text.split()
+            syms  = [p.upper() for p in parts[1:] if p.isalpha() and len(p) >= 2]
+            lbl   = ", ".join(syms) if syms else "portfolio holdings"
+            console.print(f"[dim]  → Portfolio Narratives: {lbl}[/dim]")
+            try:
+                from terminal.tools import generate_portfolio_narratives
+                from rich.table import Table
+                args = {"symbols": syms, "top_n": len(syms)} if syms else {}
+                narr = generate_portfolio_narratives(**args)
+                if narr.get("error"):
+                    console.print(f"[red]  ❌  {narr['error']}[/red]")
+                else:
+                    for n in narr.get("narratives", []):
+                        sym_n = n["symbol"]
+                        act   = n.get("action_hint", "")
+                        act_c = "green" if "Hold" in act or "Add" in act else \
+                                ("red" if "Avoid" in act or "Exit" in act else "yellow")
+                        console.print()
+                        console.print(f"  [bold]{sym_n}[/bold]  "
+                                      f"[dim]{n.get('stage','')}  RSI:{n.get('rsi','')}[/dim]  "
+                                      f"[bold {act_c}]{act}[/bold {act_c}]")
+                        console.print(f"  [green]▲ Bull:[/green] {n.get('thesis','')}")
+                        console.print(f"  [red]▼ Bear:[/red] {n.get('bear_case','')}")
+                        if n.get("signals"):
+                            console.print(f"  [dim]Signals: {', '.join(n['signals'])}[/dim]")
+                    console.print()
+                    syms_str = ", ".join(n["symbol"] for n in narr.get("narratives", []))
+                    text = (
+                        f"Portfolio narratives generated for: {syms_str}. "
+                        f"Which of these stocks has the best risk/reward right now? "
+                        f"Give a 3-sentence portfolio prioritization verdict."
+                    )
+            except Exception as _e:
+                console.print(f"[bold red]  ❌  Narrative error: {_e}[/bold red]")
+                text = f"Narrative generation error: {_e}"
+
+        # ── /voice [text...] — voice briefing (direct) ────────────────
+        elif text.lower().startswith("/voice"):
+            parts = text.split(maxsplit=1)
+            custom = parts[1].strip() if len(parts) > 1 else ""
+            console.print("[dim]  → Voice Briefing (OpenAI TTS)[/dim]")
+            try:
+                from terminal.tools import generate_voice_briefing
+                args = {"text": custom} if custom else {}
+                vb = generate_voice_briefing(**args)
+                if vb.get("error"):
+                    console.print(f"[bold red]  ❌  {vb['error']}[/bold red]")
+                else:
+                    console.print(f"  [bold green]🎙  Voice briefing generated![/bold green]")
+                    console.print(f"  File: [cyan]{vb['audio_file']}[/cyan]")
+                    console.print(f"  Duration: {vb['duration_est']}  │  Voice: {vb['voice']}")
+                    console.print(f"  [dim]Play with: open \"{vb['audio_file']}\"[/dim]")
+                    console.print()
+            except Exception as _e:
+                console.print(f"[bold red]  ❌  Voice briefing error: {_e}[/bold red]")
+            _separator()
+            continue  # self-contained — no LLM follow-up needed
+
+        # ── /concall <symbol> — concall NLP (direct render) ───────────
+        elif text.lower().startswith("/concall"):
+            parts = text.split()
+            sym   = parts[1].upper() if len(parts) > 1 else ""
+            if not sym:
+                console.print("[bold red]  Usage: /concall SYMBOL[/bold red]")
+            else:
+                console.print(f"[dim]  → Concall NLP: {sym}[/dim]")
+                try:
+                    from terminal.tools import analyze_concall_sentiment
+                    cc = analyze_concall_sentiment(sym)
+                    if cc.get("error"):
+                        console.print(f"[bold red]  ❌  {cc['error']}[/bold red]")
+                        text = f"Concall NLP for {sym} failed: {cc['error']}"
+                    else:
+                        sent  = cc.get("sentiment", "Neutral")
+                        score = cc.get("tone_score", 0.0)
+                        s_c   = "green" if sent == "Bullish" else ("red" if sent == "Bearish" else "yellow")
+                        console.print()
+                        console.print(f"  [bold]{sym}[/bold] Concall Sentiment: "
+                                      f"[bold {s_c}]{sent}[/bold {s_c}]  "
+                                      f"[dim]tone score {score:+.2f}[/dim]")
+                        if cc.get("guidance"):
+                            console.print(f"  [bold]Guidance:[/bold] {cc['guidance']}")
+                        if cc.get("themes"):
+                            console.print(f"  [bold]Key themes:[/bold]")
+                            for th in cc["themes"]:
+                                console.print(f"    • {th}")
+                        if cc.get("risk_flags"):
+                            console.print(f"  [bold red]Risk flags:[/bold red]")
+                            for rf in cc["risk_flags"]:
+                                console.print(f"    ⚠ {rf}")
+                        if cc.get("key_quotes"):
+                            console.print(f"  [bold]Key quotes:[/bold]")
+                            for q in cc["key_quotes"][:3]:
+                                console.print(f"    [italic]\"{q}\"[/italic]")
+                        console.print(f"  [dim]Source: {cc.get('transcript_source','N/A')}[/dim]")
+                        console.print()
+                        text = (
+                            f"{sym} concall: {sent} sentiment (tone {score:+.2f}). "
+                            f"Themes: {cc.get('themes',[])}. Risks: {cc.get('risk_flags',[])}. "
+                            f"Guidance: {cc.get('guidance','')}. "
+                            f"Given this tone, what is the trading implication for {sym}?"
+                        )
+                except Exception as _e:
+                    console.print(f"[bold red]  ❌  Concall NLP error: {_e}[/bold red]")
+                    text = f"Concall NLP error for {sym}: {_e}"
 
         # ── /chain <symbol> [expiry] — live option chain ───────────────
         if text.lower().startswith("/chain"):

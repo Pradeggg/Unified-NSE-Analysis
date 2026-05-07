@@ -776,3 +776,798 @@ def recommend_strategies(symbol: str, expiry: str | None = None,
             if k in chain_analysis
         },
     }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ██████████  OPTIONS BUYING ENGINE  ██████████
+# ─────────────────────────────────────────────────────────────────────────────
+# This section focuses exclusively on debit (buying) strategies:
+#   Long Call / Long Put / Bull Call Spread / Bear Put Spread /
+#   Long Straddle / Long Strangle / Calendar Spread
+#
+# Key framework:
+#   1. IV regime  — buy when IV is cheap relative to expected realised vol
+#   2. IV rank    — estimate cheapness vs recent history
+#   3. Expected Move — what the market is pricing in
+#   4. Strike selection — ATM (high delta, high cost) vs OTM (leverage)
+#   5. DTE selection — at least 2× the time you expect the move to take
+#   6. Theta profile — how fast the premium erodes
+#   7. Discipline — 50% premium stop, 100-200% profit target
+# ─────────────────────────────────────────────────────────────────────────────
+
+# IV regime thresholds for Indian markets (empirical)
+_IV_REGIMES = [
+    (0,   10, "Very Low",  "Extremely cheap — ideal buying conditions"),
+    (10,  15, "Low",       "Cheap to buy — favours debit strategies"),
+    (15,  20, "Moderate",  "Fair value — select buying with strong directional view"),
+    (20,  28, "Elevated",  "Expensive — prefer spreads over naked buys to reduce cost"),
+    (28,  40, "High",      "Costly — use tight spreads or avoid naked long options"),
+    (40, 999, "Extreme",   "Very expensive — selling strategies preferred; avoid naked buys"),
+]
+
+
+def _iv_regime_label(iv_pct: float) -> tuple[str, str]:
+    """Return (regime_label, advice) for a given IV%."""
+    for lo, hi, label, advice in _IV_REGIMES:
+        if lo <= iv_pct < hi:
+            return label, advice
+    return "Unknown", "Insufficient data"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# IV Calculation from Option Prices (chain-wide)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def calc_chain_ivs(chain_data: dict) -> dict:
+    """
+    Calculate implied volatility for every strike in the chain from LTP.
+    Returns chain_data enriched with 'ce_iv_calc' and 'pe_iv_calc' for each row.
+    Also returns summary: atm_iv, atm_ce_iv, atm_pe_iv, avg_iv, iv_skew.
+    """
+    rows  = chain_data.get("data", [])
+    spot  = chain_data.get("underlying") or 0.0
+    exp   = chain_data.get("expiry", "")
+    dte   = days_to_expiry(exp) if exp else 0
+
+    if not rows or spot <= 0 or dte <= 0:
+        return {**chain_data, "iv_summary": {"error": "Insufficient data for IV calculation"}}
+
+    enriched = []
+    ce_ivs, pe_ivs = [], []
+
+    for row in rows:
+        r = dict(row)
+        k = float(r.get("strike", 0))
+        if k <= 0:
+            enriched.append(r)
+            continue
+
+        for opt_type, ltp_key, iv_key in [("CE", "ce_ltp", "ce_iv_calc"),
+                                            ("PE", "pe_ltp", "pe_iv_calc")]:
+            ltp = float(r.get(ltp_key) or 0)
+            # Only compute IV if LTP is meaningful (> intrinsic + small margin)
+            intrinsic = max(0, spot - k if opt_type == "CE" else k - spot)
+            if ltp > 0 and ltp >= intrinsic and ltp < spot * 0.5:
+                iv = calc_iv(ltp, spot, k, dte, opt_type)
+                r[iv_key] = round(iv * 100, 2) if iv else None
+                if iv and 3 < iv * 100 < 150:   # sanity bounds
+                    if opt_type == "CE":
+                        ce_ivs.append((abs(k - spot), iv * 100))
+                    else:
+                        pe_ivs.append((abs(k - spot), iv * 100))
+            else:
+                r[iv_key] = None
+        enriched.append(r)
+
+    # ATM IV = IV of the strike closest to spot for each side
+    atm_ce_iv = min(ce_ivs, key=lambda x: x[0])[1] if ce_ivs else None
+    atm_pe_iv = min(pe_ivs, key=lambda x: x[0])[1] if pe_ivs else None
+    atm_iv    = round((atm_ce_iv + atm_pe_iv) / 2, 2) if atm_ce_iv and atm_pe_iv else (atm_ce_iv or atm_pe_iv)
+
+    # Average IV (all liquid strikes, weighted by proximity to ATM)
+    all_ivs = [iv for _, iv in ce_ivs + pe_ivs]
+    avg_iv  = round(float(np.mean(all_ivs)), 2) if all_ivs else None
+
+    # IV skew: put IV (below spot) vs call IV (above spot)
+    near_pe = [iv for dist, iv in pe_ivs if dist <= spot * 0.05]
+    near_ce = [iv for dist, iv in ce_ivs if dist <= spot * 0.05]
+    skew    = round(float(np.mean(near_pe)) - float(np.mean(near_ce)), 2) if near_pe and near_ce else None
+
+    regime, advice = _iv_regime_label(atm_iv or avg_iv or 0)
+
+    iv_summary = {
+        "atm_iv":           atm_iv,
+        "atm_ce_iv":        round(atm_ce_iv, 2) if atm_ce_iv else None,
+        "atm_pe_iv":        round(atm_pe_iv, 2) if atm_pe_iv else None,
+        "avg_iv":           avg_iv,
+        "iv_skew":          skew,
+        "iv_skew_label":    ("Puts expensive (bearish skew)" if skew and skew > 2
+                             else ("Calls expensive (bullish skew)" if skew and skew < -2
+                                   else "Balanced")),
+        "iv_regime":        regime,
+        "iv_regime_advice": advice,
+        "dte":              dte,
+        "expiry":           exp,
+    }
+
+    return {**chain_data, "data": enriched, "iv_summary": iv_summary}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Expected Move
+# ─────────────────────────────────────────────────────────────────────────────
+
+def calc_expected_move(spot: float, atm_iv: float, dte: int) -> dict:
+    """
+    Calculate expected move using IV:
+      1SD move = spot × IV × √(DTE/365)
+    Returns ±1σ, ±2σ price levels and % moves.
+    """
+    if spot <= 0 or atm_iv <= 0 or dte <= 0:
+        return {"error": "Insufficient data"}
+
+    sigma_daily = atm_iv / 100 / math.sqrt(365)
+    move_1sd    = spot * (atm_iv / 100) * math.sqrt(dte / 365)
+    move_2sd    = move_1sd * 2
+
+    # Straddle-based expected move (market price method):
+    # EM ≈ 0.85 × ATM_straddle (rough approximation)
+
+    return {
+        "spot":              spot,
+        "dte":               dte,
+        "atm_iv_pct":        atm_iv,
+        "sigma_daily_pct":   round(sigma_daily * 100, 3),
+        "expected_move_1sd": round(move_1sd, 2),
+        "expected_move_1sd_pct": round(move_1sd / spot * 100, 2),
+        "upper_1sd":         round(spot + move_1sd, 2),
+        "lower_1sd":         round(spot - move_1sd, 2),
+        "upper_2sd":         round(spot + move_2sd, 2),
+        "lower_2sd":         round(spot - move_2sd, 2),
+        "interpretation":    (
+            f"Market expects ±{round(move_1sd,0):.0f} pts ({round(move_1sd/spot*100,1)}%) "
+            f"move in {dte} trading days (1σ = 68% probability). "
+            f"Range: {round(spot-move_1sd,0):.0f} – {round(spot+move_1sd,0):.0f}"
+        ),
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Strike Selection Guide
+# ─────────────────────────────────────────────────────────────────────────────
+
+def strike_selection_guide(spot: float, atm_iv: float, dte: int,
+                            direction: str, budget_per_lot: float | None = None,
+                            chain_rows: list | None = None) -> dict:
+    """
+    Recommend optimal strike(s) for a directional options buy.
+    direction: 'bullish' | 'bearish' | 'volatile'
+    Returns ATM, slight-OTM, and deep-OTM with cost/delta/breakeven tradeoffs.
+    """
+    direction = direction.lower()
+    em = calc_expected_move(spot, atm_iv, dte)
+
+    # Strike offsets relative to expected move
+    strike_profiles = []
+    opt_type = "CE" if direction == "bullish" else ("PE" if direction == "bearish" else "CE")
+
+    # Build strike options
+    profiles_config = [
+        ("ITM",         -0.10 if direction == "bullish" else +0.10,
+         "High delta (0.6–0.8), expensive, forgiving, lower leverage",
+         "Conservative — high probability of being ITM at expiry"),
+        ("ATM",          0.0,
+         "Delta ~0.5, moderate cost, balanced risk/reward",
+         "Balanced — best for capturing directional moves"),
+        ("Slight OTM",  +0.03 if direction == "bullish" else -0.03,
+         "Delta 0.35–0.45, cheaper, needs bigger move to break even",
+         "Moderate leverage — good if move > 1σ expected"),
+        ("OTM",         +0.05 if direction == "bullish" else -0.05,
+         "Delta 0.2–0.35, cheap, needs large move",
+         "High leverage — use only with strong conviction"),
+        ("Far OTM",     +0.08 if direction == "bullish" else -0.08,
+         "Delta < 0.2, lottery ticket, mostly theta decay",
+         "Avoid unless targeting multi-sigma event move"),
+    ]
+
+    for label, pct_offset, cost_note, recommendation in profiles_config:
+        k = round(spot * (1 + pct_offset) / 50) * 50   # round to nearest 50
+        greeks = calc_greeks(spot, k, dte, atm_iv / 100, opt_type) if atm_iv > 0 else {}
+        ltp = greeks.get("theoretical_price", 0)
+
+        # Find nearest actual strike from chain
+        actual_ltp = None
+        if chain_rows:
+            ltp_key = "ce_ltp" if opt_type == "CE" else "pe_ltp"
+            nearest = min(chain_rows, key=lambda r: abs(float(r.get("strike", 0)) - k), default=None)
+            if nearest:
+                k = float(nearest["strike"])
+                actual_ltp = float(nearest.get(ltp_key) or 0)
+                greeks = calc_greeks(spot, k, dte, atm_iv / 100, opt_type) if atm_iv > 0 else {}
+
+        delta = abs(greeks.get("delta", 0))
+        theta = greeks.get("theta", 0)
+        price = actual_ltp if actual_ltp else greeks.get("theoretical_price", ltp)
+
+        be = round(k + price, 2) if direction == "bullish" else round(k - price, 2)
+        pct_to_be = round((be / spot - 1) * 100, 2) if direction == "bullish" else round((1 - be / spot) * 100, 2)
+        em_move  = em.get("expected_move_1sd_pct", 0)
+
+        strike_profiles.append({
+            "label":          label,
+            "strike":         k,
+            "option_type":    opt_type,
+            "ltp":            round(price, 2),
+            "delta":          round(delta, 3),
+            "theta_per_day":  round(theta, 2),
+            "breakeven":      be,
+            "pct_to_breakeven": pct_to_be,
+            "vs_expected_move": (
+                f"Breakeven needs {pct_to_be:.1f}% move vs expected {em_move:.1f}% (1σ)"
+                if em_move else ""
+            ),
+            "cost_profile":   cost_note,
+            "recommendation": recommendation,
+            "is_recommended": label in ("ATM", "Slight OTM"),
+        })
+
+    # DTE recommendation
+    dte_advice = _dte_recommendation(dte, atm_iv)
+
+    return {
+        "symbol_spot":     spot,
+        "direction":       direction,
+        "option_type":     opt_type,
+        "atm_iv":          atm_iv,
+        "dte":             dte,
+        "expected_move":   em,
+        "strike_profiles": strike_profiles,
+        "dte_advice":      dte_advice,
+        "buying_rules":    _BUYING_DISCIPLINE,
+    }
+
+
+def _dte_recommendation(dte: int, iv: float) -> dict:
+    """Recommend DTE range based on IV and current DTE."""
+    if dte <= 3:
+        return {
+            "label": "Expiry Day / Last Days",
+            "advice": "Extreme time decay. Only for experienced traders. Gamma play only.",
+            "ideal_dte_range": "0–3 DTE",
+            "risk": "VERY HIGH theta decay — position can go to zero overnight",
+        }
+    elif dte <= 7:
+        return {
+            "label": "Expiry Week",
+            "advice": "High gamma, high risk. Need quick move. Avoid if unsure.",
+            "ideal_dte_range": "4–7 DTE",
+            "risk": "HIGH theta decay — suitable only for strong conviction moves",
+        }
+    elif dte <= 15:
+        return {
+            "label": "Near-Term",
+            "advice": "Sweet spot for options buyers with 5-10 day view.",
+            "ideal_dte_range": "8–15 DTE",
+            "risk": "MODERATE theta — positions manageable if move happens within a week",
+        }
+    elif dte <= 30:
+        return {
+            "label": "Monthly Expiry",
+            "advice": "Good balance of theta and time. Suitable for 2-3 week thesis.",
+            "ideal_dte_range": "15–30 DTE",
+            "risk": "LOW-MODERATE theta decay in first half, accelerates in second half",
+        }
+    else:
+        return {
+            "label": "Far-Term (LEAPS equivalent)",
+            "advice": "Low theta burn, high cost. Best for big structural moves.",
+            "ideal_dte_range": "30+ DTE",
+            "risk": "LOW theta — most forgiving but expensive in absolute premium",
+        }
+
+
+_BUYING_DISCIPLINE = {
+    "stop_loss":       "Exit when premium falls 50% from entry (lose max half the premium paid)",
+    "profit_target":   "Book partial at 50-80% gain; trail remainder",
+    "exit_by_time":    "Exit at 50% of DTE if position is flat (theta decay accelerates)",
+    "avoid_over_hold": "Never hold naked options to expiry hoping for recovery",
+    "position_sizing": "Risk max 2-3% of capital per trade (premium paid = max risk)",
+    "iv_entry":        "Prefer IV < 20% for index, < 30% for stocks before buying",
+    "best_entry":      "Buy at IV contraction (after event) not IV expansion (before event)",
+}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Theta Decay Profile
+# ─────────────────────────────────────────────────────────────────────────────
+
+def theta_decay_profile(spot: float, strike: float, total_dte: int,
+                         sigma: float, option_type: str = "CE") -> dict:
+    """
+    Show how an option's value erodes over time (theta decay curve).
+    Returns a day-by-day table for key DTE checkpoints.
+    """
+    if total_dte <= 0 or sigma <= 0:
+        return {"error": "Insufficient data"}
+
+    entry_price = bs_price(spot, strike, total_dte / 365, RISK_FREE_RATE, sigma, option_type)
+    checkpoints = []
+
+    # Key DTE points to show
+    dtes = [total_dte, int(total_dte * 0.75), int(total_dte * 0.5),
+            int(total_dte * 0.25), 7, 3, 1, 0]
+    dtes = sorted(set(d for d in dtes if 0 <= d <= total_dte), reverse=True)
+
+    for dte in dtes:
+        T = dte / 365
+        price = bs_price(spot, strike, T, RISK_FREE_RATE, sigma, option_type) if dte > 0 else max(0, spot - strike if option_type == "CE" else strike - spot)
+        pct_remaining = round(price / entry_price * 100, 1) if entry_price > 0 else 0
+        days_elapsed = total_dte - dte
+        checkpoints.append({
+            "dte":               dte,
+            "days_elapsed":      days_elapsed,
+            "option_price":      round(price, 2),
+            "value_remaining_pct": pct_remaining,
+            "value_lost_pct":    round(100 - pct_remaining, 1),
+        })
+
+    # 50% value DTE (when option loses half its value to time decay alone)
+    half_val_dte = None
+    for i in range(total_dte, -1, -1):
+        p = bs_price(spot, strike, i / 365, RISK_FREE_RATE, sigma, option_type) if i > 0 else 0
+        if p <= entry_price * 0.5:
+            half_val_dte = i
+            break
+
+    return {
+        "entry_dte":       total_dte,
+        "entry_price":     round(entry_price, 2),
+        "strike":          strike,
+        "option_type":     option_type,
+        "sigma_pct":       round(sigma * 100, 2),
+        "checkpoints":     checkpoints,
+        "half_value_at_dte": half_val_dte,
+        "half_value_warning": (
+            f"Option loses 50% value by DTE {half_val_dte} — exit by then if no move"
+            if half_val_dte else None
+        ),
+        "key_insight": (
+            "Last 30% of DTE accounts for ~50% of theta decay — exit early if position is flat"
+        ),
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Probability of Profit (Delta-based)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def probability_itm(spot: float, strike: float, dte: int,
+                     sigma: float, option_type: str = "CE") -> dict:
+    """
+    Estimate probability of finishing ITM using BS delta.
+    Also compute probability of reaching 100% profit (breakeven × 2).
+    """
+    greeks = calc_greeks(spot, strike, dte, sigma, option_type)
+    delta  = abs(greeks.get("delta", 0))
+    ltp    = greeks.get("theoretical_price", 0)
+
+    # Probability of reaching target (2× premium = breakeven + premium)
+    target_spot = strike + 2 * ltp if option_type == "CE" else strike - 2 * ltp
+    target_greeks = calc_greeks(spot, target_spot, dte, sigma, option_type) if target_spot > 0 else {}
+    prob_target = abs(target_greeks.get("delta", 0)) if target_greeks else 0
+
+    return {
+        "strike":                 strike,
+        "option_type":            option_type,
+        "prob_itm_at_expiry_pct": round(delta * 100, 1),
+        "prob_2x_return_pct":     round(prob_target * 100, 1),
+        "delta":                  round(delta, 3),
+        "ltp":                    round(ltp, 2),
+        "breakeven":              round(strike + ltp if option_type == "CE" else strike - ltp, 2),
+        "interpretation":         (
+            f"{round(delta*100,0):.0f}% chance of finishing ITM; "
+            f"{round(prob_target*100,0):.0f}% chance of reaching 2× return target"
+        ),
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Deep Options Buying Analysis — Single Symbol
+# ─────────────────────────────────────────────────────────────────────────────
+
+def analyze_buying_opportunity(symbol: str, direction: str = "bullish",
+                                 expiry: str | None = None,
+                                 use_live: bool = True) -> dict:
+    """
+    Comprehensive options buying analysis for a symbol:
+      • ATM IV and regime (cheap/expensive)
+      • Expected move (what market is pricing in)
+      • Strike selection guide (ITM / ATM / OTM with cost, delta, breakeven)
+      • Top 2 recommended strikes with full greeks
+      • Theta decay profile for recommended strike
+      • OI structure (support/resistance for the view)
+      • Buying discipline checklist
+    """
+    direction = direction.lower()
+    if direction not in ("bullish", "bearish", "volatile"):
+        direction = "bullish"
+
+    # ── Fetch and enrich chain ────────────────────────────────────────────────
+    chain_raw = (
+        fetch_live_option_chain(symbol, expiry)
+        if use_live else
+        _eod_chain_to_live_format(symbol, expiry)
+    )
+    if "error" in chain_raw:
+        return chain_raw
+
+    chain = calc_chain_ivs(chain_raw)
+    iv_summary = chain.get("iv_summary", {})
+    atm_iv = iv_summary.get("atm_iv") or iv_summary.get("avg_iv") or 18.0  # fallback
+    spot   = chain.get("underlying") or 0.0
+    exp    = chain.get("expiry", "")
+    dte    = days_to_expiry(exp) if exp else 0
+
+    if spot <= 0:
+        return {"error": f"Could not determine spot price for {symbol}", "symbol": symbol}
+
+    # ── Expected move ─────────────────────────────────────────────────────────
+    em = calc_expected_move(spot, atm_iv, dte)
+
+    # ── Strike selection ──────────────────────────────────────────────────────
+    strike_guide = strike_selection_guide(
+        spot, atm_iv, dte, direction,
+        chain_rows=chain.get("data", [])
+    )
+
+    # ── Pick top 2 recommended strikes ───────────────────────────────────────
+    recommended = [s for s in strike_guide["strike_profiles"] if s["is_recommended"]][:2]
+
+    # ── Theta decay for ATM strike ────────────────────────────────────────────
+    atm_strike_info = next(
+        (s for s in strike_guide["strike_profiles"] if s["label"] == "ATM"), None
+    )
+    theta_profile = None
+    if atm_strike_info and dte > 0:
+        theta_profile = theta_decay_profile(
+            spot, atm_strike_info["strike"], dte,
+            atm_iv / 100,
+            "CE" if direction == "bullish" else "PE"
+        )
+
+    # ── OI context for the directional view ──────────────────────────────────
+    oi_context = {}
+    rows = chain.get("data", [])
+    if rows:
+        df = pd.DataFrame(rows)
+        df["strike"] = pd.to_numeric(df["strike"], errors="coerce")
+        df = df.dropna(subset=["strike"])
+
+        if direction == "bullish":
+            # Nearest CE resistance wall above spot
+            above = df[df["strike"] > spot].nlargest(3, "ce_oi")
+            oi_context["resistance_walls"] = above[["strike", "ce_oi", "ce_ltp"]].to_dict("records")
+            oi_context["note"] = "Call OI above spot = resistance. Break above these for target."
+        elif direction == "bearish":
+            below = df[df["strike"] < spot].nlargest(3, "pe_oi")
+            oi_context["support_walls"] = below[["strike", "pe_oi", "pe_ltp"]].to_dict("records")
+            oi_context["note"] = "Put OI below spot = support. Break below for target."
+        else:
+            top_ce = df.nlargest(2, "ce_oi")[["strike", "ce_oi"]].to_dict("records")
+            top_pe = df.nlargest(2, "pe_oi")[["strike", "pe_oi"]].to_dict("records")
+            oi_context = {"top_ce_walls": top_ce, "top_pe_walls": top_pe,
+                          "note": "Straddle/strangle must break beyond both walls for profit."}
+
+    # ── PCR and max pain context ──────────────────────────────────────────────
+    chain_analysis = analyze_option_chain(symbol, expiry, use_live)
+    pcr        = chain_analysis.get("pcr", {}) if "error" not in chain_analysis else {}
+    max_pain   = chain_analysis.get("max_pain")
+
+    # ── IV rank proxy (estimated from ATM IV vs typical NIFTY/stock ranges) ──
+    iv_rank_proxy = _estimate_iv_rank(symbol, atm_iv)
+
+    # ── Overall buying verdict ────────────────────────────────────────────────
+    verdict = _buying_verdict(atm_iv, iv_rank_proxy, dte, direction, pcr)
+
+    return {
+        "symbol":          symbol,
+        "underlying":      spot,
+        "expiry":          exp,
+        "dte":             dte,
+        "direction":       direction,
+        "source":          chain.get("source", "unknown"),
+        "iv_summary":      iv_summary,
+        "iv_rank_proxy":   iv_rank_proxy,
+        "expected_move":   em,
+        "strike_guide":    strike_guide,
+        "recommended_strikes": recommended,
+        "theta_decay":     theta_profile,
+        "oi_context":      oi_context,
+        "pcr":             pcr,
+        "max_pain":        max_pain,
+        "verdict":         verdict,
+        "buying_discipline": _BUYING_DISCIPLINE,
+    }
+
+
+def _estimate_iv_rank(symbol: str, current_iv: float) -> dict:
+    """
+    Estimate IV rank without full history.
+    Uses empirical typical-IV ranges for NSE indices and stocks.
+    """
+    # Typical annualised IV ranges for NSE instruments (empirical)
+    _typical_ranges: dict[str, tuple[float, float]] = {
+        "NIFTY":      (10, 28),
+        "BANKNIFTY":  (12, 35),
+        "FINNIFTY":   (12, 32),
+        "MIDCPNIFTY": (14, 38),
+    }
+    sym = symbol.upper()
+    lo, hi = _typical_ranges.get(sym, (15, 60))   # stocks have wider range
+
+    rank = round((current_iv - lo) / (hi - lo) * 100, 1) if hi > lo else 50.0
+    rank = max(0.0, min(100.0, rank))
+
+    return {
+        "current_iv":     round(current_iv, 2),
+        "typical_range":  f"{lo}%–{hi}%",
+        "iv_rank_pct":    rank,
+        "label":          (
+            "Very Low (Top buying zone)"    if rank < 20 else
+            "Low (Good buying zone)"        if rank < 35 else
+            "Medium (Selective buying)"     if rank < 60 else
+            "High (Spreads preferred)"      if rank < 80 else
+            "Extreme (Avoid buying naked)"
+        ),
+        "note": (
+            "IV rank is estimated from typical historical ranges. "
+            "Download more EOD bhavcopy history for precise rank."
+        ),
+    }
+
+
+def _buying_verdict(iv: float, iv_rank: dict, dte: int,
+                     direction: str, pcr: dict) -> dict:
+    """Produce a clear BUY / SPREAD / AVOID verdict for options buying."""
+    rank   = iv_rank.get("iv_rank_pct", 50)
+    pcr_oi = pcr.get("oi") if pcr else None
+
+    score = 0
+    reasons = []
+
+    # IV score
+    if iv < 15:
+        score += 3
+        reasons.append(f"✅ IV {iv:.1f}% is very low — cheap to buy options")
+    elif iv < 20:
+        score += 2
+        reasons.append(f"✅ IV {iv:.1f}% is low — reasonable cost for buyers")
+    elif iv < 28:
+        score += 1
+        reasons.append(f"⚠️  IV {iv:.1f}% is moderate — prefer spreads to reduce cost")
+    else:
+        score -= 1
+        reasons.append(f"❌ IV {iv:.1f}% is high — options are expensive to buy")
+
+    # IV rank score
+    if rank < 30:
+        score += 2
+        reasons.append(f"✅ IV rank {rank:.0f}% — historically cheap")
+    elif rank < 60:
+        score += 1
+        reasons.append(f"⚠️  IV rank {rank:.0f}% — moderate; not the cheapest")
+    else:
+        score -= 1
+        reasons.append(f"❌ IV rank {rank:.0f}% — expensive relative to history")
+
+    # DTE score
+    if 8 <= dte <= 20:
+        score += 2
+        reasons.append(f"✅ DTE {dte} is ideal for options buyers (sweet spot)")
+    elif 21 <= dte <= 35:
+        score += 1
+        reasons.append(f"✅ DTE {dte} — good time for monthly expiry play")
+    elif dte < 5:
+        score -= 2
+        reasons.append(f"❌ DTE {dte} — extreme theta decay risk")
+    elif dte < 8:
+        score -= 1
+        reasons.append(f"⚠️  DTE {dte} — be very selective; theta accelerating")
+
+    # PCR alignment
+    if pcr_oi:
+        if direction == "bullish" and pcr_oi > 1.0:
+            score += 1
+            reasons.append(f"✅ PCR {pcr_oi:.2f} — put writing = bullish sentiment aligns")
+        elif direction == "bearish" and pcr_oi < 0.8:
+            score += 1
+            reasons.append(f"✅ PCR {pcr_oi:.2f} — call writing = bearish sentiment aligns")
+        elif direction == "bullish" and pcr_oi < 0.7:
+            score -= 1
+            reasons.append(f"⚠️  PCR {pcr_oi:.2f} — bearish OI; cautious on bullish play")
+
+    # Verdict
+    if score >= 6:
+        verdict_label = "STRONG BUY SETUP"
+        verdict_color = "green"
+    elif score >= 4:
+        verdict_label = "GOOD BUYING OPPORTUNITY"
+        verdict_color = "green"
+    elif score >= 2:
+        verdict_label = "USE SPREAD (not naked long)"
+        verdict_color = "yellow"
+    elif score >= 0:
+        verdict_label = "SELECTIVE — SMALL POSITION ONLY"
+        verdict_color = "yellow"
+    else:
+        verdict_label = "AVOID BUYING — IV TOO HIGH"
+        verdict_color = "red"
+
+    return {
+        "label":       verdict_label,
+        "score":       score,
+        "color":       verdict_color,
+        "reasons":     reasons,
+        "action":      (
+            "Preferred strategy: ATM or slight-OTM buy" if score >= 4 else
+            "Preferred strategy: debit spread (reduce IV cost)" if score >= 2 else
+            "Consider waiting for IV contraction or use credit spread"
+        ),
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Options Buying Scanner — Cross-Stock
+# ─────────────────────────────────────────────────────────────────────────────
+
+def scan_options_buying_opportunities(direction: str = "bullish",
+                                       min_oi: int = 500_000,
+                                       max_iv: float = 35.0,
+                                       top_n: int = 10) -> dict:
+    """
+    Scan all symbols with options data in the F&O DB.
+    Rank by: low IV + strong technical momentum + adequate OI liquidity.
+
+    direction: 'bullish' | 'bearish' | 'volatile'
+    min_oi: minimum ATM strike OI for liquidity filter
+    max_iv: IV ceiling for buying filter
+    """
+    import sqlite3
+    from terminal.fno_data import FNO_DB, get_available_dates
+
+    if not FNO_DB.exists():
+        return {"error": "F&O DB not found. Run refresh_fno_eod_data() first."}
+
+    dates = get_available_dates()
+    if not dates:
+        return {"error": "No F&O EOD data available."}
+
+    trade_date = dates[0]
+    conn = sqlite3.connect(FNO_DB)
+
+    # Get all symbols with adequate options liquidity
+    rows = conn.execute("""
+        SELECT symbol, option_type, strike, last_price, oi, underlying, expiry_date
+        FROM fno_eod
+        WHERE trade_date=? AND option_type IS NOT NULL AND oi >= ?
+        ORDER BY symbol, expiry_date, strike
+    """, (trade_date, min_oi // 10)).fetchall()
+    conn.close()
+
+    if not rows:
+        return {"error": f"No options data for {trade_date} with OI >= {min_oi//10}"}
+
+    # Group by symbol
+    from collections import defaultdict
+    by_symbol: dict[str, list] = defaultdict(list)
+    for r in rows:
+        by_symbol[r[0]].append(r)
+
+    results = []
+    for symbol, sym_rows in by_symbol.items():
+        try:
+            # Get the nearest expiry
+            expiries = sorted(set(r[6] for r in sym_rows))
+            near_exp = expiries[0]
+            near_rows = [r for r in sym_rows if r[6] == near_exp]
+
+            # Find spot and ATM
+            spot_vals = [r[5] for r in near_rows if r[5]]
+            if not spot_vals:
+                continue
+            spot = float(spot_vals[0])
+            dte  = days_to_expiry(near_exp)
+
+            if dte < 2:  # skip if expiry too close
+                near_exp = expiries[1] if len(expiries) > 1 else near_exp
+                near_rows = [r for r in sym_rows if r[6] == near_exp]
+                dte = days_to_expiry(near_exp)
+                if dte < 2:
+                    continue
+
+            # ATM strike
+            atm_row = min(near_rows, key=lambda r: abs(float(r[2]) - spot))
+            atm_k = float(atm_row[2])
+
+            # Find CE and PE ATM rows
+            ce_atm = next((r for r in near_rows if abs(float(r[2]) - atm_k) < 1 and r[1] == "CE"), None)
+            pe_atm = next((r for r in near_rows if abs(float(r[2]) - atm_k) < 1 and r[1] == "PE"), None)
+
+            if not ce_atm or not pe_atm:
+                continue
+
+            ce_ltp = float(ce_atm[3] or 0)
+            pe_ltp = float(pe_atm[3] or 0)
+            ce_oi  = int(ce_atm[4] or 0)
+            pe_oi  = int(pe_atm[4] or 0)
+
+            # Skip low liquidity
+            if ce_oi < min_oi and pe_oi < min_oi:
+                continue
+
+            # Calculate ATM CE and PE IV
+            ce_iv = calc_iv(ce_ltp, spot, atm_k, dte, "CE")
+            pe_iv = calc_iv(pe_ltp, spot, atm_k, dte, "PE")
+            atm_iv = round(((ce_iv or 0) + (pe_iv or 0)) / 2 * 100, 2)
+            if atm_iv <= 0 or atm_iv > max_iv * 1.5:
+                continue
+
+            # IV regime
+            regime, _ = _iv_regime_label(atm_iv)
+
+            # Expected move
+            em_pct = round((atm_iv / 100) * math.sqrt(dte / 365) * 100, 2) if dte > 0 else 0
+
+            # ATM straddle cost
+            straddle_cost = round(ce_ltp + pe_ltp, 2)
+            straddle_pct  = round(straddle_cost / spot * 100, 2) if spot > 0 else 0
+
+            # Score for ranking
+            iv_score   = max(0, 10 - atm_iv / 3)         # lower IV = higher score
+            liq_score  = min(5, math.log10(max(ce_oi, pe_oi)) - 4)
+            dte_score  = 3 if 8 <= dte <= 25 else (2 if dte <= 35 else 1)
+            total_score = round(iv_score + liq_score + dte_score, 2)
+
+            # Direction filter
+            if direction == "bullish" and atm_iv > max_iv:
+                continue
+            if direction == "bearish" and atm_iv > max_iv:
+                continue
+
+            results.append({
+                "symbol":         symbol,
+                "spot":           round(spot, 2),
+                "expiry":         near_exp,
+                "dte":            dte,
+                "atm_strike":     atm_k,
+                "ce_ltp":         ce_ltp,
+                "pe_ltp":         pe_ltp,
+                "atm_iv_pct":     atm_iv,
+                "iv_regime":      regime,
+                "straddle_cost":  straddle_cost,
+                "straddle_pct":   straddle_pct,
+                "expected_move_pct": em_pct,
+                "ce_oi":          ce_oi,
+                "pe_oi":          pe_oi,
+                "buying_score":   total_score,
+            })
+        except Exception:
+            continue
+
+    # Sort by score (best buying opportunity first)
+    results.sort(key=lambda x: x["buying_score"], reverse=True)
+
+    return {
+        "direction":   direction,
+        "trade_date":  trade_date,
+        "max_iv_filter": max_iv,
+        "min_oi_filter": min_oi,
+        "total_scanned": len(by_symbol),
+        "qualified":   len(results),
+        "top_picks":   results[:top_n],
+        "methodology": (
+            f"Ranked by: low ATM IV (cheaper to buy) + OI liquidity + ideal DTE (8–25). "
+            f"Filter: IV < {max_iv}%, ATM OI > {min_oi:,}. "
+            f"ATM straddle cost = CE LTP + PE LTP (use for straddle/strangle sizing)."
+        ),
+    }

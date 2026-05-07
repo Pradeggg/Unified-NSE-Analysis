@@ -166,6 +166,34 @@ You have access to these data tools (call them as needed):
 • get_event_calendar_summary(index?,     → Quick event overview for an index in next N days.
     days_ahead?)
 
+[B3 Sectoral Heat Calendar]
+• get_sector_heat_calendar(month?)       → Seasonal sector heatmap: which sectors have TAILWIND /
+                                           HEADWIND / NEUTRAL in each month (7yr history).
+                                           Returns current-month signals + full 12-month matrix.
+
+[B5 Economic Cycle Tracker]
+• get_economic_cycle_assessment()        → Detect current macro cycle phase (EARLY_EXPANSION /
+                                           LATE_EXPANSION / SLOWDOWN / RECOVERY), confidence,
+                                           preferred sectors, sectors to avoid, macro snapshot.
+
+[D4 Concall NLP Engine]
+• analyze_concall_sentiment(symbol)      → NLP extraction from concall transcripts: sentiment
+                                           (Bullish/Cautious/Bearish), tone score, key themes,
+                                           risk flags, key management quotes, guidance summary.
+
+[P2-2 Scenario Engine]
+• run_scenario_analysis(symbol,          → What-if price scenarios: % change, RSI estimate,
+    price_scenarios?, scenario_labels?)    stage implication (Stage 2/3/4), key level proximity.
+
+[P2-4 Portfolio Narratives]
+• generate_portfolio_narratives(         → Per-stock investment narrative: bull thesis, bear case,
+    symbols?, top_n?)                      action hint for each holding.
+
+[P3-2 Voice Briefing]
+• generate_voice_briefing(text?,         → Convert market summary to MP3 audio via OpenAI TTS.
+    voice?, save_path?)                    Auto-generates 60-sec briefing if no text provided.
+                                           Requires OPENAI_API_KEY.
+
 • get_portfolio_exposure(sector?)     → Portfolio sector distribution and holdings
 • find_portfolio_overlap(screener)    → Holdings that match a screener
 
@@ -251,6 +279,12 @@ You have access to these data tools (call them as needed):
 • "forensic analysis / earnings manipulation / Beneish / Piotroski / Altman / earnings quality / accounting red flags / financial health score / manipulation risk / balance sheet quality" → call run_forensic_analysis(symbol)
 • "forensic screen / check portfolio for manipulation / financial health of my portfolio / forensic watchlist" → call screen_forensic_watchlist(symbols)
 • "upcoming events / corporate action calendar / event calendar / upcoming dividends / upcoming results / upcoming AGM / ex-date calendar / what events this week" → call get_event_calendar_summary() or get_upcoming_events()
+• "seasonal sector / seasonal heatmap / which sector is good in [month] / sector seasonality / monthly patterns / tailwind sector / headwind sector / sector heat calendar" → call get_sector_heat_calendar()
+• "economic cycle / business cycle / macro cycle / cycle phase / late cycle / early cycle / expansion / slowdown / recovery / where are we in the cycle / sector allocation by cycle / macro regime" → call get_economic_cycle_assessment()
+• "concall NLP / analyze concall / management tone / earnings call sentiment / what management said / concall digest / management guidance NLP / earnings quality NLP" → call analyze_concall_sentiment(symbol)
+• "scenario analysis / what if / price scenario / if it drops / if it falls / if stock goes to / what happens at / bull case bear case / stop-loss level analysis" → call run_scenario_analysis(symbol)
+• "portfolio narrative / portfolio commentary / stock thesis / investment thesis / portfolio review narrative / brief me on my portfolio / narrative for [stock]" → call generate_portfolio_narratives(symbols)
+• "voice briefing / audio briefing / daily briefing audio / TTS / voice / MP3 briefing / spoken market update" → call generate_voice_briefing()
 
 
 Before answering, THINK STEP BY STEP:

@@ -66,6 +66,12 @@ from terminal.search_engine import (
 # ── Forensic accounting suite ─────────────────────────────────────────────────
 from terminal.forensics import run_forensic_analysis, screen_forensic_watchlist
 
+# ── Seasonal / macro modules ──────────────────────────────────────────────────
+import sys as _sys
+_sys.path.insert(0, str(Path(__file__).parent.parent))
+from seasonal_heat_calendar import build_seasonal_heat_calendar, get_all_seasonal_signals
+from economic_cycle import detect_economic_cycle_phase
+
 # ── Chart module ─────────────────────────────────────────────────────────────
 from terminal.charts import render_chart, render_html_chart, chart_summary
 
@@ -2511,6 +2517,702 @@ def _get_index_symbols(index: str = "NIFTY 50", top_n: int = 50) -> list[str]:
     return syms
 
 
+# ── B3: Sectoral Heat Calendar ────────────────────────────────────────────────
+
+_SECTOR_INDEX_MAP = {
+    "NIFTY IT":                 "IT",
+    "NIFTY BANK":               "Banking",
+    "NIFTY PHARMA":             "Pharma",
+    "NIFTY AUTO":               "Auto",
+    "NIFTY FMCG":               "FMCG",
+    "NIFTY METAL":              "Metals",
+    "NIFTY REALTY":             "Realty",
+    "NIFTY ENERGY":             "Energy",
+    "NIFTY FINANCIAL SERVICES": "Financials",
+    "NIFTY INFRA":              "Infra",
+}
+
+# yfinance tickers for NSE sector indices (when local CSV lacks them)
+_SECTOR_YF_MAP = {
+    "NIFTY IT":                 "^CNXIT",
+    "NIFTY BANK":               "^NSEBANK",
+    "NIFTY PHARMA":             "^CNXPHARMA",
+    "NIFTY AUTO":               "^CNXAUTO",
+    "NIFTY FMCG":               "^CNXFMCG",
+    "NIFTY METAL":              "^CNXMETAL",
+    "NIFTY REALTY":             "^CNXREALTY",
+    "NIFTY ENERGY":             "^CNXENERGY",
+    "NIFTY FINANCIAL SERVICES": "^CNXFIN",
+    "NIFTY INFRA":              "^CNXINFRA",
+}
+
+
+def _fetch_sector_monthly_returns_yf(lookback_years: int = 7) -> pd.DataFrame:
+    """Fetch monthly returns for sector indices via yfinance (fallback path)."""
+    import yfinance as yf
+
+    records = []
+    for index_name, sector in _SECTOR_INDEX_MAP.items():
+        ticker = _SECTOR_YF_MAP.get(index_name)
+        if not ticker:
+            continue
+        try:
+            df = yf.download(ticker, period=f"{lookback_years}y", interval="1mo",
+                             progress=False, auto_adjust=True)
+            if df.empty:
+                continue
+            closes = df["Close"].squeeze().dropna()
+            monthly_ret = closes.pct_change().dropna() * 100
+            for period, ret in monthly_ret.items():
+                records.append({
+                    "sector":    sector,
+                    "month_num": period.month,
+                    "return_pct": float(ret),
+                })
+        except Exception:
+            continue
+
+    if not records:
+        return pd.DataFrame(columns=["sector", "month_num", "return_pct"])
+    return pd.DataFrame(records)
+
+
+def get_sector_heat_calendar(month: int | None = None) -> dict:
+    """
+    B3 Sectoral Heat Calendar — monthly seasonal return heatmap for NSE sectors.
+
+    Builds a 12-month × 10-sector matrix of average historical monthly returns
+    and classifies each sector-month as TAILWIND (>+2%), HEADWIND (<-1%), or NEUTRAL.
+
+    Args:
+        month: Target month number 1-12 (default: current month).
+
+    Returns:
+        {
+          "current_month": {"IT": "TAILWIND", "Banking": "HEADWIND", ...},
+          "heatmap": {sector: {month_name: avg_pct, ...}, ...},
+          "current_month_name": "May",
+          "tailwinds": [...],
+          "headwinds": [...],
+          "neutral": [...],
+          "note": str,
+        }
+    """
+    target_month = month or datetime.now().month
+    month_name = ["Jan","Feb","Mar","Apr","May","Jun",
+                  "Jul","Aug","Sep","Oct","Nov","Dec"][target_month - 1]
+
+    # Try local index CSV first, fall back to yfinance
+    try:
+        matrix, heat = build_seasonal_heat_calendar(_SECTOR_INDEX_MAP)
+        if heat.empty:
+            raise ValueError("Local index CSV lacks sector data — using yfinance")
+        use_yf = False
+    except Exception:
+        heat = None
+        use_yf = True
+
+    if use_yf:
+        raw = _fetch_sector_monthly_returns_yf()
+        if raw.empty:
+            return {"error": "Unable to fetch sector index data for heat calendar"}
+        heat = (
+            raw.groupby(["sector", "month_num"])["return_pct"]
+            .agg(avg="mean", std="std", n="count")
+            .reset_index()
+            .rename(columns={"avg": "avg", "std": "std", "n": "n"})
+        )
+        heat.columns = ["sector", "month_num", "avg", "std", "n"]
+
+    # Current-month signals
+    _TAILWIND = 2.0
+    _HEADWIND = -1.0
+    _MIN_OBS = 5
+    signals = {}
+    for _, row in heat[heat["month_num"] == target_month].iterrows():
+        if row["n"] < _MIN_OBS:
+            signals[row["sector"]] = "NEUTRAL"
+        elif row["avg"] > _TAILWIND:
+            signals[row["sector"]] = "TAILWIND"
+        elif row["avg"] < _HEADWIND:
+            signals[row["sector"]] = "HEADWIND"
+        else:
+            signals[row["sector"]] = "NEUTRAL"
+
+    # Full heatmap
+    month_names = ["Jan","Feb","Mar","Apr","May","Jun",
+                   "Jul","Aug","Sep","Oct","Nov","Dec"]
+    heatmap: dict[str, dict] = {}
+    for _, row in heat.iterrows():
+        sec = row["sector"]
+        mn  = int(row["month_num"])
+        if sec not in heatmap:
+            heatmap[sec] = {}
+        heatmap[sec][month_names[mn - 1]] = round(float(row["avg"]), 2)
+
+    tailwinds = [s for s, sig in signals.items() if sig == "TAILWIND"]
+    headwinds = [s for s, sig in signals.items() if sig == "HEADWIND"]
+    neutral   = [s for s, sig in signals.items() if sig == "NEUTRAL"]
+
+    return {
+        "current_month":      month_name,
+        "current_month_num":  target_month,
+        "current_month_signals": signals,
+        "tailwinds":          tailwinds,
+        "headwinds":          headwinds,
+        "neutral":            neutral,
+        "heatmap":            heatmap,
+        "source":             "yfinance NSE sector indices" if use_yf else "local nse_index_data.csv",
+        "note": (
+            f"Seasonal analysis based on 7yr history. "
+            f"{len(tailwinds)} sector(s) show historical tailwind in {month_name}."
+        ),
+    }
+
+
+# ── B5: Economic Cycle Tracker ────────────────────────────────────────────────
+
+def get_economic_cycle_assessment() -> dict:
+    """
+    B5 Economic Cycle Tracker — detect current macro cycle phase and sector positioning.
+
+    Reads macro proxy signals (USD/INR, Brent, Copper, US10Y, VIX, CPI, PMI, IIP, GST)
+    from the local data store and classifies the market into one of four phases:
+      • EARLY_EXPANSION   — growth improving, rates/inflation contained
+      • LATE_EXPANSION    — growth firm but inflation/commodities/rates rising
+      • SLOWDOWN          — trend weakens, volatility/inflation rise
+      • RECOVERY          — risk eases, trend starting to improve
+
+    Returns:
+        {
+          "cycle_phase":        str,
+          "confidence":         float (0-1),
+          "definition":         str,
+          "preferred_sectors":  list[str],
+          "avoid_sectors":      list[str],
+          "alignment":          {indicator: score, ...},
+          "macro_snapshot":     {indicator: {signal, value, direction}, ...},
+          "note":               str,
+        }
+    """
+    macro_csv = ROOT / "data" / "macro_proxy_signals.csv"
+    if not macro_csv.exists():
+        return {"error": "macro_proxy_signals.csv not found — run fetch_macro_proxies.py first"}
+
+    try:
+        df = pd.read_csv(str(macro_csv))
+    except Exception as e:
+        return {"error": f"Failed to read macro signals: {e}"}
+
+    try:
+        result = detect_economic_cycle_phase(df)
+    except Exception as e:
+        return {"error": f"Cycle detection failed: {e}"}
+
+    # Build macro snapshot for display
+    macro_snapshot = {}
+    for _, row in df.iterrows():
+        ind = str(row.get("indicator", "")).strip()
+        if not ind:
+            continue
+        macro_snapshot[ind] = {
+            "signal":    str(row.get("signal",    "")),
+            "value":     str(row.get("value",     "")),
+            "direction": str(row.get("direction", "")),
+        }
+
+    return {
+        "cycle_phase":       result.get("cycle_phase"),
+        "confidence":        result.get("confidence"),
+        "definition":        result.get("definition", ""),
+        "preferred_sectors": result.get("preferred_sectors", []),
+        "avoid_sectors":     result.get("avoid_sectors", []),
+        "alignment":         result.get("alignment", {}),
+        "macro_snapshot":    macro_snapshot,
+        "updated":           str(pd.Timestamp.now().date()),
+        "note": (
+            f"Cycle phase: {result.get('cycle_phase')} "
+            f"(confidence {result.get('confidence', 0):.0%}). "
+            f"Prefer: {', '.join(result.get('preferred_sectors', [])[:3])}."
+        ),
+    }
+
+
+# ── D4: Concall NLP Sentiment Engine ─────────────────────────────────────────
+
+def analyze_concall_sentiment(symbol: str) -> dict:
+    """
+    D4 Concall NLP — extract management tone, key themes, and sentiment from
+    the most recent earnings call / investor day transcript for a stock.
+
+    Fetches transcript content via the deep search engine, then uses the
+    OpenAI LLM to extract:
+      • Overall sentiment (Bullish / Cautious / Bearish / Neutral)
+      • Tone score (-1.0 to +1.0)
+      • Top 3-5 key themes from management (growth drivers, concerns, guidance)
+      • Risk flags (revenue miss, margin pressure, write-offs, promoter concerns)
+      • Key quotes (direct management statements worth tracking)
+
+    Args:
+        symbol: NSE ticker symbol (e.g. 'TCS', 'RELIANCE').
+
+    Returns:
+        {
+          "symbol":     str,
+          "sentiment":  "Bullish" | "Cautious" | "Bearish" | "Neutral",
+          "tone_score": float,
+          "themes":     list[str],
+          "risk_flags": list[str],
+          "key_quotes": list[str],
+          "guidance":   str,
+          "transcript_source": str,
+          "note":       str,
+        }
+    """
+    import openai, os, json as _json
+
+    sym = symbol.upper().strip()
+
+    # Step 1: Fetch transcript content
+    concall_data = search_concall_transcripts(sym)
+    screener_data = {}
+    try:
+        from terminal.web_research import scrape_screener_in
+        screener_data = scrape_screener_in(sym)
+    except Exception:
+        pass
+
+    # Gather concall text
+    transcript_text = ""
+    transcript_source = "N/A"
+    for item in concall_data.get("results", []):
+        snip = item.get("snippet", "") or item.get("body", "") or ""
+        transcript_text += "\n" + snip
+        if not transcript_source or transcript_source == "N/A":
+            transcript_source = item.get("url", "N/A")
+
+    # Also pull from screener concalls list if available
+    concalls = screener_data.get("concalls", [])
+    if concalls:
+        for c in concalls[:3]:
+            transcript_text += f"\n[Transcript: {c.get('date','')} {c.get('title','')}]"
+            if transcript_source == "N/A" and c.get("ppt_url"):
+                transcript_source = c["ppt_url"]
+
+    if not transcript_text.strip():
+        return {
+            "symbol": sym,
+            "error": "No concall transcript content found. Try /search SYMBOL concall for manual lookup.",
+        }
+
+    # Step 2: LLM extraction
+    api_key = os.environ.get("OPENAI_API_KEY") or os.environ.get("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        return {"symbol": sym, "error": "OPENAI_API_KEY not set — cannot run NLP extraction."}
+
+    client = openai.OpenAI(api_key=api_key) if os.environ.get("OPENAI_API_KEY") else None
+    if not client:
+        return {"symbol": sym, "error": "OpenAI client unavailable."}
+
+    prompt = f"""You are a buy-side analyst specializing in earnings call analysis.
+
+Analyze the following concall excerpts for {sym} and return a JSON object with:
+- "sentiment": "Bullish" | "Cautious" | "Bearish" | "Neutral"
+- "tone_score": float from -1.0 (very bearish) to +1.0 (very bullish)
+- "themes": list of 3-5 key themes management discussed (growth drivers, product launches, capex, guidance)
+- "risk_flags": list of specific risks mentioned (margin pressure, write-offs, slower demand, pricing pressure)
+- "key_quotes": list of 2-4 direct or paraphrased management quotes worth tracking
+- "guidance": one-line summary of forward guidance given
+
+Return ONLY the JSON object, no markdown fences.
+
+TRANSCRIPT EXCERPTS:
+{transcript_text[:3000]}
+"""
+    try:
+        resp = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.2,
+            max_tokens=600,
+        )
+        raw = resp.choices[0].message.content.strip()
+        parsed = _json.loads(raw)
+    except Exception as e:
+        return {"symbol": sym, "error": f"LLM extraction failed: {e}", "raw_snippets": transcript_text[:500]}
+
+    return {
+        "symbol":            sym,
+        "sentiment":         parsed.get("sentiment", "Neutral"),
+        "tone_score":        parsed.get("tone_score", 0.0),
+        "themes":            parsed.get("themes", []),
+        "risk_flags":        parsed.get("risk_flags", []),
+        "key_quotes":        parsed.get("key_quotes", []),
+        "guidance":          parsed.get("guidance", ""),
+        "transcript_source": transcript_source,
+        "note": f"NLP analysis of {sym} concall via LLM. Verify with original transcript.",
+    }
+
+
+# ── P2-2: Scenario Analysis Engine ───────────────────────────────────────────
+
+def run_scenario_analysis(
+    symbol: str,
+    price_scenarios: list[float] | None = None,
+    scenario_labels: list[str] | None = None,
+) -> dict:
+    """
+    P2-2 Scenario Engine — what-if price analysis for a held stock.
+
+    For each hypothetical price level, calculates:
+      • % change from current price
+      • New implied RSI (interpolated from historical distribution)
+      • New RS rank vs NIFTY (estimated)
+      • Stage implication (Stage 1/2/3/4 boundary crossings)
+      • Support/resistance proximity
+      • Risk/reward vs current technical levels
+
+    Args:
+        symbol:          NSE ticker (e.g. 'TCS').
+        price_scenarios: List of price levels to evaluate.
+                         Defaults to ±5%, ±10%, ±20% from current price.
+        scenario_labels: Optional labels for each scenario (e.g. ['Base', 'Bull', 'Bear']).
+
+    Returns:
+        {
+          "symbol":          str,
+          "current_price":   float,
+          "scenarios":       [{label, price, pct_chg, stage_implication, rsi_est, note}, ...],
+          "key_levels":      {support, resistance, ma50, ma200},
+          "current_rsi":     float,
+          "current_stage":   str,
+        }
+    """
+    sym = symbol.upper().strip()
+
+    # Get current snapshot
+    snap = get_symbol_snapshot(sym)
+    if snap.get("error"):
+        return {"error": snap["error"], "symbol": sym}
+
+    current_price = snap.get("last_price") or snap.get("price") or snap.get("close")
+    if not current_price:
+        return {"error": "No current price available", "symbol": sym}
+
+    current_price = float(current_price)
+    current_rsi   = float(snap.get("rsi") or 50.0)
+    current_stage = str(snap.get("stage") or "Unknown")
+    ma50  = float(snap.get("ma50")  or current_price)
+    ma200 = float(snap.get("ma200") or current_price)
+
+    # Load price history for support/resistance
+    hist = _load_price_history(sym, days=200)
+    support    = float(hist["LOW"].quantile(0.15))  if not hist.empty else current_price * 0.90
+    resistance = float(hist["HIGH"].quantile(0.85)) if not hist.empty else current_price * 1.10
+
+    # Build price scenarios
+    if not price_scenarios:
+        price_scenarios = [
+            round(current_price * m, 2)
+            for m in [0.80, 0.90, 0.95, 1.00, 1.05, 1.10, 1.20]
+        ]
+        scenario_labels = ["Bear -20%", "Bear -10%", "Dip -5%", "Current",
+                           "Bull +5%", "Bull +10%", "Bull +20%"]
+
+    if not scenario_labels:
+        scenario_labels = [f"S{i+1}" for i in range(len(price_scenarios))]
+
+    scenarios = []
+    for label, price in zip(scenario_labels, price_scenarios):
+        price = float(price)
+        pct   = (price - current_price) / current_price * 100
+
+        # Estimate RSI at scenario price (linear approximation from current distribution)
+        rsi_delta = pct * 0.8  # rough: ±10% price → ±8 RSI points
+        rsi_est = min(100, max(0, current_rsi + rsi_delta))
+
+        # Stage implication
+        if price > max(ma50, ma200) * 1.02:
+            stage_impl = "Stage 2 (uptrend) — above both MAs"
+        elif price > ma200 and price < ma50:
+            stage_impl = "Stage 1/2 transition — above 200MA, below 50MA"
+        elif price < ma200 and price > ma200 * 0.95:
+            stage_impl = "Stage 3 warning — near/at 200MA"
+        elif price < ma200 * 0.95:
+            stage_impl = "Stage 4 (downtrend) — below 200MA"
+        else:
+            stage_impl = "Stage transition zone"
+
+        # Key observations
+        notes = []
+        if abs(price - support) / current_price < 0.03:
+            notes.append(f"Near support ₹{support:.0f}")
+        if abs(price - resistance) / current_price < 0.03:
+            notes.append(f"Near resistance ₹{resistance:.0f}")
+        if abs(price - ma50) / current_price < 0.02:
+            notes.append(f"Near 50-DMA ₹{ma50:.0f}")
+        if abs(price - ma200) / current_price < 0.02:
+            notes.append(f"At 200-DMA ₹{ma200:.0f} — critical level")
+
+        scenarios.append({
+            "label":            label,
+            "price":            round(price, 2),
+            "pct_change":       round(pct, 1),
+            "rsi_estimate":     round(rsi_est, 1),
+            "stage_implication": stage_impl,
+            "notes":            "; ".join(notes) if notes else "No key level proximity",
+        })
+
+    return {
+        "symbol":        sym,
+        "current_price": current_price,
+        "current_rsi":   current_rsi,
+        "current_stage": current_stage,
+        "key_levels": {
+            "support":    round(support, 2),
+            "resistance": round(resistance, 2),
+            "ma50":       round(ma50, 2),
+            "ma200":      round(ma200, 2),
+        },
+        "scenarios": scenarios,
+        "note": f"What-if scenario analysis for {sym}. RSI estimates are approximate linear projections.",
+    }
+
+
+# ── P2-4: Portfolio Narrative Generator ──────────────────────────────────────
+
+def generate_portfolio_narratives(
+    symbols: list[str] | None = None,
+    top_n: int = 5,
+) -> dict:
+    """
+    P2-4 Portfolio Narrative Engine — per-stock LLM commentary combining technical,
+    fundamental, and market context into a concise investment narrative.
+
+    For each stock in the portfolio (or provided list), synthesises:
+      • Current stage + RSI + key signals
+      • Fundamental snapshot (P/E, ROE, ROCE from screener.in)
+      • Recent news catalyst
+      • 2-3 sentence investment thesis (bull) and 1-2 sentence bear case
+
+    Args:
+        symbols: Explicit list of symbols. If None, uses top portfolio holdings by score.
+        top_n:   Number of stocks to narrate (default 5).
+
+    Returns:
+        {
+          "narratives": [{symbol, thesis, bear_case, signals, action_hint}, ...],
+          "generated_at": str,
+        }
+    """
+    # Get symbols from portfolio if not provided
+    if not symbols:
+        port = get_portfolio_exposure()
+        if port.get("error"):
+            return {"error": "No symbols provided and portfolio is empty."}
+        holdings = port.get("holdings", [])
+        symbols = [h["symbol"] for h in holdings[:top_n] if h.get("symbol")]
+
+    if not symbols:
+        return {"error": "No symbols to narrate"}
+
+    narratives = []
+    for sym in symbols[:top_n]:
+        sym = sym.upper().strip()
+        snap = get_symbol_snapshot(sym)
+        if snap.get("error"):
+            narratives.append({"symbol": sym, "error": snap["error"]})
+            continue
+
+        stage   = snap.get("stage", "Unknown")
+        rsi     = snap.get("rsi")
+        rs_pct  = snap.get("rs_pct")
+        signal  = snap.get("trading_signal", "")
+        score   = snap.get("investment_score")
+        price   = snap.get("last_price") or snap.get("price") or snap.get("close")
+        ma50    = snap.get("ma50")
+        ma200   = snap.get("ma200")
+
+        # Compute MA50/MA200 from price history if not in snapshot
+        if not ma50 or not ma200:
+            try:
+                _hist = _load_price_history(sym, days=220)
+                if not _hist.empty:
+                    _c = _hist["CLOSE"].dropna()
+                    if not ma50 and len(_c) >= 50:
+                        ma50 = round(float(_c.iloc[-50:].mean()), 2)
+                    if not ma200 and len(_c) >= 200:
+                        ma200 = round(float(_c.iloc[-200:].mean()), 2)
+            except Exception:
+                pass
+        ma50_str  = f"₹{ma50:,.0f}" if ma50 else "50-DMA"
+        ma200_str = f"₹{ma200:,.0f}" if ma200 else "200-DMA"
+
+        # Build brief context for LLM (no API call to screener.in to keep this fast)
+        context_lines = [
+            f"Stock: {sym}",
+            f"Stage: {stage}  |  RSI: {rsi}  |  RS%: {rs_pct}",
+            f"Signal: {signal}  |  Investment Score: {score}",
+            f"Price: {price}  |  50-DMA: {ma50}  |  200-DMA: {ma200}",
+        ]
+
+        # Signals
+        signals_list = []
+        if rsi and float(str(rsi).replace(",", "") or 0) > 70:
+            signals_list.append("RSI overbought")
+        elif rsi and float(str(rsi).replace(",", "") or 0) < 35:
+            signals_list.append("RSI oversold")
+        if "Stage 2" in str(stage):
+            signals_list.append("Stage 2 uptrend")
+        elif "Stage 4" in str(stage):
+            signals_list.append("Stage 4 downtrend — caution")
+        if rs_pct and float(str(rs_pct).replace(",", "") or 0) > 0:
+            signals_list.append(f"Outperforming market (+{rs_pct}% RS)")
+
+        # Craft narrative using rules-based logic (no API call needed for basic output)
+        stage_upper = str(stage).upper()
+        if ("STAGE_2" in stage_upper or "STAGE 2" in stage_upper) and signals_list:
+            thesis = (
+                f"{sym} is in a confirmed Stage 2 uptrend with RSI at {rsi}, "
+                f"outperforming the broader market by {rs_pct}%. "
+                f"Current signal: {signal}. Trend intact while above {ma50_str}."
+            )
+            bear_case = f"Break below {ma50_str} or Stage 2→3 transition would invalidate the setup."
+            action = "Hold / Add on dips above 50-DMA"
+        elif "STAGE_4" in stage_upper or "STAGE 4" in stage_upper:
+            thesis = (
+                f"{sym} is in Stage 4 downtrend. RSI: {rsi}. "
+                f"Price below both key MAs. Avoid new positions."
+            )
+            bear_case = f"Further downside likely unless reclaims {ma200_str}."
+            action = "Avoid / Exit on bounces"
+        elif "STAGE_1" in stage_upper or "STAGE 1" in stage_upper:
+            thesis = (
+                f"{sym} is basing (Stage 1). RSI: {rsi}. "
+                f"Watching for Stage 2 breakout above {ma50_str} with volume."
+            )
+            bear_case = "No catalyst yet. Monitor for breakout confirmation."
+            action = "Watch / Small starter if breadth improves"
+        elif "STAGE_3" in stage_upper or "STAGE 3" in stage_upper:
+            thesis = (
+                f"{sym} is in Stage 3 topping phase. RSI: {rsi}. "
+                f"Distribution or early breakdown — caution warranted."
+            )
+            bear_case = f"Potential Stage 3→4 transition. Reduce or hedge below {ma50_str}."
+            action = "Reduce / Tighten stops"
+        else:
+            thesis = f"{sym} — Stage: {stage}, RSI: {rsi}, Signal: {signal}. Monitor closely."
+            bear_case = "Unclear trend — wait for direction."
+            action = "Neutral / Wait for clarity"
+
+        narratives.append({
+            "symbol":      sym,
+            "stage":       stage,
+            "rsi":         rsi,
+            "rs_pct":      rs_pct,
+            "price":       price,
+            "signals":     signals_list,
+            "thesis":      thesis,
+            "bear_case":   bear_case,
+            "action_hint": action,
+        })
+
+    return {
+        "narratives":    narratives,
+        "total_stocks":  len(narratives),
+        "generated_at":  str(pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")),
+        "note": f"Portfolio narratives for {len(narratives)} stock(s) based on EOD snapshot + stage analysis.",
+    }
+
+
+# ── P3-2: Voice Briefing Generator ───────────────────────────────────────────
+
+def generate_voice_briefing(
+    text: str | None = None,
+    voice: str = "alloy",
+    save_path: str | None = None,
+) -> dict:
+    """
+    P3-2 Daily Voice Briefing — convert market summary to audio using OpenAI TTS.
+
+    If no text is provided, auto-generates a 60-second market briefing using
+    the current day's live market overview, top movers, and portfolio status.
+
+    Args:
+        text:      Custom text to convert to speech. If None, generates auto-briefing.
+        voice:     OpenAI TTS voice — 'alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer'.
+        save_path: Where to save the MP3 file. Defaults to data/voice_briefing.mp3.
+
+    Returns:
+        {
+          "audio_file": str path,
+          "text_used":  str,
+          "duration_est": str,
+          "voice":      str,
+          "note":       str,
+        }
+    """
+    import openai, os
+    from pathlib import Path as _Path
+
+    api_key = os.environ.get("OPENAI_API_KEY", "")
+    if not api_key:
+        return {"error": "OPENAI_API_KEY not set — cannot generate voice briefing."}
+
+    # Auto-generate briefing text if not provided
+    if not text:
+        try:
+            overview = get_live_market_overview()
+            mkt_mood = overview.get("market_mood", "mixed")
+            nifty_chg = overview.get("nifty_change_pct", 0)
+            top_gain = overview.get("top_gainers", [{}])[:2]
+            top_loss = overview.get("top_losers",  [{}])[:2]
+            gainers_str = ", ".join(g.get("symbol","") for g in top_gain if g.get("symbol"))
+            losers_str  = ", ".join(g.get("symbol","") for g in top_loss if g.get("symbol"))
+        except Exception:
+            overview = {}
+            mkt_mood = "mixed"
+            nifty_chg = 0
+            gainers_str = ""
+            losers_str  = ""
+
+        sign = "up" if float(nifty_chg or 0) >= 0 else "down"
+        text = (
+            f"Good morning. Here is your Agent Adda market briefing. "
+            f"NIFTY 50 is {sign} {abs(float(nifty_chg or 0)):.2f} percent. "
+            f"Market mood is {mkt_mood}. "
+            + (f"Top gainers today include {gainers_str}. " if gainers_str else "")
+            + (f"Key stocks under pressure: {losers_str}. " if losers_str else "")
+            + "Check Agent Adda for full analysis. Have a great trading day."
+        )
+
+    out_path = _Path(save_path) if save_path else ROOT / "data" / "voice_briefing.mp3"
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        client = openai.OpenAI(api_key=api_key)
+        response = client.audio.speech.create(
+            model="tts-1",
+            voice=voice,
+            input=text,
+        )
+        response.stream_to_file(str(out_path))
+    except Exception as e:
+        return {"error": f"TTS generation failed: {e}", "text_used": text}
+
+    word_count = len(text.split())
+    duration_secs = word_count / 2.5  # approx 150 wpm
+    duration_str = f"~{duration_secs:.0f}s"
+
+    return {
+        "audio_file":    str(out_path),
+        "text_used":     text,
+        "duration_est":  duration_str,
+        "voice":         voice,
+        "note": f"Voice briefing saved to {out_path.name}. Play with: open '{out_path}'",
+    }
+
+
 def compare_stocks(
     symbols: list[str],
     aspects: list[str] | None = None,
@@ -3904,6 +4606,149 @@ TOOL_REGISTRY.update({
                     "type": "integer",
                     "description": "Days ahead to look (default 14)",
                     "default": 14,
+                },
+            },
+            "required": [],
+        },
+    ),
+})
+
+# ── B3, B5, D4, P2-2, P2-4, P3-2: New tool registrations ────────────────────
+TOOL_REGISTRY.update({
+    "get_sector_heat_calendar": (
+        get_sector_heat_calendar,
+        (
+            "B3 Sectoral Heat Calendar — 12-month seasonal return heatmap for NSE sector indices. "
+            "Shows which sectors historically perform best in each month (TAILWIND/HEADWIND/NEUTRAL). "
+            "Use for: sector rotation timing, seasonal investing, which sectors favour current month, "
+            "historical monthly patterns, seasonal tailwinds and headwinds."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "month": {
+                    "type": "integer",
+                    "description": "Target month 1-12 (default: current month)",
+                },
+            },
+            "required": [],
+        },
+    ),
+    "get_economic_cycle_assessment": (
+        get_economic_cycle_assessment,
+        (
+            "B5 Economic Cycle Tracker — detect current macro cycle phase from proxy signals. "
+            "Returns EARLY_EXPANSION / LATE_EXPANSION / SLOWDOWN / RECOVERY with confidence, "
+            "preferred sectors to overweight, sectors to avoid, and full macro snapshot. "
+            "Use for: macro-driven sector allocation, positioning in current cycle phase, "
+            "understanding where we are in the business cycle, rate/inflation/commodity regime."
+        ),
+        {
+            "type": "object",
+            "properties": {},
+            "required": [],
+        },
+    ),
+    "analyze_concall_sentiment": (
+        analyze_concall_sentiment,
+        (
+            "D4 Concall NLP — extract management tone, key themes, risk flags, and sentiment "
+            "from the most recent earnings call or investor day transcript. "
+            "Returns: sentiment (Bullish/Cautious/Bearish/Neutral), tone score (-1 to +1), "
+            "top themes, risk flags, key management quotes, guidance summary. "
+            "Use for: post-results management tone check, earnings quality assessment, "
+            "concall digest, what management said about margins/growth/guidance."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {
+                    "type": "string",
+                    "description": "NSE ticker symbol (e.g. 'TCS', 'RELIANCE')",
+                },
+            },
+            "required": ["symbol"],
+        },
+    ),
+    "run_scenario_analysis": (
+        run_scenario_analysis,
+        (
+            "P2-2 Scenario Engine — what-if price analysis for a stock at various levels. "
+            "For each hypothetical price: % change, RSI estimate, stage implication (Stage 2/3/4), "
+            "proximity to key levels (support, resistance, 50-DMA, 200-DMA). "
+            "Use for: what happens if stock drops 10%? which level triggers Stage 4? "
+            "risk/reward analysis, stop-loss placement, bull/base/bear case planning."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {
+                    "type": "string",
+                    "description": "NSE ticker symbol (e.g. 'TCS')",
+                },
+                "price_scenarios": {
+                    "type": "array",
+                    "items": {"type": "number"},
+                    "description": "List of price levels to evaluate. Default: ±5/10/20% from current.",
+                },
+                "scenario_labels": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Labels for each price scenario (e.g. ['Base', 'Bull', 'Bear'])",
+                },
+            },
+            "required": ["symbol"],
+        },
+    ),
+    "generate_portfolio_narratives": (
+        generate_portfolio_narratives,
+        (
+            "P2-4 Portfolio Narrative Engine — per-stock investment narratives combining "
+            "stage analysis, RSI, RS, signals, and fundamental snapshot. "
+            "Returns bull thesis, bear case, and action hint for each stock. "
+            "Use for: portfolio review, morning briefing narrative, stock-by-stock commentary, "
+            "investment thesis validation, portfolio health check."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbols": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of symbols to narrate. Default: top portfolio holdings.",
+                },
+                "top_n": {
+                    "type": "integer",
+                    "description": "Max number of stocks to narrate (default 5)",
+                    "default": 5,
+                },
+            },
+            "required": [],
+        },
+    ),
+    "generate_voice_briefing": (
+        generate_voice_briefing,
+        (
+            "P3-2 Voice Briefing — convert market summary to an MP3 audio briefing using OpenAI TTS. "
+            "Auto-generates a 60-second daily market briefing if no text provided. "
+            "Saves to data/voice_briefing.mp3. Requires OPENAI_API_KEY. "
+            "Use for: hands-free morning briefing, audio market update, voice digest."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "text": {
+                    "type": "string",
+                    "description": "Custom text to convert. If None, auto-generates from market overview.",
+                },
+                "voice": {
+                    "type": "string",
+                    "description": "TTS voice: alloy, echo, fable, onyx, nova, shimmer (default: alloy)",
+                    "default": "alloy",
+                },
+                "save_path": {
+                    "type": "string",
+                    "description": "File path for MP3 output. Default: data/voice_briefing.mp3",
                 },
             },
             "required": [],
