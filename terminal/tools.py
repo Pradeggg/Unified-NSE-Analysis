@@ -46,6 +46,20 @@ from terminal.web_research import (
     comprehensive_stock_research,
 )
 
+# ── Deep Search Engine ────────────────────────────────────────────────────────
+from terminal.search_engine import (
+    search_nse_announcements,
+    search_corporate_actions,
+    search_insider_trades,
+    search_bse_filings,
+    search_shareholding_analysis,
+    search_analyst_coverage,
+    search_concall_transcripts,
+    search_sector_news,
+    search_social_buzz,
+    deep_search,
+)
+
 # ── Chart module ─────────────────────────────────────────────────────────────
 from terminal.charts import render_chart, render_html_chart, chart_summary
 
@@ -2866,6 +2880,202 @@ TOOL_REGISTRY: dict[str, Any] = {
                     "items": {"type": "string",
                               "enum": ["fundamentals","news","concalls","peers","filings","ratios","all"]},
                     "description": "Which aspects to fetch. Defaults to all.",
+                },
+            },
+            "required": ["symbol"],
+        },
+    ),
+
+    # ── Deep Search Engine ─────────────────────────────────────────────────────
+
+    "search_nse_announcements": (
+        search_nse_announcements,
+        (
+            "Fetch live NSE corporate announcements for a stock (board meetings, results filings, "
+            "regulatory disclosures, pledging changes). Source: nseindia.com live API. "
+            "Use when user asks about 'NSE announcements', 'latest filings', 'company disclosures'."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbol":      {"type": "string"},
+                "max_results": {"type": "integer", "default": 15},
+            },
+            "required": ["symbol"],
+        },
+    ),
+
+    "search_corporate_actions": (
+        search_corporate_actions,
+        (
+            "Fetch upcoming and recent corporate actions from NSE: dividends, stock splits, "
+            "bonus issues, rights issues, AGMs. Source: nseindia.com corporate actions API. "
+            "Use when user asks about 'dividend', 'bonus', 'split', 'rights issue', 'ex-date'."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbol":      {"type": "string"},
+                "max_results": {"type": "integer", "default": 12},
+            },
+            "required": ["symbol"],
+        },
+    ),
+
+    "search_insider_trades": (
+        search_insider_trades,
+        (
+            "Fetch promoter / director / insider trading disclosures from NSE's SAST/PIT database. "
+            "Shows who is buying or selling, quantities, values, and provides SEBI XBRL links. "
+            "Use when user asks about 'insider trading', 'promoter buying/selling', 'insider activity'."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbol":      {"type": "string"},
+                "max_results": {"type": "integer", "default": 15},
+            },
+            "required": ["symbol"],
+        },
+    ),
+
+    "search_bse_filings": (
+        search_bse_filings,
+        (
+            "Search BSE India corporate filings: board meeting results, annual reports, "
+            "concall notices, investor presentations. Uses DuckDuckGo site:bseindia.com. "
+            "Use when user asks about 'BSE filings', 'annual report', 'board meeting results'."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbol":      {"type": "string"},
+                "max_results": {"type": "integer", "default": 10},
+            },
+            "required": ["symbol"],
+        },
+    ),
+
+    "search_shareholding_analysis": (
+        search_shareholding_analysis,
+        (
+            "Scrape quarterly shareholding pattern from screener.in: promoter %, FII %, DII %, "
+            "public %, pledge alerts, and QoQ change trends. "
+            "Use when user asks about 'shareholding', 'promoter holding', 'FII holding', "
+            "'pledge', 'DII activity'."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string"},
+            },
+            "required": ["symbol"],
+        },
+    ),
+
+    "search_analyst_coverage": (
+        search_analyst_coverage,
+        (
+            "Aggregate analyst price targets, buy/sell/hold ratings, and brokerage recommendations "
+            "from Moneycontrol, Economic Times, screener.in and general web. "
+            "Use when user asks about 'analyst target', 'buy/sell/hold rating', 'brokerage view', "
+            "'consensus target price'."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbol":      {"type": "string"},
+                "max_results": {"type": "integer", "default": 8},
+            },
+            "required": ["symbol"],
+        },
+    ),
+
+    "search_concall_transcripts": (
+        search_concall_transcripts,
+        (
+            "Search for earnings call transcripts, investor day presentations, and management "
+            "commentary from screener.in, trendlyne, BSE, Moneycontrol, ET. "
+            "Use when user asks about 'concall', 'earnings call', 'management commentary', "
+            "'Q4 concall', 'investor day transcript'."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbol":      {"type": "string"},
+                "max_results": {"type": "integer", "default": 8},
+            },
+            "required": ["symbol"],
+        },
+    ),
+
+    "search_sector_news": (
+        search_sector_news,
+        (
+            "Aggregate sector-level news from 6 portals in parallel: Economic Times, "
+            "Business Standard, Mint, Moneycontrol, Financial Express, Hindu BusinessLine. "
+            "Use when user asks about 'sector news', 'industry news', 'latest news', "
+            "or for macro sector context around a stock."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbol":      {"type": "string"},
+                "sector":      {"type": "string", "description": "Optional sector override"},
+                "max_results": {"type": "integer", "default": 5},
+            },
+            "required": ["symbol"],
+        },
+    ),
+
+    "search_social_buzz": (
+        search_social_buzz,
+        (
+            "Gauge retail investor sentiment from Indian investing communities: "
+            "Reddit r/IndiaInvestments, r/IndianStockMarket, Valuepickr, Traderji, Tijori. "
+            "Returns community discussions plus a rough bullish/bearish sentiment signal. "
+            "Use when user asks about 'social sentiment', 'retail view', 'community buzz', "
+            "'what are investors saying about X'."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbol":      {"type": "string"},
+                "max_results": {"type": "integer", "default": 5},
+            },
+            "required": ["symbol"],
+        },
+    ),
+
+    "deep_search": (
+        deep_search,
+        (
+            "Run a full deep-dive search on any NSE stock using up to 9 distinct parallel "
+            "search verticals: NSE announcements, corporate actions, insider trades, BSE filings, "
+            "shareholding analysis, analyst coverage, concall transcripts, sector news, social buzz. "
+            "Intelligently selects verticals based on context (e.g. 'results' → concalls+announcements, "
+            "'dividend' → corporate_actions, 'insider' → insider_trades+shareholding). "
+            "Use for 'deep search', 'deep dive', 'full search', or when multiple search verticals needed."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbol":    {"type": "string"},
+                "verticals": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "enum": [
+                            "announcements", "corporate_actions", "insider_trades",
+                            "bse_filings", "shareholding", "analyst_coverage",
+                            "concalls", "sector_news", "social_buzz",
+                        ],
+                    },
+                    "description": "Specific verticals to run. Leave empty to auto-select from context.",
+                },
+                "context": {
+                    "type": "string",
+                    "description": "Optional context hint to bias vertical selection (e.g. 'dividend ex-date', 'concall highlights', 'insider buying').",
                 },
             },
             "required": ["symbol"],

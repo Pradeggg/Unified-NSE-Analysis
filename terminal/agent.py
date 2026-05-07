@@ -128,10 +128,9 @@ You have access to these data tools (call them as needed):
 [Web research tools — use for deep research, always return REAL URLs]
 • scrape_screener_in(symbol)          → screener.in: P/E, P/B, ROE, ROCE, pros/cons,
                                         quarterly results, annual P&L, shareholding trend,
-                                        BSE filing PDF links, annual-report links, peer table.
-                                        NOW INCLUDES: concalls[] list with direct PDF transcript
-                                        URLs, recording links (YouTube/mp3), PPT links — all
-                                        accessible without login. Always use for concalls first.
+                                        BSE filing PDF links, annual-report PDF links, peer table.
+                                        NOW INCLUDES: concalls[] with direct PDF transcript URLs,
+                                        recording links (YouTube/mp3), PPT links — no login needed.
 • search_yahoo_finance(symbol)        → Yahoo Finance: price stats + up to 6 news articles
 • multi_source_web_search(symbol,     → DuckDuckGo site: searches across moneycontrol.com,
     company_name, extra_query)          screener.in, economictimes.com, nseindia.com, bseindia.com
@@ -139,6 +138,21 @@ You have access to these data tools (call them as needed):
 • comprehensive_stock_research(symbol)→ All-in-one: screener.in + Yahoo Finance + multi-site
                                         news. Returns ratios, peers, filings, news, deep-links.
 • search_latest_catalysts(symbol)     → DuckDuckGo general web search for recent news
+
+[Deep Search Engine — 9 distinct parallel verticals]
+• search_nse_announcements(symbol)    → NSE live API: corporate announcements, filings, disclosures
+• search_corporate_actions(symbol)    → NSE live API: dividends, splits, bonuses, rights, AGMs
+• search_insider_trades(symbol)       → NSE PIT disclosures: promoter/director/insider buy-sell
+• search_bse_filings(symbol)          → BSE filings: board meetings, annual reports, concall notices
+• search_shareholding_analysis(symbol)→ screener.in: promoter %, FII %, DII %, pledge, QoQ trend
+• search_analyst_coverage(symbol)     → Analyst targets, buy/sell/hold ratings, brokerage views
+• search_concall_transcripts(symbol)  → Concall transcripts, investor day PPTs, mgmt commentary
+• search_sector_news(symbol, sector?) → 6-portal news pulse: ET, BS, Mint, MC, FE, HBL
+• search_social_buzz(symbol)          → Retail sentiment: Reddit, Valuepickr, Traderji, Tijori
+• deep_search(symbol, verticals?,     → Orchestrator: runs all/selected verticals in parallel.
+    context?)                           Auto-selects verticals from context (e.g. 'results',
+                                        'dividend', 'insider', 'analyst target', 'social buzz').
+
 • get_portfolio_exposure(sector?)     → Portfolio sector distribution and holdings
 • find_portfolio_overlap(screener)    → Holdings that match a screener
 
@@ -200,12 +214,20 @@ You have access to these data tools (call them as needed):
 • "fundamental comparison / ratios comparison" → compare_stocks with aspects=['fundamental']
 • "fundamentals / ratios / P/E / ROE / ROCE / valuation / book value" → call scrape_screener_in
 • "peers / peer comparison / sector peers" → call scrape_screener_in (has peer table)
-• "concall / transcript / conference call / management commentary" → call scrape_screener_in first (has direct PDF transcript URLs, recording links); supplement with multi_source_web_search if no transcripts found
-• "BSE filing / corporate announcement / results date / quarterly results" → call scrape_screener_in (has BSE PDF links)
-• "annual report / annual financials" → call scrape_screener_in (has annual-report PDF links)
+• "concall / transcript / conference call / management commentary" → call search_concall_transcripts(symbol) AND scrape_screener_in(symbol) for direct PDF links; supplement with multi_source_web_search if no transcripts found
+• "BSE filing / corporate announcement / results date / quarterly results" → call search_nse_announcements(symbol) for live NSE data; also scrape_screener_in for PDF links
+• "annual report / annual financials" → call search_bse_filings(symbol) + scrape_screener_in (has annual-report PDF links)
 • "moneycontrol / screener.in / yahoo finance / NSE website" → call the specific tool for that site
-• "news / catalysts / events / latest" → call search_latest_catalysts AND search_yahoo_finance
-• "deep research / full analysis / comprehensive / everything about" → call comprehensive_stock_research
+• "news / catalysts / events / latest" → call search_sector_news(symbol) + search_latest_catalysts + search_yahoo_finance
+• "deep research / full analysis / comprehensive / everything about" → call comprehensive_stock_research + deep_search(symbol, context="full")
+• "deep search / deep dive / all sources / full search" → call deep_search(symbol, context=<user_context>)
+• "NSE announcements / company announcements / corporate filings / exchange filings" → call search_nse_announcements(symbol)
+• "dividend / ex-date / bonus / stock split / rights issue / corporate action" → call search_corporate_actions(symbol)
+• "insider trading / promoter buying / promoter selling / insider buy / insider sell / PIT disclosure" → call search_insider_trades(symbol)
+• "shareholding / promoter holding / FII holding / DII holding / pledged shares / pledge" → call search_shareholding_analysis(symbol)
+• "analyst target / analyst rating / buy recommendation / sell recommendation / hold / brokerage view / consensus" → call search_analyst_coverage(symbol)
+• "sector news / industry news" → call search_sector_news(symbol)
+• "social sentiment / retail investors / what investors say / community view / Reddit / Valuepickr / forum" → call search_social_buzz(symbol)
 
 
 Before answering, THINK STEP BY STEP:

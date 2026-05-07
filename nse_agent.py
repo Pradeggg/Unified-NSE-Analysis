@@ -394,6 +394,18 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/chart NIFTY --html",     "NIFTY interactive HTML chart (opens in browser)"),
     ("/chart NIFTY 1y --html",  "NIFTY 1-year interactive HTML chart"),
     ("/chart BANKNIFTY 6mo --html", "BANKNIFTY 6-month HTML chart"),
+    # ── Deep Search commands ────────────────────────────────────────────────
+    ("/search",                           "Deep search — 9 parallel verticals (NSE+BSE+web)"),
+    ("/search RELIANCE",                  "Full deep search on RELIANCE"),
+    ("/search RELIANCE announcements",    "NSE corporate announcements for RELIANCE"),
+    ("/search RELIANCE dividend",         "Dividend / corporate actions for RELIANCE"),
+    ("/search RELIANCE insider",          "Insider trade disclosures for RELIANCE"),
+    ("/search RELIANCE shareholding",     "Shareholding pattern & FII/DII trend"),
+    ("/search RELIANCE analyst",          "Analyst targets & brokerage recommendations"),
+    ("/search RELIANCE concall",          "Concall transcripts & management commentary"),
+    ("/search RELIANCE news",             "Sector news from 6 portals"),
+    ("/search RELIANCE social",           "Retail investor buzz: Reddit, Valuepickr, Traderji"),
+    ("/search TATACONSUM deep",           "Full 9-vertical deep search"),
     ("/live",             "Switch to LIVE mode (real-time NSE API)"),
     ("/eod",              "Switch to EOD mode (historical CSV/DB)"),
     ("/auto",             "Switch to AUTO mode (keyword detect)"),
@@ -1406,6 +1418,17 @@ def _print_help() -> None:
             "  [dim]Timeframes: 1d · 5d · 1mo · 3mo · 6mo · 1y · 2y[/dim]\n"
             "  [dim]Indicators: volume · rsi · macd  (ASCII default: volume rsi)[/dim]\n"
             "  [dim]HTML chart: candlestick + EMA20/50/200 + Bollinger Bands + volume + RSI + MACD[/dim]\n\n"
+            "[bold magenta]DEEP SEARCH ENGINE 🔍[/bold magenta]\n"
+            "  [magenta]/search RELIANCE[/magenta]          — Full deep-dive (7 parallel verticals)\n"
+            "  [magenta]/search RELIANCE dividend[/magenta] — Dividends, splits, bonuses (NSE live)\n"
+            "  [magenta]/search RELIANCE insider[/magenta]  — Insider/promoter trade disclosures\n"
+            "  [magenta]/search RELIANCE shareholding[/magenta] — Promoter/FII/DII/pledge trend\n"
+            "  [magenta]/search RELIANCE analyst[/magenta]  — Analyst targets, brokerage ratings\n"
+            "  [magenta]/search RELIANCE concall[/magenta]  — Concall transcripts & mgmt commentary\n"
+            "  [magenta]/search RELIANCE news[/magenta]     — 6-portal sector news pulse\n"
+            "  [magenta]/search RELIANCE social[/magenta]   — Reddit, Valuepickr, Traderji buzz\n"
+            "  [dim]Verticals: announcements · corporate_actions · insider_trades · bse_filings[/dim]\n"
+            "  [dim]           shareholding · analyst_coverage · concalls · sector_news · social_buzz[/dim]\n\n"
             "[bold cyan]GLOBAL MARKET[/bold cyan]\n"
             "  [green]/global[/green]                 — Global risk regime and India read-through\n\n"
             "[bold cyan]PROMPT LIBRARY[/bold cyan]\n"
@@ -1837,6 +1860,64 @@ def _chat_loop(agent, show_trace: bool) -> None:
                     f"Give a brief technical summary for {sym} chart ({tf}): "
                     f"trend direction, key support/resistance levels, RSI reading, "
                     f"MACD status, and what to watch for next."
+                )
+
+        # ── /search <symbol> [vertical/context] — deep search engine ──────
+        if text.lower().startswith("/search"):
+            parts   = text.split()
+            sym     = parts[1].upper() if len(parts) > 1 else "RELIANCE"
+            context = " ".join(parts[2:]) if len(parts) > 2 else ""
+
+            # Map shorthand tokens to readable context for the LLM
+            _CTX_MAP = {
+                "div":          "dividend corporate actions ex-date",
+                "dividend":     "dividend corporate actions ex-date",
+                "insider":      "insider trades promoter buying selling",
+                "holding":      "shareholding promoter FII DII pledge",
+                "shareholding": "shareholding promoter FII DII trend",
+                "analyst":      "analyst targets brokerage recommendations",
+                "concall":      "concall transcript management commentary",
+                "news":         "latest news sector news",
+                "social":       "social buzz retail investor sentiment",
+                "bse":          "BSE filings board meeting",
+                "deep":         "",
+                "full":         "",
+            }
+            ctx_key  = context.strip().lower().split()[0] if context else ""
+            ctx_desc = _CTX_MAP.get(ctx_key, context)
+
+            # Map context to specific verticals
+            _VERT_MAP = {
+                "div":          ["corporate_actions", "announcements"],
+                "dividend":     ["corporate_actions", "announcements"],
+                "insider":      ["insider_trades", "shareholding"],
+                "holding":      ["shareholding", "insider_trades"],
+                "shareholding": ["shareholding", "insider_trades"],
+                "analyst":      ["analyst_coverage", "concalls"],
+                "concall":      ["concalls", "bse_filings"],
+                "news":         ["sector_news", "announcements"],
+                "social":       ["social_buzz", "analyst_coverage"],
+                "bse":          ["bse_filings", "announcements"],
+            }
+            forced_verts = _VERT_MAP.get(ctx_key)
+
+            if forced_verts:
+                vert_str = ", ".join(forced_verts)
+                console.print(f"[dim]  → Deep Search: [bold]{sym}[/bold] — verticals: {vert_str}[/dim]")
+                text = (
+                    f"Run deep_search for {sym} using verticals {forced_verts} with context '{ctx_desc}'. "
+                    f"Present all results clearly — include dates, URLs, and key insights for each vertical."
+                )
+            else:
+                console.print(f"[dim]  → Deep Search: [bold]{sym}[/bold] — all verticals[/dim]")
+                text = (
+                    f"Run a comprehensive deep search for {sym}. "
+                    f"Use deep_search with all default verticals. "
+                    f"Context: '{ctx_desc or 'full overview'}'. "
+                    f"Present results section-by-section: "
+                    f"NSE announcements, corporate actions, insider trades, "
+                    f"shareholding, analyst targets, concalls, sector news. "
+                    f"Include dates, real URLs, and actionable insights."
                 )
 
         # ── /chain <symbol> [expiry] — live option chain ───────────────
