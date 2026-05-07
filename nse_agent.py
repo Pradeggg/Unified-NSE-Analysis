@@ -1978,7 +1978,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
         if text.lower() in ("/help", "?", "/h"):
             _print_help()
             continue
-        if text.lower() == "/clear":
+        if text.lower() in ("/clear", "clear", "cls"):
             _followups = []
             os.system("clear")
             print_banner()
