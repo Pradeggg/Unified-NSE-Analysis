@@ -7,8 +7,12 @@ import pandas as pd
 from global_market_intelligence import (
     DEFAULT_US_UNIVERSE,
     GlobalMarketDataLoader,
+    build_risk_dashboard,
     compute_technical_metrics,
     normalize_ohlcv,
+    rank_sector_rotation,
+    screen_stage2_leaders,
+    screen_vcp_setups,
     universe_records,
 )
 
@@ -155,6 +159,74 @@ class GlobalMarketIntelligenceTests(unittest.TestCase):
         self.assertTrue(pd.isna(row["RS_SPY_1M"]))
         self.assertTrue(pd.isna(row["RS_QQQ_1M"]))
         self.assertEqual(row["RS_STATUS"], "BENCHMARK_UNAVAILABLE")
+
+    def test_screen_stage2_leaders_ranks_strong_rs_stage2_names(self):
+        metrics = pd.DataFrame(
+            [
+                {"SYMBOL": "NVDA", "STAGE": "STAGE_2", "RS_SPY_3M": 18.0, "RET_1M": 12.0, "RSI_14": 68, "SMA_ALIGNMENT": "BULLISH"},
+                {"SYMBOL": "AAPL", "STAGE": "STAGE_2", "RS_SPY_3M": 4.0, "RET_1M": 3.0, "RSI_14": 55, "SMA_ALIGNMENT": "BULLISH"},
+                {"SYMBOL": "TSLA", "STAGE": "STAGE_4", "RS_SPY_3M": 22.0, "RET_1M": 15.0, "RSI_14": 72, "SMA_ALIGNMENT": "MIXED"},
+            ]
+        )
+
+        result = screen_stage2_leaders(metrics)
+
+        self.assertEqual(list(result["SYMBOL"]), ["NVDA", "AAPL"])
+        self.assertIn("SCREENER_SCORE", result.columns)
+        self.assertGreater(result.iloc[0]["SCREENER_SCORE"], result.iloc[1]["SCREENER_SCORE"])
+
+    def test_screen_vcp_setups_keeps_only_constructive_contractions(self):
+        metrics = pd.DataFrame(
+            [
+                {"SYMBOL": "SMH", "VCP_FLAG": True, "SMA_ALIGNMENT": "BULLISH", "RS_SPY_3M": 9.0, "DIST_52W_HIGH_PCT": -4.0, "RET_1M": 5.0},
+                {"SYMBOL": "ARKK", "VCP_FLAG": True, "SMA_ALIGNMENT": "BEARISH", "RS_SPY_3M": 12.0, "DIST_52W_HIGH_PCT": -6.0, "RET_1M": 8.0},
+                {"SYMBOL": "QQQ", "VCP_FLAG": False, "SMA_ALIGNMENT": "BULLISH", "RS_SPY_3M": 5.0, "DIST_52W_HIGH_PCT": -2.0, "RET_1M": 4.0},
+            ]
+        )
+
+        result = screen_vcp_setups(metrics)
+
+        self.assertEqual(list(result["SYMBOL"]), ["SMH"])
+        self.assertEqual(result.iloc[0]["SETUP"], "VCP")
+
+    def test_rank_sector_rotation_uses_sector_etf_universe(self):
+        metrics = pd.DataFrame(
+            [
+                {"SYMBOL": "XLK", "RET_1M": 8.0, "RET_3M": 15.0, "RS_SPY_3M": 7.0, "SMA_ALIGNMENT": "BULLISH", "MACD_SIGNAL": "BULLISH"},
+                {"SYMBOL": "XLE", "RET_1M": 5.0, "RET_3M": 7.0, "RS_SPY_3M": 2.0, "SMA_ALIGNMENT": "BULLISH", "MACD_SIGNAL": "BULLISH"},
+                {"SYMBOL": "SPY", "RET_1M": 3.0, "RET_3M": 5.0, "RS_SPY_3M": 0.0, "SMA_ALIGNMENT": "BULLISH", "MACD_SIGNAL": "BULLISH"},
+            ]
+        )
+
+        result = rank_sector_rotation(metrics)
+
+        self.assertEqual(list(result["SYMBOL"])[:2], ["XLK", "XLE"])
+        self.assertIn("ROTATION_SCORE", result.columns)
+
+    def test_build_risk_dashboard_classifies_risk_on_and_risk_off(self):
+        risk_on_metrics = pd.DataFrame(
+            [
+                {"SYMBOL": "QQQ", "RET_1M": 8.0},
+                {"SYMBOL": "SPY", "RET_1M": 3.0},
+                {"SYMBOL": "IWM", "RET_1M": 5.0},
+                {"SYMBOL": "HYG", "RET_1M": 2.0},
+                {"SYMBOL": "LQD", "RET_1M": 0.5},
+                {"SYMBOL": "^VIX", "RET_1M": -10.0},
+            ]
+        )
+        risk_off_metrics = pd.DataFrame(
+            [
+                {"SYMBOL": "QQQ", "RET_1M": -6.0},
+                {"SYMBOL": "SPY", "RET_1M": -2.0},
+                {"SYMBOL": "IWM", "RET_1M": -8.0},
+                {"SYMBOL": "HYG", "RET_1M": -3.0},
+                {"SYMBOL": "LQD", "RET_1M": 1.0},
+                {"SYMBOL": "^VIX", "RET_1M": 20.0},
+            ]
+        )
+
+        self.assertEqual(build_risk_dashboard(risk_on_metrics)["regime"], "risk-on")
+        self.assertEqual(build_risk_dashboard(risk_off_metrics)["regime"], "risk-off")
 
 
 if __name__ == "__main__":

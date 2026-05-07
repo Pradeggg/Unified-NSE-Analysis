@@ -230,7 +230,7 @@ Every external and internal data source the platform uses or will use. Items mar
 | G0 US/Global Market Intelligence Design | ✅ DONE | Codex | Design spec created for phased US indices, ETFs, stocks, screeners, India read-through, terminal/report integration |
 | G1 US Universe + yfinance Cache | ✅ DONE | Codex | `global_market_intelligence.py`; curated US/global universe, yfinance-compatible OHLCV normalization, daily cache, latest snapshot |
 | G2 US Technical Engine + RS | ✅ DONE | Codex | `compute_technical_metrics()`; returns, SMA, RSI, MACD, 52W distance, support/resistance, VCP, Stage 2, RS vs SPY/QQQ |
-| G3 US Screeners | 🔜 READY | — | Stage 2 leaders, VCP setups, 52W high momentum, sector ETF rotation, risk dashboard |
+| G3 US Screeners | ✅ DONE | Codex | Stage 2 leaders, VCP setups, sector ETF rotation, risk dashboard built on `compute_technical_metrics()` |
 | G4 India Read-Through Engine | 🔜 READY | — | Map Nasdaq, semis, crude, DXY, yields, VIX, credit, Russell signals to NSE sector implications |
 | G5 US/Global HTML Report | 🔜 READY | — | Standalone report plus latest pointer with summary, screeners, read-through, freshness, disclaimer |
 | G6 Terminal + NLP Integration | 🔜 READY | — | `/us`, `/us indices`, `/us sectors`, `/us stage2`, `/us vcp`, `/us stock`, `/global readthrough` |
@@ -2506,7 +2506,7 @@ def render_filing_report(analysis: dict, output_format: str = "html") -> Path:
 - Tests cover benchmark-available and benchmark-missing paths.
 
 #### G3 — US Screeners
-**Size:** M | **Priority:** High | **Status:** 🔜 READY
+**Size:** M | **Priority:** High | **Status:** ✅ DONE
 
 **What to build:**
 - US Stage 2 leaders.
@@ -2518,6 +2518,10 @@ def render_filing_report(analysis: dict, output_format: str = "html") -> Path:
 **Acceptance criteria:**
 - Screeners return ranked tables with evidence columns.
 - Empty/unavailable data yields explicit warnings, not crashes.
+
+**Implementation note (2026-05-08):**
+- Added `screen_stage2_leaders()`, `screen_vcp_setups()`, `rank_sector_rotation()`, and `build_risk_dashboard()`.
+- Tests cover ranking order, VCP filtering, sector ETF filtering, and risk-on/risk-off classification.
 
 #### G4 — India Read-Through Engine
 **Size:** M | **Priority:** High | **Status:** 🔜 READY

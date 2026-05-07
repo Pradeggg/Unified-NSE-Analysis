@@ -445,6 +445,117 @@ def compute_technical_metrics(
     return pd.DataFrame(rows).reindex(columns=columns)
 
 
+SECTOR_ETFS = {
+    "XLK", "XLF", "XLE", "XLY", "XLI", "XLU", "XLV", "XLP", "XLB", "XLRE",
+    "SMH", "SOXX", "ARKK",
+}
+
+
+def _numeric_series(df: pd.DataFrame, column: str, default: float = 0.0) -> pd.Series:
+    if column not in df.columns:
+        return pd.Series([default] * len(df), index=df.index, dtype=float)
+    return pd.to_numeric(df[column], errors="coerce").fillna(default)
+
+
+def screen_stage2_leaders(metrics: pd.DataFrame, limit: int = 20) -> pd.DataFrame:
+    """Rank Stage 2 leaders with positive relative strength."""
+    if metrics is None or metrics.empty:
+        return pd.DataFrame()
+    df = metrics.copy()
+    stage = df.get("STAGE", pd.Series("", index=df.index)).astype(str)
+    df = df[stage.eq("STAGE_2")].copy()
+    if df.empty:
+        return df
+    rs = _numeric_series(df, "RS_SPY_3M")
+    ret = _numeric_series(df, "RET_1M")
+    rsi = _numeric_series(df, "RSI_14", 50)
+    alignment_bonus = df.get("SMA_ALIGNMENT", pd.Series("", index=df.index)).astype(str).eq("BULLISH").astype(float) * 5
+    df["SCREENER_SCORE"] = (rs * 0.50 + ret * 0.30 + (rsi - 50).clip(lower=0) * 0.20 + alignment_bonus).round(2)
+    return df.sort_values("SCREENER_SCORE", ascending=False).head(limit).reset_index(drop=True)
+
+
+def screen_vcp_setups(metrics: pd.DataFrame, limit: int = 20) -> pd.DataFrame:
+    """Return constructive volatility-contraction setups."""
+    if metrics is None or metrics.empty:
+        return pd.DataFrame()
+    df = metrics.copy()
+    vcp = df.get("VCP_FLAG", pd.Series(False, index=df.index)).fillna(False).astype(bool)
+    alignment = df.get("SMA_ALIGNMENT", pd.Series("", index=df.index)).astype(str)
+    df = df[vcp & alignment.ne("BEARISH")].copy()
+    if df.empty:
+        return df
+    rs = _numeric_series(df, "RS_SPY_3M")
+    ret = _numeric_series(df, "RET_1M")
+    distance_score = (20 + _numeric_series(df, "DIST_52W_HIGH_PCT")).clip(lower=0)
+    df["SETUP"] = "VCP"
+    df["SCREENER_SCORE"] = (rs * 0.45 + ret * 0.25 + distance_score * 0.30).round(2)
+    return df.sort_values("SCREENER_SCORE", ascending=False).head(limit).reset_index(drop=True)
+
+
+def rank_sector_rotation(metrics: pd.DataFrame, limit: int | None = None) -> pd.DataFrame:
+    """Rank US sector/theme ETFs by return, RS, and trend confirmation."""
+    if metrics is None or metrics.empty:
+        return pd.DataFrame()
+    df = metrics.copy()
+    df["SYMBOL"] = df["SYMBOL"].astype(str).str.upper()
+    df = df[df["SYMBOL"].isin(SECTOR_ETFS)].copy()
+    if df.empty:
+        return df
+    ret1 = _numeric_series(df, "RET_1M")
+    ret3 = _numeric_series(df, "RET_3M")
+    rs3 = _numeric_series(df, "RS_SPY_3M")
+    trend_bonus = df.get("SMA_ALIGNMENT", pd.Series("", index=df.index)).astype(str).eq("BULLISH").astype(float) * 5
+    macd_bonus = df.get("MACD_SIGNAL", pd.Series("", index=df.index)).astype(str).eq("BULLISH").astype(float) * 3
+    df["ROTATION_SCORE"] = (ret1 * 0.35 + ret3 * 0.25 + rs3 * 0.30 + trend_bonus + macd_bonus).round(2)
+    ranked = df.sort_values("ROTATION_SCORE", ascending=False).reset_index(drop=True)
+    return ranked.head(limit) if limit else ranked
+
+
+def _metric_value(metrics: pd.DataFrame, symbol: str, column: str) -> float | None:
+    if metrics is None or metrics.empty or column not in metrics.columns:
+        return None
+    rows = metrics[metrics["SYMBOL"].astype(str).str.upper() == symbol.upper()]
+    if rows.empty:
+        return None
+    value = pd.to_numeric(rows.iloc[0][column], errors="coerce")
+    return None if pd.isna(value) else float(value)
+
+
+def build_risk_dashboard(metrics: pd.DataFrame) -> dict:
+    """Classify US/global risk appetite from ETF/index relationships."""
+    qqq = _metric_value(metrics, "QQQ", "RET_1M")
+    spy = _metric_value(metrics, "SPY", "RET_1M")
+    iwm = _metric_value(metrics, "IWM", "RET_1M")
+    hyg = _metric_value(metrics, "HYG", "RET_1M")
+    lqd = _metric_value(metrics, "LQD", "RET_1M")
+    vix = _metric_value(metrics, "^VIX", "RET_1M")
+
+    score = 0
+    signals: list[str] = []
+    if qqq is not None and spy is not None:
+        delta = qqq - spy
+        score += 1 if delta > 1 else -1 if delta < -1 else 0
+        signals.append(f"QQQ vs SPY 1M: {delta:+.2f}pp")
+    if iwm is not None and spy is not None:
+        delta = iwm - spy
+        score += 1 if delta > 0 else -1 if delta < -3 else 0
+        signals.append(f"IWM vs SPY 1M: {delta:+.2f}pp")
+    if hyg is not None and lqd is not None:
+        delta = hyg - lqd
+        score += 1 if delta > 0 else -1 if delta < -1 else 0
+        signals.append(f"HYG vs LQD 1M: {delta:+.2f}pp")
+    if vix is not None:
+        score += 1 if vix < -5 else -1 if vix > 10 else 0
+        signals.append(f"VIX 1M: {vix:+.2f}%")
+
+    regime = "risk-on" if score >= 2 else "risk-off" if score <= -2 else "neutral"
+    return {
+        "regime": regime,
+        "score": score,
+        "signals": signals,
+    }
+
+
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Agent Adda US/global market intelligence")
     parser.add_argument("--root-dir", default=str(DEFAULT_ROOT))
