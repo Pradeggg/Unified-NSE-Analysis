@@ -906,13 +906,6 @@ def _strip_html_tags(text: str) -> str:
     return re.sub(r"<[^>]+>", "", text)
 
 
-def _osc8(label: str, url: str, color: str = "cyan") -> Text:
-    """Return a Rich Text span as OSC-8 link (iTerm2/WezTerm) + plain label (Terminal.app)."""
-    t = Text()
-    t.append(label, style=RichStyle(link=url, color=color, underline=True))
-    return t
-
-
 def _html_links_to_visible_urls(text: str) -> str:
     """Convert HTML anchors <a href="url">label</a> → visible 'label (url)'.
 
@@ -966,7 +959,11 @@ def _append_bare_url_links(target: Text, text: str) -> None:
 
 
 def _text_with_links(text: str) -> Text:
-    """Create Rich Text; HTML anchors → OSC-8 with visible label; bare URLs → visible cyan."""
+    """Create Rich Text; HTML/Markdown links → visible label + raw URL; bare URLs → cyan."""
+    # Pre-process: convert markdown [label](url) → HTML anchors so the
+    # single HTML-anchor loop handles both formats uniformly.
+    text = _MD_LINK_RE.sub(r'<a href="\2">\1</a>', text)
+
     out = Text()
     pos = 0
     for match in _HTML_LINK_RE.finditer(text):
@@ -977,7 +974,7 @@ def _text_with_links(text: str) -> Text:
         out.append(label, style=RichStyle(link=url, color="cyan", underline=True))
         # Show raw URL on same line so Terminal.app can Cmd+click it
         if label != url:
-            out.append(f" {url}", style=RichStyle(color="cyan dim"))
+            out.append(f" {url}", style=RichStyle(color="cyan", dim=True))
         pos = match.end()
     if pos < len(text):
         _append_bare_url_links(out, text[pos:])
@@ -2627,8 +2624,8 @@ def _chat_loop(agent, show_trace: bool) -> None:
                     text = f"Concall NLP error for {sym}: {_e}"
 
         # ── /options — live options chain (Rich side-by-side table) ──────
-        if user_input.startswith("/options"):
-            parts = user_input.split()
+        if text.startswith("/options"):
+            parts = text.split()
             sym = parts[1].upper() if len(parts) > 1 else "NIFTY"
             expiry_idx = int(parts[2]) if len(parts) > 2 and parts[2].isdigit() else 0
             console.print(f"[dim]  Fetching options chain for {sym} (expiry #{expiry_idx})...[/dim]")
