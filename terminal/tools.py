@@ -47,7 +47,7 @@ from terminal.web_research import (
 )
 
 # ── Chart module ─────────────────────────────────────────────────────────────
-from terminal.charts import render_chart, chart_summary
+from terminal.charts import render_chart, render_html_chart, chart_summary
 
 # ── Intraday screener engine ──────────────────────────────────────────────────
 from terminal.intraday import (
@@ -3150,6 +3150,19 @@ def get_chart_summary(symbol: str, timeframe: str = "3mo") -> dict:
     return chart_summary(symbol, timeframe)
 
 
+def open_html_chart(symbol: str, timeframe: str = "3mo",
+                    indicators: list | None = None) -> dict:
+    """
+    Generate and open a full interactive Plotly HTML chart in the browser.
+    Returns the file path.
+    """
+    inds = indicators or ["volume", "rsi", "macd"]
+    try:
+        fpath = render_html_chart(symbol, timeframe, inds, open_browser=True)
+        return {"status": "opened", "file": fpath, "symbol": symbol, "timeframe": timeframe}
+    except Exception as e:
+        return {"error": str(e)}
+
 # Register chart + options buying tools
 TOOL_REGISTRY.update({
     "get_chart_summary": (
@@ -3169,6 +3182,26 @@ TOOL_REGISTRY.update({
                     "enum": ["1d", "5d", "1mo", "3mo", "6mo", "1y", "2y"],
                     "description": "Chart timeframe (default 3mo)",
                 },
+            },
+            "required": ["symbol"],
+        },
+    ),
+    "open_html_chart": (
+        open_html_chart,
+        (
+            "Generate and open a full interactive HTML chart (Plotly) in the browser. "
+            "Shows candlestick + EMA20/50/200 + Bollinger Bands + Volume + RSI + MACD "
+            "in a professional dark TradingView-style layout. Fully interactive: zoom, pan, hover. "
+            "Use for: 'open chart', 'interactive chart', 'show html chart', 'open in browser', "
+            "'full chart for X', 'detailed chart'."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbol":     {"type": "string"},
+                "timeframe":  {"type": "string", "enum": ["1d", "5d", "1mo", "3mo", "6mo", "1y", "2y"]},
+                "indicators": {"type": "array", "items": {"type": "string"},
+                               "description": "['volume','rsi','macd'] — default: all three"},
             },
             "required": ["symbol"],
         },

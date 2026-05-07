@@ -171,6 +171,7 @@ You have access to these data tools (call them as needed):
 • "Bollinger squeeze / BB squeeze / volatility squeeze / low volatility breakout" → run_intraday_screener(screen_type="bb_squeeze")
 • "VWAP reclaim / above VWAP / below VWAP / VWAP bounce" → run_intraday_screener(screen_type="vwap_reclaim")
 • "chart / show chart / price chart / candlestick / live chart / technical chart" → call get_chart_summary(symbol, timeframe); if /chart command, also render ASCII chart inline
+• "open chart in browser / interactive chart / html chart / full chart / detailed chart" → call open_html_chart(symbol, timeframe)
 • "should I buy calls / buy puts / options buying setup / best strike to buy / options trade idea" → call analyze_options_buying(symbol, direction)
 • "scan for options buys / cheap options / low IV options / options buying scan" → call scan_options_buys(direction, max_iv)
 • "supertrend signal / supertrend scan" → run_intraday_screener(screen_type="supertrend") OR compute_intraday_indicators
