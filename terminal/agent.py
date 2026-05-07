@@ -104,6 +104,19 @@ You have access to these data tools (call them as needed):
                                         Works for ANY NSE stock. Has market-session awareness and
                                         EOD daily level fallback for pre-market / missing data.
 
+• get_option_chain(symbol, expiry?) → Live option chain: OI, IV, PCR, max pain, ATM greeks,
+                                      OI buildup/unwinding, IV skew. Falls back to EOD outside hours.
+• get_oi_analysis(symbol, expiry?)  → Focused OI: PCR, max pain, CE/PE concentration (support/resistance)
+• get_futures_analysis(symbol)      → Futures basis, cost-of-carry, rollover OI analysis
+• get_options_strategy(symbol,      → Build specific strategy: legs, entry cost, risk/reward,
+    strategy, expiry?)                breakevens, payoff curve. Strategies: long_call, long_put,
+                                      bull_call_spread, bear_put_spread, long_straddle, long_strangle,
+                                      iron_condor, covered_call, protective_put, calendar_spread
+• get_strategy_recommendations      → Recommend top 3 strategies based on PCR/IV/DTE/max pain
+    (symbol, expiry?)
+• refresh_fno_eod_data()            → Download latest F&O EOD bhavcopy from NSE and store in DB
+• get_fno_data_status()             → Check local F&O DB availability and dates
+
 [Web research tools — use for deep research, always return REAL URLs]
 • scrape_screener_in(symbol)          → screener.in: P/E, P/B, ROE, ROCE, pros/cons,
                                         quarterly results, annual P&L, shareholding trend,
@@ -122,8 +135,22 @@ You have access to these data tools (call them as needed):
 • find_portfolio_overlap(screener)    → Holdings that match a screener
 
 ━━━ TOOL SELECTION RULES ━━━
-• "intraday setup / technical target zones / invalidation / trading setup" → call explain_intraday_setup(symbol)
-• "intraday levels / support resistance / pivots / VWAP levels" → call get_intraday_levels(symbol)
+• "option chain / options data / OI for NIFTY/BANKNIFTY/<stock> / option chain analysis" → call get_option_chain(symbol)
+• "PCR / put call ratio / put-call ratio" → call get_oi_analysis(symbol) — focus on pcr and signal
+• "max pain / options max pain / expiry pin / where will it expire" → call get_oi_analysis(symbol) — focus on max_pain
+• "OI buildup / open interest buildup / call writing / put writing / where is OI concentration" → call get_oi_analysis(symbol)
+• "support from options / resistance from options / OI support resistance / key strikes" → call get_oi_analysis(symbol)
+• "greeks / delta / theta / vega / gamma / IV / implied volatility" → call get_option_chain(symbol) — atm_greeks section
+• "IV skew / volatility skew / put IV vs call IV" → call get_option_chain(symbol) — iv_skew section
+• "futures price / futures basis / futures premium / futures discount / cost of carry" → call get_futures_analysis(symbol)
+• "rollover / futures rollover / rollover percentage" → call get_futures_analysis(symbol)
+• "build a strategy / options strategy / set up a <strategy name>" → call get_options_strategy(symbol, strategy)
+• "what strategy should I use / recommend options strategy / best options play" → call get_strategy_recommendations(symbol)
+• "long call / buy call / buy put / long put / straddle / strangle / bull spread / bear spread / iron condor" → call get_options_strategy(symbol, strategy=<mapped_key>)
+• "F&O data / download bhavcopy / update options data / refresh F&O" → call refresh_fno_eod_data()
+• "F&O data status / options DB / available expiries" → call get_fno_data_status()
+• "intraday setup / technical target zones / invalidation / trading setup" → call explain_intraday_setup(symbol); if SQLite tables are missing/stale or symbol bars are absent, call get_intraday_analysis(symbol) and clearly label it as Yahoo Finance/EOD fallback context
+• "intraday levels / support resistance / pivots / VWAP levels" → call get_intraday_levels(symbol); if SQLite levels are unavailable, call get_intraday_analysis(symbol) and clearly label fallback levels
 • "intraday data health / live table health / SQLite intraday" → call get_intraday_source_health
 • "breakout stocks / live breakouts / breakouts last N minutes / stocks breaking out now / volume breakouts" → call scan_intraday_market(index="NIFTY 500", interval="15m", strategies=["ema","volume","macd"], direction_filter="buy")
 • "intraday screener / scan / best intraday stocks / momentum plays" → call run_intraday_screener(screen_type="momentum") [auto-falls-back to yfinance if SQLite unavailable]
@@ -401,9 +428,10 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
 
     words = re.findall(r"[A-Za-z][A-Za-z0-9\-&\.]+", query)
     skip  = {"show","me","the","latest","on","for","what","is","how","tell",
-              "about","give","setup","stock","NSE","India","market","today","brief",
-              "intraday","levels","level","support","resistance","screener","scan"}
-    candidates = [w for w in words if w.upper() not in skip and len(w) >= 2]
+              "about","give","setup","stock","nse","india","market","today","brief",
+              "intraday","levels","level","support","resistance","screener","scan",
+              "deep","dive","analysis","technical","trade","trading"}
+    candidates = [w for w in words if w.lower() not in skip and len(w) >= 2]
 
     # SQLite-backed intraday routing. No EOD/yfinance fallback in this path.
     if data_mode == "intraday":
@@ -422,12 +450,14 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
             return {"intent": "intraday_levels", "plan": [
                 ("resolve_symbol", {"query": sym_q}),
                 ("get_intraday_levels", {"symbol": sym_q}),
+                ("get_intraday_analysis", {"symbol": sym_q}),
             ]}
         if candidates:
             sym_q = candidates[0]
             return {"intent": "intraday_setup", "plan": [
                 ("resolve_symbol", {"query": sym_q}),
                 ("explain_intraday_setup", {"symbol": sym_q}),
+                ("get_intraday_analysis", {"symbol": sym_q}),
             ]}
 
     # Index query
@@ -546,6 +576,7 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict]) -> str:
     intra_screen = _get("run_intraday_screener")
     intra_levels = _get("get_intraday_levels")
     intra_ind = _get("compute_intraday_indicators")
+    intra_legacy = _get("get_intraday_analysis")
 
     sym = (snap or {}).get("symbol") or (tech or {}).get("symbol") or ""
     cname = (snap or {}).get("company_name") or sym
@@ -710,6 +741,69 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict]) -> str:
         lines.append(f"  MACD hist:   {ind.get('macd_hist', '—')}")
         lines.append(f"  Supertrend:  {ind.get('supertrend_dir', '—')}")
 
+    if (
+        intra_legacy
+        and not intra_legacy.get("error")
+        and (
+            (intra_setup and intra_setup.get("error"))
+            or (intra_levels and intra_levels.get("error"))
+            or not (intra_setup or intra_levels or intra_ind)
+        )
+    ):
+        sqlite_error = (
+            (intra_setup or {}).get("error")
+            or (intra_levels or {}).get("error")
+            or "SQLite intraday source unavailable"
+        )
+        lines.append("\n▶ INTRADAY FALLBACK ANALYSIS")
+        lines.append(f"  SQLite intraday source unavailable: {sqlite_error}")
+        lines.append(
+            f"  Fallback source: {intra_legacy.get('source') or intra_legacy.get('data_source') or 'legacy intraday engine'}"
+        )
+        lines.append(f"  Symbol:      {intra_legacy.get('symbol', '—')}")
+        lines.append(f"  Interval:    {intra_legacy.get('interval', '—')}")
+        lines.append(f"  Session:     {intra_legacy.get('session', '—')}")
+        lines.append(f"  Price:       ₹{intra_legacy.get('close', '—')}")
+        lines.append(f"  Bias:        {intra_legacy.get('bias', '—')}")
+        if intra_legacy.get("candles") is not None:
+            lines.append(f"  Candles:     {intra_legacy.get('candles')}")
+        reason = intra_legacy.get("reason") or intra_legacy.get("note")
+        if reason:
+            lines.append(f"  Note:        {reason}")
+        key_levels = intra_legacy.get("key_levels") or intra_legacy.get("approx_levels") or {}
+        if key_levels:
+            supports = key_levels.get("supports") or [key_levels.get("support_20d_low"), key_levels.get("prev_day_low")]
+            resistances = key_levels.get("resistances") or [key_levels.get("resistance_20d_high"), key_levels.get("prev_day_high")]
+            supports = [v for v in supports if v is not None]
+            resistances = [v for v in resistances if v is not None]
+            lines.append(f"  Supports:    {supports or '—'}")
+            lines.append(f"  Resistances: {resistances or '—'}")
+            lines.append(f"  Pivot:       {key_levels.get('pivot') or key_levels.get('prev_day_close') or '—'}")
+        ind = intra_legacy.get("indicators") or {}
+        if ind:
+            lines.append(
+                f"  Indicators:  RSI {ind.get('rsi', '—')} | MACD hist {ind.get('macd_hist', '—')} | "
+                f"Supertrend dir {ind.get('supertrend_dir', '—')}"
+            )
+        buy_sigs = intra_legacy.get("buy_signals") or []
+        sell_sigs = intra_legacy.get("sell_signals") or []
+        watch = intra_legacy.get("watch_alerts") or []
+        if buy_sigs or sell_sigs or watch:
+            lines.append(
+                f"  Signals:     {len(buy_sigs)} long research setups | "
+                f"{len(sell_sigs)} short research setups | {len(watch)} watch alerts"
+            )
+            for sig in (buy_sigs + sell_sigs + watch)[:5]:
+                bits = [str(sig.get("strategy", "setup"))]
+                if sig.get("entry") is not None:
+                    bits.append(f"entry {sig.get('entry')}")
+                if sig.get("target") is not None:
+                    bits.append(f"target {sig.get('target')}")
+                if sig.get("stoploss") is not None:
+                    bits.append(f"invalidation {sig.get('stoploss')}")
+                lines.append("    - " + " | ".join(bits))
+        lines.append("  Framing:     Research-only fallback analysis; not a buy/sell recommendation.")
+
     if intra_screen and not intra_screen.get("error"):
         lines.append(
             f"\n▶ INTRADAY SCREENER: {intra_screen.get('screen_type', '').upper()} "
@@ -860,8 +954,10 @@ class Agent:
                 else (
                "Use get_intraday_source_health first for calculations, then SQLite-backed "
                "get_intraday_bars, compute_intraday_indicators, get_intraday_levels, "
-               "explain_intraday_setup, and run_intraday_screener. Do not silently use "
-               "EOD data for intraday calculations."
+               "explain_intraday_setup, and run_intraday_screener. If SQLite intraday "
+               "tables are missing or stale for a single-stock deep dive, call "
+               "get_intraday_analysis as an explicit Yahoo Finance/EOD fallback, label "
+               "it clearly, and do not present fallback levels as SQLite/live-table data."
                     if mode == "intraday"
                     else "Use EOD CSV and DB snapshot tools for historical/technical analysis."
                 )

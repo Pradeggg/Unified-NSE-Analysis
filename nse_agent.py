@@ -358,6 +358,21 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/monitor start all",        "Start ALL strategy alerts combined"),
     ("/monitor stop",    "Stop a monitor (e.g. /monitor stop breakout)"),
     ("/monitor stop all","Stop ALL active monitors"),
+    # ── F&O / Options commands ─────────────────────────────────────────────
+    ("/chain",            "Live option chain (PCR, max pain, OI, greeks)"),
+    ("/chain NIFTY",      "NIFTY option chain — nearest expiry"),
+    ("/chain BANKNIFTY",  "BANKNIFTY option chain — nearest expiry"),
+    ("/chain FINNIFTY",   "FINNIFTY option chain"),
+    ("/oi",               "Open Interest analysis (PCR, max pain, support/resistance)"),
+    ("/oi NIFTY",         "NIFTY OI analysis"),
+    ("/oi BANKNIFTY",     "BANKNIFTY OI analysis"),
+    ("/fno",              "Comprehensive F&O overview: chain + futures + strategy"),
+    ("/fno NIFTY",        "NIFTY F&O overview"),
+    ("/fno BANKNIFTY",    "BANKNIFTY F&O overview"),
+    ("/strategy",         "Build a specific options strategy with live pricing"),
+    ("/strategy NIFTY long_straddle",    "Long straddle on NIFTY"),
+    ("/strategy NIFTY bull_call_spread", "Bull call spread on NIFTY"),
+    ("/strategy BANKNIFTY iron_condor",  "Iron condor on BANKNIFTY"),
     ("/live",             "Switch to LIVE mode (real-time NSE API)"),
     ("/eod",              "Switch to EOD mode (historical CSV/DB)"),
     ("/auto",             "Switch to AUTO mode (keyword detect)"),
@@ -1350,6 +1365,16 @@ def _print_help() -> None:
             "  [magenta]/monitor stop breakout[/magenta] — Stop a specific monitor\n"
             "  [magenta]/monitor stop all[/magenta]      — Stop all monitors\n"
             "  [dim]Strategies: breakout · volume_surge · reversal · momentum · supertrend · vcp · all[/dim]\n\n"
+            "[bold yellow]F&O / OPTIONS 📊[/bold yellow]\n"
+            "  [yellow]/chain NIFTY[/yellow]           — Live option chain (PCR, max pain, OI, greeks)\n"
+            "  [yellow]/chain BANKNIFTY[/yellow]       — BANKNIFTY option chain\n"
+            "  [yellow]/oi NIFTY[/yellow]              — OI analysis (support/resistance, PCR)\n"
+            "  [yellow]/fno NIFTY[/yellow]             — Full F&O overview (chain + futures + strategy)\n"
+            "  [yellow]/strategy NIFTY long_straddle[/yellow]    — Build a specific options strategy\n"
+            "  [yellow]/strategy NIFTY bull_call_spread[/yellow] — Bull call spread with pricing\n"
+            "  [dim]Strategies: long_call · long_put · bull_call_spread · bear_put_spread ·[/dim]\n"
+            "  [dim]            long_straddle · long_strangle · iron_condor · covered_call ·[/dim]\n"
+            "  [dim]            protective_put · calendar_spread[/dim]\n\n"
             "[bold cyan]GLOBAL MARKET[/bold cyan]\n"
             "  [green]/global[/green]                 — Global risk regime and India read-through\n\n"
             "[bold cyan]PROMPT LIBRARY[/bold cyan]\n"
@@ -1735,6 +1760,53 @@ def _chat_loop(agent, show_trace: bool) -> None:
             else:
                 text = f"Run EOD screener {arg} and show top results"
                 console.print(f"[dim]  → EOD screener: {arg}[/dim]")
+
+        # ── /chain <symbol> [expiry] — live option chain ───────────────
+        if text.lower().startswith("/chain"):
+            parts = text.split()
+            sym   = parts[1].upper() if len(parts) > 1 else "NIFTY"
+            expiry_part = parts[2] if len(parts) > 2 else ""
+            expiry_str  = f" for expiry {expiry_part}" if expiry_part else " for the nearest expiry"
+            text = (
+                f"Fetch the live option chain for {sym}{expiry_str}. "
+                f"Show PCR, max pain, top CE OI (resistance) and PE OI (support) strikes, "
+                f"ATM greeks, and OI buildup/unwinding summary."
+            )
+            console.print(f"[dim]  → Option chain: {sym}[/dim]")
+
+        # ── /oi <symbol> — open interest analysis ─────────────────────
+        elif text.lower().startswith("/oi"):
+            parts = text.split()
+            sym   = parts[1].upper() if len(parts) > 1 else "NIFTY"
+            text  = (
+                f"Run open interest analysis for {sym}. "
+                f"Show PCR, max pain, key CE/PE OI support and resistance levels, "
+                f"and where OI is building or unwinding today."
+            )
+            console.print(f"[dim]  → OI analysis: {sym}[/dim]")
+
+        # ── /fno [symbol] — F&O overview ──────────────────────────────
+        elif text.lower().startswith("/fno"):
+            parts = text.split()
+            sym   = parts[1].upper() if len(parts) > 1 else "NIFTY"
+            text  = (
+                f"Give a comprehensive F&O overview for {sym}: "
+                f"option chain (PCR, max pain, top OI strikes), "
+                f"futures basis and cost of carry, and recommend the best options strategy "
+                f"based on current conditions."
+            )
+            console.print(f"[dim]  → F&O overview: {sym}[/dim]")
+
+        # ── /strategy <symbol> <strategy_name> — build options strategy
+        elif text.lower().startswith("/strategy"):
+            parts = text.split()
+            sym   = parts[1].upper() if len(parts) > 1 else "NIFTY"
+            strat = parts[2].lower().replace("-", "_") if len(parts) > 2 else "long_straddle"
+            text  = (
+                f"Build a {strat.replace('_', ' ')} options strategy for {sym}. "
+                f"Show legs, strikes, entry cost, max risk, max reward, and breakevens."
+            )
+            console.print(f"[dim]  → Strategy: {strat} on {sym}[/dim]")
 
         # ── p<n> prompt library shortcut ───────────────────────────────
         import re as _re

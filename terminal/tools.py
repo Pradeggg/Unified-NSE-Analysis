@@ -16,6 +16,23 @@ from typing import Any
 
 import pandas as pd
 
+# ── F&O data and options analysis ────────────────────────────────────────────
+from terminal.fno_data import (
+    fetch_live_option_chain,
+    fetch_live_futures,
+    load_and_store_latest as _fno_load_latest,
+    get_available_dates as _fno_available_dates,
+    days_to_expiry,
+    get_expiry_dates,
+)
+from terminal.options_analysis import (
+    analyze_option_chain,
+    analyze_futures,
+    build_strategy,
+    recommend_strategies,
+    STRATEGY_CATALOG,
+)
+
 # ── Web research module (screener.in, Yahoo Finance, multi-site search) ───────
 from terminal.web_research import (
     scrape_screener_in,
@@ -2873,6 +2890,219 @@ TOOL_REGISTRY: dict[str, Any] = {
         },
     ),
 }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# F&O / Options Tool Wrappers
+# ─────────────────────────────────────────────────────────────────────────────
+
+def get_option_chain(symbol: str, expiry: str | None = None,
+                     use_live: bool = True) -> dict:
+    """
+    Fetch live option chain for an index or stock.
+    Returns OI, IV, PCR, max pain, ATM greeks, OI buildup and support/resistance levels.
+    Falls back to EOD data outside market hours.
+    """
+    return analyze_option_chain(symbol, expiry, use_live=use_live)
+
+
+def get_oi_analysis(symbol: str, expiry: str | None = None) -> dict:
+    """
+    Focused open-interest analysis: PCR, max pain, CE/PE OI concentration,
+    OI buildup and unwinding at key strikes.  Good for support/resistance.
+    """
+    result = analyze_option_chain(symbol, expiry, use_live=True)
+    if "error" in result:
+        return result
+    return {
+        "symbol":            result["symbol"],
+        "underlying":        result["underlying"],
+        "expiry":            result["expiry"],
+        "dte":               result["dte"],
+        "source":            result.get("source"),
+        "pcr":               result["pcr"],
+        "max_pain":          result["max_pain"],
+        "max_pain_vs_spot":  result.get("max_pain_vs_spot"),
+        "top_ce_oi_strikes": result["top_ce_oi_strikes"],   # resistance
+        "top_pe_oi_strikes": result["top_pe_oi_strikes"],   # support
+        "oi_buildup":        result["oi_buildup"],
+        "total_ce_oi":       result.get("total_ce_oi"),
+        "total_pe_oi":       result.get("total_pe_oi"),
+    }
+
+
+def get_futures_analysis(symbol: str) -> dict:
+    """
+    Futures basis, cost-of-carry, and rollover analysis for an index or stock.
+    """
+    return analyze_futures(symbol, use_live=True)
+
+
+def get_options_strategy(symbol: str, strategy: str,
+                          expiry: str | None = None) -> dict:
+    """
+    Build a specific options strategy with live pricing.
+    Returns legs, entry costs, max risk/reward, breakevens, and payoff curve.
+
+    Available strategies: long_call, long_put, bull_call_spread, bear_put_spread,
+    long_straddle, long_strangle, iron_condor, covered_call, protective_put,
+    calendar_spread.
+    """
+    return build_strategy(symbol, strategy, expiry, use_live=True)
+
+
+def get_strategy_recommendations(symbol: str, expiry: str | None = None) -> dict:
+    """
+    Analyse current option chain context (PCR, IV, DTE, max pain) and
+    recommend the top 3 options strategies with rationale.
+    """
+    return recommend_strategies(symbol, expiry, use_live=True)
+
+
+def refresh_fno_eod_data() -> dict:
+    """
+    Download the latest F&O EOD bhavcopy from NSE archives and store in SQLite.
+    Returns summary: trade_date, rows_stored, options count, futures count.
+    """
+    return _fno_load_latest()
+
+
+def get_fno_data_status() -> dict:
+    """
+    Return the status of the local F&O EOD database:
+    available dates, record counts, and last download time.
+    """
+    dates = _fno_available_dates()
+    if not dates:
+        return {
+            "status": "no_data",
+            "message": "F&O EOD database is empty. Run refresh_fno_eod_data() first.",
+            "available_strategies": list(STRATEGY_CATALOG.keys()),
+        }
+    return {
+        "status":             "ok",
+        "latest_date":        dates[0],
+        "available_dates":    dates[:10],
+        "total_dates":        len(dates),
+        "available_strategies": list(STRATEGY_CATALOG.keys()),
+    }
+
+
+# Register F&O tools
+TOOL_REGISTRY.update({
+    "get_option_chain": (
+        get_option_chain,
+        (
+            "Fetch live option chain for a NIFTY/BANKNIFTY index or any NSE stock. "
+            "Returns: underlying price, PCR (put-call ratio), max pain, top CE/PE OI strikes "
+            "(key resistance/support), ATM±2 greeks (delta/theta/vega/gamma/IV), OI buildup "
+            "and unwinding, IV skew, DTE. Falls back to EOD data outside market hours. "
+            "Use for: 'option chain', 'OI analysis', 'PCR', 'max pain', 'support resistance', "
+            "'greeks', 'IV', 'option data for NIFTY/BANKNIFTY/<stock>'."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbol":   {"type": "string", "description": "NSE symbol e.g. NIFTY, BANKNIFTY, RELIANCE"},
+                "expiry":   {"type": "string", "description": "Expiry date YYYY-MM-DD or NSE format e.g. 08-May-2026"},
+                "use_live": {"type": "boolean", "default": True},
+            },
+            "required": ["symbol"],
+        },
+    ),
+    "get_oi_analysis": (
+        get_oi_analysis,
+        (
+            "Focused open interest analysis: PCR, max pain, top CE/PE OI concentration strikes, "
+            "OI buildup and unwinding. Identifies key support (PE OI) and resistance (CE OI) levels. "
+            "Use for: 'where is support/resistance', 'OI buildup', 'PCR signal', 'max pain level', "
+            "'where is call writing', 'where is put writing'."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string"},
+                "expiry": {"type": "string"},
+            },
+            "required": ["symbol"],
+        },
+    ),
+    "get_futures_analysis": (
+        get_futures_analysis,
+        (
+            "Futures chain analysis: basis (futures vs spot), cost of carry (annualised), "
+            "rollover percentage, OI across expiries. Good for gauging institutional positioning. "
+            "Use for: 'futures basis', 'cost of carry', 'rollover', 'futures premium/discount', "
+            "'long/short build-up in futures', 'what is NIFTY futures price'."
+        ),
+        {
+            "type": "object",
+            "properties": {"symbol": {"type": "string"}},
+            "required": ["symbol"],
+        },
+    ),
+    "get_options_strategy": (
+        get_options_strategy,
+        (
+            "Build a specific options strategy with live pricing. Returns legs, strikes, "
+            "entry costs, max risk, max reward, breakeven points, and payoff curve. "
+            "Strategies: long_call, long_put, bull_call_spread, bear_put_spread, "
+            "long_straddle, long_strangle, iron_condor, covered_call, protective_put, calendar_spread. "
+            "Use for: 'set up a bull call spread on NIFTY', 'long straddle for earnings', "
+            "'buy a call option', 'iron condor setup', 'options strategy for <stock>'."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbol":   {"type": "string"},
+                "strategy": {
+                    "type": "string",
+                    "enum": [
+                        "long_call", "long_put", "bull_call_spread", "bear_put_spread",
+                        "long_straddle", "long_strangle", "iron_condor",
+                        "covered_call", "protective_put", "calendar_spread",
+                    ],
+                },
+                "expiry": {"type": "string"},
+            },
+            "required": ["symbol", "strategy"],
+        },
+    ),
+    "get_strategy_recommendations": (
+        get_strategy_recommendations,
+        (
+            "Analyse current PCR, IV, DTE, and max pain to recommend the top 3 options strategies "
+            "with rationale. Tailors recommendations to current market regime (trending/volatile/range-bound). "
+            "Use for: 'what options strategy should I use', 'best strategy for NIFTY now', "
+            "'options setup recommendation', 'which strategy fits current conditions'."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string"},
+                "expiry": {"type": "string"},
+            },
+            "required": ["symbol"],
+        },
+    ),
+    "refresh_fno_eod_data": (
+        refresh_fno_eod_data,
+        (
+            "Download and store the latest F&O EOD bhavcopy from NSE. "
+            "Returns summary of rows stored, options count, futures count, and trade date. "
+            "Use when asked to 'update F&O data', 'download bhavcopy', 'refresh options data'."
+        ),
+        {"type": "object", "properties": {}, "required": []},
+    ),
+    "get_fno_data_status": (
+        get_fno_data_status,
+        (
+            "Check status of local F&O EOD database: available dates and available strategy list. "
+            "Use at the start of any F&O session to confirm data availability."
+        ),
+        {"type": "object", "properties": {}, "required": []},
+    ),
+})
 
 
 def call_tool(name: str, args: dict) -> dict:
