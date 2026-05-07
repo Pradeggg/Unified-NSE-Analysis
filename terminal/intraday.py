@@ -10,6 +10,8 @@ Signals:    BUY / SELL with entry, target, stoploss, R:R ratio.
 from __future__ import annotations
 
 import math
+import os
+import contextlib
 import warnings
 from datetime import datetime, timedelta
 from typing import Any
@@ -18,6 +20,13 @@ import numpy as np
 import pandas as pd
 
 warnings.filterwarnings("ignore", category=FutureWarning)
+
+
+def _quiet_yf_download(yf, *args, **kwargs) -> pd.DataFrame:
+    """Run yfinance download while suppressing its noisy failed-ticker output."""
+    with open(os.devnull, "w") as devnull:
+        with contextlib.redirect_stdout(devnull), contextlib.redirect_stderr(devnull):
+            return yf.download(*args, **kwargs)
 
 
 def _f(v: Any, digits: int = 2) -> float | None:
@@ -92,8 +101,15 @@ def get_intraday_candles(
 
     def _fetch(ticker: str, ivl: str, prd: str) -> pd.DataFrame:
         try:
-            df = yf.download(ticker, period=prd, interval=ivl,
-                             progress=False, auto_adjust=True, prepost=False)
+            df = _quiet_yf_download(
+                yf,
+                ticker,
+                period=prd,
+                interval=ivl,
+                progress=False,
+                auto_adjust=True,
+                prepost=False,
+            )
             if df.empty:
                 return pd.DataFrame()
             if isinstance(df.columns, pd.MultiIndex):
@@ -810,16 +826,437 @@ def signal_volume_spike(df: pd.DataFrame) -> dict | None:
     return None
 
 
+
+# ── New signal generators ──────────────────────────────────────────────────────
+
+def signal_orb(df: pd.DataFrame, orb_bars: int = 3) -> dict | None:
+    """Opening Range Breakout (ORB).
+
+    Identifies when price breaks above/below the first N-bar range with volume.
+    BUY : Close > ORB high AND volume confirms (≥ 1.5× average)
+    SELL: Close < ORB low  AND volume confirms
+    """
+    if len(df) < orb_bars + 5:
+        return None
+    df   = compute_atr(compute_ema_stack(df))
+    last = df.iloc[-1]
+    atr  = last["ATR"]
+    close = last["Close"]
+
+    orb_high = df.iloc[:orb_bars]["High"].max()
+    orb_low  = df.iloc[:orb_bars]["Low"].min()
+    avg_vol  = df["Volume"].rolling(20).mean().iloc[-1]
+    vol_ok   = (not pd.isna(avg_vol)) and last["Volume"] >= 1.5 * avg_vol
+
+    if close > orb_high and vol_ok:
+        sl     = round(orb_high - 0.5 * atr, 2)
+        target = round(close + 2.0 * (close - sl), 2)
+        return {
+            "strategy":  "ORB Breakout",
+            "direction": "BUY",
+            "entry":     round(close, 2),
+            "target":    target,
+            "stoploss":  sl,
+            "rr":        _rr(close, target, sl),
+            "strength":  "Strong" if close > orb_high * 1.003 else "Moderate",
+            "note":      f"Price broke above ORB high {round(orb_high,2)} with volume",
+            "indicator": {"orb_high": round(orb_high,2), "orb_low": round(orb_low,2)},
+        }
+    if close < orb_low and vol_ok:
+        sl     = round(orb_low + 0.5 * atr, 2)
+        target = round(close - 2.0 * (sl - close), 2)
+        return {
+            "strategy":  "ORB Breakdown",
+            "direction": "SELL",
+            "entry":     round(close, 2),
+            "target":    target,
+            "stoploss":  sl,
+            "rr":        _rr(close, target, sl),
+            "strength":  "Strong" if close < orb_low * 0.997 else "Moderate",
+            "note":      f"Price broke below ORB low {round(orb_low,2)} with volume",
+            "indicator": {"orb_high": round(orb_high,2), "orb_low": round(orb_low,2)},
+        }
+    return None
+
+
+def signal_gap(df: pd.DataFrame) -> dict | None:
+    """Gap and Go continuation play.
+
+    BUY : Gap up > 0.5% from prior close AND first candle bullish AND MACD positive
+    SELL: Gap down > 0.5% AND first candle bearish AND MACD negative
+    """
+    if len(df) < 30:
+        return None
+    df    = compute_macd(compute_ema_stack(compute_atr(df)))
+    last  = df.iloc[-1]
+    prev  = df.iloc[-2]
+    close = last["Close"]
+    atr   = last["ATR"]
+
+    # Gap = today's open vs prior candle's close
+    gap_pct = (df.iloc[0]["Open"] - prev["Close"]) / prev["Close"] * 100
+
+    first_bull = df.iloc[0]["Close"] > df.iloc[0]["Open"]
+    first_bear = df.iloc[0]["Close"] < df.iloc[0]["Open"]
+
+    if gap_pct > 0.5 and first_bull and last["MACD_hist"] > 0:
+        entry  = round(close, 2)
+        sl     = round(close - 1.5 * atr, 2)
+        target = round(close + 2.5 * atr, 2)
+        return {
+            "strategy":  "Gap and Go",
+            "direction": "BUY",
+            "entry":     entry,
+            "target":    target,
+            "stoploss":  sl,
+            "rr":        _rr(entry, target, sl),
+            "strength":  "Strong" if gap_pct > 1.0 else "Moderate",
+            "note":      f"Gap up +{round(gap_pct,1)}%, bullish continuation + MACD positive",
+            "indicator": {"gap_pct": round(gap_pct,2)},
+        }
+    if gap_pct < -0.5 and first_bear and last["MACD_hist"] < 0:
+        entry  = round(close, 2)
+        sl     = round(close + 1.5 * atr, 2)
+        target = round(close - 2.5 * atr, 2)
+        return {
+            "strategy":  "Gap and Go",
+            "direction": "SELL",
+            "entry":     entry,
+            "target":    target,
+            "stoploss":  sl,
+            "rr":        _rr(entry, target, sl),
+            "strength":  "Strong" if gap_pct < -1.0 else "Moderate",
+            "note":      f"Gap down {round(gap_pct,1)}%, bearish continuation + MACD negative",
+            "indicator": {"gap_pct": round(gap_pct,2)},
+        }
+    return None
+
+
+def signal_vwap(df: pd.DataFrame) -> dict | None:
+    """VWAP reclaim / loss signal using EMA9 as VWAP proxy.
+
+    BUY : Price crosses above EMA9 (VWAP proxy) with RSI 40–65 range
+    SELL: Price crosses below EMA9 with RSI 35–60 range
+    Also checks EMA21 alignment for trend filter.
+    """
+    if len(df) < 25:
+        return None
+    df    = compute_rsi(compute_ema_stack(compute_atr(df)))
+    last  = df.iloc[-1]
+    prev  = df.iloc[-2]
+    close = last["Close"]
+    atr   = last["ATR"]
+    rsi   = last["RSI"]
+    vwap  = last["EMA9"]   # proxy
+
+    cross_above = prev["Close"] < prev["EMA9"] and close > vwap
+    cross_below = prev["Close"] > prev["EMA9"] and close < vwap
+
+    if cross_above and 38 <= rsi <= 68 and close > last["EMA21"]:
+        entry  = round(close, 2)
+        sl     = round(vwap - 0.5 * atr, 2)
+        target = round(close + 2.0 * (close - sl), 2)
+        return {
+            "strategy":  "VWAP Reclaim",
+            "direction": "BUY",
+            "entry":     entry,
+            "target":    target,
+            "stoploss":  sl,
+            "rr":        _rr(entry, target, sl),
+            "strength":  "Strong" if close > last["EMA21"] * 1.002 else "Moderate",
+            "note":      f"Price reclaimed VWAP proxy {round(vwap,2)}, RSI={round(rsi,1)}",
+            "indicator": {"vwap_proxy": round(vwap,2), "rsi": round(rsi,1)},
+        }
+    if cross_below and 32 <= rsi <= 62 and close < last["EMA21"]:
+        entry  = round(close, 2)
+        sl     = round(vwap + 0.5 * atr, 2)
+        target = round(close - 2.0 * (sl - close), 2)
+        return {
+            "strategy":  "VWAP Loss",
+            "direction": "SELL",
+            "entry":     entry,
+            "target":    target,
+            "stoploss":  sl,
+            "rr":        _rr(entry, target, sl),
+            "strength":  "Strong" if close < last["EMA21"] * 0.998 else "Moderate",
+            "note":      f"Price lost VWAP proxy {round(vwap,2)}, RSI={round(rsi,1)}",
+            "indicator": {"vwap_proxy": round(vwap,2), "rsi": round(rsi,1)},
+        }
+    return None
+
+
+def signal_engulfing(df: pd.DataFrame) -> dict | None:
+    """Bullish/Bearish Engulfing candlestick pattern.
+
+    BUY : Bullish engulfing (small red candle followed by larger green that covers it)
+          at or near a support level (EMA21 or recent swing low)
+    SELL: Bearish engulfing (small green → larger red) near resistance
+    """
+    if len(df) < 25:
+        return None
+    df   = compute_rsi(compute_ema_stack(compute_atr(df)))
+    last = df.iloc[-1]
+    prev = df.iloc[-2]
+    atr  = last["ATR"]
+    close = last["Close"]
+
+    last_bull = last["Close"] > last["Open"]
+    last_bear = last["Close"] < last["Open"]
+    prev_bull = prev["Close"] > prev["Open"]
+    prev_bear = prev["Close"] < prev["Open"]
+
+    last_body = abs(last["Close"] - last["Open"])
+    prev_body = abs(prev["Close"] - prev["Open"])
+
+    bull_engulf = (last_bull and prev_bear and
+                   last["Open"] <= prev["Close"] and
+                   last["Close"] >= prev["Open"] and
+                   last_body > prev_body * 1.1)
+    bear_engulf = (last_bear and prev_bull and
+                   last["Open"] >= prev["Close"] and
+                   last["Close"] <= prev["Open"] and
+                   last_body > prev_body * 1.1)
+
+    rsi = last["RSI"]
+
+    if bull_engulf and close > last["EMA21"] * 0.995 and rsi < 65:
+        entry  = round(close, 2)
+        sl     = round(prev["Low"] - 0.2 * atr, 2)
+        target = round(close + 2.5 * (close - sl), 2)
+        return {
+            "strategy":  "Bullish Engulfing",
+            "direction": "BUY",
+            "entry":     entry,
+            "target":    target,
+            "stoploss":  sl,
+            "rr":        _rr(entry, target, sl),
+            "strength":  "Strong" if rsi < 50 else "Moderate",
+            "note":      f"Bullish engulfing near EMA21={round(last['EMA21'],2)}, RSI={round(rsi,1)}",
+            "indicator": {"rsi": round(rsi,1), "candle_ratio": round(last_body/max(prev_body,0.01),2)},
+        }
+    if bear_engulf and close < last["EMA21"] * 1.005 and rsi > 35:
+        entry  = round(close, 2)
+        sl     = round(prev["High"] + 0.2 * atr, 2)
+        target = round(close - 2.5 * (sl - close), 2)
+        return {
+            "strategy":  "Bearish Engulfing",
+            "direction": "SELL",
+            "entry":     entry,
+            "target":    target,
+            "stoploss":  sl,
+            "rr":        _rr(entry, target, sl),
+            "strength":  "Strong" if rsi > 50 else "Moderate",
+            "note":      f"Bearish engulfing near EMA21={round(last['EMA21'],2)}, RSI={round(rsi,1)}",
+            "indicator": {"rsi": round(rsi,1), "candle_ratio": round(last_body/max(prev_body,0.01),2)},
+        }
+    return None
+
+
+def signal_ema_ribbon(df: pd.DataFrame) -> dict | None:
+    """EMA Ribbon alignment — all fast EMAs aligned in same direction.
+
+    BUY : EMA9 > EMA21 > EMA50 all stacked (perfect bull ribbon) + price above all
+    SELL: EMA9 < EMA21 < EMA50 all stacked (perfect bear ribbon) + price below all
+    Also requires RSI in momentum zone (50–75 BUY, 25–50 SELL).
+    """
+    if len(df) < 55:
+        return None
+    df   = compute_rsi(compute_ema_stack(compute_atr(df)))
+    last = df.iloc[-1]
+    prev = df.iloc[-2]
+    close = last["Close"]
+    atr   = last["ATR"]
+    rsi   = last["RSI"]
+
+    bull_ribbon = last["EMA9"] > last["EMA21"] > last["EMA50"] and close > last["EMA9"]
+    bear_ribbon = last["EMA9"] < last["EMA21"] < last["EMA50"] and close < last["EMA9"]
+
+    # Ribbon just aligned (wasn't aligned last bar)
+    prev_bull = prev["EMA9"] > prev["EMA21"] > prev["EMA50"]
+    prev_bear = prev["EMA9"] < prev["EMA21"] < prev["EMA50"]
+
+    if bull_ribbon and not prev_bull and 48 <= rsi <= 78:
+        entry  = round(close, 2)
+        sl     = round(last["EMA21"] - 0.3 * atr, 2)
+        target = round(close + 2.5 * (close - sl), 2)
+        return {
+            "strategy":  "EMA Ribbon Bull",
+            "direction": "BUY",
+            "entry":     entry,
+            "target":    target,
+            "stoploss":  sl,
+            "rr":        _rr(entry, target, sl),
+            "strength":  "High",
+            "note":      f"EMA 9/21/50 just stacked bullish. RSI={round(rsi,1)}",
+            "indicator": {"ema9": round(last["EMA9"],2), "ema21": round(last["EMA21"],2),
+                          "ema50": round(last["EMA50"],2), "rsi": round(rsi,1)},
+        }
+    if bear_ribbon and not prev_bear and 22 <= rsi <= 52:
+        entry  = round(close, 2)
+        sl     = round(last["EMA21"] + 0.3 * atr, 2)
+        target = round(close - 2.5 * (sl - close), 2)
+        return {
+            "strategy":  "EMA Ribbon Bear",
+            "direction": "SELL",
+            "entry":     entry,
+            "target":    target,
+            "stoploss":  sl,
+            "rr":        _rr(entry, target, sl),
+            "strength":  "High",
+            "note":      f"EMA 9/21/50 just stacked bearish. RSI={round(rsi,1)}",
+            "indicator": {"ema9": round(last["EMA9"],2), "ema21": round(last["EMA21"],2),
+                          "ema50": round(last["EMA50"],2), "rsi": round(rsi,1)},
+        }
+    return None
+
+
+def signal_multi_confirm(df: pd.DataFrame) -> dict | None:
+    """Multi-indicator confluence — requires 3+ indicators agreeing on direction.
+
+    BUY : MACD bull + EMA cross bull + RSI 45–68 + Volume above average
+          → High-confidence entry; all four signals aligned
+    SELL: MACD bear + EMA cross bear + RSI 32–55 + Volume above average
+    """
+    if len(df) < 55:
+        return None
+    df   = compute_rsi(compute_macd(compute_ema_stack(compute_atr(df))))
+    last = df.iloc[-1]
+    prev = df.iloc[-2]
+    close = last["Close"]
+    atr   = last["ATR"]
+    rsi   = last["RSI"]
+
+    avg_vol = df["Volume"].rolling(20).mean().iloc[-1]
+    vol_ok  = (not pd.isna(avg_vol)) and last["Volume"] >= 1.2 * avg_vol
+
+    macd_bull   = last["MACD"] > last["MACD_signal"] and last["MACD_hist"] > 0
+    macd_bear   = last["MACD"] < last["MACD_signal"] and last["MACD_hist"] < 0
+    ema_bull    = last["EMA9"] > last["EMA21"] and close > last["EMA21"]
+    ema_bear    = last["EMA9"] < last["EMA21"] and close < last["EMA21"]
+    rsi_bull    = 45 <= rsi <= 70
+    rsi_bear    = 30 <= rsi <= 55
+
+    bull_count = sum([macd_bull, ema_bull, rsi_bull, vol_ok])
+    bear_count = sum([macd_bear, ema_bear, rsi_bear, vol_ok])
+
+    if bull_count >= 3:
+        entry  = round(close, 2)
+        sl     = round(last["EMA21"] - 0.5 * atr, 2)
+        target = round(close + 3.0 * (close - sl), 2)
+        return {
+            "strategy":  "Multi-Confirm BUY",
+            "direction": "BUY",
+            "entry":     entry,
+            "target":    target,
+            "stoploss":  sl,
+            "rr":        _rr(entry, target, sl),
+            "strength":  "High" if bull_count == 4 else "Strong",
+            "note":      f"{bull_count}/4 signals aligned bullish: "
+                         f"{'MACD ' if macd_bull else ''}{'EMA ' if ema_bull else ''}"
+                         f"{'RSI ' if rsi_bull else ''}{'Vol' if vol_ok else ''}",
+            "indicator": {"macd_bull": macd_bull, "ema_bull": ema_bull,
+                          "rsi": round(rsi,1), "vol_above_avg": vol_ok},
+        }
+    if bear_count >= 3:
+        entry  = round(close, 2)
+        sl     = round(last["EMA21"] + 0.5 * atr, 2)
+        target = round(close - 3.0 * (sl - close), 2)
+        return {
+            "strategy":  "Multi-Confirm SELL",
+            "direction": "SELL",
+            "entry":     entry,
+            "target":    target,
+            "stoploss":  sl,
+            "rr":        _rr(entry, target, sl),
+            "strength":  "High" if bear_count == 4 else "Strong",
+            "note":      f"{bear_count}/4 signals aligned bearish: "
+                         f"{'MACD ' if macd_bear else ''}{'EMA ' if ema_bear else ''}"
+                         f"{'RSI ' if rsi_bear else ''}{'Vol' if vol_ok else ''}",
+            "indicator": {"macd_bear": macd_bear, "ema_bear": ema_bear,
+                          "rsi": round(rsi,1), "vol_above_avg": vol_ok},
+        }
+    return None
+
+
+def signal_rsi_divergence(df: pd.DataFrame) -> dict | None:
+    """RSI divergence — price and RSI disagree (hidden strength or weakness).
+
+    Bullish divergence: Price making lower lows but RSI making higher lows
+    Bearish divergence: Price making higher highs but RSI making lower highs
+    Lookback: compare last 3 swing points
+    """
+    if len(df) < 30:
+        return None
+    df    = compute_rsi(compute_ema_stack(compute_atr(df)))
+    closes = df["Close"].values
+    rsis   = df["RSI"].values
+    last   = df.iloc[-1]
+    atr    = last["ATR"]
+    close  = closes[-1]
+    rsi    = rsis[-1]
+
+    # Compare current bar vs 5 bars ago and 10 bars ago
+    c5 = closes[-6]; r5 = rsis[-6]
+    c10= closes[-11]; r10= rsis[-11]
+
+    # Bullish divergence: price lower, RSI higher
+    bull_div = close < c5 < c10 and rsi > r5 and rsi > r10
+    # Bearish divergence: price higher, RSI lower
+    bear_div = close > c5 > c10 and rsi < r5 and rsi < r10
+
+    if bull_div and rsi < 50:
+        entry  = round(close, 2)
+        sl     = round(close - 2.0 * atr, 2)
+        target = round(close + 3.0 * atr, 2)
+        return {
+            "strategy":  "RSI Bullish Divergence",
+            "direction": "BUY",
+            "entry":     entry,
+            "target":    target,
+            "stoploss":  sl,
+            "rr":        _rr(entry, target, sl),
+            "strength":  "High",
+            "note":      f"Price making lower lows but RSI rising ({round(r10,1)}→{round(r5,1)}→{round(rsi,1)})",
+            "indicator": {"rsi_trend": f"{round(r10,1)}→{round(r5,1)}→{round(rsi,1)}",
+                          "price_trend": f"{round(c10,1)}→{round(c5,1)}→{round(close,1)}"},
+        }
+    if bear_div and rsi > 50:
+        entry  = round(close, 2)
+        sl     = round(close + 2.0 * atr, 2)
+        target = round(close - 3.0 * atr, 2)
+        return {
+            "strategy":  "RSI Bearish Divergence",
+            "direction": "SELL",
+            "entry":     entry,
+            "target":    target,
+            "stoploss":  sl,
+            "rr":        _rr(entry, target, sl),
+            "strength":  "High",
+            "note":      f"Price making higher highs but RSI falling ({round(r10,1)}→{round(r5,1)}→{round(rsi,1)})",
+            "indicator": {"rsi_trend": f"{round(r10,1)}→{round(r5,1)}→{round(rsi,1)}",
+                          "price_trend": f"{round(c10,1)}→{round(c5,1)}→{round(close,1)}"},
+        }
+    return None
+
+
 # ── All-strategy signal runner ────────────────────────────────────────────────
 
 _STRATEGIES = {
-    "macd":         signal_macd,
-    "rsi":          signal_rsi,
-    "supertrend":   signal_supertrend,
-    "bollinger":    signal_bollinger,
-    "ema":          signal_ema_crossover,
-    "vcp":          signal_vcp,
-    "volume":       signal_volume_spike,
+    "macd":           signal_macd,
+    "rsi":            signal_rsi,
+    "supertrend":     signal_supertrend,
+    "bollinger":      signal_bollinger,
+    "ema":            signal_ema_crossover,
+    "vcp":            signal_vcp,
+    "volume":         signal_volume_spike,
+    # ── New strategies ──────────────────────────────────────────────────────
+    "orb":            signal_orb,
+    "gap":            signal_gap,
+    "vwap":           signal_vwap,
+    "engulfing":      signal_engulfing,
+    "ema_ribbon":     signal_ema_ribbon,
+    "multi_confirm":  signal_multi_confirm,
+    "rsi_divergence": signal_rsi_divergence,
 }
 
 

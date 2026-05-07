@@ -349,13 +349,20 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/monitor list",     "List all available monitor strategies"),
     ("/monitor status",   "Show status of all running monitors"),
     ("/monitor start",    "Start a background monitor (e.g. /monitor start breakout NIFTY 500 15 buy)"),
-    ("/monitor start breakout",   "Start breakout alert monitor (EMA+volume) — default 15m, NIFTY 500"),
-    ("/monitor start volume_surge","Start volume surge alert monitor"),
-    ("/monitor start reversal",   "Start RSI/Bollinger reversal alert monitor"),
-    ("/monitor start momentum",   "Start MACD+RSI momentum alert monitor"),
-    ("/monitor start supertrend", "Start Supertrend flip alert monitor"),
-    ("/monitor start vcp",        "Start VCP contraction pattern alert monitor"),
-    ("/monitor start all",        "Start ALL strategy alerts combined"),
+    ("/monitor start breakout",      "Start breakout alert monitor (EMA+volume) — default 15m, NIFTY 500"),
+    ("/monitor start volume_surge",  "Start volume surge alert monitor"),
+    ("/monitor start reversal",      "Start RSI/Bollinger reversal alert monitor"),
+    ("/monitor start momentum",      "Start MACD+RSI momentum alert monitor"),
+    ("/monitor start supertrend",    "Start Supertrend flip alert monitor"),
+    ("/monitor start vcp",           "Start VCP contraction pattern alert monitor"),
+    ("/monitor start orb",           "Start Opening Range Breakout alert monitor (5m bars)"),
+    ("/monitor start gap_go",        "Start Gap and Go continuation alert monitor"),
+    ("/monitor start vwap",          "Start VWAP reclaim/loss alert monitor"),
+    ("/monitor start engulfing",     "Start Engulfing candlestick pattern alert monitor"),
+    ("/monitor start ema_ribbon",    "Start EMA Ribbon alignment alert monitor"),
+    ("/monitor start multi_confirm", "Start Multi-signal confluence alert (3/4 indicators agree)"),
+    ("/monitor start rsi_divergence","Start RSI divergence alert monitor"),
+    ("/monitor start all",           "Start ALL strategy alerts combined"),
     ("/monitor stop",    "Stop a monitor (e.g. /monitor stop breakout)"),
     ("/monitor stop all","Stop ALL active monitors"),
     # ── F&O / Options commands ─────────────────────────────────────────────
@@ -1378,7 +1385,9 @@ def _print_help() -> None:
             "  [magenta]/monitor start momentum NIFTY BANK 10[/magenta] — Custom index + interval\n"
             "  [magenta]/monitor stop breakout[/magenta] — Stop a specific monitor\n"
             "  [magenta]/monitor stop all[/magenta]      — Stop all monitors\n"
-            "  [dim]Strategies: breakout · volume_surge · reversal · momentum · supertrend · vcp · all[/dim]\n\n"
+            "  [dim]Strategies (14): breakout · volume_surge · reversal · momentum · supertrend · vcp[/dim]\n"
+            "  [dim]               · orb · gap_go · vwap · engulfing · ema_ribbon · multi_confirm[/dim]\n"
+            "  [dim]               · rsi_divergence · all[/dim]\n\n"
             "[bold yellow]F&O / OPTIONS 📊[/bold yellow]\n"
             "  [yellow]/chain NIFTY[/yellow]           — Live option chain (PCR, max pain, OI, greeks)\n"
             "  [yellow]/chain BANKNIFTY[/yellow]       — BANKNIFTY option chain\n"

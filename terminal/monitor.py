@@ -96,8 +96,52 @@ STRATEGIES = {
         "yf_strats":   ["vcp", "volume"],
         "min_rr":      2.0,
     },
+    # ── New strategies ────────────────────────────────────────────────────────
+    "orb": {
+        "description": "Opening Range Breakout — price breaks above/below first-bar range with volume",
+        "interval":    "5m",
+        "yf_strats":   ["orb", "volume"],
+        "min_rr":      1.5,
+    },
+    "gap_go": {
+        "description": "Gap and Go — gap up/down > 0.5% with bullish/bearish continuation + MACD",
+        "interval":    "5m",
+        "yf_strats":   ["gap"],
+        "min_rr":      1.3,
+    },
+    "vwap": {
+        "description": "VWAP Reclaim/Loss — price crossing VWAP proxy (EMA9) with RSI confirmation",
+        "interval":    "15m",
+        "yf_strats":   ["vwap", "ema"],
+        "min_rr":      1.3,
+    },
+    "engulfing": {
+        "description": "Candlestick patterns — bullish/bearish engulfing near key EMA levels",
+        "interval":    "15m",
+        "yf_strats":   ["engulfing"],
+        "min_rr":      1.5,
+    },
+    "ema_ribbon": {
+        "description": "EMA Ribbon — EMA 9/21/50 all stacking in same direction (trend confirmation)",
+        "interval":    "15m",
+        "yf_strats":   ["ema_ribbon"],
+        "min_rr":      1.5,
+    },
+    "multi_confirm": {
+        "description": "Multi-signal confluence — 3 of 4 indicators agree (MACD + EMA + RSI + Volume)",
+        "interval":    "15m",
+        "yf_strats":   ["multi_confirm"],
+        "min_rr":      1.5,
+    },
+    "rsi_divergence": {
+        "description": "RSI Divergence — price and RSI disagree, signalling hidden reversal strength",
+        "interval":    "15m",
+        "yf_strats":   ["rsi_divergence"],
+        "min_rr":      1.8,
+    },
     "all": {
-        "description": "All strategies: breakout + volume + reversal + momentum + supertrend + VCP",
+        "description": "All strategies: breakout + volume + reversal + momentum + supertrend + VCP "
+                       "+ ORB + Gap&Go + VWAP + Engulfing + EMA Ribbon + Multi-confirm + RSI Div",
         "interval":    "15m",
         "yf_strats":   None,    # None = run all
         "min_rr":      1.3,
