@@ -1,5 +1,7 @@
 import json
+import io
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -7,6 +9,8 @@ from financial_filing_agent import (
     build_arg_parser,
     detect_document_type,
     ingest_filing_url,
+    parse_pdf_filing,
+    parse_registered_filing,
     safe_path_part,
 )
 
@@ -105,6 +109,196 @@ class FinancialFilingAgentTests(unittest.TestCase):
         self.assertEqual(args.url, "https://example.com/result.pdf")
         self.assertEqual(args.symbol, "BLUESTARCO")
         self.assertEqual(args.period, "FY26_Q4")
+
+    def test_parse_pdf_filing_returns_dependency_error_when_backend_missing(self):
+        with TemporaryDirectory() as td:
+            pdf_path = Path(td) / "sample.pdf"
+            pdf_path.write_bytes(b"%PDF sample")
+
+            result = parse_pdf_filing(pdf_path, backend_loader=lambda: None)
+
+            self.assertEqual(result["status"], "error")
+            self.assertEqual(result["error_code"], "PDF_BACKEND_MISSING")
+            self.assertEqual(result["document_type"], "pdf")
+            self.assertEqual(result["source_path"], str(pdf_path))
+            self.assertEqual(result["pages"], [])
+            self.assertEqual(result["tables"], [])
+            self.assertEqual(result["evidence"], [])
+
+    def test_parse_pdf_filing_extracts_page_text_and_evidence_with_backend(self):
+        class FakePage:
+            def __init__(self, text):
+                self.text = text
+
+            def get_text(self, mode):
+                return self.text
+
+        class FakeDocument:
+            def __init__(self):
+                self.pages = [
+                    FakePage("Standalone revenue grew 24 percent.\nProfit after tax improved."),
+                    FakePage("Segment results show strong electro-mechanical project execution."),
+                ]
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+            def __len__(self):
+                return len(self.pages)
+
+            def __iter__(self):
+                return iter(self.pages)
+
+        class FakeBackend:
+            @staticmethod
+            def open(path):
+                return FakeDocument()
+
+        with TemporaryDirectory() as td:
+            pdf_path = Path(td) / "sample.pdf"
+            pdf_path.write_bytes(b"%PDF sample")
+
+            result = parse_pdf_filing(pdf_path, backend_loader=lambda: FakeBackend)
+
+            self.assertEqual(result["status"], "ok")
+            self.assertEqual(result["page_count"], 2)
+            self.assertEqual(result["pages"][0]["page_number"], 1)
+            self.assertIn("Standalone revenue", result["pages"][0]["text"])
+            self.assertEqual(result["evidence"][0]["source_type"], "pdf_page")
+            self.assertEqual(result["evidence"][0]["page_number"], 1)
+            self.assertIn("Standalone revenue", result["evidence"][0]["text_excerpt"])
+
+    def test_parse_pdf_filing_extracts_detected_tables_with_cell_evidence(self):
+        class FakeTable:
+            def extract(self):
+                return [
+                    ["Particulars", "FY26", "FY25"],
+                    ["Revenue from operations", "11,779.23", "11,325.75"],
+                    ["Profit after tax", "385.10", "484.90"],
+                ]
+
+        class FakeTableFinder:
+            tables = [FakeTable()]
+
+        class FakePage:
+            def get_text(self, mode):
+                return "STANDALONE FINANCIAL RESULTS"
+
+            def find_tables(self):
+                return FakeTableFinder()
+
+        class FakeDocument:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+            def __len__(self):
+                return 1
+
+            def __iter__(self):
+                return iter([FakePage()])
+
+        class FakeBackend:
+            @staticmethod
+            def open(path):
+                return FakeDocument()
+
+        with TemporaryDirectory() as td:
+            pdf_path = Path(td) / "sample.pdf"
+            pdf_path.write_bytes(b"%PDF sample")
+
+            result = parse_pdf_filing(pdf_path, backend_loader=lambda: FakeBackend)
+
+            self.assertEqual(result["status"], "ok")
+            self.assertEqual(len(result["tables"]), 1)
+            self.assertEqual(result["tables"][0]["row_count"], 3)
+            self.assertEqual(result["tables"][0]["rows"][1][0], "Revenue from operations")
+            table_evidence = [item for item in result["evidence"] if item["source_type"] == "pdf_table_cell"]
+            self.assertEqual(table_evidence[0]["row_label"], "Revenue from operations")
+            self.assertEqual(table_evidence[0]["column_label"], "FY26")
+            self.assertEqual(table_evidence[0]["extracted_value"], "11,779.23")
+
+    def test_parse_pdf_filing_suppresses_backend_table_stdout_noise(self):
+        class NoisyPage:
+            def get_text(self, mode):
+                return "RESULTS"
+
+            def find_tables(self):
+                print("backend layout suggestion")
+
+                class Finder:
+                    tables = []
+
+                return Finder()
+
+        class FakeDocument:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+            def __len__(self):
+                return 1
+
+            def __iter__(self):
+                return iter([NoisyPage()])
+
+        class FakeBackend:
+            @staticmethod
+            def open(path):
+                return FakeDocument()
+
+        with TemporaryDirectory() as td:
+            pdf_path = Path(td) / "sample.pdf"
+            pdf_path.write_bytes(b"%PDF sample")
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                result = parse_pdf_filing(pdf_path, backend_loader=lambda: FakeBackend)
+
+            self.assertEqual(result["status"], "ok")
+            self.assertEqual(stdout.getvalue(), "")
+
+    def test_parse_registered_filing_reads_manifest_and_writes_parsed_json(self):
+        with TemporaryDirectory() as td:
+            ingest = ingest_filing_url(
+                "https://example.com/result.pdf",
+                symbol="BLUESTARCO",
+                period="FY26_Q4",
+                root_dir=Path(td),
+                fetcher=lambda url: FakeResponse(content=b"%PDF sample", content_type="application/pdf"),
+            )
+            parsed_result = {
+                "status": "ok",
+                "document_type": "pdf",
+                "source_path": ingest["local_path"],
+                "page_count": 1,
+                "pages": [{"page_number": 1, "text": "Revenue grew.", "char_count": 13}],
+                "tables": [],
+                "evidence": [{"source_type": "pdf_page", "page_number": 1, "text_excerpt": "Revenue grew."}],
+                "warnings": [],
+            }
+
+            result = parse_registered_filing(Path(ingest["manifest_path"]), parser=lambda path: parsed_result)
+
+            self.assertEqual(result["status"], "ok")
+            self.assertTrue(Path(result["parsed_path"]).exists())
+            written = json.loads(Path(result["parsed_path"]).read_text())
+            self.assertEqual(written["page_count"], 1)
+            self.assertEqual(written["evidence"][0]["text_excerpt"], "Revenue grew.")
+
+    def test_build_arg_parser_accepts_parse_command(self):
+        parser = build_arg_parser()
+        args = parser.parse_args(["parse", "data/filings/BLUESTARCO/FY26_Q4/manifest.json"])
+
+        self.assertEqual(args.command, "parse")
+        self.assertEqual(args.manifest_path, "data/filings/BLUESTARCO/FY26_Q4/manifest.json")
 
 
 if __name__ == "__main__":

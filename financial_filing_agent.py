@@ -9,8 +9,10 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import io
 import json
 import re
+from contextlib import redirect_stderr, redirect_stdout
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -21,6 +23,7 @@ import requests
 
 
 DEFAULT_ROOT = Path("data") / "filings"
+PDF_BACKEND_INSTALL_HINT = "Install PyMuPDF with: .venv/bin/python -m pip install pymupdf"
 
 
 @dataclass(frozen=True)
@@ -198,6 +201,219 @@ def ingest_filing_url(
         }
 
 
+def _load_pdf_backend():
+    try:
+        import fitz  # type: ignore
+    except ImportError:
+        return None
+    return fitz
+
+
+def _empty_parse_error(
+    error_code: str,
+    error: str,
+    source_path: Path,
+    warnings: list[str] | None = None,
+) -> dict:
+    return {
+        "status": "error",
+        "error_code": error_code,
+        "error": error,
+        "document_type": "pdf",
+        "source_path": str(source_path),
+        "page_count": 0,
+        "pages": [],
+        "tables": [],
+        "evidence": [],
+        "warnings": warnings or [],
+    }
+
+
+def _clean_table_value(value: object) -> str:
+    return re.sub(r"\s+", " ", str(value or "").strip())
+
+
+def _extract_page_tables(page: object, page_number: int) -> tuple[list[dict], list[dict]]:
+    if not hasattr(page, "find_tables"):
+        return [], []
+
+    try:
+        with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
+            table_finder = page.find_tables()
+    except Exception:
+        return [], []
+
+    tables = []
+    evidence = []
+    for table_index, table in enumerate(getattr(table_finder, "tables", []) or [], start=1):
+        try:
+            raw_rows = table.extract()
+        except Exception:
+            continue
+        rows = [[_clean_table_value(cell) for cell in row] for row in raw_rows if row]
+        if not rows:
+            continue
+
+        column_count = max((len(row) for row in rows), default=0)
+        headers = rows[0] if rows else []
+        table_record = {
+            "page_number": page_number,
+            "table_index": table_index,
+            "row_count": len(rows),
+            "column_count": column_count,
+            "rows": rows,
+        }
+        tables.append(table_record)
+
+        for row_index, row in enumerate(rows[1:], start=2):
+            row_label = row[0] if row else ""
+            for column_index, value in enumerate(row[1:], start=2):
+                if not value:
+                    continue
+                column_label = headers[column_index - 1] if column_index - 1 < len(headers) else f"Column {column_index}"
+                evidence.append(
+                    {
+                        "source_type": "pdf_table_cell",
+                        "page_number": page_number,
+                        "table_index": table_index,
+                        "row_index": row_index,
+                        "column_index": column_index,
+                        "row_label": row_label,
+                        "column_label": column_label,
+                        "extracted_value": value,
+                        "confidence": "table_extraction",
+                    }
+                )
+
+    return tables, evidence
+
+
+def parse_pdf_filing(
+    pdf_path: Path | str,
+    backend_loader: Callable[[], object | None] | None = None,
+) -> dict:
+    """
+    Extract deterministic page text, detected tables, and evidence from a PDF filing.
+    """
+    source_path = Path(pdf_path)
+    if not source_path.exists():
+        return _empty_parse_error("FILE_NOT_FOUND", f"PDF not found: {source_path}", source_path)
+
+    loader = backend_loader or _load_pdf_backend
+    backend = loader()
+    if backend is None:
+        return _empty_parse_error(
+            "PDF_BACKEND_MISSING",
+            PDF_BACKEND_INSTALL_HINT,
+            source_path,
+            warnings=["PDF text extraction requires PyMuPDF."],
+        )
+
+    pages: list[dict] = []
+    evidence: list[dict] = []
+    tables: list[dict] = []
+    warnings: list[str] = []
+
+    try:
+        with backend.open(source_path) as document:
+            for page_index, page in enumerate(document, start=1):
+                text = str(page.get_text("text") or "").strip()
+                pages.append(
+                    {
+                        "page_number": page_index,
+                        "char_count": len(text),
+                        "text": text,
+                    }
+                )
+                if text:
+                    evidence.append(
+                        {
+                            "source_type": "pdf_page",
+                            "page_number": page_index,
+                            "text_excerpt": text[:500],
+                            "confidence": "text_extraction",
+                        }
+                    )
+                page_tables, page_table_evidence = _extract_page_tables(page, page_index)
+                tables.extend(page_tables)
+                evidence.extend(page_table_evidence)
+            page_count = len(document)
+    except Exception as exc:
+        return _empty_parse_error("PDF_PARSE_FAILED", str(exc), source_path)
+
+    return {
+        "status": "ok",
+        "error": None,
+        "document_type": "pdf",
+        "source_path": str(source_path),
+        "page_count": page_count,
+        "pages": pages,
+        "tables": tables,
+        "evidence": evidence,
+        "warnings": warnings,
+        "parsed_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+def parse_registered_filing(
+    manifest_path: Path | str,
+    parser: Callable[[Path], dict] | None = None,
+) -> dict:
+    """
+    Parse a previously ingested filing manifest and write parsed/filing_parse.json.
+    """
+    manifest_file = Path(manifest_path)
+    try:
+        manifest = json.loads(manifest_file.read_text())
+    except FileNotFoundError:
+        return {
+            "status": "error",
+            "error_code": "MANIFEST_NOT_FOUND",
+            "error": f"Manifest not found: {manifest_file}",
+            "manifest_path": str(manifest_file),
+        }
+    except json.JSONDecodeError as exc:
+        return {
+            "status": "error",
+            "error_code": "MANIFEST_INVALID_JSON",
+            "error": str(exc),
+            "manifest_path": str(manifest_file),
+        }
+
+    if manifest.get("status") != "ok":
+        return {
+            "status": "error",
+            "error_code": "MANIFEST_NOT_READY",
+            "error": "Cannot parse a failed or incomplete manifest.",
+            "manifest_path": str(manifest_file),
+        }
+
+    document_type = manifest.get("document_type")
+    if document_type != "pdf":
+        return {
+            "status": "error",
+            "error_code": "UNSUPPORTED_DOCUMENT_TYPE",
+            "error": f"Parser currently supports pdf filings only, got: {document_type}",
+            "manifest_path": str(manifest_file),
+        }
+
+    local_path = Path(str(manifest.get("local_path", "")))
+    parse = parser or parse_pdf_filing
+    parsed = parse(local_path)
+    parsed_path = manifest_file.parent / "parsed" / "filing_parse.json"
+    parsed_path.parent.mkdir(parents=True, exist_ok=True)
+    parsed_with_registry = {
+        **parsed,
+        "manifest_path": str(manifest_file),
+        "parsed_path": str(parsed_path),
+        "symbol": manifest.get("symbol"),
+        "period": manifest.get("period"),
+        "source_url": manifest.get("source_url"),
+    }
+    parsed_path.write_text(json.dumps(parsed_with_registry, indent=2, sort_keys=True) + "\n")
+    return parsed_with_registry
+
+
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Agent Adda financial filing ingestion")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -207,6 +423,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
     ingest.add_argument("--period", default=None)
     ingest.add_argument("--root-dir", default=str(DEFAULT_ROOT))
     ingest.add_argument("--force", action="store_true")
+    parse = sub.add_parser("parse", help="Parse a registered filing manifest")
+    parse.add_argument("manifest_path")
     return parser
 
 
@@ -221,6 +439,10 @@ def main(argv: list[str] | None = None) -> int:
             root_dir=Path(args.root_dir),
             force=args.force,
         )
+        print(json.dumps(result, indent=2, sort_keys=True))
+        return 0 if result.get("status") == "ok" else 1
+    if args.command == "parse":
+        result = parse_registered_filing(Path(args.manifest_path))
         print(json.dumps(result, indent=2, sort_keys=True))
         return 0 if result.get("status") == "ok" else 1
     parser.error(f"Unsupported command: {args.command}")

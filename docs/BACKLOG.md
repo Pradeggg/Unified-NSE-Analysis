@@ -208,7 +208,7 @@ Every external and internal data source the platform uses or will use. Items mar
 | F1 Filing Registry + Direct Link Ingestion | ✅ DONE | Codex | `financial_filing_agent.py`; direct URL ingestion, document type detection, manifest, idempotency, Blue Star PDF smoke tested |
 | F2 NSE/BSE Filing Discovery | 🔜 READY | — | Auto-discover latest financial-results filings by symbol/quarter; prefer Integrated Filing XBRL/iXBRL |
 | F3 XBRL/iXBRL Parser + Canonical Facts | 🔜 READY | — | Parse structured tags into canonical financial facts with contexts/units |
-| F4 Multi-Page PDF Extractor + Evidence Map | 🔜 READY | — | Extract page text/tables with page/table evidence trail |
+| F4 Multi-Page PDF Extractor + Evidence Map | ✅ DONE | Codex | PyMuPDF page text + detected table extraction with page/table/cell evidence trail; Blue Star PDF parsed |
 | F5 Reconciliation + Verification Agent | 🔜 READY | — | Reconcile XBRL facts against PDF tables; mark verified/partial/conflict |
 | F6 LLM-Based Filing Analysis Agents | 🔜 READY | — | Numbers, balance sheet, cash flow, segment, risk, narrative agents over canonical evidence |
 | F7 HTML + Markdown Filing Report Generator | 🔜 READY | — | Self-contained reports with evidence-backed metrics and disclaimer |
@@ -2267,7 +2267,7 @@ def parse_xbrl_filing(path: str) -> dict:
 - Missing facts are `None` with warnings, never hallucinated.
 
 #### F4 — Multi-Page PDF Extractor + Evidence Map
-**Size:** L | **Priority:** High | **Status:** 🔜 READY
+**Size:** L | **Priority:** High | **Status:** ✅ DONE
 
 **What to build:**
 ```python
@@ -2291,6 +2291,11 @@ def parse_pdf_filing(path: str) -> dict:
 - Tables are extracted into normalized row/column records.
 - Page/table references are available to the final report.
 - If PDF parser dependency is missing, tool returns actionable install guidance.
+
+**Implementation note (2026-05-07):**
+- `financial_filing_agent.py parse <manifest>` writes `parsed/filing_parse.json`.
+- PyMuPDF is used for page text and detected tables; dependency is listed in `requirements.txt`.
+- Blue Star FY26 Q4 filing smoke parse produced 23 pages, 12 detected tables, and 749 evidence items.
 
 #### F5 — Reconciliation + Verification Agent
 **Size:** M | **Priority:** Critical | **Status:** 🔜 READY
