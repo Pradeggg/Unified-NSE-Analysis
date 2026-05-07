@@ -8,6 +8,7 @@ from global_market_intelligence import (
     DEFAULT_US_UNIVERSE,
     GlobalMarketDataLoader,
     build_risk_dashboard,
+    build_india_readthrough,
     compute_technical_metrics,
     normalize_ohlcv,
     rank_sector_rotation,
@@ -227,6 +228,44 @@ class GlobalMarketIntelligenceTests(unittest.TestCase):
 
         self.assertEqual(build_risk_dashboard(risk_on_metrics)["regime"], "risk-on")
         self.assertEqual(build_risk_dashboard(risk_off_metrics)["regime"], "risk-off")
+
+    def test_build_india_readthrough_maps_tech_and_semis_to_it_positive(self):
+        metrics = pd.DataFrame(
+            [
+                {"SYMBOL": "QQQ", "RET_1M": 8.0, "RS_SPY_3M": 5.0},
+                {"SYMBOL": "SMH", "RET_1M": 14.0, "RS_SPY_3M": 12.0},
+                {"SYMBOL": "SPY", "RET_1M": 3.0, "RS_SPY_3M": 0.0},
+            ]
+        )
+
+        result = build_india_readthrough(metrics)
+        sectors = {item["nse_sector"] for item in result["india_sector_implications"]}
+
+        self.assertEqual(result["global_regime"], "risk-on")
+        self.assertIn("IT & Technology", sectors)
+        self.assertIn("Electronics / EMS", sectors)
+        self.assertTrue(any("QQQ" in signal["symbols"] for signal in result["source_signals"]))
+
+    def test_build_india_readthrough_maps_crude_and_risk_off(self):
+        metrics = pd.DataFrame(
+            [
+                {"SYMBOL": "USO", "RET_1M": 9.0, "RS_SPY_3M": 6.0},
+                {"SYMBOL": "QQQ", "RET_1M": -6.0, "RS_SPY_3M": -4.0},
+                {"SYMBOL": "SPY", "RET_1M": -2.0, "RS_SPY_3M": 0.0},
+                {"SYMBOL": "IWM", "RET_1M": -8.0, "RS_SPY_3M": -6.0},
+                {"SYMBOL": "HYG", "RET_1M": -3.0, "RS_SPY_3M": -2.0},
+                {"SYMBOL": "LQD", "RET_1M": 1.0, "RS_SPY_3M": 1.0},
+                {"SYMBOL": "^VIX", "RET_1M": 20.0, "RS_SPY_3M": 15.0},
+            ]
+        )
+
+        result = build_india_readthrough(metrics)
+        implications = result["india_sector_implications"]
+
+        self.assertEqual(result["global_regime"], "risk-off")
+        self.assertTrue(any(item["stance"] == "positive" and item["nse_sector"] == "Energy - Oil & Gas" for item in implications))
+        self.assertTrue(any(item["stance"] == "negative" and item["nse_sector"] == "Aviation / Paints / Tyres" for item in implications))
+        self.assertTrue(any(item["stance"] == "negative" and item["nse_sector"] == "High Beta / Smallcaps" for item in implications))
 
 
 if __name__ == "__main__":

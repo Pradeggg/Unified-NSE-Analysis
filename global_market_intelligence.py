@@ -556,6 +556,159 @@ def build_risk_dashboard(metrics: pd.DataFrame) -> dict:
     }
 
 
+def _has_positive_momentum(metrics: pd.DataFrame, symbol: str, ret_threshold: float = 5.0, rs_threshold: float = 3.0) -> bool:
+    ret = _metric_value(metrics, symbol, "RET_1M")
+    rs = _metric_value(metrics, symbol, "RS_SPY_3M")
+    return (ret is not None and ret >= ret_threshold) or (rs is not None and rs >= rs_threshold)
+
+
+def _has_negative_momentum(metrics: pd.DataFrame, symbol: str, ret_threshold: float = -5.0, rs_threshold: float = -3.0) -> bool:
+    ret = _metric_value(metrics, symbol, "RET_1M")
+    rs = _metric_value(metrics, symbol, "RS_SPY_3M")
+    return (ret is not None and ret <= ret_threshold) or (rs is not None and rs <= rs_threshold)
+
+
+def _readthrough_item(
+    nse_sector: str,
+    stance: str,
+    thesis: str,
+    symbols: list[str],
+    confidence: str = "medium",
+) -> dict:
+    return {
+        "nse_sector": nse_sector,
+        "stance": stance,
+        "thesis": thesis,
+        "symbols": symbols,
+        "confidence": confidence,
+    }
+
+
+def build_india_readthrough(metrics: pd.DataFrame) -> dict:
+    """Map US/global signals to deterministic NSE sector implications."""
+    risk = build_risk_dashboard(metrics)
+    global_regime = risk["regime"]
+    implications: list[dict] = []
+    source_signals: list[dict] = []
+
+    if _has_positive_momentum(metrics, "QQQ") or _has_positive_momentum(metrics, "^IXIC"):
+        if global_regime == "neutral":
+            global_regime = "risk-on"
+        implications.append(
+            _readthrough_item(
+                "IT & Technology",
+                "positive",
+                "US growth and Nasdaq leadership supports Indian IT, digital, and cloud sentiment.",
+                ["QQQ", "^IXIC"],
+                "medium",
+            )
+        )
+        source_signals.append({"theme": "nasdaq_growth", "symbols": ["QQQ", "^IXIC"], "direction": "positive"})
+
+    if _has_positive_momentum(metrics, "SMH") or _has_positive_momentum(metrics, "SOXX"):
+        if global_regime == "neutral":
+            global_regime = "risk-on"
+        implications.append(
+            _readthrough_item(
+                "Electronics / EMS",
+                "positive",
+                "US semiconductor leadership supports EMS, electronics, and semiconductor supply-chain read-through.",
+                ["SMH", "SOXX"],
+                "high",
+            )
+        )
+        source_signals.append({"theme": "semiconductors", "symbols": ["SMH", "SOXX"], "direction": "positive"})
+
+    if _has_positive_momentum(metrics, "USO", ret_threshold=6.0, rs_threshold=4.0):
+        implications.append(
+            _readthrough_item(
+                "Energy - Oil & Gas",
+                "positive",
+                "Crude strength can support upstream energy and oil-linked earnings sensitivity.",
+                ["USO"],
+                "medium",
+            )
+        )
+        implications.append(
+            _readthrough_item(
+                "Aviation / Paints / Tyres",
+                "negative",
+                "Higher crude can pressure fuel and input-cost sensitive sectors.",
+                ["USO"],
+                "medium",
+            )
+        )
+        source_signals.append({"theme": "crude", "symbols": ["USO"], "direction": "mixed"})
+
+    if _has_positive_momentum(metrics, "UUP", ret_threshold=3.0, rs_threshold=2.0):
+        implications.append(
+            _readthrough_item(
+                "EM Flows / FII Sensitive",
+                "negative",
+                "US dollar strength can pressure emerging-market flows and valuation appetite.",
+                ["UUP"],
+                "medium",
+            )
+        )
+        source_signals.append({"theme": "dollar_strength", "symbols": ["UUP"], "direction": "negative"})
+
+    if _has_negative_momentum(metrics, "IWM", ret_threshold=-5.0, rs_threshold=-4.0) or risk["regime"] == "risk-off":
+        global_regime = "risk-off"
+        implications.append(
+            _readthrough_item(
+                "High Beta / Smallcaps",
+                "negative",
+                "Weak US small-cap/risk appetite warns against high-beta and liquidity-sensitive Indian pockets.",
+                ["IWM", "HYG", "LQD", "^VIX"],
+                "high" if risk["regime"] == "risk-off" else "medium",
+            )
+        )
+        source_signals.append({"theme": "risk_appetite", "symbols": ["IWM", "HYG", "LQD", "^VIX"], "direction": risk["regime"]})
+
+    if _has_positive_momentum(metrics, "XLF", ret_threshold=4.0, rs_threshold=3.0):
+        implications.append(
+            _readthrough_item(
+                "Private Banks / NBFC",
+                "watch",
+                "US financial strength supports global bank risk appetite, but India mapping should be confirmed with domestic credit data.",
+                ["XLF"],
+                "low",
+            )
+        )
+        source_signals.append({"theme": "financials", "symbols": ["XLF"], "direction": "watch"})
+
+    if _has_positive_momentum(metrics, "GLD", ret_threshold=4.0, rs_threshold=3.0) and risk["regime"] != "risk-on":
+        implications.append(
+            _readthrough_item(
+                "Defensives / Gold Sensitives",
+                "watch",
+                "Gold strength outside risk-on regimes points to defensive positioning.",
+                ["GLD"],
+                "medium",
+            )
+        )
+        source_signals.append({"theme": "gold_defensive", "symbols": ["GLD"], "direction": "watch"})
+
+    if not implications:
+        implications.append(
+            _readthrough_item(
+                "Broad Market",
+                "watch",
+                "No strong US/global read-through signal crossed rule thresholds.",
+                [],
+                "low",
+            )
+        )
+
+    return {
+        "global_regime": global_regime,
+        "risk_score": risk["score"],
+        "india_sector_implications": implications,
+        "source_signals": source_signals,
+        "risk_signals": risk["signals"],
+    }
+
+
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Agent Adda US/global market intelligence")
     parser.add_argument("--root-dir", default=str(DEFAULT_ROOT))

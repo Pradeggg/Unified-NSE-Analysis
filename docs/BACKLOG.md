@@ -231,7 +231,7 @@ Every external and internal data source the platform uses or will use. Items mar
 | G1 US Universe + yfinance Cache | ✅ DONE | Codex | `global_market_intelligence.py`; curated US/global universe, yfinance-compatible OHLCV normalization, daily cache, latest snapshot |
 | G2 US Technical Engine + RS | ✅ DONE | Codex | `compute_technical_metrics()`; returns, SMA, RSI, MACD, 52W distance, support/resistance, VCP, Stage 2, RS vs SPY/QQQ |
 | G3 US Screeners | ✅ DONE | Codex | Stage 2 leaders, VCP setups, sector ETF rotation, risk dashboard built on `compute_technical_metrics()` |
-| G4 India Read-Through Engine | 🔜 READY | — | Map Nasdaq, semis, crude, DXY, yields, VIX, credit, Russell signals to NSE sector implications |
+| G4 India Read-Through Engine | ✅ DONE | Codex | `build_india_readthrough()` maps Nasdaq, semis, crude, DXY, VIX/credit/Russell and financials/gold signals to NSE sector implications |
 | G5 US/Global HTML Report | 🔜 READY | — | Standalone report plus latest pointer with summary, screeners, read-through, freshness, disclaimer |
 | G6 Terminal + NLP Integration | 🔜 READY | — | `/us`, `/us indices`, `/us sectors`, `/us stage2`, `/us vcp`, `/us stock`, `/global readthrough` |
 | G7 Sector Report Global Tab | 🔜 READY | — | Embed US/global context tab/section in `sector_rotation_report.py` without breaking NSE report generation |
@@ -2524,7 +2524,7 @@ def render_filing_report(analysis: dict, output_format: str = "html") -> Path:
 - Tests cover ranking order, VCP filtering, sector ETF filtering, and risk-on/risk-off classification.
 
 #### G4 — India Read-Through Engine
-**Size:** M | **Priority:** High | **Status:** 🔜 READY
+**Size:** M | **Priority:** High | **Status:** ✅ DONE
 
 **What to build:**
 - Translate US/global signals into NSE sector implications.
@@ -2533,6 +2533,10 @@ def render_filing_report(analysis: dict, output_format: str = "html") -> Path:
 **Acceptance criteria:**
 - Each read-through item includes source symbols, metric triggers, affected NSE sectors, and confidence.
 - Rules are deterministic and testable before LLM narrative generation.
+
+**Implementation note (2026-05-08):**
+- Added `build_india_readthrough()` with deterministic sector implications and source-signal trails.
+- Tests cover positive Nasdaq/semiconductor read-through and crude/risk-off negative implications.
 
 #### G5 — US/Global HTML Report
 **Size:** M | **Priority:** High | **Status:** 🔜 READY
