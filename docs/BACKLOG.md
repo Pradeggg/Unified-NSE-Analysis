@@ -132,6 +132,15 @@ Every external and internal data source the platform uses or will use. Items mar
 | Screener.in Cash Flow Statement | Same page → `#cash-flow` table | On-demand (cache 30d) | `data/_sector_rotation_fund_cache.csv` | D2: Earnings quality (CFO data) |
 | Screener.in 5-Year P&L | Same page → `#profit-loss` (5-year trend) | On-demand (cache 30d) | `data/_sector_rotation_fund_cache.csv` | D1: DuPont, A7: Quality compounder |
 
+#### O. US / Global Market Intelligence Data (NEW — Phase 4 Branch G)
+
+| Source | URL / Method | Frequency | Local Cache | Used By |
+|---|---|---|---|---|
+| Yahoo Finance US Indices | `yfinance` for `^GSPC`, `^IXIC`, `^NDX`, `^DJI`, `^RUT`, `^VIX` | Daily | `data/global_market/prices.csv` | G1-G7: US index technicals and risk regime |
+| Yahoo Finance US ETFs | `yfinance` for SPY/QQQ/DIA/IWM, sector ETFs, SMH/SOXX, TLT/HYG/LQD, GLD/USO/UUP | Daily | `data/global_market/prices.csv` | G2-G5: ETF rotation, risk-on/off, India read-through |
+| Yahoo Finance US Stocks | `yfinance` for starter liquid universe: MAG7, semis, financials, energy, defense, consumer, cloud/software | Daily | `data/global_market/prices.csv` | G2-G6: US screeners, stock deep dives, terminal commands |
+| Global / US Universe Config | Local curated symbol registry | On change | `data/global_market/universe.json` | G1: reproducible universe metadata and India read-through tags |
+
 #### Access Notes
 
 1. **NSE APIs require browser-like headers**: `User-Agent: Mozilla/5.0`, `Referer: https://www.nseindia.com`. Always use `curl` subprocess or `requests` with timeout + retry (macOS hang issue).
@@ -217,6 +226,16 @@ Every external and internal data source the platform uses or will use. Items mar
 | F7 HTML + Markdown Filing Report Generator | 🔜 READY | — | Self-contained reports with evidence-backed metrics and disclaimer |
 | F8 Terminal / Agent Adda Integration | 🔜 READY | — | `/filing` commands and NLP routes for direct-link and symbol-driven analysis |
 | F9 Batch Earnings Intelligence | 💤 DEFERRED | — | Portfolio/watchlist/Nifty500 batch filing analysis after F2-F7 |
+| **Phase 4 — Branch G: US / Global Market Intelligence** | | | |
+| G0 US/Global Market Intelligence Design | ✅ DONE | Codex | Design spec created for phased US indices, ETFs, stocks, screeners, India read-through, terminal/report integration |
+| G1 US Universe + yfinance Cache | 🔜 READY | — | Curated US/global universe, daily OHLCV fetch, cache freshness, normalized price store |
+| G2 US Technical Engine + RS | 🔜 READY | — | SMA, RSI, MACD, 52W distance, support/resistance, VCP, Stage 2, RS vs SPY/QQQ |
+| G3 US Screeners | 🔜 READY | — | Stage 2 leaders, VCP setups, 52W high momentum, sector ETF rotation, risk dashboard |
+| G4 India Read-Through Engine | 🔜 READY | — | Map Nasdaq, semis, crude, DXY, yields, VIX, credit, Russell signals to NSE sector implications |
+| G5 US/Global HTML Report | 🔜 READY | — | Standalone report plus latest pointer with summary, screeners, read-through, freshness, disclaimer |
+| G6 Terminal + NLP Integration | 🔜 READY | — | `/us`, `/us indices`, `/us sectors`, `/us stage2`, `/us vcp`, `/us stock`, `/global readthrough` |
+| G7 Sector Report Global Tab | 🔜 READY | — | Embed US/global context tab/section in `sector_rotation_report.py` without breaking NSE report generation |
+| G8 Intraday US Extension | 💤 DEFERRED | — | Add US intraday scanning after daily US/global layer is stable |
 
 ---
 
@@ -2435,6 +2454,136 @@ def render_filing_report(analysis: dict, output_format: str = "html") -> Path:
 - Batch mode can skip companies with missing filings and continue.
 - Dashboard highlights best/worst filings with source trails.
 - Results can feed sector rotation candidate narratives later.
+
+### Phase 4 — Branch G: US / Global Market Intelligence
+
+#### G0 — US/Global Market Intelligence Design
+**Size:** S | **Priority:** High | **Status:** ✅ DONE
+
+**What exists:**
+- `docs/superpowers/specs/2026-05-08-us-global-market-intelligence-design.md`
+
+**Acceptance criteria:**
+- Design defines phased US/global architecture, data sources, terminal commands, reports, testing, and India read-through.
+
+#### G1 — US Universe + yfinance Cache
+**Size:** M | **Priority:** High | **Status:** 🔜 READY
+
+**What to build:**
+- Create curated US/global universe config covering indices, ETFs, and starter stocks.
+- Fetch daily OHLCV through `yfinance`.
+- Cache normalized data under `data/global_market/`.
+- Support `--force`, cache TTL, missing ticker warnings, and smoke universe.
+
+**Files to create/modify:**
+- `global_market_intelligence.py`
+- `tests/test_global_market_intelligence.py`
+- `data/global_market/` runtime outputs
+
+**Acceptance criteria:**
+- `SPY`, `QQQ`, sector ETFs, and starter stocks can be fetched and cached.
+- Cache reload works without network.
+- Missing tickers do not fail the full pipeline.
+
+#### G2 — US Technical Engine + RS
+**Size:** M | **Priority:** High | **Status:** 🔜 READY
+
+**What to build:**
+- Compute returns, SMA 20/50/200, RSI, MACD, 52W high distance, support/resistance, VCP, Stage 2, and RS vs `SPY`/`QQQ`.
+
+**Acceptance criteria:**
+- Fixture data produces deterministic indicator outputs.
+- RS ranking works when benchmark data exists and degrades clearly when missing.
+- Stage/VCP outputs are compatible with existing NSE terminology.
+
+#### G3 — US Screeners
+**Size:** M | **Priority:** High | **Status:** 🔜 READY
+
+**What to build:**
+- US Stage 2 leaders.
+- US VCP setups.
+- 52-week high momentum.
+- Sector ETF rotation.
+- Risk-on/risk-off dashboard using QQQ/SPY, IWM/SPY, HYG/LQD, TLT, VIX, UUP, GLD, USO.
+
+**Acceptance criteria:**
+- Screeners return ranked tables with evidence columns.
+- Empty/unavailable data yields explicit warnings, not crashes.
+
+#### G4 — India Read-Through Engine
+**Size:** M | **Priority:** High | **Status:** 🔜 READY
+
+**What to build:**
+- Translate US/global signals into NSE sector implications.
+- Map Nasdaq/semis, crude, DXY, yields, VIX, credit, Russell, financials, and gold signals to positive/negative/watch India read-through.
+
+**Acceptance criteria:**
+- Each read-through item includes source symbols, metric triggers, affected NSE sectors, and confidence.
+- Rules are deterministic and testable before LLM narrative generation.
+
+#### G5 — US/Global HTML Report
+**Size:** M | **Priority:** High | **Status:** 🔜 READY
+
+**What to build:**
+- Standalone HTML report:
+  - global summary
+  - index tape
+  - sector ETF rotation
+  - US screeners
+  - India read-through
+  - data freshness
+  - disclaimer
+
+**Files to create/modify:**
+- `global_market_intelligence.py`
+- `reports/global/us_market_report_YYYYMMDD.html`
+- `reports/latest/us_market_report.html`
+
+**Acceptance criteria:**
+- Report opens locally and contains all core sections.
+- Report remains useful when a subset of data is unavailable.
+
+#### G6 — Terminal + NLP Integration
+**Size:** M | **Priority:** High | **Status:** 🔜 READY
+
+**What to build:**
+- Add terminal commands:
+  - `/us`
+  - `/us indices`
+  - `/us sectors`
+  - `/us stage2`
+  - `/us vcp`
+  - `/us stock NVDA`
+  - `/global readthrough`
+- Route NLP queries about US market, Nasdaq, NVDA, US sector rotation, and India read-through.
+
+**Files to create/modify:**
+- `nse_agent.py`
+- `tests/test_nse_agent_global_us.py`
+
+**Acceptance criteria:**
+- Existing `/global` behavior is preserved and enriched.
+- `/us` commands return concise terminal summaries and report paths.
+
+#### G7 — Sector Report Global Tab
+**Size:** M | **Priority:** Medium | **Status:** 🔜 READY
+
+**What to build:**
+- Embed US/global context in `sector_rotation_report.py` as a tab or section.
+- Show US risk regime, ETF rotation, and India read-through near the broader market narrative.
+
+**Acceptance criteria:**
+- Sector rotation report still generates if US/global module fails.
+- Global tab includes freshness and source warnings.
+
+#### G8 — Intraday US Extension
+**Size:** L | **Priority:** Medium | **Status:** 💤 DEFERRED
+
+**What to build later:**
+- US intraday OHLCV, intraday screeners, and live terminal views.
+
+**Deferred until:**
+- Daily US/global layer is stable and useful.
 
 ---
 
