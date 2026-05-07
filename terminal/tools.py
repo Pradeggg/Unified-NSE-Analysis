@@ -672,27 +672,28 @@ def get_global_market_assessment() -> dict:
     if len(df) < 2:
         return {"error": "Global indices CSV needs at least two dated rows"}
 
-    latest = df.iloc[-1]
-    prev_idx = len(df) - 2
+    asset_cols = [c for c in df.columns if c != "Date"]
+    # Convert all asset columns to numeric once for efficiency
+    num_df = df[asset_cols].apply(pd.to_numeric, errors="coerce")
+
     moves: dict[str, dict[str, Any]] = {}
-    for asset in [c for c in df.columns if c != "Date"]:
-        latest_val = pd.to_numeric(pd.Series([latest.get(asset)]), errors="coerce").iloc[0]
-        if pd.isna(latest_val):
+    for asset in asset_cols:
+        col = num_df[asset].dropna()
+        if len(col) < 2:
+            continue
+        # Use the most-recent valid row for this asset (not necessarily df.iloc[-1])
+        latest_idx = col.index[-1]
+        prev_idx   = col.index[-2]
+        latest_val = col.iloc[-1]
+        prev_val   = col.iloc[-2]
+        if prev_val == 0:
             continue
 
-        prev_val = None
-        for i in range(prev_idx, -1, -1):
-            candidate = pd.to_numeric(pd.Series([df.iloc[i].get(asset)]), errors="coerce").iloc[0]
-            if pd.notna(candidate) and candidate != 0:
-                prev_val = float(candidate)
-                break
-        if prev_val is None:
-            continue
-
-        pct_change = round((float(latest_val) / prev_val - 1) * 100, 2)
+        pct_change = round((latest_val / prev_val - 1) * 100, 2)
         moves[asset] = {
-            "price": round(float(latest_val), 2),
+            "price":      round(float(latest_val), 2),
             "pct_change": pct_change,
+            "as_of":      str(df.loc[latest_idx, "Date"].date()),
         }
 
     def _avg(names: list[str]) -> float | None:
@@ -785,9 +786,14 @@ def get_global_market_assessment() -> dict:
             for _, row in corr[keep].head(12).iterrows():
                 correlations.append(row.where(pd.notna(row), None).to_dict())
 
+    # Determine the "as_of" date: latest date that has any data
+    last_dates = {asset: m["as_of"] for asset, m in moves.items()}
+    as_of = max(last_dates.values()) if last_dates else str(df.iloc[-1]["Date"].date())
+
     return {
         "risk_regime": risk_regime,
-        "as_of": str(latest["Date"].date()),
+        "as_of": as_of,
+        "asset_dates": last_dates,   # per-asset last-available date (useful when markets are closed)
         "regions": regions,
         "moves": moves,
         "india_readthrough": india_readthrough,
