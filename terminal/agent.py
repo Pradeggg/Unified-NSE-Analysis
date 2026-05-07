@@ -139,7 +139,7 @@ You have access to these data tools (call them as needed):
                                         news. Returns ratios, peers, filings, news, deep-links.
 • search_latest_catalysts(symbol)     → DuckDuckGo general web search for recent news
 
-[Deep Search Engine — 9 distinct parallel verticals]
+[Deep Search Engine — 11 distinct parallel verticals]
 • search_nse_announcements(symbol)    → NSE live API: corporate announcements, filings, disclosures
 • search_corporate_actions(symbol)    → NSE live API: dividends, splits, bonuses, rights, AGMs
 • search_insider_trades(symbol)       → NSE PIT disclosures: promoter/director/insider buy-sell
@@ -149,9 +149,22 @@ You have access to these data tools (call them as needed):
 • search_concall_transcripts(symbol)  → Concall transcripts, investor day PPTs, mgmt commentary
 • search_sector_news(symbol, sector?) → 6-portal news pulse: ET, BS, Mint, MC, FE, HBL
 • search_social_buzz(symbol)          → Retail sentiment: Reddit, Valuepickr, Traderji, Tijori
+• search_broker_research(symbol)      → Broker house reports, institutional targets, consensus (Trendlyne/MC/ET/Kotak/Motilal)
+• search_mf_holdings(symbol)          → MF holdings, FII/DII data, shareholding pattern (screener.in + Trendlyne/Tijori)
 • deep_search(symbol, verticals?,     → Orchestrator: runs all/selected verticals in parallel.
     context?)                           Auto-selects verticals from context (e.g. 'results',
-                                        'dividend', 'insider', 'analyst target', 'social buzz').
+                                        'dividend', 'insider', 'analyst target', 'broker', 'mf').
+
+[D5 Forensic Accounting Suite]
+• run_forensic_analysis(symbol)          → Beneish M-score (manipulation risk), Piotroski F-score
+                                           (financial health 0-9), Altman Z'-score (distress risk)
+• screen_forensic_watchlist(symbols)     → Forensic screening across portfolio/watchlist
+
+[E4 Event-Driven Alert Engine]
+• get_upcoming_events(symbols?, index?,  → Upcoming dividends, splits, bonuses, results, AGMs,
+    days_ahead?, event_types?)             board meetings. Grouped by date + type with countdown.
+• get_event_calendar_summary(index?,     → Quick event overview for an index in next N days.
+    days_ahead?)
 
 • get_portfolio_exposure(sector?)     → Portfolio sector distribution and holdings
 • find_portfolio_overlap(screener)    → Holdings that match a screener
@@ -230,9 +243,14 @@ You have access to these data tools (call them as needed):
 • "dividend / ex-date / bonus / stock split / rights issue / corporate action" → call search_corporate_actions(symbol)
 • "insider trading / promoter buying / promoter selling / insider buy / insider sell / PIT disclosure" → call search_insider_trades(symbol)
 • "shareholding / promoter holding / FII holding / DII holding / pledged shares / pledge" → call search_shareholding_analysis(symbol)
-• "analyst target / analyst rating / buy recommendation / sell recommendation / hold / brokerage view / consensus" → call search_analyst_coverage(symbol)
+• "analyst target / analyst rating / buy recommendation / sell recommendation / hold / brokerage view / consensus" → call search_analyst_coverage(symbol) + search_broker_research(symbol)
+• "broker report / broker research / Motilal / Kotak / ICICI Securities / HDFC Securities / Edelweiss / Axis Capital / institutional report" → call search_broker_research(symbol)
+• "mutual fund holding / MF holding / FII DII activity / institutional ownership / AMFI / NAV" → call search_mf_holdings(symbol)
 • "sector news / industry news" → call search_sector_news(symbol)
 • "social sentiment / retail investors / what investors say / community view / Reddit / Valuepickr / forum" → call search_social_buzz(symbol)
+• "forensic analysis / earnings manipulation / Beneish / Piotroski / Altman / earnings quality / accounting red flags / financial health score / manipulation risk / balance sheet quality" → call run_forensic_analysis(symbol)
+• "forensic screen / check portfolio for manipulation / financial health of my portfolio / forensic watchlist" → call screen_forensic_watchlist(symbols)
+• "upcoming events / corporate action calendar / event calendar / upcoming dividends / upcoming results / upcoming AGM / ex-date calendar / what events this week" → call get_event_calendar_summary() or get_upcoming_events()
 
 
 Before answering, THINK STEP BY STEP:

@@ -782,19 +782,236 @@ def search_social_buzz(symbol: str, max_results: int = 5) -> dict:
 
 
 # ═════════════════════════════════════════════════════════════════════════════
+# Vertical 10 — Broker & Institutional Research
+# ═════════════════════════════════════════════════════════════════════════════
+
+def search_broker_research(symbol: str, max_per_source: int = 5) -> dict:
+    """
+    Search for broker house research reports, institutional ratings, and price targets.
+
+    Sources:
+      • Trendlyne analyst view & consensus estimates (via DDG)
+      • Moneycontrol broker radar & analyst reports (via DDG)
+      • Economic Times Markets analyst reports (via DDG)
+      • Finology broker research & buy/sell ratings (via DDG)
+      • Screener.in analyst notes section (via DDG)
+      • NSE research reports (via DDG)
+      • Kotak / ICICI / HDFC / Edelweiss / Motilal reports (via DDG)
+
+    Returns unified list of broker report links with titles, sources, and URLs.
+    """
+    sym = symbol.upper().strip()
+    company = sym
+    try:
+        from terminal.tools import get_symbol_snapshot
+        info = get_symbol_snapshot(sym)
+        company = info.get("company_name") or sym
+    except Exception:
+        pass
+
+    queries = {
+        "trendlyne_consensus": (
+            f"{sym} site:trendlyne.com analyst price target consensus rating"
+        ),
+        "moneycontrol_analyst": (
+            f"\"{company}\" OR {sym} NSE site:moneycontrol.com broker recommendation target"
+        ),
+        "et_markets_reports": (
+            f"{sym} OR \"{company}\" NSE analyst recommendation target 2025 2026 "
+            f"site:economictimes.indiatimes.com"
+        ),
+        "finology_research": (
+            f"{sym} NSE site:finology.in OR site:finviz.com buy sell recommendation"
+        ),
+        "broker_reports_general": (
+            f"\"{company}\" NSE buy rating target price broker report "
+            f"Motilal OR Kotak OR ICICI OR HDFC OR Edelweiss OR Axis 2025 2026"
+        ),
+        "nse_research": (
+            f"{sym} NSE research report analyst equity 2025 site:nseindia.com OR site:nse500.in"
+        ),
+        "screener_notes": (
+            f"{sym} site:screener.in analyst note price target earnings"
+        ),
+    }
+
+    results: dict[str, list[dict]] = {}
+    all_results: list[dict] = []
+
+    for source, q in queries.items():
+        hits = _ddg(q, max_results=max_per_source)
+        if hits:
+            results[source] = hits
+            for h in hits:
+                h["search_source"] = source
+            all_results.extend(hits)
+
+    # Deduplicate by URL
+    seen_urls: set[str] = set()
+    unique_results: list[dict] = []
+    for item in all_results:
+        url = item.get("url", "")
+        if url and url not in seen_urls:
+            seen_urls.add(url)
+            unique_results.append(item)
+
+    # Extract price targets from titles using regex
+    targets: list[dict] = []
+    target_pattern = re.compile(
+        r"(?:target|TP|price target)[:\s]+(?:Rs?\.?\s*|INR\s*)?([\d,]+)",
+        re.I,
+    )
+    for item in unique_results:
+        m = target_pattern.search(item.get("title", "") + " " + item.get("snippet", ""))
+        if m:
+            targets.append({
+                "source": item.get("search_source", ""),
+                "target": m.group(1).replace(",", ""),
+                "title":  item["title"][:120],
+                "url":    item.get("url", ""),
+            })
+
+    return {
+        "symbol":         sym,
+        "company":        company,
+        "by_source":      results,
+        "all_results":    unique_results[:25],
+        "price_targets":  targets[:8],
+        "total_results":  len(unique_results),
+        "total_targets":  len(targets),
+        "source":         "Trendlyne, Moneycontrol, ET, Finology, Broker PDFs (DuckDuckGo)",
+        "disclaimer":     "Broker targets are forward-looking estimates — verify before trading",
+    }
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Vertical 11 — Mutual Fund & FII Holdings
+# ═════════════════════════════════════════════════════════════════════════════
+
+def search_mf_holdings(symbol: str, max_results: int = 8) -> dict:
+    """
+    Search for mutual fund and FII/DII institutional holding data.
+
+    Sources:
+      • Trendlyne MF holdings & FII activity (via DDG)
+      • Moneycontrol mutual funds holding this stock (via DDG)
+      • Screener.in shareholding section (direct scrape for promoter/FII/DII trend)
+      • Tijori Finance institutional holdings (via DDG)
+      • Value Research MF portfolio overlap (via DDG)
+
+    Returns MF scheme names, holding percentages, recent changes.
+    """
+    sym = symbol.upper().strip()
+    company = sym
+    try:
+        from terminal.tools import get_symbol_snapshot
+        info = get_symbol_snapshot(sym)
+        company = info.get("company_name") or sym
+    except Exception:
+        pass
+
+    queries = {
+        "trendlyne_mf": (
+            f"{sym} site:trendlyne.com mutual fund holdings FII DII institutional"
+        ),
+        "moneycontrol_mf": (
+            f"\"{company}\" OR {sym} NSE mutual fund holding bought sold "
+            f"site:moneycontrol.com"
+        ),
+        "screener_shareholding": (
+            f"{sym} shareholding pattern FII DII promoter pledge "
+            f"site:screener.in"
+        ),
+        "tijori_holdings": (
+            f"{sym} site:tijorifinance.com institutional holdings mutual fund"
+        ),
+        "value_research_mf": (
+            f"\"{company}\" OR {sym} NSE mutual fund portfolio holding 2025 "
+            f"site:valueresearchonline.com OR site:advisorkhoj.com"
+        ),
+        "nse_mf_change": (
+            f"{sym} NSE FII DII institutional activity bought sold 2025 2026"
+        ),
+    }
+
+    results: dict[str, list[dict]] = {}
+    all_results: list[dict] = []
+
+    for source, q in queries.items():
+        hits = _ddg(q, max_results=max_results)
+        if hits:
+            results[source] = hits
+            for h in hits:
+                h["search_source"] = source
+            all_results.extend(hits)
+
+    # Deduplicate
+    seen_urls: set[str] = set()
+    unique_results: list[dict] = []
+    for item in all_results:
+        url = item.get("url", "")
+        if url and url not in seen_urls:
+            seen_urls.add(url)
+            unique_results.append(item)
+
+    # Also try screener.in shareholding direct
+    shareholding_data: dict = {}
+    try:
+        import requests as _req
+        from bs4 import BeautifulSoup as _BS
+        url_sc = f"https://www.screener.in/company/{sym}/consolidated/"
+        r = _req.get(url_sc, headers=_HEADERS, timeout=10)
+        if r.ok:
+            soup = _BS(r.text, "lxml")
+            shp_sec = soup.select_one("#shareholding")
+            if shp_sec:
+                tbl_rows = shp_sec.select("table tr")
+                if tbl_rows:
+                    hdr = [th.get_text(strip=True) for th in tbl_rows[0].select("td,th")]
+                    for row in tbl_rows[1:6]:
+                        cells = [td.get_text(strip=True) for td in row.select("td,th")]
+                        if len(cells) >= 2:
+                            label = cells[0].rstrip("+").strip()
+                            shareholding_data[label] = {
+                                "latest":    cells[-1],
+                                "prev":      cells[-2] if len(cells) > 2 else None,
+                                "trend":     cells[1:],
+                                "quarters":  hdr[1:],
+                            }
+    except Exception:
+        pass
+
+    return {
+        "symbol":            sym,
+        "company":           company,
+        "shareholding":      shareholding_data,
+        "by_source":         results,
+        "all_results":       unique_results[:20],
+        "total_results":     len(unique_results),
+        "shareholding_note": (
+            "Direct screener.in shareholding data included where available. "
+            "FII/DII/Promoter quarterly trend shown."
+        ),
+        "source": "Screener.in (direct) + Trendlyne, Moneycontrol, Tijori (DuckDuckGo)",
+    }
+
+
+# ═════════════════════════════════════════════════════════════════════════════
 # Orchestrator — deep_search (runs all verticals in parallel)
 # ═════════════════════════════════════════════════════════════════════════════
 
 _ALL_VERTICALS = {
-    "announcements":   search_nse_announcements,
+    "announcements":    search_nse_announcements,
     "corporate_actions": search_corporate_actions,
-    "insider_trades":  search_insider_trades,
-    "bse_filings":     search_bse_filings,
-    "shareholding":    search_shareholding_analysis,
+    "insider_trades":   search_insider_trades,
+    "bse_filings":      search_bse_filings,
+    "shareholding":     search_shareholding_analysis,
     "analyst_coverage": search_analyst_coverage,
-    "concalls":        search_concall_transcripts,
-    "sector_news":     search_sector_news,
-    "social_buzz":     search_social_buzz,
+    "concalls":         search_concall_transcripts,
+    "sector_news":      search_sector_news,
+    "social_buzz":      search_social_buzz,
+    "broker_research":  search_broker_research,
+    "mf_holdings":      search_mf_holdings,
 }
 
 # Which verticals are always fast (direct API, no web scraping)
@@ -833,19 +1050,21 @@ def deep_search(
     if not verticals:
         ctx = context.lower()
         if any(k in ctx for k in ("result", "quarterly", "earnings", "revenue", "profit")):
-            verticals = ["announcements", "concalls", "analyst_coverage", "sector_news"]
+            verticals = ["announcements", "concalls", "analyst_coverage", "sector_news", "broker_research"]
         elif any(k in ctx for k in ("dividend", "bonus", "split", "rights", "action")):
             verticals = ["corporate_actions", "announcements", "shareholding"]
         elif any(k in ctx for k in ("insider", "promoter", "pledge", "holding")):
-            verticals = ["insider_trades", "shareholding", "bse_filings"]
-        elif any(k in ctx for k in ("analyst", "target", "rating", "recommend")):
-            verticals = ["analyst_coverage", "concalls", "sector_news"]
+            verticals = ["insider_trades", "shareholding", "bse_filings", "mf_holdings"]
+        elif any(k in ctx for k in ("analyst", "target", "rating", "recommend", "broker")):
+            verticals = ["analyst_coverage", "broker_research", "concalls", "sector_news"]
+        elif any(k in ctx for k in ("mf", "mutual fund", "fii", "dii", "institution")):
+            verticals = ["mf_holdings", "shareholding", "insider_trades"]
         elif any(k in ctx for k in ("news", "latest", "recent", "update")):
             verticals = ["announcements", "sector_news", "bse_filings", "social_buzz"]
         elif any(k in ctx for k in ("social", "buzz", "sentiment", "forum", "reddit")):
             verticals = ["social_buzz", "analyst_coverage", "sector_news"]
         else:
-            # Default: run most verticals (skip social for speed)
+            # Default: run most verticals (skip social + slow ones for speed)
             verticals = [
                 "announcements", "corporate_actions", "insider_trades",
                 "shareholding", "analyst_coverage", "concalls", "sector_news",

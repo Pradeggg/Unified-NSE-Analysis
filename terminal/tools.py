@@ -58,8 +58,13 @@ from terminal.search_engine import (
     search_concall_transcripts,
     search_sector_news,
     search_social_buzz,
+    search_broker_research,
+    search_mf_holdings,
     deep_search,
 )
+
+# ── Forensic accounting suite ─────────────────────────────────────────────────
+from terminal.forensics import run_forensic_analysis, screen_forensic_watchlist
 
 # ── Chart module ─────────────────────────────────────────────────────────────
 from terminal.charts import render_chart, render_html_chart, chart_summary
@@ -2252,6 +2257,260 @@ def _ratio_pb(ratios: dict) -> str | None:
         return None
 
 
+# ── E4: Event-Driven Alert Engine ────────────────────────────────────────────
+
+def get_upcoming_events(
+    symbols: list[str] | None = None,
+    index: str = "NIFTY 50",
+    days_ahead: int = 30,
+    event_types: list[str] | None = None,
+) -> dict:
+    """
+    E4 Event-Driven Alert Engine: fetch upcoming corporate action events for
+    a list of symbols or an entire index.
+
+    Event types tracked:
+      • Dividend  — ex-dividend dates, record dates, amount
+      • Bonus Issue — bonus ratio (e.g. 1:1, 2:1)
+      • Stock Split  — split ratio and record date
+      • Rights Issue — entitlement and pricing
+      • AGM / EGM   — Annual / Extraordinary General Meeting dates
+      • Board Meeting — typically announcing results or dividends
+      • Results Calendar — Q1/Q2/Q3/Q4 earnings announcement dates
+
+    Args:
+        symbols:     Explicit list of NSE tickers (e.g. ['TCS', 'INFY']).
+                     If None, fetches top symbols from the Nifty 50 DB snapshot.
+        index:       Index name for auto-symbol lookup when symbols=None.
+        days_ahead:  Window in calendar days to consider events "upcoming".
+        event_types: Filter to specific types e.g. ['Dividend', 'Results'].
+                     None means return all types.
+
+    Returns:
+        {
+          "events_by_date":  {date_str: [events]},
+          "events_by_type":  {type_str: [events]},
+          "upcoming":        [...sorted by ex_date...],
+          "total":           int,
+          "next_7_days":     [...],
+          "next_30_days":    [...],
+        }
+    """
+    import urllib.parse
+    from datetime import date, timedelta
+
+    today = date.today()
+    cutoff = today + timedelta(days=days_ahead)
+
+    # Get symbols list
+    if not symbols:
+        symbols = _get_index_symbols(index)[:50]  # top 50 from index
+
+    all_events: list[dict[str, Any]] = []
+
+    # Batch NSE corporate actions API calls
+    sess = _get_live_session()
+
+    def _fetch_actions(sym: str) -> list[dict]:
+        url = (
+            f"https://www.nseindia.com/api/corporates-corporateActions"
+            f"?index=equities&symbol={urllib.parse.quote(sym)}&issuer="
+        )
+        try:
+            r = sess.get(url, timeout=8)
+            if not r.ok:
+                return []
+            items = r.json()
+            if isinstance(items, dict):
+                items = items.get("data", [])
+            return items or []
+        except Exception:
+            return []
+
+    from concurrent.futures import ThreadPoolExecutor, as_completed as _as_completed
+    with ThreadPoolExecutor(max_workers=5) as pool:
+        futures = {pool.submit(_fetch_actions, sym): sym for sym in (symbols or [])}
+        for fut in _as_completed(futures):
+            sym = futures[fut]
+            try:
+                items = fut.result()
+                for item in items:
+                    subject = str(item.get("subject", "")).strip()
+                    ex_date_str = item.get("exDate", "") or item.get("ex_date", "")
+                    rec_date_str = item.get("recDate", "") or item.get("rec_date", "")
+
+                    # Parse date
+                    ex_date = None
+                    for fmt in ("%d-%b-%Y", "%Y-%m-%d", "%d/%m/%Y", "%b %d %Y"):
+                        try:
+                            ex_date = datetime.strptime(ex_date_str, fmt).date()
+                            break
+                        except (ValueError, TypeError):
+                            continue
+
+                    # Classify event type
+                    subj_lower = subject.lower()
+                    if "dividend" in subj_lower:
+                        etype = "Dividend"
+                    elif "bonus" in subj_lower:
+                        etype = "Bonus"
+                    elif "split" in subj_lower or "sub-division" in subj_lower:
+                        etype = "Split"
+                    elif "rights" in subj_lower:
+                        etype = "Rights"
+                    elif "agm" in subj_lower or "annual general" in subj_lower:
+                        etype = "AGM"
+                    elif "egm" in subj_lower or "extra" in subj_lower:
+                        etype = "EGM"
+                    elif "board meeting" in subj_lower:
+                        etype = "Board Meeting"
+                    elif "result" in subj_lower:
+                        etype = "Results"
+                    else:
+                        etype = "Corporate Action"
+
+                    if event_types and etype not in event_types:
+                        continue
+
+                    days_until = (ex_date - today).days if ex_date else None
+
+                    all_events.append({
+                        "symbol":      sym,
+                        "type":        etype,
+                        "subject":     subject,
+                        "ex_date":     ex_date_str,
+                        "ex_date_obj": ex_date,
+                        "record_date": rec_date_str,
+                        "face_value":  item.get("faceVal"),
+                        "series":      item.get("series", "EQ"),
+                        "days_until":  days_until,
+                        "is_upcoming": (
+                            ex_date is not None and today <= ex_date <= cutoff
+                        ),
+                    })
+            except Exception:
+                pass
+
+    # Filter to upcoming + sort by date
+    upcoming = sorted(
+        [e for e in all_events if e.get("is_upcoming")],
+        key=lambda x: x["ex_date_obj"] or date.max,
+    )
+
+    # Clean up non-serializable date objects
+    for e in all_events:
+        e.pop("ex_date_obj", None)
+    for e in upcoming:
+        e.pop("ex_date_obj", None)
+
+    # Group by date
+    events_by_date: dict[str, list] = {}
+    for ev in upcoming:
+        d = ev["ex_date"]
+        events_by_date.setdefault(d, []).append(ev)
+
+    # Group by type
+    events_by_type: dict[str, list] = {}
+    for ev in upcoming:
+        events_by_type.setdefault(ev["type"], []).append(ev)
+
+    # Next 7 days
+    week_cutoff = today + timedelta(days=7)
+    next_7 = [
+        e for e in upcoming
+        if e.get("days_until") is not None and 0 <= e["days_until"] <= 7
+    ]
+
+    return {
+        "as_of":          today.isoformat(),
+        "days_window":    days_ahead,
+        "symbols_scanned": len(symbols or []),
+        "total":          len(upcoming),
+        "events_by_date": events_by_date,
+        "events_by_type": events_by_type,
+        "upcoming":       upcoming,
+        "next_7_days":    next_7,
+        "types_found":    list(events_by_type.keys()),
+        "source":         "NSE Corporate Actions API (live)",
+    }
+
+
+def get_event_calendar_summary(
+    index: str = "NIFTY 50",
+    days_ahead: int = 14,
+) -> dict:
+    """
+    Quick event calendar overview for an index — upcoming dividends, splits,
+    bonuses, results, and board meetings in the next N days.
+
+    Args:
+        index:      Index name (e.g. 'NIFTY 50', 'NIFTY NEXT 50', 'NIFTY 500').
+        days_ahead: Calendar days to look ahead (default 14).
+
+    Returns compact event summary suitable for terminal sidebar display.
+    """
+    full = get_upcoming_events(index=index, days_ahead=days_ahead)
+    if full.get("error"):
+        return full
+
+    # Compact view for each upcoming event
+    compact = []
+    for ev in full.get("upcoming", []):
+        compact.append({
+            "symbol":    ev["symbol"],
+            "type":      ev["type"],
+            "ex_date":   ev["ex_date"],
+            "days_away": ev.get("days_until"),
+            "detail":    ev["subject"][:80],
+        })
+
+    type_counts = {t: len(v) for t, v in full.get("events_by_type", {}).items()}
+
+    return {
+        "index":         index,
+        "days_ahead":    days_ahead,
+        "total_events":  full.get("total", 0),
+        "event_counts":  type_counts,
+        "events":        compact,
+        "next_7_days":   full.get("next_7_days", []),
+        "source":        full.get("source"),
+    }
+
+
+def _get_index_symbols(index: str = "NIFTY 50", top_n: int = 50) -> list[str]:
+    """Get symbols for an index from the DB snapshot."""
+    syms: list[str] = []
+    try:
+        if DB_PATH.exists():
+            conn = _db_conn()
+            idx_lower = index.lower()
+            rows = conn.execute(
+                "SELECT DISTINCT symbol FROM stage_snapshots "
+                "WHERE LOWER(sector) != '' "
+                "AND snapshot_date = (SELECT MAX(snapshot_date) FROM stage_snapshots) "
+                "ORDER BY investment_score DESC NULLS LAST LIMIT ?",
+                (top_n,),
+            ).fetchall()
+            conn.close()
+            syms = [r[0] for r in rows]
+    except Exception:
+        pass
+    # Fallback to a small hardcoded Nifty 50 subset
+    if not syms:
+        syms = [
+            "RELIANCE", "TCS", "HDFCBANK", "INFY", "ICICIBANK", "HINDUNILVR",
+            "ITC", "SBIN", "BHARTIARTL", "BAJFINANCE", "KOTAKBANK", "LT",
+            "AXISBANK", "ASIANPAINT", "MARUTI", "TITAN", "SUNPHARMA", "WIPRO",
+            "ULTRACEMCO", "HCLTECH", "NESTLEIND", "POWERGRID", "NTPC",
+            "TATAMOTORS", "TATASTEEL", "M&M", "TECHM", "ONGC", "DRREDDY",
+            "DIVISLAB", "ADANIPORTS", "BAJAJFINSV", "CIPLA", "HEROMOTOCO",
+            "EICHERMOT", "GRASIM", "BRITANNIA", "COALINDIA", "INDUSINDBK",
+            "JSWSTEEL", "BPCL", "APOLLOHOSP", "TATACONSUM", "LTIM",
+            "HINDALCO", "UPL", "SBILIFE", "HDFCLIFE", "BAJAJ-AUTO", "VEDL",
+        ][:top_n]
+    return syms
+
+
 def compare_stocks(
     symbols: list[str],
     aspects: list[str] | None = None,
@@ -3503,6 +3762,149 @@ TOOL_REGISTRY.update({
                 "max_iv":    {"type": "number", "description": "Max ATM IV% (default 25)"},
                 "min_oi":    {"type": "integer", "description": "Min OI for liquidity (default 500000)"},
                 "top_n":     {"type": "integer", "description": "Number of results to return (default 10)"},
+            },
+            "required": [],
+        },
+    ),
+})
+
+
+# Register forensic accounting + event calendar tools
+TOOL_REGISTRY.update({
+    "run_forensic_analysis": (
+        run_forensic_analysis,
+        (
+            "Run D5 Forensic Accounting analysis on an NSE stock. "
+            "Computes three quantitative red-flag models: "
+            "(1) Beneish M-score — detects earnings manipulation (M > -1.78 = manipulation risk); "
+            "(2) Piotroski F-score — financial health 0-9 (7-9 = strong, 0-3 = weak); "
+            "(3) Altman Z'-score — bankruptcy/distress risk (Z' < 1.1 = distress zone). "
+            "Data from screener.in annual balance sheet + P&L + cash flow statements. "
+            "Use for: forensic analysis, earnings quality, manipulation risk, financial health, "
+            "due diligence, red flags, balance sheet quality, accounting risk."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string", "description": "NSE ticker e.g. RELIANCE, ADANIENT"},
+            },
+            "required": ["symbol"],
+        },
+    ),
+    "screen_forensic_watchlist": (
+        screen_forensic_watchlist,
+        (
+            "Run forensic accounting screening across multiple NSE stocks in parallel. "
+            "Returns all three forensic scores (Beneish, Piotroski, Altman) for each stock, "
+            "ranked by risk level. Use for portfolio-level forensic due diligence, "
+            "pre-buy checklist, or identifying high-risk holdings."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbols": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of NSE tickers to screen (max 8)",
+                },
+            },
+            "required": ["symbols"],
+        },
+    ),
+    "search_broker_research": (
+        search_broker_research,
+        (
+            "Search for broker house research reports, institutional analyst ratings, "
+            "and consensus price targets for an NSE stock. "
+            "Searches: Trendlyne (consensus estimates), Moneycontrol (broker radar), "
+            "Economic Times (analyst reports), major brokers (Motilal/Kotak/ICICI/HDFC/Edelweiss/Axis). "
+            "Extracts price targets from report titles where available. "
+            "Use for: broker reports, analyst ratings, price targets, buy/sell recommendations, "
+            "institutional views, consensus estimate."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string", "description": "NSE ticker e.g. TCS"},
+            },
+            "required": ["symbol"],
+        },
+    ),
+    "search_mf_holdings": (
+        search_mf_holdings,
+        (
+            "Search for mutual fund holdings and FII/DII institutional ownership data for a stock. "
+            "Combines screener.in direct shareholding scrape (promoter/FII/DII quarterly trend) "
+            "with web search across Trendlyne, Moneycontrol, Tijori Finance. "
+            "Use for: MF holdings, institutional ownership, FII activity, DII buying/selling, "
+            "promoter pledge, shareholding pattern changes."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string", "description": "NSE ticker e.g. HDFCBANK"},
+            },
+            "required": ["symbol"],
+        },
+    ),
+    "get_upcoming_events": (
+        get_upcoming_events,
+        (
+            "E4 Event-Driven Alert Engine: fetch upcoming corporate action events for a list of "
+            "symbols or an entire index. Tracks dividends, bonus issues, stock splits, rights issues, "
+            "AGMs, board meetings, and results calendar. Returns events grouped by date and type, "
+            "with days-until countdown. "
+            "Use for: upcoming dividends, ex-date, bonus issues, stock splits, results dates, "
+            "event calendar, corporate actions calendar, board meeting dates."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbols":    {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "NSE tickers to check (leave empty to use index symbols)",
+                },
+                "index":      {
+                    "type": "string",
+                    "description": "Index to scan when symbols is empty (default 'NIFTY 50')",
+                    "default": "NIFTY 50",
+                },
+                "days_ahead": {
+                    "type": "integer",
+                    "description": "Calendar days ahead to look (default 30)",
+                    "default": 30,
+                },
+                "event_types": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Filter to specific types e.g. ['Dividend', 'Results', 'Bonus', 'Split']",
+                },
+            },
+            "required": [],
+        },
+    ),
+    "get_event_calendar_summary": (
+        get_event_calendar_summary,
+        (
+            "Quick event calendar overview for an index — compact list of upcoming dividends, "
+            "splits, bonuses, results announcements, and board meetings in the next N days. "
+            "Lighter than get_upcoming_events. Use for: what events this week/fortnight, "
+            "upcoming ex-dates, results season, event summary for NIFTY."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "index":      {
+                    "type": "string",
+                    "description": "Index name e.g. 'NIFTY 50' (default)",
+                    "default": "NIFTY 50",
+                },
+                "days_ahead": {
+                    "type": "integer",
+                    "description": "Days ahead to look (default 14)",
+                    "default": 14,
+                },
             },
             "required": [],
         },

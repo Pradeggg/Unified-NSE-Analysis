@@ -396,17 +396,27 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/chart NIFTY 1y --html",  "NIFTY 1-year interactive HTML chart"),
     ("/chart BANKNIFTY 6mo --html", "BANKNIFTY 6-month HTML chart"),
     # ── Deep Search commands ────────────────────────────────────────────────
-    ("/search",                           "Deep search — 9 parallel verticals (NSE+BSE+web)"),
+    ("/search",                           "Deep search — 11 parallel verticals (NSE+BSE+web)"),
     ("/search RELIANCE",                  "Full deep search on RELIANCE"),
     ("/search RELIANCE announcements",    "NSE corporate announcements for RELIANCE"),
     ("/search RELIANCE dividend",         "Dividend / corporate actions for RELIANCE"),
     ("/search RELIANCE insider",          "Insider trade disclosures for RELIANCE"),
     ("/search RELIANCE shareholding",     "Shareholding pattern & FII/DII trend"),
     ("/search RELIANCE analyst",          "Analyst targets & brokerage recommendations"),
+    ("/search RELIANCE broker",           "Broker house research reports & price targets"),
+    ("/search RELIANCE mf",               "Mutual fund & institutional holdings"),
     ("/search RELIANCE concall",          "Concall transcripts & management commentary"),
     ("/search RELIANCE news",             "Sector news from 6 portals"),
     ("/search RELIANCE social",           "Retail investor buzz: Reddit, Valuepickr, Traderji"),
-    ("/search TATACONSUM deep",           "Full 9-vertical deep search"),
+    ("/search TATACONSUM deep",           "Full 11-vertical deep search"),
+    # ── Forensic commands ───────────────────────────────────────────────────
+    ("/forensic",                         "D5 Forensic analysis — Beneish M-score, Piotroski F-score, Altman Z'-score"),
+    ("/forensic RELIANCE",                "Forensic accounting analysis for RELIANCE"),
+    ("/forensic TCS INFY WIPRO",          "Forensic screening across multiple stocks"),
+    # ── Event calendar commands ─────────────────────────────────────────────
+    ("/events",                           "E4 Upcoming corporate events — dividends, splits, results, AGMs"),
+    ("/events NIFTY 50",                  "Event calendar for NIFTY 50 stocks (next 14 days)"),
+    ("/events RELIANCE",                  "Upcoming events for a specific stock"),
     ("/live",             "Switch to LIVE mode (real-time NSE API)"),
     ("/eod",              "Switch to EOD mode (historical CSV/DB)"),
     ("/auto",             "Switch to AUTO mode (keyword detect)"),
@@ -673,8 +683,30 @@ def _print_ric_library() -> None:
     console.print()
 
 
+def _looks_like_index_arg(arg: str) -> bool:
+    arg_up = arg.strip().upper()
+    if not arg_up:
+        return False
+    return (
+        arg_up.startswith("NIFTY")
+        or "MIDCAP" in arg_up
+        or "SMALLCAP" in arg_up
+        or "BANK" in arg_up
+        or "SENSEX" in arg_up
+        or "INDEX" in arg_up
+    )
+
+
 def _run_ric(agent, key: str, arg: str, show_trace: bool) -> None:
     """Execute a named RIC step by step, each result feeding context."""
+    if key == "sector-xray" and _looks_like_index_arg(arg):
+        # User entered an index basket, not a sector. Route to the index workflow.
+        console.print(
+            f"[yellow]  ↺  '{arg.strip()}' looks like an index, so routing to "
+            f"[bold]/ric index-pulse {arg.strip()}[/bold] instead of sector-xray.[/yellow]"
+        )
+        key = "index-pulse"
+
     ric = RIC_LIBRARY.get(key)
     if not ric:
         console.print(f"[red]  ✗  Unknown RIC '{key}'. Type /ric to see the library.[/red]")
@@ -1436,16 +1468,30 @@ def _print_help() -> None:
             "  [dim]Indicators: volume · rsi · macd  (ASCII default: volume rsi)[/dim]\n"
             "  [dim]HTML chart: candlestick + EMA20/50/200 + Bollinger Bands + volume + RSI + MACD[/dim]\n\n"
             "[bold magenta]DEEP SEARCH ENGINE 🔍[/bold magenta]\n"
-            "  [magenta]/search RELIANCE[/magenta]          — Full deep-dive (7 parallel verticals)\n"
-            "  [magenta]/search RELIANCE dividend[/magenta] — Dividends, splits, bonuses (NSE live)\n"
-            "  [magenta]/search RELIANCE insider[/magenta]  — Insider/promoter trade disclosures\n"
+            "  [magenta]/search RELIANCE[/magenta]           — Full deep-dive (11 parallel verticals)\n"
+            "  [magenta]/search RELIANCE dividend[/magenta]  — Dividends, splits, bonuses (NSE live)\n"
+            "  [magenta]/search RELIANCE insider[/magenta]   — Insider/promoter trade disclosures\n"
             "  [magenta]/search RELIANCE shareholding[/magenta] — Promoter/FII/DII/pledge trend\n"
-            "  [magenta]/search RELIANCE analyst[/magenta]  — Analyst targets, brokerage ratings\n"
-            "  [magenta]/search RELIANCE concall[/magenta]  — Concall transcripts & mgmt commentary\n"
-            "  [magenta]/search RELIANCE news[/magenta]     — 6-portal sector news pulse\n"
-            "  [magenta]/search RELIANCE social[/magenta]   — Reddit, Valuepickr, Traderji buzz\n"
+            "  [magenta]/search RELIANCE analyst[/magenta]   — Analyst targets + broker reports\n"
+            "  [magenta]/search RELIANCE broker[/magenta]    — Broker house research & price targets\n"
+            "  [magenta]/search RELIANCE mf[/magenta]        — Mutual fund & institutional holdings\n"
+            "  [magenta]/search RELIANCE concall[/magenta]   — Concall transcripts & mgmt commentary\n"
+            "  [magenta]/search RELIANCE news[/magenta]      — 6-portal sector news pulse\n"
+            "  [magenta]/search RELIANCE social[/magenta]    — Reddit, Valuepickr, Traderji buzz\n"
             "  [dim]Verticals: announcements · corporate_actions · insider_trades · bse_filings[/dim]\n"
-            "  [dim]           shareholding · analyst_coverage · concalls · sector_news · social_buzz[/dim]\n\n"
+            "  [dim]           shareholding · analyst_coverage · broker_research · mf_holdings[/dim]\n"
+            "  [dim]           concalls · sector_news · social_buzz[/dim]\n\n"
+            "[bold red]FORENSIC ACCOUNTING 🧪[/bold red]\n"
+            "  [red]/forensic RELIANCE[/red]           — Beneish M-score + Piotroski F-score + Altman Z'\n"
+            "  [red]/forensic TCS INFY WIPRO[/red]     — Forensic screening across multiple stocks\n"
+            "  [dim]Beneish M-score: M > -1.78 = manipulation risk (8-variable probit model)[/dim]\n"
+            "  [dim]Piotroski F-score: 0-9 (7+ = strong, 0-3 = weak financial health)[/dim]\n"
+            "  [dim]Altman Z'-score: Z' < 1.1 = distress zone (emerging-market version)[/dim]\n\n"
+            "[bold yellow]EVENT CALENDAR 📅[/bold yellow]\n"
+            "  [yellow]/events[/yellow]                  — Upcoming events for NIFTY 50 (next 14 days)\n"
+            "  [yellow]/events NIFTY 50[/yellow]         — Dividends, splits, results, AGMs, board meetings\n"
+            "  [yellow]/events RELIANCE[/yellow]         — Upcoming events for a specific stock\n"
+            "  [yellow]/events NIFTY 50 30[/yellow]      — Extend window to 30 days\n\n"
             "[bold cyan]GLOBAL MARKET[/bold cyan]\n"
             "  [green]/global[/green]                 — Global risk regime and India read-through\n\n"
             "[bold cyan]PROMPT LIBRARY[/bold cyan]\n"
@@ -1909,8 +1955,10 @@ def _chat_loop(agent, show_trace: bool) -> None:
                 "dividend":     ["corporate_actions", "announcements"],
                 "insider":      ["insider_trades", "shareholding"],
                 "holding":      ["shareholding", "insider_trades"],
-                "shareholding": ["shareholding", "insider_trades"],
-                "analyst":      ["analyst_coverage", "concalls"],
+                "shareholding": ["shareholding", "insider_trades", "mf_holdings"],
+                "analyst":      ["analyst_coverage", "broker_research", "concalls"],
+                "broker":       ["broker_research", "analyst_coverage"],
+                "mf":           ["mf_holdings", "shareholding"],
                 "concall":      ["concalls", "bse_filings"],
                 "news":         ["sector_news", "announcements"],
                 "social":       ["social_buzz", "analyst_coverage"],
@@ -1935,6 +1983,71 @@ def _chat_loop(agent, show_trace: bool) -> None:
                     f"NSE announcements, corporate actions, insider trades, "
                     f"shareholding, analyst targets, concalls, sector news. "
                     f"Include dates, real URLs, and actionable insights."
+                )
+
+        # ── /forensic <symbol> [symbol2 ...] — forensic accounting ───────
+        elif text.lower().startswith("/forensic"):
+            parts = text.split()
+            syms  = [p.upper() for p in parts[1:] if p]
+            if not syms:
+                syms = ["RELIANCE"]
+
+            if len(syms) == 1:
+                console.print(f"[dim]  → Forensic Analysis: [bold]{syms[0]}[/bold] (Beneish + Piotroski + Altman)[/dim]")
+                text = (
+                    f"Run run_forensic_analysis for {syms[0]}. "
+                    f"Present all three scores clearly: "
+                    f"(1) Beneish M-score — is there earnings manipulation risk? Explain each variable flagged. "
+                    f"(2) Piotroski F-score — what is the financial health? Show all 9 signals. "
+                    f"(3) Altman Z'-score — what is the distress zone? "
+                    f"Conclude with overall risk verdict and actionable insights for the investor."
+                )
+            else:
+                sym_str = ", ".join(syms)
+                console.print(f"[dim]  → Forensic Screen: [bold]{sym_str}[/bold][/dim]")
+                text = (
+                    f"Run screen_forensic_watchlist for symbols {syms}. "
+                    f"Rank by overall risk (high → low). "
+                    f"For each stock show: Beneish M-score (manipulation risk), "
+                    f"Piotroski F-score (financial health), Altman Z'-score (distress risk). "
+                    f"Highlight any stocks with high risk and explain the specific flags."
+                )
+
+        # ── /events [index or symbol] [days] — corporate event calendar ──
+        elif text.lower().startswith("/events"):
+            parts = text.split()
+            # Determine if it's a specific stock or index
+            arg1  = parts[1].upper() if len(parts) > 1 else ""
+            arg2  = parts[2].upper() if len(parts) > 2 else ""
+            days  = 14
+
+            # Try to detect days_ahead as last numeric arg
+            for p in parts[1:]:
+                try:
+                    days = int(p)
+                except ValueError:
+                    pass
+
+            # Known index names
+            _IDX_WORDS = {"NIFTY", "50", "NEXT", "BANK", "500", "MIDCAP", "SMALLCAP", "IT", "PHARMA"}
+            raw_sym = " ".join(p for p in parts[1:] if not p.isdigit()).strip().upper()
+            is_index = any(w in raw_sym.split() for w in _IDX_WORDS) or not raw_sym
+
+            if is_index or not raw_sym:
+                idx = raw_sym or "NIFTY 50"
+                console.print(f"[dim]  → Event Calendar: [bold]{idx}[/bold] — next {days} days[/dim]")
+                text = (
+                    f"Run get_event_calendar_summary for index '{idx}' with days_ahead={days}. "
+                    f"Present events grouped by type (Dividend, Results, Bonus, Split, AGM, Board Meeting). "
+                    f"Show upcoming ex-dates with days-until countdown. "
+                    f"Highlight events in the next 7 days separately."
+                )
+            else:
+                console.print(f"[dim]  → Events for: [bold]{raw_sym}[/bold][/dim]")
+                text = (
+                    f"Run get_upcoming_events with symbols=['{raw_sym}'] and days_ahead={days}. "
+                    f"List all upcoming corporate events: dividends, results, board meetings, "
+                    f"AGMs, splits, bonuses. Include ex-dates and days-until countdown."
                 )
 
         # ── /chain <symbol> [expiry] — live option chain ───────────────
