@@ -115,6 +115,7 @@ MIGRATION_SQL: list[str] = [
     "ALTER TABLE stage_snapshots ADD COLUMN stance TEXT",
     "ALTER TABLE stage_snapshots ADD COLUMN supertrend_state TEXT",
     "ALTER TABLE stage_snapshots ADD COLUMN supertrend_value REAL",
+    "ALTER TABLE stage_snapshots ADD COLUMN price_date TEXT",
 ]
 
 
@@ -161,18 +162,107 @@ except ImportError:
 # Data helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _parse_date_tokens_from_name(name: str) -> Optional[datetime]:
+    """Extract the most recent valid date token from a comprehensive CSV filename."""
+    import re
+    found: list[datetime] = []
+    for token in re.findall(r"\d{8}", name):
+        for fmt in ("%Y%m%d", "%d%m%Y"):
+            try:
+                dt = datetime.strptime(token, fmt)
+                if 2000 <= dt.year <= 2100:
+                    found.append(dt)
+            except ValueError:
+                continue
+    return max(found) if found else None
+
+
 def _latest_comprehensive_csv() -> Optional[Path]:
     candidates = list((ROOT / "reports" / "generated_csv").rglob("comprehensive_nse_enhanced_*.csv"))
-    return max(candidates, key=lambda p: p.stat().st_mtime) if candidates else None
+    if not candidates:
+        return None
+
+    # Prefer the latest business date encoded in filename; break ties by mtime.
+    return max(
+        candidates,
+        key=lambda p: (
+            _parse_date_tokens_from_name(p.name) or datetime.min,
+            datetime.fromtimestamp(p.stat().st_mtime),
+        ),
+    )
 
 
 def _load_price_history() -> pd.DataFrame:
     if not STOCK_CSV.exists():
         return pd.DataFrame()
     print("  Loading price history from nse_sec_full_data.csv …")
-    df = pd.read_csv(STOCK_CSV, usecols=["SYMBOL", "TIMESTAMP", "OPEN", "HIGH", "LOW", "CLOSE"])
+    cols = ["SYMBOL", "TIMESTAMP", "OPEN", "HIGH", "LOW", "CLOSE", "TOTTRDQTY"]
+    df = pd.read_csv(STOCK_CSV, usecols=lambda c: c in cols)
     df["TIMESTAMP"] = pd.to_datetime(df["TIMESTAMP"])
     return df
+
+
+def _latest_eod_close_date(hist: pd.DataFrame | None = None) -> Optional[str]:
+    """Return the latest EOD close date available in the local NSE history."""
+    try:
+        df = hist if hist is not None else _load_price_history()
+        if df is None or df.empty or "TIMESTAMP" not in df.columns:
+            return None
+        ts = pd.to_datetime(df["TIMESTAMP"], errors="coerce").dropna()
+        if ts.empty:
+            return None
+        return ts.max().date().isoformat()
+    except Exception:
+        return None
+
+
+def _backfill_snapshot_dates(
+    hist: pd.DataFrame,
+    days: int = 30,
+    end_date: Optional[str] = None,
+) -> list[str]:
+    """Return the last N available trading dates from local EOD history."""
+    if hist.empty or "TIMESTAMP" not in hist.columns or days <= 0:
+        return []
+    ts = pd.to_datetime(hist["TIMESTAMP"], errors="coerce").dropna()
+    if end_date:
+        end_ts = pd.to_datetime(end_date, errors="coerce")
+        if pd.notna(end_ts):
+            ts = ts[ts.dt.date <= end_ts.date()]
+    dates = sorted({t.date().isoformat() for t in ts})
+    return dates[-days:]
+
+
+def _history_as_of(hist: pd.DataFrame, as_of_date: Optional[str]) -> pd.DataFrame:
+    """Return history through as_of_date inclusive."""
+    if hist.empty or not as_of_date or "TIMESTAMP" not in hist.columns:
+        return hist
+    end_ts = pd.to_datetime(as_of_date, errors="coerce")
+    if pd.isna(end_ts):
+        return hist
+    df = hist.copy()
+    df["TIMESTAMP"] = pd.to_datetime(df["TIMESTAMP"], errors="coerce")
+    return df[df["TIMESTAMP"].dt.date <= end_ts.date()].copy()
+
+
+def _apply_latest_history_prices(candidates: pd.DataFrame, hist: pd.DataFrame) -> pd.DataFrame:
+    """Override stale analysis prices with latest local EOD closes where available."""
+    df = candidates.copy()
+    if hist.empty or "SYMBOL" not in hist.columns or "CLOSE" not in hist.columns:
+        return df
+    latest = (
+        hist.sort_values("TIMESTAMP")
+        .dropna(subset=["SYMBOL", "CLOSE"])
+        .groupby("SYMBOL", as_index=False)
+        .tail(1)[["SYMBOL", "CLOSE"]]
+        .rename(columns={"CLOSE": "_LATEST_EOD_CLOSE"})
+    )
+    df = df.merge(latest, on="SYMBOL", how="left")
+    has_latest = df["_LATEST_EOD_CLOSE"].notna()
+    df.loc[has_latest, "CLOSE"] = pd.to_numeric(df.loc[has_latest, "_LATEST_EOD_CLOSE"], errors="coerce")
+    if "CURRENT_PRICE" in df.columns:
+        df.loc[has_latest, "CURRENT_PRICE"] = df.loc[has_latest, "CLOSE"]
+    return df.drop(columns=["_LATEST_EOD_CLOSE"])
 
 
 def _compute_supertrend_for_symbols(hist: pd.DataFrame, symbols: list) -> dict:
@@ -204,6 +294,7 @@ def _run_screener(analysis: pd.DataFrame, hist: pd.DataFrame) -> pd.DataFrame:
     sys.path.insert(0, str(ROOT))
     from screeners import run_stage_screener, enrich_with_stage
     df = analysis.rename(columns={"CURRENT_PRICE": "CLOSE"}).copy()
+    df = _apply_latest_history_prices(df, hist if not hist.empty else pd.DataFrame())
     return run_stage_screener(df, history=hist if not hist.empty else None)
 
 
@@ -391,14 +482,23 @@ def _closest_snapshot(dates: list[str], target: date, max_gap_days: int = 10) ->
 
 def write_snapshot(
     snap_date: Optional[str] = None,
+    price_as_of_date: Optional[str] = None,
     fetch_live: bool = True,
     force: bool = False,
+    compute_supertrend: bool = True,
+    hist_override: Optional[pd.DataFrame] = None,
+    analysis_override: Optional[pd.DataFrame] = None,
+    csv_path_override: Optional[Path] = None,
+    recompute_changes: bool = True,
 ) -> int:
     """
     Capture today's stage screener results and write to DB.
     Returns number of rows written (0 if already exists and not forced).
     """
-    today = snap_date or date.today().isoformat()
+    hist_full = hist_override if hist_override is not None else _load_price_history()
+    hist = _history_as_of(hist_full, price_as_of_date)
+    price_date = _latest_eod_close_date(hist)
+    today = snap_date or price_date or date.today().isoformat()
     conn = get_conn()
 
     existing = conn.execute(
@@ -409,13 +509,12 @@ def write_snapshot(
         conn.close()
         return 0
 
-    csv_path = _latest_comprehensive_csv()
+    csv_path = csv_path_override or _latest_comprehensive_csv()
     if csv_path is None:
         raise FileNotFoundError("No comprehensive_nse_enhanced_*.csv found in reports/generated_csv/")
 
     print(f"  Source CSV: {csv_path.name}")
-    analysis = pd.read_csv(csv_path)
-    hist = _load_price_history()
+    analysis = analysis_override.copy() if analysis_override is not None else pd.read_csv(csv_path)
     screener_df = _run_screener(analysis, hist)
 
     live_prices: dict[str, float] = {}
@@ -456,6 +555,7 @@ def write_snapshot(
             "stage": str(r.get("STAGE", "UNKNOWN") or "UNKNOWN"),
             "stage_score": _f(r.get("STAGE_SCORE")),
             "price": _f(r.get("CLOSE") or r.get("CURRENT_PRICE")),
+            "price_date": price_date,
             "live_price": live_prices.get(sym),
             "technical_score": _f(r.get("TECHNICAL_SCORE")),
             "rsi": _f(r.get("RSI")),
@@ -480,11 +580,13 @@ def write_snapshot(
         fund_details_dict: dict | None = None
         if fc_row:
             fund_details_dict = {
-                "pnl_summary": fc_row.get("pnl_summary"),
-                "quarterly_summary": fc_row.get("quarterly_summary"),
-                "balance_sheet_summary": fc_row.get("balance_sheet_summary"),
-                "ratios_summary": fc_row.get("ratios_summary"),
+                "pnl_summary": _text_or_none(fc_row.get("pnl_summary")),
+                "quarterly_summary": _text_or_none(fc_row.get("quarterly_summary")),
+                "balance_sheet_summary": _text_or_none(fc_row.get("balance_sheet_summary")),
+                "ratios_summary": _text_or_none(fc_row.get("ratios_summary")),
             }
+            if not any(fund_details_dict.values()):
+                fund_details_dict = None
         base["fund_details"] = json.dumps(fund_details_dict) if fund_details_dict else None
         base["investment_score"] = _investment_score(base)
         narrative_text, stance_val = _generate_narrative(base, fund_details_dict)
@@ -495,12 +597,17 @@ def write_snapshot(
     if existing and force:
         conn.execute("DELETE FROM stage_snapshots WHERE snapshot_date=?", (today,))
 
-    print("  Computing supertrend …")
-    st_map = _compute_supertrend_for_symbols(hist, [r["symbol"] for r in rows])
-    for row in rows:
-        st_info = st_map.get(row["symbol"], {})
-        row["supertrend_state"] = st_info.get("state")
-        row["supertrend_value"] = _f(st_info.get("value"))
+    if compute_supertrend:
+        print("  Computing supertrend …")
+        st_map = _compute_supertrend_for_symbols(hist, [r["symbol"] for r in rows])
+        for row in rows:
+            st_info = st_map.get(row["symbol"], {})
+            row["supertrend_state"] = st_info.get("state")
+            row["supertrend_value"] = _f(st_info.get("value"))
+    else:
+        for row in rows:
+            row["supertrend_state"] = None
+            row["supertrend_value"] = None
 
     conn.executemany(
         """INSERT OR REPLACE INTO stage_snapshots
@@ -509,31 +616,85 @@ def write_snapshot(
              change_1d_pct, change_1w_pct, change_1m_pct, market_cap_cat, source_csv,
              sector, fundamental_score, enhanced_fund_score, earnings_quality, sales_growth,
              financial_strength, institutional_backing, can_slim_score, minervini_score,
-             investment_score, fund_details, narrative, stance, supertrend_state, supertrend_value)
+             investment_score, fund_details, narrative, stance, supertrend_state, supertrend_value,
+             price_date)
            VALUES
             (:snapshot_date,:symbol,:company_name,:stage,:stage_score,:price,:live_price,
              :technical_score,:rsi,:trading_signal,:trend_signal,:relative_strength,
              :change_1d_pct,:change_1w_pct,:change_1m_pct,:market_cap_cat,:source_csv,
              :sector,:fundamental_score,:enhanced_fund_score,:earnings_quality,:sales_growth,
              :financial_strength,:institutional_backing,:can_slim_score,:minervini_score,
-             :investment_score,:fund_details,:narrative,:stance,:supertrend_state,:supertrend_value)""",
+             :investment_score,:fund_details,:narrative,:stance,:supertrend_state,:supertrend_value,
+             :price_date)""",
         rows,
     )
     conn.commit()
     print(f"  Wrote {len(rows)} rows for {today} ({sum(1 for r in rows if r['stage']=='STAGE_2')} Stage 2).")
 
-    # Auto-compute changes against previous available snapshot
-    dates = list_snapshot_dates(conn)
-    if len(dates) >= 2:
-        _compute_changes(conn, dates[0], dates[1])   # today vs yesterday
-    # Also vs ~7 days ago — find closest snapshot within ±3 days of a week ago
-    week_target = datetime.fromisoformat(today).date() - timedelta(days=7)
-    week_snap = _closest_snapshot(dates, week_target)
-    if week_snap and week_snap != dates[1]:
-        _compute_changes(conn, today, week_snap)
+    if recompute_changes:
+        # Auto-compute changes against previous available snapshot older than this snapshot.
+        dates = list_snapshot_dates(conn)
+        older_dates = [d for d in dates if d < today]
+        prev_snap = max(older_dates) if older_dates else None
+        if prev_snap:
+            _compute_changes(conn, today, prev_snap)
+        week_target = datetime.fromisoformat(today).date() - timedelta(days=7)
+        week_snap = _closest_snapshot(older_dates, week_target)
+        if week_snap and prev_snap and week_snap != prev_snap:
+            _compute_changes(conn, today, week_snap)
 
     conn.close()
     return len(rows)
+
+
+def recompute_adjacent_stage_changes(conn: sqlite3.Connection) -> int:
+    """Recompute day-to-day stage_changes for all available snapshot dates."""
+    conn.execute("DELETE FROM stage_changes")
+    conn.commit()
+    dates = list_snapshot_dates(conn)
+    total = 0
+    for newer, older in zip(dates, dates[1:]):
+        total += _compute_changes(conn, newer, older)
+    return total
+
+
+def backfill_snapshots(
+    days: int = 30,
+    end_date: Optional[str] = None,
+    force: bool = False,
+) -> list[str]:
+    """Build historical stage snapshots for the last N local EOD trading dates."""
+    hist_full = _load_price_history()
+    dates = _backfill_snapshot_dates(hist_full, days=days, end_date=end_date)
+    if not dates:
+        print("  No EOD dates available for backfill.")
+        return []
+
+    csv_path = _latest_comprehensive_csv()
+    if csv_path is None:
+        raise FileNotFoundError("No comprehensive_nse_enhanced_*.csv found in reports/generated_csv/")
+    analysis = pd.read_csv(csv_path)
+
+    print(f"  Backfilling {len(dates)} snapshots from {dates[0]} to {dates[-1]} …")
+    for d in dates:
+        print(f"  Backfill snapshot {d}")
+        hist_as_of = _history_as_of(hist_full, d)
+        write_snapshot(
+            snap_date=d,
+            price_as_of_date=d,
+            fetch_live=False,
+            force=force,
+            compute_supertrend=False,
+            hist_override=hist_as_of,
+            analysis_override=analysis,
+            csv_path_override=csv_path,
+            recompute_changes=False,
+        )
+
+    conn = get_conn()
+    recompute_adjacent_stage_changes(conn)
+    conn.close()
+    return dates
 
 
 def _f(v) -> Optional[float]:
@@ -543,6 +704,16 @@ def _f(v) -> Optional[float]:
         return None if math.isnan(fv) else round(fv, 4)
     except (TypeError, ValueError):
         return None
+
+
+def _text_or_none(v) -> Optional[str]:
+    """Return clean text, treating pandas NaN/empty/"nan" as missing."""
+    if _is_missing(v):
+        return None
+    text = str(v).strip()
+    if not text or text.lower() in {"nan", "none", "null"}:
+        return None
+    return text
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -842,6 +1013,59 @@ def build_change_report(
         "total_stage2": len(s2_now),
         "available_dates": dates[:10],
     }
+    hist_rows = pd.read_sql_query(
+        """
+        SELECT
+            snapshot_date,
+            COUNT(*) AS total_stocks,
+            SUM(CASE WHEN stage='STAGE_2' THEN 1 ELSE 0 END) AS stage2_count
+        FROM stage_snapshots
+        GROUP BY snapshot_date
+        ORDER BY snapshot_date DESC
+        LIMIT 30
+        """,
+        conn,
+    )
+    hist_records = hist_rows.to_dict("records")
+    for idx, row in enumerate(hist_records):
+        try:
+            row["stage2_count"] = int(row.get("stage2_count") or 0)
+            row["total_stocks"] = int(row.get("total_stocks") or 0)
+        except (TypeError, ValueError):
+            pass
+        if idx + 1 >= len(hist_records):
+            row["stage2_delta"] = 0
+            row["stage_changes"] = 0
+            continue
+        date_new = str(row.get("snapshot_date", ""))
+        date_old = str(hist_records[idx + 1].get("snapshot_date", ""))
+        if not date_new or not date_old:
+            continue
+        existing = conn.execute(
+            "SELECT COUNT(*) FROM stage_changes WHERE change_date=? AND compare_date=?",
+            (date_new, date_old),
+        ).fetchone()[0]
+        if not existing:
+            _compute_changes(conn, date_new, date_old)
+        chg_pair = pd.read_sql_query(
+            "SELECT * FROM stage_changes WHERE change_date=? AND compare_date=?",
+            conn,
+            params=(date_new, date_old),
+        )
+        old_s2 = int(hist_records[idx + 1].get("stage2_count") or 0)
+        row.update({
+            "compare_date": date_old,
+            "stage2_delta": int(row.get("stage2_count") or 0) - old_s2,
+            "stage_changes": int((chg_pair.stage_changed == 1).sum()) if not chg_pair.empty else 0,
+            "new_stage2": int((chg_pair.change_type == "NEW_STAGE2").sum()) if not chg_pair.empty else 0,
+            "exit_stage2": int((chg_pair.change_type == "EXIT_STAGE2").sum()) if not chg_pair.empty else 0,
+            "S1_to_S2": int(len(chg_pair[(chg_pair.stage_prev == "STAGE_1") & (chg_pair.stage_now == "STAGE_2")])) if not chg_pair.empty else 0,
+            "S2_to_S3": int(len(chg_pair[(chg_pair.stage_prev == "STAGE_2") & (chg_pair.stage_now == "STAGE_3")])) if not chg_pair.empty else 0,
+            "S3_to_S4": int(len(chg_pair[(chg_pair.stage_prev == "STAGE_3") & (chg_pair.stage_now == "STAGE_4")])) if not chg_pair.empty else 0,
+            "S2_to_S1": int(len(chg_pair[(chg_pair.stage_prev == "STAGE_2") & (chg_pair.stage_now == "STAGE_1")])) if not chg_pair.empty else 0,
+            "S3_to_S2": int(len(chg_pair[(chg_pair.stage_prev == "STAGE_3") & (chg_pair.stage_now == "STAGE_2")])) if not chg_pair.empty else 0,
+        })
+    result["snapshot_history"] = hist_records
     if prev_snap:
         result["summary"].update({
             "new_entrants_day":   len(result.get("new_stage2", [])),
@@ -885,6 +1109,32 @@ def build_change_report(
 
 _H = html.escape
 
+def _is_missing(v) -> bool:
+    if v is None:
+        return True
+    try:
+        return math.isnan(float(v))
+    except (TypeError, ValueError):
+        return False
+
+
+def _num_or_none(v) -> Optional[float]:
+    if _is_missing(v):
+        return None
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return None
+
+
+def _report_price_date(report: dict) -> str:
+    for row in report.get("stage2_now", []):
+        price_date = row.get("price_date")
+        if price_date:
+            return str(price_date)[:10]
+    return _latest_eod_close_date() or str(report.get("snap_date", "N/A"))[:10]
+
+
 def _badge(stage: str) -> str:
     colors = {
         "STAGE_2": ("background:#16a34a;color:#fff", "S2 ✅"),
@@ -898,7 +1148,7 @@ def _badge(stage: str) -> str:
 
 
 def _pct_cell(v) -> str:
-    if v is None:
+    if _is_missing(v):
         return '<td style="color:#94a3b8">—</td>'
     try:
         fv = float(v)
@@ -910,7 +1160,7 @@ def _pct_cell(v) -> str:
 
 
 def _price_cell(v) -> str:
-    if v is None:
+    if _is_missing(v):
         return '<td style="color:#94a3b8">—</td>'
     try:
         return f'<td style="text-align:right">₹{float(v):,.2f}</td>'
@@ -1079,6 +1329,22 @@ tr.row-sell{background:rgba(220,38,38,.03)}
 .tf-arrow{font-size:1rem;font-weight:900;line-height:1;padding:0 2px}
 .tf-count{font-size:.85rem;font-weight:800;padding:1px 7px;border-radius:10px;margin-left:4px}
 .trans-note{font-size:.78rem;color:#94a3b8;font-style:italic}
+/* ── Daily snapshot transition cards ── */
+.snapshot-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;padding:14px 18px}
+.snapshot-card{border:1px solid #dbeafe;border-radius:10px;background:#f8fafc;padding:11px 12px;min-width:0}
+.snapshot-card.latest{border-color:#059669;background:#f0fdf4}
+.snap-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px}
+.snap-date{font-size:.82rem;font-weight:800;color:#0f172a}
+.snap-vs{font-size:.68rem;color:#64748b;margin-top:1px}
+.snap-delta{font-size:.72rem;font-weight:800;border-radius:999px;padding:2px 8px;white-space:nowrap}
+.snap-delta.pos{background:#dcfce7;color:#166534}.snap-delta.neg{background:#fee2e2;color:#991b1b}.snap-delta.flat{background:#e2e8f0;color:#475569}
+.snap-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:8px}
+.snap-metric{background:#fff;border:1px solid #e2e8f0;border-radius:7px;padding:5px 6px}
+.snap-metric b{display:block;font-size:.86rem;line-height:1;color:#0f172a}
+.snap-metric span{display:block;font-size:.65rem;color:#64748b;margin-top:2px;text-transform:uppercase;letter-spacing:.04em}
+.snap-flow-list{display:flex;flex-wrap:wrap;gap:5px}
+.snap-flow{font-size:.68rem;font-weight:800;border-radius:999px;padding:2px 7px;background:#eef2ff;color:#3730a3}
+.snap-flow.good{background:#dcfce7;color:#166534}.snap-flow.bad{background:#fee2e2;color:#991b1b}.snap-flow.neu{background:#e2e8f0;color:#475569}
 </style>"""
 
 
@@ -1086,6 +1352,7 @@ def build_html_report(report: dict) -> str:
     snap = report.get("snap_date", "N/A")
     prev = report.get("prev_date", "N/A")
     week = report.get("week_snap", "N/A")
+    close_date = _report_price_date(report)
     summ = report.get("summary", {})
     now_ts = datetime.now().strftime("%Y-%m-%d %H:%M")
 
@@ -1096,6 +1363,7 @@ def build_html_report(report: dict) -> str:
     w_new     = report.get("week_new_stage2", [])
     w_exit    = report.get("week_exit_stage2", [])
     w_price   = report.get("week_price_changes", [])
+    snap_hist = report.get("snapshot_history", [])
 
     # ── helpers ──────────────────────────────────────────────────────────────
     _SIG_MAP = {
@@ -1118,6 +1386,8 @@ def build_html_report(report: dict) -> str:
     def score_bar(v, max_v: float = 100, color: str = "#059669") -> str:
         try:
             fv = float(v)
+            if math.isnan(fv):
+                return "—"
             w = min(100, max(0, fv / max_v * 100))
             return (f'<div class="score-bar"><span class="sb-num">{fv:.0f}</span>'
                     f'<div class="sb-track"><div class="sb-fill" style="width:{w}%;background:{color}"></div></div></div>')
@@ -1127,6 +1397,8 @@ def build_html_report(report: dict) -> str:
     def rsi_cell(v) -> str:
         try:
             fv = float(v)
+            if math.isnan(fv):
+                return '<td style="color:#94a3b8">—</td>'
             if fv >= 70:
                 cls = "rsi-ob"
             elif fv >= 55:
@@ -1153,13 +1425,17 @@ def build_html_report(report: dict) -> str:
                 fd = json.loads(fd_json)
             except Exception:
                 pass
-        pnl_txt = str(fd.get("pnl_summary") or "")[:300] if fd else ""
-        rat_txt = str(fd.get("ratios_summary") or "")[:300] if fd else ""
+        pnl_txt   = str(fd.get("pnl_summary") or "")[:300] if fd else ""
+        qtr_txt   = str(fd.get("quarterly_summary") or "")[:300] if fd else ""
+        bs_txt    = str(fd.get("balance_sheet_summary") or "")[:200] if fd else ""
+        rat_txt   = str(fd.get("ratios_summary") or "")[:300] if fd else ""
 
         # Score bar helper (local)
         def _sb(v, color="#059669"):
             try:
                 fv = float(v)
+                if math.isnan(fv):
+                    return "—"
                 w = min(100, max(0, fv))
                 return (f'<div class="score-bar"><span class="sb-num">{fv:.0f}</span>'
                         f'<div class="sb-track"><div class="sb-fill" style="width:{w}%;background:{color}"></div></div></div>')
@@ -1185,20 +1461,27 @@ def build_html_report(report: dict) -> str:
             f'<p>Signal: {sig_chip(r.get("trading_signal",""))}</p>'
             f'</div>'
         )
+        _has_fund_scores = any(r.get(k) is not None for k in ("enhanced_fund_score", "earnings_quality", "sales_growth", "financial_strength", "institutional_backing"))
         card_fund = (
             f'<div class="det-card"><h4>Fundamentals</h4>'
-            f'<p>Enh Fund: {_sb(r.get("enhanced_fund_score"), "#7c3aed")}</p>'
-            f'<p>Earn Qual: {_sb(r.get("earnings_quality"), "#0891b2")}</p>'
-            f'<p>Sales Gr: {_sb(r.get("sales_growth"), "#059669")}</p>'
-            f'<p>Fin Str: {_sb(r.get("financial_strength"), "#d97706")}</p>'
-            f'<p>Inst Back: {_sb(r.get("institutional_backing"), "#db2777")}</p>'
-            f'</div>'
+            + (
+                f'<p>Enh Fund: {_sb(r.get("enhanced_fund_score"), "#7c3aed")}</p>'
+                f'<p>Earn Qual: {_sb(r.get("earnings_quality"), "#0891b2")}</p>'
+                f'<p>Sales Gr: {_sb(r.get("sales_growth"), "#059669")}</p>'
+                f'<p>Fin Str: {_sb(r.get("financial_strength"), "#d97706")}</p>'
+                f'<p>Inst Back: {_sb(r.get("institutional_backing"), "#db2777")}</p>'
+                if _has_fund_scores else
+                f'<p style="color:#94a3b8;font-size:.78rem">Numeric scores not available — see Fund Details →</p>'
+            )
+            + f'</div>'
         )
         card_fd = (
             f'<div class="det-card" style="flex:2;min-width:200px"><h4>Fund Details</h4>'
             + (f'<p class="fund-detail-text"><strong>P&amp;L:</strong> {_H(pnl_txt)}</p>' if pnl_txt else '')
+            + (f'<p class="fund-detail-text"><strong>Quarterly:</strong> {_H(qtr_txt)}</p>' if qtr_txt else '')
+            + (f'<p class="fund-detail-text"><strong>Balance Sheet:</strong> {_H(bs_txt)}</p>' if bs_txt else '')
             + (f'<p class="fund-detail-text"><strong>Ratios:</strong> {_H(rat_txt)}</p>' if rat_txt else '')
-            + (f'<p style="color:#94a3b8;font-size:.78rem">No fund data available</p>' if not pnl_txt and not rat_txt else '')
+            + (f'<p style="color:#94a3b8;font-size:.78rem">No fund data available</p>' if not any([pnl_txt, qtr_txt, bs_txt, rat_txt]) else '')
             + f'</div>'
         )
         detail_content = f'<div class="detail-grid">{card_inv}{card_narr}{card_tech}{card_fund}{card_fd}</div>'
@@ -1235,7 +1518,7 @@ def build_html_report(report: dict) -> str:
                 {"key": "stage",       "label": "Stage",                 "toggleable": True, "default": True},
                 {"key": "signal",      "label": "Signal",                "toggleable": True, "default": True},
                 {"key": "live_price",  "label": "Live ₹",                "toggleable": True, "default": True},
-                {"key": "csv_price",   "label": f"Close {snap[:10]}",    "toggleable": True, "default": True},
+                {"key": "csv_price",   "label": f"Close {close_date}",   "toggleable": True, "default": True},
                 {"key": "live_pct",    "label": "Live Chg%",             "toggleable": True, "default": True},
                 {"key": "tech_score",  "label": "Tech Score",            "toggleable": True, "default": True},
                 {"key": "rsi",         "label": "RSI",                   "toggleable": True, "default": True},
@@ -1469,10 +1752,83 @@ def build_html_report(report: dict) -> str:
     else:
         trans_html = (
             '<div class="trans-section">'
-            '<div class="trans-label">Stage Transitions</div>'
-            '<div class="trans-note">No transitions yet — run daily snapshots to track movement over time.</div>'
+            '<div class="trans-label">Stage Transitions (vs prev snapshot)</div>'
+            '<div class="trans-note">No stage transitions in the latest comparison — review Daily Stage Transitions for earlier movement.</div>'
             '</div>'
         )
+
+    def snapshot_history_html(rows: list[dict]) -> str:
+        if not rows:
+            return ""
+        def _fmt_delta(v: object) -> tuple[str, str]:
+            try:
+                n = int(v or 0)
+            except (TypeError, ValueError):
+                n = 0
+            if n > 0:
+                return f"+{n}", "pos"
+            if n < 0:
+                return str(n), "neg"
+            return "0", "flat"
+
+        def _flow(label: str, count: object, cls: str) -> str:
+            try:
+                n = int(count or 0)
+            except (TypeError, ValueError):
+                n = 0
+            if n <= 0:
+                return ""
+            return f'<span class="snap-flow {cls}">{label} {n}</span>'
+
+        cards = []
+        for r in rows[:30]:
+            d = _H(str(r.get("snapshot_date", "—")))
+            total = int(r.get("total_stocks") or 0)
+            s2 = int(r.get("stage2_count") or 0)
+            compare = str(r.get("compare_date") or "").strip()
+            delta_text, delta_cls = _fmt_delta(r.get("stage2_delta"))
+            stage_changes = int(r.get("stage_changes") or 0)
+            new_s2 = int(r.get("new_stage2") or 0)
+            exit_s2 = int(r.get("exit_stage2") or 0)
+            flows = "".join([
+                _flow("S1 → S2", r.get("S1_to_S2"), "good"),
+                _flow("S3 → S2", r.get("S3_to_S2"), "good"),
+                _flow("S2 → S1", r.get("S2_to_S1"), "bad"),
+                _flow("S2 → S3", r.get("S2_to_S3"), "bad"),
+                _flow("S3 → S4", r.get("S3_to_S4"), "bad"),
+            ]) or '<span class="snap-flow neu">No stage moves</span>'
+            cards.append(
+                f'<div class="snapshot-card {"latest" if r is rows[0] else ""}">'
+                '<div class="snap-top">'
+                f'<div><div class="snap-date">{d}</div>'
+                + (f'<div class="snap-vs">vs {_H(compare)}</div>' if compare else '<div class="snap-vs">baseline</div>')
+                + '</div>'
+                f'<span class="snap-delta {delta_cls}">S2 Δ {delta_text}</span>'
+                '</div>'
+                '<div class="snap-metrics">'
+                f'<div class="snap-metric"><b>{s2}</b><span>Stage 2</span></div>'
+                f'<div class="snap-metric"><b>{stage_changes}</b><span>Changes</span></div>'
+                f'<div class="snap-metric"><b>{total}</b><span>Rows</span></div>'
+                '</div>'
+                '<div class="snap-flow-list">'
+                f'<span class="snap-flow good">{new_s2} new</span>'
+                f'<span class="snap-flow bad">{exit_s2} exits</span>'
+                f'{flows}'
+                '</div>'
+                '</div>'
+            )
+        return (
+            '<div class="section">'
+            '<div class="sec-hdr"><h2>📅 Daily Stage Transitions</h2>'
+            f'<span class="badge-count">{len(rows[:30])}</span>'
+            '<span style="font-size:.75rem;color:#64748b;margin-left:8px">Latest EOD tracker history with adjacent-snapshot movement</span>'
+            '</div>'
+            '<div class="snapshot-grid">'
+            + "".join(cards)
+            + '</div></div>'
+        )
+
+    snapshot_section = snapshot_history_html(snap_hist)
 
     cards = (
         stage_count_html
@@ -1490,6 +1846,10 @@ def build_html_report(report: dict) -> str:
             return ""
         import json as _json
 
+        def _json_num(v, default=0.0):
+            nv = _num_or_none(v)
+            return default if nv is None else nv
+
         # Build JSON data for all picks (for the modal)
         picks_data = []
         for pk in picks:
@@ -1502,30 +1862,30 @@ def build_html_report(report: dict) -> str:
                 "symbol": str(pk.get("symbol", "")),
                 "company": str(pk.get("company_name", ""))[:60],
                 "sector": str(pk.get("sector", "Other")),
-                "investment_score": float(pk.get("investment_score") or 0),
+                "investment_score": _json_num(pk.get("investment_score")),
                 "stance": str(pk.get("stance") or "NEUTRAL"),
                 "narrative": str(pk.get("narrative") or ""),
-                "technical_score": float(pk.get("technical_score") or 0),
-                "rsi": float(pk.get("rsi") or 0),
-                "enhanced_fund_score": float(pk.get("enhanced_fund_score") or 0),
-                "earnings_quality": float(pk.get("earnings_quality") or 0),
-                "sales_growth": float(pk.get("sales_growth") or 0),
-                "financial_strength": float(pk.get("financial_strength") or 0),
-                "institutional_backing": float(pk.get("institutional_backing") or 0),
-                "can_slim_score": float(pk.get("can_slim_score") or 0),
-                "minervini_score": float(pk.get("minervini_score") or 0),
+                "technical_score": _json_num(pk.get("technical_score")),
+                "rsi": _json_num(pk.get("rsi")),
+                "enhanced_fund_score": _json_num(pk.get("enhanced_fund_score")),
+                "earnings_quality": _json_num(pk.get("earnings_quality")),
+                "sales_growth": _json_num(pk.get("sales_growth")),
+                "financial_strength": _json_num(pk.get("financial_strength")),
+                "institutional_backing": _json_num(pk.get("institutional_backing")),
+                "can_slim_score": _json_num(pk.get("can_slim_score")),
+                "minervini_score": _json_num(pk.get("minervini_score")),
                 "pnl_summary": str(fd.get("pnl_summary") or ""),
                 "quarterly_summary": str(fd.get("quarterly_summary") or ""),
                 "ratios_summary": str(fd.get("ratios_summary") or ""),
                 "trend_signal": str(pk.get("trend_signal") or ""),
-                "live_price": float(pk.get("live_price") or pk.get("price") or 0),
-                "stage_score": float(pk.get("stage_score") or 0),
+                "live_price": _json_num(pk.get("live_price"), _json_num(pk.get("price"))),
+                "stage_score": _json_num(pk.get("stage_score")),
             })
         picks_json = _json.dumps(picks_data)
 
         pick_cards = []
         for i, pk in enumerate(picks):
-            inv = pk.get("investment_score") or 0
+            inv = _json_num(pk.get("investment_score"))
             stance = str(pk.get("stance") or "NEUTRAL").upper()
             stance_cls = {"BULLISH": "stance-bull", "BEARISH": "stance-bear"}.get(stance, "stance-neut")
             pick_cards.append(
@@ -1945,12 +2305,14 @@ function closePickModal() {
 <body>
 <div class="app-bar">
   <h1>📈 Sector Rotation – Stage 2 Tracker</h1>
-  <p>Snapshot: <strong>{snap}</strong> &nbsp;·&nbsp; Compared vs: <strong>{prev}</strong>
+  <p>Snapshot: <strong>{snap}</strong> &nbsp;·&nbsp; EOD Close: <strong>{close_date}</strong>
+     &nbsp;·&nbsp; Compared vs: <strong>{prev}</strong>
      &nbsp;·&nbsp; Week vs: <strong>{week}</strong> &nbsp;·&nbsp; Generated: {now_ts}</p>
 </div>
 <div class="container">
   <div class="summary-grid">{cards}</div>
   {trans_html}
+  {snapshot_section}
   {picks_section}
   <div class="section">
     {tabs_html}
@@ -1976,7 +2338,16 @@ def main() -> None:
     parser.add_argument("--list",     action="store_true", help="List available snapshot dates")
     parser.add_argument("--no-live",  action="store_true", help="Skip Yahoo Finance live prices")
     parser.add_argument("--update-live", action="store_true", help="Update live prices for latest snapshot without re-running screener")
+    parser.add_argument("--backfill", action="store_true", help="Build historical EOD snapshots from local price history")
+    parser.add_argument("--days", type=int, default=30, help="Number of EOD trading dates to backfill")
+    parser.add_argument("--to", help="Backfill through this EOD date (YYYY-MM-DD); default latest local EOD date")
     args = parser.parse_args()
+
+    if args.backfill:
+        dates = backfill_snapshots(days=args.days, end_date=args.to, force=args.force)
+        if dates:
+            print(f"  Backfilled {len(dates)} snapshots: {dates[0]} → {dates[-1]}")
+        return
 
     if args.update_live:
         update_live_prices(snap_date=args.date)
@@ -2019,11 +2390,15 @@ def main() -> None:
         if rpt.get("new_stage2"):
             print("\n  New Stage 2 entrants today:")
             for r in rpt["new_stage2"]:
-                print(f"    + {r['symbol']:<14} {r.get('company_name','')[:35]:<35}  lv={r.get('live_price') or '—'}")
+                cname = r.get("company_name", "")
+                cname = "" if pd.isna(cname) else str(cname)
+                print(f"    + {r['symbol']:<14} {cname[:35]:<35}  lv={r.get('live_price') or '—'}")
         if rpt.get("exit_stage2"):
             print("\n  Stage 2 exits today:")
             for r in rpt["exit_stage2"]:
-                print(f"    - {r['symbol']:<14} {r.get('company_name','')[:35]:<35}  now={r.get('stage_now')}")
+                cname = r.get("company_name", "")
+                cname = "" if pd.isna(cname) else str(cname)
+                print(f"    - {r['symbol']:<14} {cname[:35]:<35}  now={r.get('stage_now')}")
 
         if args.html or args.all:
             REPORTS_DIR.mkdir(parents=True, exist_ok=True)
