@@ -4122,6 +4122,116 @@ TOOL_REGISTRY: dict[str, Any] = {
 # F&O / Options Tool Wrappers
 # ─────────────────────────────────────────────────────────────────────────────
 
+def get_options_chain(symbol: str = "NIFTY", expiry_index: int = 0) -> dict:
+    """Fetch NSE options chain for a symbol with PCR, max pain, and IV data."""
+    symbol = symbol.upper()
+
+    try:
+        data = None
+        try:
+            from nsepython import nse_optionchain_scrapper
+            data = nse_optionchain_scrapper(symbol)
+        except Exception:
+            data = None
+
+        if data is None:
+            import requests
+            session = requests.Session()
+            session.headers.update({
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+                "Accept-Encoding": "gzip, deflate, br",
+                "Accept-Language": "en-US,en;q=0.9",
+                "Referer": "https://www.nseindia.com/option-chain",
+            })
+            session.get("https://www.nseindia.com", timeout=10)
+            import time as _t; _t.sleep(1)
+            if symbol in ("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"):
+                url = f"https://www.nseindia.com/api/option-chain-indices?symbol={symbol}"
+            else:
+                url = f"https://www.nseindia.com/api/option-chain-equities?symbol={symbol}"
+            resp = session.get(url, timeout=15)
+            data = resp.json()
+
+        if not data or "records" not in data:
+            return {"error": f"No options data for {symbol}"}
+
+        records = data["records"]
+        expiry_dates = records.get("expiryDates", [])
+        if not expiry_dates:
+            return {"error": "No expiry dates found"}
+
+        expiry = expiry_dates[min(expiry_index, len(expiry_dates) - 1)]
+        underlying = records.get("underlyingValue", 0)
+
+        calls: list[dict] = []
+        puts: list[dict] = []
+        for row in records.get("data", []):
+            if row.get("expiryDate") != expiry:
+                continue
+            strike = row.get("strikePrice", 0)
+            ce = row.get("CE", {})
+            pe = row.get("PE", {})
+            if ce:
+                calls.append({
+                    "strike": strike,
+                    "oi": ce.get("openInterest", 0),
+                    "chg_oi": ce.get("changeinOpenInterest", 0),
+                    "volume": ce.get("totalTradedVolume", 0),
+                    "iv": ce.get("impliedVolatility", 0),
+                    "ltp": ce.get("lastPrice", 0),
+                    "bid": ce.get("bidprice", 0),
+                    "ask": ce.get("askPrice", 0),
+                })
+            if pe:
+                puts.append({
+                    "strike": strike,
+                    "oi": pe.get("openInterest", 0),
+                    "chg_oi": pe.get("changeinOpenInterest", 0),
+                    "volume": pe.get("totalTradedVolume", 0),
+                    "iv": pe.get("impliedVolatility", 0),
+                    "ltp": pe.get("lastPrice", 0),
+                    "bid": pe.get("bidprice", 0),
+                    "ask": pe.get("askPrice", 0),
+                })
+
+        calls.sort(key=lambda x: x["strike"])
+        puts.sort(key=lambda x: x["strike"])
+
+        total_call_oi = sum(c["oi"] for c in calls)
+        total_put_oi = sum(p["oi"] for p in puts)
+        pcr = round(total_put_oi / total_call_oi, 3) if total_call_oi else 0
+
+        strikes = sorted(set(c["strike"] for c in calls) | set(p["strike"] for p in puts))
+        call_map = {c["strike"]: c["oi"] for c in calls}
+        put_map = {p["strike"]: p["oi"] for p in puts}
+        max_pain_strike = 0
+        min_pain = float("inf")
+        for s in strikes:
+            loss = sum(call_map.get(k, 0) * max(0, k - s) for k in strikes)
+            loss += sum(put_map.get(k, 0) * max(0, s - k) for k in strikes)
+            if loss < min_pain:
+                min_pain = loss
+                max_pain_strike = s
+
+        atm = min(strikes, key=lambda s: abs(s - underlying)) if strikes else 0
+
+        return {
+            "symbol": symbol,
+            "expiry": expiry,
+            "expiry_dates": expiry_dates[:4],
+            "underlying": underlying,
+            "atm": atm,
+            "pcr": pcr,
+            "max_pain": max_pain_strike,
+            "calls": calls,
+            "puts": puts,
+            "total_call_oi": total_call_oi,
+            "total_put_oi": total_put_oi,
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
 def get_option_chain(symbol: str, expiry: str | None = None,
                      use_live: bool = True) -> dict:
     """
@@ -4751,6 +4861,127 @@ TOOL_REGISTRY.update({
                     "description": "File path for MP3 output. Default: data/voice_briefing.mp3",
                 },
             },
+            "required": [],
+        },
+    ),
+})
+
+
+# ── Watchlist alert tools ──────────────────────────────────────────────────
+
+
+def get_watchlist_alerts(_args: dict) -> dict:
+    from terminal.alerts import list_alerts
+    alerts = list_alerts()
+    return {"alerts": alerts, "count": len(alerts)}
+
+
+def add_watchlist_alert(args: dict) -> dict:
+    from terminal.alerts import add_alert
+    sym = args.get("symbol", "").upper()
+    trigger = args.get("trigger", "price_above")
+    value = float(args.get("value", 0))
+    note = args.get("note", "")
+    alert = add_alert(sym, trigger, value, note)
+    return {"added": alert}
+
+
+def delete_watchlist_alert(args: dict) -> dict:
+    from terminal.alerts import delete_alert
+    aid = int(args.get("alert_id", 0))
+    ok = delete_alert(aid)
+    return {"deleted": ok, "alert_id": aid}
+
+
+def check_watchlist_alerts(_args: dict) -> dict:
+    from terminal.alerts import check_alerts
+    triggered = check_alerts()
+    return {"triggered": triggered, "count": len(triggered)}
+
+
+TOOL_REGISTRY.update({
+    "get_watchlist_alerts": (
+        get_watchlist_alerts,
+        "List all active price/RSI alerts",
+        {"type": "object", "properties": {}},
+    ),
+    "add_watchlist_alert": (
+        add_watchlist_alert,
+        "Add a price or RSI alert for a symbol",
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string"},
+                "trigger": {"type": "string", "enum": ["price_above", "price_below", "rsi_above", "rsi_below"]},
+                "value": {"type": "number"},
+                "note": {"type": "string"},
+            },
+        },
+    ),
+    "delete_watchlist_alert": (
+        delete_watchlist_alert,
+        "Delete an alert by ID",
+        {"type": "object", "properties": {"alert_id": {"type": "integer"}}},
+    ),
+    "check_watchlist_alerts": (
+        check_watchlist_alerts,
+        "Check all alerts against live prices/RSI and fire macOS notifications for triggered ones",
+        {"type": "object", "properties": {}},
+    ),
+})
+
+
+TOOL_REGISTRY.update({
+    "get_options_chain": (
+        get_options_chain,
+        (
+            "Fetch live NSE options chain with full OI, IV, LTP, PCR, and max pain. "
+            "Returns side-by-side calls/puts data for all strikes near ATM, total OI, "
+            "PCR (put-call ratio), max pain strike, and available expiry dates. "
+            "Use for: 'options chain', 'OI buildup', 'PCR', 'max pain', 'IV skew', "
+            "'option chain for NIFTY/BANKNIFTY/<stock>', 'show me calls and puts'."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {
+                    "type": "string",
+                    "description": "Index (NIFTY/BANKNIFTY/FINNIFTY) or equity symbol",
+                },
+                "expiry_index": {
+                    "type": "integer",
+                    "description": "0=nearest expiry, 1=next, etc.",
+                    "default": 0,
+                },
+            },
+            "required": [],
+        },
+    ),
+})
+
+
+def get_portfolio_pnl(_args: dict = None) -> dict:
+    """Compute live unrealised P&L for all holdings in data/holdings.csv."""
+    try:
+        from terminal.portfolio_pnl import compute_pnl
+        return compute_pnl()
+    except Exception as e:
+        return {"error": str(e)}
+
+
+TOOL_REGISTRY.update({
+    "get_portfolio_pnl": (
+        get_portfolio_pnl,
+        (
+            "Live Portfolio P&L — compute unrealised gains/losses for all holdings in data/holdings.csv. "
+            "Fetches live prices for each position and returns per-stock P&L, day P&L, invested value, "
+            "current value, P&L %, and portfolio totals. "
+            "Use for: 'portfolio P&L', 'my holdings', 'unrealised gains', 'unrealised losses', "
+            "'how is my portfolio doing', 'portfolio performance', 'check my holdings'."
+        ),
+        {
+            "type": "object",
+            "properties": {},
             "required": [],
         },
     ),

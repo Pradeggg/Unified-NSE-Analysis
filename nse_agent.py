@@ -366,7 +366,17 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/monitor start all",           "Start ALL strategy alerts combined"),
     ("/monitor stop",    "Stop a monitor (e.g. /monitor stop breakout)"),
     ("/monitor stop all","Stop ALL active monitors"),
+    # ── Watchlist alert commands ───────────────────────────────────────────
+    ("/alert list",       "List all price/RSI alerts"),
+    ("/alert add ",       "Add an alert: /alert add SYMBOL price_above 1500 [note]"),
+    ("/alert del ",       "Delete an alert by ID: /alert del 1"),
+    ("/alert check",      "Check all alerts against live prices/RSI now"),
+    ("/alert monitor",    "Toggle background alert monitor (polls every 5 min, market hours)"),
     # ── F&O / Options commands ─────────────────────────────────────────────
+    ("/options",          "Live options chain — Rich table (Calls|Strike|Puts) with PCR, max pain, IV"),
+    ("/options NIFTY",    "NIFTY options chain — nearest expiry"),
+    ("/options BANKNIFTY","BANKNIFTY options chain — nearest expiry"),
+    ("/options NIFTY 1",  "NIFTY options chain — next expiry"),
     ("/chain",            "Live option chain (PCR, max pain, OI, greeks)"),
     ("/chain NIFTY",      "NIFTY option chain — nearest expiry"),
     ("/chain BANKNIFTY",  "BANKNIFTY option chain — nearest expiry"),
@@ -426,6 +436,7 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/narrative TCS INFY",               "Investment narratives for specific stocks"),
     ("/voice",                            "P3-2 Generate daily voice briefing (MP3, needs OpenAI key)"),
     ("/concall TCS",                      "D4 Concall NLP — sentiment, themes, risk flags"),
+    ("/pnl",              "💼 Live portfolio P&L — unrealised gains/losses from holdings.csv"),
     ("/live",             "Switch to LIVE mode (real-time NSE API)"),
     ("/eod",              "Switch to EOD mode (historical CSV/DB)"),
     ("/auto",             "Switch to AUTO mode (keyword detect)"),
@@ -885,6 +896,7 @@ _HTML_LINK_RE = re.compile(
     r'<a\s+[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)</a>',
     re.IGNORECASE | re.DOTALL,
 )
+_MD_LINK_RE = re.compile(r'\[([^\]]+)\]\((https?://[^\s\)]+)\)')
 
 
 def _strip_html_tags(text: str) -> str:
@@ -899,25 +911,37 @@ def _osc8(label: str, url: str, color: str = "cyan") -> Text:
 
 
 def _html_links_to_visible_urls(text: str) -> str:
-    """Convert HTML anchors <a href="url">label</a> → visible 'label → url'.
+    """Convert HTML anchors <a href="url">label</a> → visible 'label (url)'.
 
     Plain visible URLs are required for macOS Terminal.app Cmd+click detection.
-    We also emit Markdown [label](url) so Rich Markdown generates OSC-8 for
-    terminals that support it (iTerm2, WezTerm, VS Code terminal).
     """
     def _replace(match: re.Match) -> str:
         url   = html.unescape(match.group(1).strip())
         label = html.unescape(_strip_html_tags(match.group(2))).strip() or url
         if label == url:
             return url
-        return f"[{label}]({url})"
+        return f"{label} ({url})"
 
     return _HTML_LINK_RE.sub(_replace, text)
 
 
+def _markdown_links_to_visible_urls(text: str) -> str:
+    """Convert Markdown links [label](url) → visible 'label (url)'."""
+    def _replace(match: re.Match) -> str:
+        label = match.group(1).strip()
+        url = match.group(2).strip()
+        if label == url:
+            return url
+        return f"{label} ({url})"
+
+    return _MD_LINK_RE.sub(_replace, text)
+
+
 def _linkify_markdown(text: str) -> str:
-    """Convert HTML anchors to Markdown links; leave [label](url) intact for Rich Markdown."""
-    return _html_links_to_visible_urls(text)
+    """Normalize links so markdown output always contains visible raw URLs."""
+    text = _html_links_to_visible_urls(text)
+    text = _markdown_links_to_visible_urls(text)
+    return text
 
 
 def _append_bare_url_links(target: Text, text: str) -> None:
@@ -1488,6 +1512,9 @@ def _print_help() -> None:
             "  [dim]               · orb · gap_go · vwap · engulfing · ema_ribbon · multi_confirm[/dim]\n"
             "  [dim]               · rsi_divergence · all[/dim]\n\n"
             "[bold yellow]F&O / OPTIONS 📊[/bold yellow]\n"
+            "  [yellow]/options NIFTY[/yellow]         — Live options chain: Calls|Strike|Puts table (PCR, max pain, IV)\n"
+            "  [yellow]/options BANKNIFTY[/yellow]     — BANKNIFTY options chain (nearest expiry)\n"
+            "  [yellow]/options NIFTY 1[/yellow]       — NIFTY options chain (next expiry, index 1)\n"
             "  [yellow]/chain NIFTY[/yellow]           — Live option chain (PCR, max pain, OI, greeks)\n"
             "  [yellow]/chain BANKNIFTY[/yellow]       — BANKNIFTY option chain\n"
             "  [yellow]/oi NIFTY[/yellow]              — OI analysis (support/resistance, PCR)\n"
@@ -1845,7 +1872,107 @@ def _chat_loop(agent, show_trace: bool) -> None:
             _handle_monitor_command(parts)
             continue
 
-        # ── /ric: recursive investigative conversation ─────────────────
+        # ── /alert: watchlist price/RSI alerts ────────────────────────
+        if text.lower().startswith("/alert"):
+            parts = text.split()
+            sub = parts[1].lower() if len(parts) > 1 else "list"
+
+            if sub == "list":
+                from terminal.alerts import list_alerts
+                alerts = list_alerts()
+                if not alerts:
+                    console.print("[dim]  No alerts set. Use /alert add SYMBOL price_above 1500[/dim]")
+                else:
+                    from rich.table import Table
+                    tbl = Table(title="🔔 Watchlist Alerts", show_header=True, header_style="bold cyan")
+                    tbl.add_column("ID", style="dim", width=4)
+                    tbl.add_column("Symbol", style="bold yellow")
+                    tbl.add_column("Trigger", style="cyan")
+                    tbl.add_column("Value", style="green", justify="right")
+                    tbl.add_column("Note", style="dim")
+                    for a in alerts:
+                        tbl.add_row(str(a["id"]), a["symbol"], a["trigger"], str(a["value"]), a.get("note", ""))
+                    console.print(tbl)
+                continue
+
+            elif sub == "add" and len(parts) >= 5:
+                # /alert add SYMBOL trigger value [note...]
+                sym = parts[2].upper()
+                trigger = parts[3].lower()
+                try:
+                    val = float(parts[4])
+                except ValueError:
+                    console.print("[red]  Value must be a number[/red]")
+                    continue
+                note = " ".join(parts[5:]) if len(parts) > 5 else ""
+                from terminal.alerts import add_alert
+                try:
+                    alert = add_alert(sym, trigger, val, note)
+                    console.print(f"[green]  ✅ Alert #{alert['id']} added: {sym} {trigger} {val}[/green]")
+                except ValueError as e:
+                    console.print(f"[red]  {e}[/red]")
+                continue
+
+            elif sub == "del" and len(parts) >= 3:
+                try:
+                    aid = int(parts[2])
+                except ValueError:
+                    console.print("[red]  Alert ID must be an integer[/red]")
+                    continue
+                from terminal.alerts import delete_alert
+                ok = delete_alert(aid)
+                if ok:
+                    console.print(f"[green]  ✅ Alert #{aid} deleted[/green]")
+                else:
+                    console.print(f"[red]  Alert #{aid} not found[/red]")
+                continue
+
+            elif sub == "check":
+                console.print("[dim]  Checking alerts against live prices...[/dim]")
+                from terminal.alerts import check_alerts
+                triggered = check_alerts()
+                if not triggered:
+                    console.print("[dim]  No alerts triggered.[/dim]")
+                else:
+                    for t in triggered:
+                        console.print(f"[bold yellow]  🔔 {t['symbol']} — {t['trigger']} {t['value']} (current: {t.get('triggered_value','?')})[/bold yellow]")
+                continue
+
+            elif sub == "monitor":
+                import threading
+                import time as _time
+                import types as _types
+                if not hasattr(_chat_loop, "_ns"):
+                    _chat_loop._ns = _types.SimpleNamespace()
+                _ns = _chat_loop._ns
+                _stop_monitor = getattr(_ns, "_alert_monitor_stop", None)
+                if _stop_monitor is not None and not _stop_monitor.is_set():
+                    _stop_monitor.set()
+                    _ns._alert_monitor_stop = None
+                    console.print("[dim]  🔕 Alert monitor stopped.[/dim]")
+                else:
+                    stop_evt = threading.Event()
+                    _ns._alert_monitor_stop = stop_evt
+
+                    def _monitor_loop(stop):
+                        from terminal.alerts import check_alerts as _ca
+                        import datetime as _dt
+                        while not stop.is_set():
+                            now = _dt.datetime.now()
+                            if now.weekday() < 5 and _dt.time(9, 15) <= now.time() <= _dt.time(15, 30):
+                                _ca()
+                            stop.wait(300)  # poll every 5 min
+
+                    t = threading.Thread(target=_monitor_loop, args=(stop_evt,), daemon=True)
+                    t.start()
+                    console.print("[green]  🔔 Alert monitor started (polling every 5 min, market hours).[/green]")
+                continue
+
+            else:
+                console.print("[dim]  Usage: /alert list | /alert add SYMBOL trigger value [note] | /alert del ID | /alert check | /alert monitor[/dim]")
+                continue
+
+
         if text.lower().startswith("/ric"):
             parts = text.split(maxsplit=2)
             if len(parts) == 1:
@@ -2353,6 +2480,70 @@ def _chat_loop(agent, show_trace: bool) -> None:
             _separator()
             continue  # self-contained — no LLM follow-up needed
 
+        # ── /pnl — live portfolio P&L dashboard ───────────────────────
+        elif text.lower().startswith("/pnl"):
+            console.print("[dim]  Fetching live prices for portfolio...[/dim]")
+            try:
+                from terminal.portfolio_pnl import compute_pnl
+                result = compute_pnl()
+
+                from rich.table import Table
+                import rich.box as _box
+
+                tbl = Table(
+                    title="💼 Portfolio — Unrealised P&L",
+                    show_header=True,
+                    header_style="bold cyan",
+                    box=_box.SIMPLE_HEAVY,
+                    padding=(0,1)
+                )
+                tbl.add_column("Symbol",   style="bold yellow", width=12)
+                tbl.add_column("Qty",      justify="right", width=6)
+                tbl.add_column("Avg Cost", justify="right", style="dim", width=10)
+                tbl.add_column("LTP",      justify="right", width=10)
+                tbl.add_column("Value",    justify="right", width=12)
+                tbl.add_column("P&L",      justify="right", width=12)
+                tbl.add_column("P&L%",     justify="right", width=8)
+                tbl.add_column("Day%",     justify="right", width=8)
+
+                for r in result["rows"]:
+                    pnl_color = "green" if r["pnl"] >= 0 else "red"
+                    day_color = "green" if r["day_chg_pct"] >= 0 else "red"
+                    pnl_sign  = "+" if r["pnl"] >= 0 else ""
+                    day_sign  = "+" if r["day_chg_pct"] >= 0 else ""
+                    tbl.add_row(
+                        r["symbol"],
+                        str(r["qty"]),
+                        f"₹{r['avg_cost']:,.2f}",
+                        f"₹{r['ltp']:,.2f}",
+                        f"₹{r['current']:,.0f}",
+                        f"[{pnl_color}]{pnl_sign}₹{r['pnl']:,.0f}[/]",
+                        f"[{pnl_color}]{pnl_sign}{r['pnl_pct']:.1f}%[/]",
+                        f"[{day_color}]{day_sign}{r['day_chg_pct']:.1f}%[/]",
+                    )
+
+                console.print(tbl)
+
+                # Totals footer
+                tot_color = "green" if result["total_pnl"] >= 0 else "red"
+                tot_sign  = "+" if result["total_pnl"] >= 0 else ""
+                day_color = "green" if result["total_day_pnl"] >= 0 else "red"
+                console.print(f"  [bold]Invested:[/bold]  ₹{result['total_invested']:,.0f}")
+                console.print(f"  [bold]Current:[/bold]   ₹{result['total_current']:,.0f}")
+                console.print(f"  [bold]Total P&L:[/bold] [{tot_color}]{tot_sign}₹{result['total_pnl']:,.0f}  ({tot_sign}{result['total_pnl_pct']:.1f}%)[/]")
+                console.print(f"  [bold]Day P&L:[/bold]   [{day_color}]{'+' if result['total_day_pnl']>=0 else ''}₹{result['total_day_pnl']:,.0f}[/]\n")
+
+                text = (
+                    f"Portfolio P&L summary: invested ₹{result['total_invested']:,.0f}, "
+                    f"current ₹{result['total_current']:,.0f}, total P&L {result['total_pnl_pct']:.1f}%. "
+                    f"Top gainers and losers: {', '.join(r['symbol'] for r in result['rows'][:3])}. "
+                    f"Give a brief portfolio health commentary and any rebalancing suggestions."
+                )
+            except Exception as _e:
+                console.print(f"[bold red]  ❌ P&L error: {_e}[/bold red]")
+                import traceback; traceback.print_exc()
+                continue
+
         # ── /concall <symbol> — concall NLP (direct render) ───────────
         elif text.lower().startswith("/concall"):
             parts = text.split()
@@ -2400,6 +2591,85 @@ def _chat_loop(agent, show_trace: bool) -> None:
                 except Exception as _e:
                     console.print(f"[bold red]  ❌  Concall NLP error: {_e}[/bold red]")
                     text = f"Concall NLP error for {sym}: {_e}"
+
+        # ── /options — live options chain (Rich side-by-side table) ──────
+        if user_input.startswith("/options"):
+            parts = user_input.split()
+            sym = parts[1].upper() if len(parts) > 1 else "NIFTY"
+            expiry_idx = int(parts[2]) if len(parts) > 2 and parts[2].isdigit() else 0
+            console.print(f"[dim]  Fetching options chain for {sym} (expiry #{expiry_idx})...[/dim]")
+            try:
+                from terminal.tools import call_tool
+                oc = call_tool("get_options_chain", {"symbol": sym, "expiry_index": expiry_idx})
+                if "error" in oc:
+                    console.print(f"[red]  ❌ {oc['error']}[/red]")
+                    continue
+
+                from rich.table import Table
+                import rich.box as _box
+
+                console.print(f"\n[bold cyan]  Options Chain: {oc['symbol']}[/bold cyan]  [dim]Expiry: {oc['expiry']}  |  Spot: ₹{oc['underlying']:,.1f}  |  ATM: {oc['atm']}[/dim]")
+                console.print(f"  [yellow]PCR: {oc['pcr']}[/yellow]  [dim]|[/dim]  [cyan]Max Pain: {oc['max_pain']}[/cyan]  [dim]|  Call OI: {oc['total_call_oi']:,}  |  Put OI: {oc['total_put_oi']:,}[/dim]")
+
+                if oc.get("expiry_dates"):
+                    exp_str = "  ".join(f"[{'bold green' if i == expiry_idx else 'dim'}]{i}:{d}[/]" for i, d in enumerate(oc["expiry_dates"]))
+                    console.print(f"  Expiries: {exp_str}\n")
+
+                atm = oc["atm"]
+                all_strikes = sorted(set(c["strike"] for c in oc["calls"]) | set(p["strike"] for p in oc["puts"]))
+                atm_idx_pos = all_strikes.index(atm) if atm in all_strikes else len(all_strikes) // 2
+                show_strikes = set(all_strikes[max(0, atm_idx_pos - 10):atm_idx_pos + 11])
+
+                call_map = {c["strike"]: c for c in oc["calls"]}
+                put_map = {p["strike"]: p for p in oc["puts"]}
+
+                tbl = Table(show_header=True, header_style="bold", box=_box.SIMPLE_HEAVY, padding=(0, 1))
+                tbl.add_column("C.OI", style="dim", justify="right", width=10)
+                tbl.add_column("C.IV%", justify="right", width=6)
+                tbl.add_column("C.LTP", style="green", justify="right", width=8)
+                tbl.add_column("STRIKE", style="bold white", justify="center", width=8)
+                tbl.add_column("P.LTP", style="red", justify="right", width=8)
+                tbl.add_column("P.IV%", justify="right", width=6)
+                tbl.add_column("P.OI", style="dim", justify="right", width=10)
+
+                for strike in sorted(show_strikes):
+                    c = call_map.get(strike, {})
+                    p = put_map.get(strike, {})
+                    is_atm = (strike == atm)
+                    strike_str = f"[bold yellow]► {strike} ◄[/bold yellow]" if is_atm else str(strike)
+                    c_style = "bold green" if strike < oc["underlying"] else ""
+                    p_style = "bold red" if strike > oc["underlying"] else ""
+                    tbl.add_row(
+                        f"[{c_style}]{c.get('oi', 0):,}[/]" if c else "-",
+                        f"{c.get('iv', 0):.1f}" if c else "-",
+                        f"[{c_style}]{c.get('ltp', 0):.2f}[/]" if c else "-",
+                        strike_str,
+                        f"[{p_style}]{p.get('ltp', 0):.2f}[/]" if p else "-",
+                        f"{p.get('iv', 0):.1f}" if p else "-",
+                        f"[{p_style}]{p.get('oi', 0):,}[/]" if p else "-",
+                    )
+
+                console.print(tbl)
+
+                pcr = oc["pcr"]
+                if pcr > 1.2:
+                    pcr_msg = "[green]Bullish (heavy put writing)[/green]"
+                elif pcr < 0.8:
+                    pcr_msg = "[red]Bearish (heavy call writing)[/red]"
+                else:
+                    pcr_msg = "[yellow]Neutral[/yellow]"
+                console.print(f"  PCR Interpretation: {pcr_msg}\n")
+
+                text = (
+                    f"Options chain for {sym} (expiry {oc['expiry']}): spot {oc['underlying']}, "
+                    f"ATM {atm}, PCR {pcr}, max pain {oc['max_pain']}. "
+                    f"Give a brief F&O analysis: key support/resistance from OI buildup, "
+                    f"IV skew interpretation, and trading outlook."
+                )
+            except Exception as _e:
+                console.print(f"[bold red]  ❌ Options error: {_e}[/bold red]")
+                import traceback; traceback.print_exc()
+                continue
 
         # ── /chain <symbol> [expiry] — live option chain ───────────────
         if text.lower().startswith("/chain"):
