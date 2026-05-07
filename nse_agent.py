@@ -822,38 +822,36 @@ def _strip_html_tags(text: str) -> str:
 
 
 def _osc8(label: str, url: str, color: str = "cyan") -> Text:
-    """Return a Rich Text span rendered as an OSC-8 clickable hyperlink."""
+    """Return a Rich Text span as OSC-8 link (iTerm2/WezTerm) + plain label (Terminal.app)."""
     t = Text()
     t.append(label, style=RichStyle(link=url, color=color, underline=True))
     return t
 
 
 def _html_links_to_visible_urls(text: str) -> str:
-    """Convert HTML anchors <a href="url">label</a> → Markdown [label](url).
+    """Convert HTML anchors <a href="url">label</a> → visible 'label → url'.
 
-    Rich's Markdown renderer turns [label](url) into OSC-8 clickable links,
-    so we convert to that form rather than stripping to plain text.
+    Plain visible URLs are required for macOS Terminal.app Cmd+click detection.
+    We also emit Markdown [label](url) so Rich Markdown generates OSC-8 for
+    terminals that support it (iTerm2, WezTerm, VS Code terminal).
     """
     def _replace(match: re.Match) -> str:
         url   = html.unescape(match.group(1).strip())
         label = html.unescape(_strip_html_tags(match.group(2))).strip() or url
-        # Use markdown link syntax so Markdown() generates OSC-8
+        if label == url:
+            return url
         return f"[{label}]({url})"
 
     return _HTML_LINK_RE.sub(_replace, text)
 
 
 def _linkify_markdown(text: str) -> str:
-    """Convert HTML anchors to Markdown link syntax; leave [label](url) intact.
-
-    Rich's Markdown() renderer converts [label](url) to OSC-8 hyperlinks,
-    which are natively clickable in iTerm2, WezTerm, kitty, VS Code terminal.
-    """
+    """Convert HTML anchors to Markdown links; leave [label](url) intact for Rich Markdown."""
     return _html_links_to_visible_urls(text)
 
 
 def _append_bare_url_links(target: Text, text: str) -> None:
-    """Append text, turning bare https:// URLs into OSC-8 clickable links."""
+    """Append text; bare URLs rendered as cyan OSC-8 links AND visible text (dual compat)."""
     pos = 0
     for match in _URL_RE.finditer(text):
         if match.start() > pos:
@@ -861,7 +859,8 @@ def _append_bare_url_links(target: Text, text: str) -> None:
         raw = match.group(1)
         url = raw.rstrip(".,;)")
         trailing = raw[len(url):]
-        target.append(url, style=RichStyle(link=url, color="cyan", underline=True))
+        # Visible cyan URL — Cmd+click in Terminal.app; OSC-8 in iTerm2/WezTerm
+        target.append(url, style=RichStyle(link=url, color="cyan"))
         if trailing:
             target.append(trailing)
         pos = match.end()
@@ -870,7 +869,7 @@ def _append_bare_url_links(target: Text, text: str) -> None:
 
 
 def _text_with_links(text: str) -> Text:
-    """Create Rich Text preserving line breaks; HTML anchors + bare URLs become OSC-8 links."""
+    """Create Rich Text; HTML anchors → OSC-8 with visible label; bare URLs → visible cyan."""
     out = Text()
     pos = 0
     for match in _HTML_LINK_RE.finditer(text):
@@ -879,6 +878,9 @@ def _text_with_links(text: str) -> Text:
         url   = html.unescape(match.group(1).strip())
         label = html.unescape(_strip_html_tags(match.group(2))).strip() or url
         out.append(label, style=RichStyle(link=url, color="cyan", underline=True))
+        # Show raw URL on same line so Terminal.app can Cmd+click it
+        if label != url:
+            out.append(f" {url}", style=RichStyle(color="cyan dim"))
         pos = match.end()
     if pos < len(text):
         _append_bare_url_links(out, text[pos:])
@@ -886,30 +888,32 @@ def _text_with_links(text: str) -> Text:
 
 
 def _render_news_item(r: dict, cap: int = 140) -> None:
-    """Render one news/research item with an OSC-8 clickable title + dim snippet."""
+    """Render one news/research item — title + raw URL + snippet.
+
+    Dual-compatible: OSC-8 metadata for iTerm2/WezTerm; raw visible URL for
+    macOS Terminal.app (Cmd+click the cyan https:// URL to open in browser).
+    """
     title   = r.get("title") or r.get("name") or ""
     url     = r.get("url")   or r.get("link") or ""
     snippet = r.get("snippet") or r.get("body") or ""
     source  = r.get("source", "")
 
-    # Source badge
     if source:
         console.print(f"  [dim cyan][{source}][/dim cyan]")
 
-    if title and url:
-        # OSC-8 clickable title — Cmd/Ctrl+click in iTerm2, WezTerm, VS Code terminal
-        line = Text("  ")
-        line.append(title, style=RichStyle(link=url, bold=True, color="cyan", underline=True))
-        console.print(line)
-    elif title:
-        console.print(f"  [bold]{title}[/bold]")
-    elif url:
-        # No title — show clickable URL as the link text
-        line = Text("  ")
-        line.append(url, style=RichStyle(link=url, color="cyan", underline=True))
-        console.print(line)
+    # Title — bold with OSC-8 link embedded (works in iTerm2/WezTerm)
+    if title:
+        if url:
+            line = Text("  ")
+            line.append(title, style=RichStyle(link=url, bold=True, color="white"))
+            console.print(line)
+        else:
+            console.print(f"  [bold]{title}[/bold]")
 
-    # Snippet
+    # Raw URL always shown as cyan text — macOS Terminal.app: Cmd+click to open
+    if url:
+        console.print(f"  [cyan]{url}[/cyan]")
+
     if snippet:
         body = snippet[:cap] + "…" if len(snippet) > cap else snippet
         console.print(f"  [dim]{body}[/dim]")
