@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import re
 import sqlite3
+from difflib import SequenceMatcher
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -207,6 +208,71 @@ def _all_symbols_map() -> dict[str, str]:
     return mapping
 
 
+def _lookup_key(value: str) -> str:
+    """Normalize symbol/name text for local symbol matching."""
+    return re.sub(r"[^A-Z0-9]", "", str(value or "").upper())
+
+
+def _resolve_local_symbol(query: str) -> dict:
+    """Resolve a symbol/name from local DB aliases without network access."""
+    q = str(query or "").strip().upper()
+    q_key = _lookup_key(q)
+    if not q_key:
+        return {"symbol": None, "confidence": "none", "query": query}
+
+    mapping = _all_symbols_map()
+    if q in mapping:
+        return {"symbol": mapping[q], "confidence": "exact", "query": query}
+
+    normalized: dict[str, tuple[str, str]] = {}
+    for key, sym in mapping.items():
+        key_norm = _lookup_key(key)
+        if key_norm:
+            normalized.setdefault(key_norm, (key, sym))
+
+    if q_key in normalized:
+        key, sym = normalized[q_key]
+        return {"symbol": sym, "confidence": "exact", "query": query, "matched": key}
+
+    contains_hits: list[tuple[int, str, str]] = []
+    for key_norm, (key, sym) in normalized.items():
+        if q_key in key_norm or key_norm in q_key:
+            contains_hits.append((abs(len(key_norm) - len(q_key)), key, sym))
+    if contains_hits:
+        contains_hits.sort(key=lambda x: x[0])
+        best = contains_hits[0][2]
+        return {
+            "symbol": best,
+            "confidence": "fuzzy",
+            "query": query,
+            "candidates": list(dict.fromkeys(hit[2] for hit in contains_hits[:5])),
+        }
+
+    near_hits: list[tuple[float, str, str]] = []
+    for key_norm, (key, sym) in normalized.items():
+        if len(key_norm) < 4 or q_key[:4] != key_norm[:4]:
+            continue
+        ratio = SequenceMatcher(None, q_key, key_norm).ratio()
+        if ratio >= 0.84:
+            near_hits.append((ratio, key, sym))
+    if near_hits:
+        near_hits.sort(key=lambda x: x[0], reverse=True)
+        best = near_hits[0][2]
+        return {
+            "symbol": best,
+            "confidence": "near-match",
+            "query": query,
+            "candidates": list(dict.fromkeys(hit[2] for hit in near_hits[:5])),
+        }
+
+    return {"symbol": None, "confidence": "none", "query": query}
+
+
+def _canonical_symbol(symbol: str) -> str:
+    resolved = _resolve_local_symbol(symbol)
+    return str(resolved.get("symbol") or symbol).strip().upper()
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Tool functions (all return dict)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -218,28 +284,9 @@ def resolve_symbol(query: str) -> dict:
     """
     import requests as _req
     q = query.strip().upper()
-    mapping = _all_symbols_map()
-
-    # Exact match
-    if q in mapping:
-        sym = mapping[q]
-        return {"symbol": sym, "confidence": "exact", "query": query}
-
-    # Local fuzzy
-    hits: list[tuple[str, str]] = []
-    for key, sym in mapping.items():
-        if q in key:
-            hits.append((key, sym))
-
-    if hits:
-        hits.sort(key=lambda x: len(x[0]))
-        best = hits[0][1]
-        return {
-            "symbol":     best,
-            "confidence": "fuzzy",
-            "query":      query,
-            "candidates": list({h[1] for h in hits[:5]}),
-        }
+    local = _resolve_local_symbol(q)
+    if local.get("symbol"):
+        return local
 
     # Fall back to NSE live search API
     try:
@@ -266,7 +313,7 @@ def resolve_symbol(query: str) -> dict:
 
 def get_symbol_snapshot(symbol: str) -> dict:
     """Get latest EOD snapshot for a symbol: price, stage, RS, RSI, signals, sector."""
-    sym = symbol.upper()
+    sym = _canonical_symbol(symbol)
     snap: dict[str, Any] = {"symbol": sym, "data_source": "stage_snapshots DB"}
 
     if DB_PATH.exists():
@@ -299,7 +346,7 @@ def get_symbol_snapshot(symbol: str) -> dict:
 
 def get_technical_setup(symbol: str, days: int = 400) -> dict:
     """Compute technical indicators for a symbol from price history CSV."""
-    sym = symbol.upper()
+    sym = _canonical_symbol(symbol)
     grp = _load_price_history(sym, days)
     if grp.empty:
         return {"symbol": sym, "error": "No price history available"}
@@ -358,7 +405,7 @@ def get_technical_setup(symbol: str, days: int = 400) -> dict:
 def get_sector_context(sector_or_symbol: str) -> dict:
     """Get sector performance and stock composition context.
     Pass a stock symbol (e.g. 'BHEL') to auto-detect its sector, or a sector name directly."""
-    q = sector_or_symbol.upper()
+    q = _canonical_symbol(sector_or_symbol)
     if not DB_PATH.exists():
         return {"error": "DB not available"}
 
@@ -2624,7 +2671,7 @@ TOOL_REGISTRY: dict[str, Any] = {
     ),
     "resolve_symbol": (
         resolve_symbol,
-        "Resolve a company name or alias to its NSE ticker symbol",
+        "Resolve a company name, alias, or near-match to its canonical NSE ticker symbol. Call this before stock-specific tools.",
         {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]},
     ),
     "get_symbol_snapshot": (
