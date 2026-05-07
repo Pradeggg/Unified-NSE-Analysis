@@ -445,6 +445,9 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/new",              "Start a fresh session (clear history)"),
     ("/reset",            "Start a fresh session (clear history)"),
     ("/clear",            "Clear the screen"),
+    ("/export",           "Export session to HTML report"),
+    ("/export html",      "Export session to HTML file (opens in browser)"),
+    ("/export pdf",       "Export session to PDF (requires weasyprint or pdfkit)"),
     ("/help",             "Show all commands"),
 ]
 
@@ -1986,6 +1989,37 @@ def _chat_loop(agent, show_trace: bool) -> None:
         # ── /context: show session summary ────────────────────────────
         if text.lower() in ("/context", "/session", "/history"):
             _print_context_summary(agent)
+            continue
+
+        # ── /export — export session to HTML/PDF ──────────────────────
+        if text.lower().startswith("/export"):
+            parts = text.split()
+            fmt = parts[1].lower() if len(parts) > 1 and parts[1].lower() in ("html", "pdf") else "html"
+            sym = parts[2].upper() if len(parts) > 2 and parts[2].lower() not in ("html", "pdf") else ""
+            # If first arg is a symbol (not html/pdf), shift
+            if len(parts) > 1 and parts[1].lower() not in ("html", "pdf"):
+                sym = parts[1].upper()
+                fmt = "html"
+
+            console.print(f"[dim]  Exporting session as {fmt.upper()}...[/dim]")
+            try:
+                from terminal.export import export_session_html, export_session_pdf
+                export_msgs = list(agent._history)
+
+                if fmt == "pdf":
+                    fpath = export_session_pdf(export_msgs, symbol=sym)
+                else:
+                    fpath = export_session_html(export_msgs, symbol=sym)
+
+                console.print(f"[green]  ✅ Session exported:[/green] {fpath}")
+                try:
+                    import subprocess as _sp
+                    _sp.run(["open", fpath], check=False)
+                except Exception:
+                    pass
+            except Exception as _e:
+                console.print(f"[bold red]  ❌ Export error: {_e}[/bold red]")
+                import traceback; traceback.print_exc()
             continue
 
         # ── /global shortcut: run global assessment ───────────────────

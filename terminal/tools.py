@@ -4988,6 +4988,28 @@ TOOL_REGISTRY.update({
 })
 
 
+def export_session(args: dict) -> dict:
+    """Export current session to HTML or PDF."""
+    fmt = args.get("format", "html")
+    symbol = args.get("symbol", "")
+    return {"message": f"Use /export {fmt} {symbol} command to export the session."}
+
+
+TOOL_REGISTRY.update({
+    "export_session": (
+        export_session,
+        "Export the current research session to HTML or PDF report",
+        {
+            "type": "object",
+            "properties": {
+                "format": {"type": "string", "enum": ["html", "pdf"], "default": "html"},
+                "symbol": {"type": "string"},
+            },
+        },
+    ),
+})
+
+
 def call_tool(name: str, args: dict) -> dict:
     """Execute a registered tool by name with given arguments."""
     if name not in TOOL_REGISTRY:
