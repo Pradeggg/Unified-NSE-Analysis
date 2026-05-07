@@ -60,6 +60,30 @@ FUNDAMENTAL_FALLBACK_CSVS = [
     ROOT / "organized" / "data" / "fundamental_scores_database.csv",
 ]
 
+TECHNICAL_VIEW_INDEX_BASKET = [
+    "Nifty 50",
+    "Nifty Bank",
+    "Nifty Next 50",
+    "Nifty Midcap 100",
+    "Nifty Smallcap 100",
+    "Nifty IT",
+    "Nifty Pharma",
+    "Nifty Metal",
+    "Nifty Auto",
+    "Nifty FMCG",
+    "Nifty Realty",
+    "Nifty Energy",
+    "Nifty Oil & Gas",
+]
+
+INDEX_NAME_ALIASES = {
+    "nifty midcap 100": "NIFTY MIDCAP 100",
+    "nifty smallcap 100": "NIFTY SMLCAP 100",
+    "nifty oil gas": "NIFTY OIL AND GAS",
+    "nifty oil and gas": "NIFTY OIL AND GAS",
+    "nifty healthcare": "NIFTY HEALTHCARE",
+}
+
 ROTATING_INDEXES = {
     "Nifty Ind Defence": "Defence & Aerospace",
     "Nifty Realty": "Realty",
@@ -258,6 +282,285 @@ def build_index_metrics(index_data: pd.DataFrame, symbols: list[str]) -> pd.Data
             }
         )
     return pd.DataFrame(rows)
+
+
+def _norm_index_name(value: object) -> str:
+    text = str(value or "").strip().lower()
+    text = re.sub(r"&", " and ", text)
+    text = re.sub(r"[^a-z0-9]+", " ", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _resolve_index_symbol(available: list[str], requested: str) -> str | None:
+    lookup = {_norm_index_name(sym): sym for sym in available}
+    requested_key = _norm_index_name(requested)
+    alias = INDEX_NAME_ALIASES.get(requested_key)
+    if alias and _norm_index_name(alias) in lookup:
+        return lookup[_norm_index_name(alias)]
+    if requested_key in lookup:
+        return lookup[requested_key]
+    return None
+
+
+def _rsi14(close: pd.Series) -> pd.Series:
+    close = pd.to_numeric(close, errors="coerce")
+    delta = close.diff()
+    gain = delta.clip(lower=0).ewm(alpha=1 / 14, adjust=False, min_periods=14).mean()
+    loss = (-delta.clip(upper=0)).ewm(alpha=1 / 14, adjust=False, min_periods=14).mean()
+    rs = gain / loss.replace(0, np.nan)
+    rsi = 100 - (100 / (1 + rs))
+    rsi = rsi.where(~((loss == 0) & (gain > 0)), 100.0)
+    rsi = rsi.where(~((gain == 0) & (loss > 0)), 0.0)
+    return rsi.fillna(50.0)
+
+
+def _macd(close: pd.Series) -> tuple[pd.Series, pd.Series, pd.Series]:
+    close = pd.to_numeric(close, errors="coerce")
+    macd = close.ewm(span=12, adjust=False, min_periods=12).mean() - close.ewm(span=26, adjust=False, min_periods=26).mean()
+    signal = macd.ewm(span=9, adjust=False, min_periods=9).mean()
+    hist = macd - signal
+    return macd, signal, hist
+
+
+def _latest_float(series: pd.Series, default: float = math.nan) -> float:
+    if series.empty:
+        return default
+    try:
+        val = float(series.iloc[-1])
+        return val if not math.isnan(val) else default
+    except (TypeError, ValueError):
+        return default
+
+
+def _trend_classification(close: float, sma20: float, sma50: float, sma200: float, rsi: float, macd_hist: float) -> str:
+    above_short = close > sma20 and close > sma50
+    above_long = math.isnan(sma200) or close > sma200
+    stacked = above_short and above_long and sma20 >= sma50
+    if stacked and rsi >= 55 and macd_hist >= 0:
+        return "BULLISH"
+    if above_short and rsi >= 50:
+        return "CONSTRUCTIVE"
+    if close < sma20 and close < sma50 and rsi < 45 and macd_hist < 0:
+        return "BEARISH"
+    if close < sma50 or rsi < 48:
+        return "WEAK"
+    return "NEUTRAL"
+
+
+def _vcp_flag(hist: pd.DataFrame) -> str:
+    if len(hist) < 35:
+        return "NO"
+    close = pd.to_numeric(hist["CLOSE"], errors="coerce").replace(0, np.nan)
+    high = pd.to_numeric(hist.get("HIGH", hist["CLOSE"]), errors="coerce")
+    low = pd.to_numeric(hist.get("LOW", hist["CLOSE"]), errors="coerce")
+    range_pct = ((high - low) / close * 100).replace([np.inf, -np.inf], np.nan)
+    recent = range_pct.tail(10).mean()
+    prior = range_pct.tail(35).head(25).mean()
+    if pd.notna(recent) and pd.notna(prior) and prior > 0 and recent <= prior * 0.72:
+        return "YES"
+    return "NO"
+
+
+def _rule_based_technical_view_narrative(metrics: pd.DataFrame, missing_indices: list[str]) -> str:
+    if metrics.empty:
+        return (
+            "Short-term technical view is unavailable because no approved index history was found. "
+            "Add local EOD index history to data/nse_index_data.csv and regenerate the report."
+        )
+    trend_counts = metrics["TREND"].value_counts().to_dict()
+    bullish_count = int(metrics["TREND"].isin(["BULLISH", "CONSTRUCTIVE"]).sum())
+    weak_count = int(metrics["TREND"].isin(["WEAK", "BEARISH"]).sum())
+    leader = metrics.sort_values(["RS_1M", "RET_1M"], ascending=False).iloc[0]
+    laggard = metrics.sort_values(["RS_1M", "RET_1M"], ascending=True).iloc[0]
+    nifty = metrics[metrics["SYMBOL"] == "Nifty 50"]
+    if nifty.empty:
+        nifty = metrics.head(1)
+    nrow = nifty.iloc[0]
+    vwap_msg = (
+        "VWAP is unavailable for indices where local index volume is absent or zero."
+        if (metrics["VWAP_STATUS"] == "UNAVAILABLE").any()
+        else "VWAP is computed from available local traded quantity."
+    )
+    missing_msg = f" Missing indices: {', '.join(missing_indices)}." if missing_indices else ""
+    return (
+        f"Broader market technical regime is {str(nrow['TREND']).lower()} with {bullish_count}/{len(metrics)} approved indices "
+        f"in bullish or constructive trends and {weak_count} in weak or bearish trends. "
+        f"Nifty 50 closed at {float(nrow['CLOSE']):.2f}; its RSI is {float(nrow['RSI_14']):.1f}, MACD is {str(nrow['MACD_SIGNAL']).lower()}, "
+        f"support is near {float(nrow['SUPPORT']):.2f}, and resistance is near {float(nrow['RESISTANCE']):.2f}. "
+        f"Relative strength leadership is with {leader['SYMBOL']} at {float(leader['RS_1M']):+.1f}% 1M RS versus Nifty 50, while "
+        f"{laggard['SYMBOL']} lags at {float(laggard['RS_1M']):+.1f}% 1M RS. "
+        f"SMA alignment shows {trend_counts}. VCP contraction flags are present in "
+        f"{int((metrics['VCP_FLAG'] == 'YES').sum())} indices, indicating selective volatility contraction rather than a broad setup. "
+        f"{vwap_msg}{missing_msg}"
+    )
+
+
+def _generate_technical_view_narrative(metrics: pd.DataFrame, missing_indices: list[str]) -> str:
+    fallback = _rule_based_technical_view_narrative(metrics, missing_indices)
+    if metrics.empty:
+        return fallback
+    import os
+
+    api_key = (
+        os.environ.get("OPENAI_API_KEY")
+        or _load_env_key("OPENAI_API_KEY")
+        or _load_env_key("AGENTIC_HARNESS_API_KEY")
+    )
+    if not api_key:
+        return fallback
+    model = (
+        os.environ.get("SHUNYAAI_ASSISTANT_MODEL")
+        or _load_env_key("SHUNYAAI_ASSISTANT_MODEL")
+        or "gpt-5.5"
+    )
+    try:
+        sample_cols = [
+            "SYMBOL", "CLOSE", "RET_1W", "RET_1M", "RET_3M", "RS_1M", "RS_3M",
+            "SMA_ALIGNMENT", "RSI_14", "MACD_SIGNAL", "TREND", "SUPPORT", "RESISTANCE",
+            "VCP_FLAG", "VWAP_STATUS",
+        ]
+        prompt = "\n".join(
+            [
+                "Write a comprehensive but concise short-term technical view for an NSE sector rotation report.",
+                "Use only the supplied EOD index metrics. Do not give investment advice, buy/sell calls, targets, or trade instructions.",
+                "Cover broader market regime, RS leaders/laggards, SMA alignment, RSI/MACD confirmation, VCP contraction, support/resistance, and VWAP limitations.",
+                "Return valid JSON with one key: narrative.",
+                "",
+                metrics[sample_cols].to_json(orient="records"),
+                f"Missing indices: {missing_indices}",
+            ]
+        )
+        print(f"  Generating short-term technical view via OpenAI {model}...")
+        result = _llm_call(
+            api_key,
+            model,
+            "You are an NSE India technical market strategist. Return valid JSON only.",
+            prompt,
+            max_tokens=4096,
+            timeout=120,
+        )
+        narrative = str(result.get("narrative", "")).strip()
+        return narrative or fallback
+    except Exception as exc:
+        print(f"  LLM technical view skipped ({type(exc).__name__}); using rule-based technical view.")
+        return fallback
+
+
+def build_short_term_technical_view(
+    index_history: pd.DataFrame | None,
+    index_basket: list[str] | None = None,
+    use_llm: bool = False,
+) -> dict:
+    basket = index_basket or TECHNICAL_VIEW_INDEX_BASKET
+    empty_result = {"metrics": pd.DataFrame(), "missing_indices": list(basket), "narrative": ""}
+    if index_history is None or index_history.empty or "SYMBOL" not in index_history.columns:
+        empty_result["narrative"] = _rule_based_technical_view_narrative(pd.DataFrame(), list(basket))
+        return empty_result
+
+    history = index_history.copy()
+    if "TIMESTAMP" not in history.columns or "CLOSE" not in history.columns:
+        empty_result["narrative"] = _rule_based_technical_view_narrative(pd.DataFrame(), list(basket))
+        return empty_result
+    history["TIMESTAMP"] = pd.to_datetime(history["TIMESTAMP"], errors="coerce")
+    history = history.dropna(subset=["TIMESTAMP", "CLOSE"])
+
+    available = history["SYMBOL"].dropna().astype(str).unique().tolist()
+    rows: list[dict] = []
+    missing: list[str] = []
+
+    for requested in basket:
+        actual = _resolve_index_symbol(available, requested)
+        if actual is None:
+            missing.append(requested)
+            continue
+        hist = history[history["SYMBOL"].astype(str) == actual].sort_values("TIMESTAMP").tail(260).copy()
+        if len(hist) < 30:
+            missing.append(requested)
+            continue
+        close = pd.to_numeric(hist["CLOSE"], errors="coerce")
+        high = pd.to_numeric(hist["HIGH"], errors="coerce") if "HIGH" in hist.columns else close
+        low = pd.to_numeric(hist["LOW"], errors="coerce") if "LOW" in hist.columns else close
+        dates = hist["TIMESTAMP"]
+
+        sma20 = close.rolling(20, min_periods=10).mean()
+        sma50 = close.rolling(50, min_periods=25).mean()
+        sma200 = close.rolling(200, min_periods=100).mean()
+        rsi = _rsi14(close)
+        macd, macd_signal, macd_hist = _macd(close)
+
+        latest_close = _latest_float(close)
+        latest_sma20 = _latest_float(sma20)
+        latest_sma50 = _latest_float(sma50)
+        latest_sma200 = _latest_float(sma200)
+        latest_rsi = _latest_float(rsi, 50.0)
+        latest_macd = _latest_float(macd)
+        latest_macd_signal = _latest_float(macd_signal)
+        latest_macd_hist = _latest_float(macd_hist, 0.0)
+        macd_state = "BULLISH" if latest_macd_hist > 0 else "BEARISH" if latest_macd_hist < 0 else "NEUTRAL"
+        trend = _trend_classification(latest_close, latest_sma20, latest_sma50, latest_sma200, latest_rsi, latest_macd_hist)
+        support = float(low.tail(20).min())
+        resistance = float(high.tail(20).max())
+
+        volume = pd.to_numeric(hist["TOTTRDQTY"], errors="coerce") if "TOTTRDQTY" in hist.columns else pd.Series(dtype=float)
+        if not volume.empty and float(volume.tail(20).sum() or 0) > 0:
+            vwap = float((close.tail(20) * volume.tail(20)).sum() / volume.tail(20).sum())
+            vwap_status = "AVAILABLE"
+        else:
+            vwap = math.nan
+            vwap_status = "UNAVAILABLE"
+
+        rows.append(
+            {
+                "SYMBOL": requested,
+                "SOURCE_SYMBOL": actual,
+                "DATE": pd.to_datetime(dates.iloc[-1]).date().isoformat(),
+                "CLOSE": round(latest_close, 2),
+                "RET_1W": round(_pct_return(close, 7, dates), 2),
+                "RET_1M": round(_pct_return(close, 30, dates), 2),
+                "RET_3M": round(_pct_return(close, 91, dates), 2),
+                "SMA_20": round(latest_sma20, 2),
+                "SMA_50": round(latest_sma50, 2),
+                "SMA_200": round(latest_sma200, 2) if not math.isnan(latest_sma200) else math.nan,
+                "SMA_ALIGNMENT": (
+                    "ABOVE_20_50_200" if latest_close > latest_sma20 and latest_close > latest_sma50 and (math.isnan(latest_sma200) or latest_close > latest_sma200)
+                    else "BELOW_20_50" if latest_close < latest_sma20 and latest_close < latest_sma50
+                    else "MIXED"
+                ),
+                "RSI_14": round(latest_rsi, 2),
+                "MACD": round(latest_macd, 2) if not math.isnan(latest_macd) else math.nan,
+                "MACD_SIGNAL_LINE": round(latest_macd_signal, 2) if not math.isnan(latest_macd_signal) else math.nan,
+                "MACD_HIST": round(latest_macd_hist, 2),
+                "MACD_SIGNAL": macd_state,
+                "TREND": trend,
+                "SUPPORT": round(support, 2),
+                "RESISTANCE": round(resistance, 2),
+                "VCP_FLAG": _vcp_flag(hist),
+                "VWAP": round(vwap, 2) if not math.isnan(vwap) else math.nan,
+                "VWAP_STATUS": vwap_status,
+            }
+        )
+
+    metrics = pd.DataFrame(rows)
+    if not metrics.empty:
+        nifty = metrics[metrics["SYMBOL"] == "Nifty 50"]
+        if nifty.empty:
+            nifty = metrics.head(1)
+        n_1m = float(nifty.iloc[0].get("RET_1M", 0) or 0)
+        n_3m = float(nifty.iloc[0].get("RET_3M", 0) or 0)
+        metrics["RS_1M"] = (pd.to_numeric(metrics["RET_1M"], errors="coerce") - n_1m).round(2)
+        metrics["RS_3M"] = (pd.to_numeric(metrics["RET_3M"], errors="coerce") - n_3m).round(2)
+        metrics["RS_RANK"] = pd.to_numeric(metrics["RS_1M"], errors="coerce").rank(ascending=False, method="min").astype(int)
+        metrics = metrics.sort_values(["RS_RANK", "RET_1M"], ascending=[True, False]).reset_index(drop=True)
+
+    return {
+        "metrics": metrics,
+        "missing_indices": missing,
+        "narrative": (
+            _generate_technical_view_narrative(metrics, missing)
+            if use_llm
+            else _rule_based_technical_view_narrative(metrics, missing)
+        ),
+    }
 
 
 def rank_rotating_sectors(index_metrics: pd.DataFrame, benchmark_symbol: str = "Nifty 500") -> pd.DataFrame:
@@ -2084,8 +2387,37 @@ _SECTOR_PARA_LABELS = [
     ("Risk & Tactical View", "⚠️"),
 ]
 
+
+def _narrative_points(text: object) -> list[str]:
+    """Split narrative prose into concise bullet points without changing meaning."""
+    cleaned = re.sub(r"\s+", " ", str(text or "").replace("\\n", "\n")).strip()
+    if not cleaned:
+        return []
+    raw_lines = [line.strip() for line in re.split(r"\n+", cleaned) if line.strip()]
+    points: list[str] = []
+    for line in raw_lines:
+        line = re.sub(r"^[\-•*]\s*", "", line).strip()
+        if not line:
+            continue
+        parts = [
+            part.strip()
+            for part in re.split(r"(?<=[.!?])\s+(?=[A-Z0-9])", line)
+            if part.strip()
+        ]
+        points.extend(parts or [line])
+    return points
+
+
+def _bullet_list_html(text: object, class_name: str = "narr-bullets") -> str:
+    points = _narrative_points(text)
+    if not points:
+        return '<p><em>Narrative not available.</em></p>'
+    items = "".join(f"<li>{html_mod.escape(point)}</li>" for point in points)
+    return f'<ul class="{html_mod.escape(class_name)}">{items}</ul>'
+
+
 def _narrative_html(text: str, is_sector: bool = False) -> str:
-    """Convert narrative text (\\n\\n separated) to labelled HTML paragraphs."""
+    """Convert narrative text (\\n\\n separated) to labelled, scannable cards."""
     if not text:
         return "<p><em>Narrative not available.</em></p>"
     paras = [p.strip() for p in text.replace("\\n\\n", "\n\n").split("\n\n") if p.strip()]
@@ -2098,14 +2430,17 @@ def _narrative_html(text: str, is_sector: bool = False) -> str:
     for i, para in enumerate(paras):
         if i < len(labels):
             label, icon = labels[i]
+            card_class = "narr-card sector-narr-card" if is_sector else "narr-card"
             html_parts.append(
-                f'<div class="narr-section">'
+                f'<div class="narr-section {card_class}">'
                 f'<div class="narr-label">{icon} {html_mod.escape(label)}</div>'
-                f'<p>{html_mod.escape(para)}</p>'
+                f'{_bullet_list_html(para)}'
                 f'</div>'
             )
         else:
-            html_parts.append(f"<p>{html_mod.escape(para)}</p>")
+            html_parts.append(
+                f'<div class="narr-section narr-card">{_bullet_list_html(para)}</div>'
+            )
     return "\n".join(html_parts)
 
 
@@ -2177,12 +2512,20 @@ a{color:var(--primary-alt);text-decoration:none}
 .summary-card{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow);padding:18px;min-width:0;max-width:100%;overflow-wrap:anywhere}
 .summary-card h3{font-size:13px;font-weight:700;color:var(--primary);margin-bottom:10px}
 .summary-card p{font-size:13px;line-height:1.65;color:var(--text)}
+.rotation-context-list{list-style:none;margin:0;padding:0}
+.rotation-context-list li{position:relative;font-size:13px;line-height:1.65;color:#1f2937;padding-left:16px;margin:0 0 8px;overflow-wrap:anywhere}
+.rotation-context-list li:last-child{margin-bottom:0}
+.rotation-context-list li::before{content:"";position:absolute;left:0;top:.78em;width:6px;height:6px;border-radius:50%;background:#1e3a5f}
 .brief-card{background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow);padding:16px 18px;margin:10px 0 12px}
 .brief-title{font-size:13px;font-weight:800;color:var(--primary);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px}
 .brief-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
 .brief-block{border-left:3px solid #3b82f6;background:#f8fafc;padding:10px 11px;border-radius:6px;min-width:0}
 .brief-label{font-size:10px;font-weight:800;color:#475569;text-transform:uppercase;margin-bottom:5px}
 .brief-text{font-size:12px;line-height:1.55;color:var(--text);overflow-wrap:anywhere}
+.brief-list{list-style:none;margin:0;padding:0}
+.brief-list li{position:relative;font-size:12px;line-height:1.55;color:#1f2937;padding-left:13px;margin:0 0 5px;overflow-wrap:anywhere}
+.brief-list li:last-child{margin-bottom:0}
+.brief-list li::before{content:"";position:absolute;left:0;top:.72em;width:5px;height:5px;border-radius:50%;background:#3b82f6}
 @media(max-width:900px){.brief-grid{grid-template-columns:1fr}}
 .buy-list{list-style:none;padding:0}
 .buy-list li{padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;display:flex;align-items:center;gap:8px}
@@ -2191,6 +2534,41 @@ a{color:var(--primary-alt);text-decoration:none}
 /* ---- CHART ---- */
 .chart-wrap{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);padding:20px;margin-bottom:20px;position:relative;height:280px}
 .chart-title{font-size:12px;font-weight:700;color:var(--primary);margin-bottom:12px;text-transform:uppercase;letter-spacing:.06em}
+
+/* ---- SHORT-TERM TECHNICAL VIEW ---- */
+.tech-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:16px}
+.tech-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px;min-width:0}
+.tech-kicker{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:800;margin-bottom:5px}
+.tech-main{font-size:18px;font-weight:850;color:var(--primary);line-height:1.2}
+.tech-sub{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.45}
+.tech-narr{background:#f8fbff;border:1px solid #bfdbfe;border-radius:var(--radius);padding:18px;margin-bottom:16px}
+.tech-narr h3{font-size:14px;color:var(--primary);margin-bottom:8px}
+.tech-narr p{font-size:13px;line-height:1.75;color:var(--text)}
+.tech-narr-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
+.tech-narr-section{background:#fff;border:1px solid #dbeafe;border-left:4px solid #2563eb;border-radius:8px;padding:12px 14px;min-width:0}
+.tech-narr-label{font-size:10px;font-weight:850;color:#1e40af;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px}
+.tech-narr-section p{font-size:12.5px;line-height:1.65;color:#1f2937;margin:0}
+.tech-narr-list{list-style:none;margin:0;padding:0}
+.tech-narr-list li{position:relative;font-size:12.5px;line-height:1.65;color:#1f2937;margin:0 0 7px;padding-left:15px}
+.tech-narr-list li:last-child{margin-bottom:0}
+.tech-narr-list li::before{content:"";position:absolute;left:0;top:.75em;width:6px;height:6px;border-radius:50%;background:#2563eb}
+.tech-narr-section.tech-risk{border-left-color:#dc2626}.tech-narr-section.tech-risk .tech-narr-label{color:#991b1b}
+.tech-narr-section.tech-risk .tech-narr-list li::before{background:#dc2626}
+.tech-narr-section.tech-data{border-left-color:#64748b}.tech-narr-section.tech-data .tech-narr-label{color:#475569}
+.tech-narr-section.tech-data .tech-narr-list li::before{background:#64748b}
+.tech-charts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:16px}
+.tech-chart{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:15px;min-width:0}
+.tech-chart-title{font-size:11px;font-weight:800;color:var(--primary);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+.bar-row{display:grid;grid-template-columns:minmax(94px,150px) 1fr 52px;gap:8px;align-items:center;margin:7px 0;font-size:11px}
+.bar-label{font-weight:700;color:#334155;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar-track{height:8px;background:#e2e8f0;border-radius:999px;overflow:hidden}
+.bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#1e3a5f,#38bdf8)}
+.bar-val{text-align:right;font-variant-numeric:tabular-nums;color:#475569;font-weight:700}
+.trend-pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:800;white-space:nowrap}
+.trend-BULLISH{background:#dcfce7;color:#166534}.trend-CONSTRUCTIVE{background:#d1fae5;color:#047857}
+.trend-NEUTRAL{background:#f1f5f9;color:#475569}.trend-WEAK{background:#ffedd5;color:#c2410c}.trend-BEARISH{background:#fee2e2;color:#991b1b}
+.tech-note{font-size:11px;color:#64748b;background:#f8fafc;border:1px solid var(--border);border-radius:6px;padding:9px 11px;margin-bottom:12px}
+@media(max-width:900px){.tech-charts,.tech-narr-grid{grid-template-columns:1fr}}
 
 /* ---- TABLES ---- */
 .tbl-wrap{display:block;width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:var(--radius);border:1px solid var(--border);background:var(--card);margin-bottom:16px;box-shadow:var(--shadow)}
@@ -2307,6 +2685,12 @@ tr:hover td{background:#f0f7ff}
 .idx-search{padding:6px 12px;border:1px solid #e2e8f0;border-radius:16px;font-size:12px;min-width:200px;outline:none;background:var(--card)}
 .idx-search:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.15)}
 
+/* ---- SCREENER SUB-TABS (A1 / A3 / A6 / A2) ---- */
+.scr-subnav{display:flex;gap:2px;margin-bottom:16px;border-bottom:2px solid #e2e8f0;padding-bottom:0;flex-wrap:wrap}
+.scr-subbtn{padding:7px 16px;font-size:12px;font-weight:600;border:none;background:none;cursor:pointer;color:#64748b;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;white-space:nowrap}
+.scr-subbtn.active{color:#1e40af;border-bottom-color:#1e40af;background:#f0f4ff;border-radius:4px 4px 0 0}
+.scr-subbtn:hover:not(.active){color:#3b82f6;background:#f8fafc}
+.scr-pane{display:none}.scr-pane.scr-active{display:block}
 /* ---- SIGNALS POPUP (F&O + Insider + Events) ---- */
 .signals-wrap{position:relative;display:inline-block}
 .signals-btn{display:flex;align-items:center;gap:3px;cursor:pointer;padding:3px 8px;border-radius:12px;border:1px solid #e2e8f0;background:#f8fafc;font-size:10px;font-weight:600;white-space:nowrap;transition:background .15s}
@@ -2341,7 +2725,16 @@ details.narr[open] summary::before{transform:rotate(90deg)}
 .narr-body p{font-size:13px;line-height:1.7;color:var(--text);margin-bottom:0}
 .narr-section{margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #dbeafe}
 .narr-section:last-child{margin-bottom:0;padding-bottom:0;border-bottom:none}
-.narr-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#1e40af;margin-bottom:5px}
+.narr-card{background:#fff;border:1px solid #dbeafe;border-left:4px solid #2563eb;border-radius:8px;padding:11px 13px;margin-bottom:10px;box-shadow:0 1px 2px rgba(30,64,175,.04)}
+.narr-card:last-child{margin-bottom:0}
+.sector-narr-card{border-left-color:#0f766e;background:#f8fffc;border-color:#99f6e4}
+.narr-label{font-size:10px;font-weight:850;text-transform:uppercase;letter-spacing:.07em;color:#1e40af;margin-bottom:7px}
+.sector-narr-card .narr-label{color:#0f766e}
+.narr-bullets{list-style:none;margin:0;padding:0}
+.narr-bullets li{position:relative;font-size:12.5px;line-height:1.65;color:#1f2937;padding-left:15px;margin:0 0 7px;overflow-wrap:anywhere}
+.narr-bullets li:last-child{margin-bottom:0}
+.narr-bullets li::before{content:"";position:absolute;left:0;top:.75em;width:6px;height:6px;border-radius:50%;background:#2563eb}
+.sector-narr-card .narr-bullets li::before{background:#0f766e}
 .click-detail summary{cursor:pointer;list-style:none;display:inline-block}
 .click-detail summary::-webkit-details-marker{display:none}
 .click-detail summary::after{content:"";display:inline-block;margin-left:4px;border-left:3px solid transparent;border-right:3px solid transparent;border-top:4px solid currentColor;opacity:.55;vertical-align:middle}
@@ -2901,6 +3294,212 @@ def build_indices_tab_html(all_metrics: pd.DataFrame | None) -> str:
     )
 
 
+def _trend_badge(trend: object) -> str:
+    trend_s = str(trend or "NEUTRAL").upper()
+    label = trend_s.replace("_", " ").title()
+    return f'<span class="trend-pill trend-{html_mod.escape(trend_s)}">{html_mod.escape(label)}</span>'
+
+
+def _technical_bar_chart(rows: pd.DataFrame, value_col: str, title: str, suffix: str = "%", limit: int = 8) -> str:
+    if rows is None or rows.empty or value_col not in rows.columns:
+        return f'<div class="tech-chart"><div class="tech-chart-title">{html_mod.escape(title)}</div><p>No chart data.</p></div>'
+    data = rows[["SYMBOL", value_col]].copy()
+    data[value_col] = pd.to_numeric(data[value_col], errors="coerce").fillna(0.0)
+    data = data.sort_values(value_col, ascending=False).head(limit)
+    max_abs = max(float(data[value_col].abs().max() or 1.0), 1.0)
+    bars = ""
+    for _, r in data.iterrows():
+        val = float(r[value_col])
+        width = max(2, min(100, int(abs(val) / max_abs * 100)))
+        color = "#16a34a" if val > 0 else "#dc2626" if val < 0 else "#94a3b8"
+        sign = "+" if val > 0 else ""
+        bars += (
+            '<div class="bar-row">'
+            f'<div class="bar-label">{html_mod.escape(str(r["SYMBOL"]))}</div>'
+            f'<div class="bar-track"><div class="bar-fill" style="width:{width}%;background:{color}"></div></div>'
+            f'<div class="bar-val">{sign}{val:.1f}{suffix}</div>'
+            '</div>'
+        )
+    return f'<div class="tech-chart"><div class="tech-chart-title">{html_mod.escape(title)}</div>{bars}</div>'
+
+
+def _trend_score_chart(rows: pd.DataFrame) -> str:
+    if rows is None or rows.empty:
+        return '<div class="tech-chart"><div class="tech-chart-title">Trend Score</div><p>No chart data.</p></div>'
+    score_map = {"BULLISH": 100, "CONSTRUCTIVE": 75, "NEUTRAL": 50, "WEAK": 30, "BEARISH": 10}
+    data = rows[["SYMBOL", "TREND"]].copy()
+    data["TREND_SCORE"] = data["TREND"].map(score_map).fillna(50)
+    data = data.sort_values("TREND_SCORE", ascending=False).head(8)
+    bars = ""
+    for _, r in data.iterrows():
+        score = float(r["TREND_SCORE"])
+        bars += (
+            '<div class="bar-row">'
+            f'<div class="bar-label">{html_mod.escape(str(r["SYMBOL"]))}</div>'
+            f'<div class="bar-track"><div class="bar-fill" style="width:{int(score)}%"></div></div>'
+            f'<div class="bar-val">{html_mod.escape(str(r["TREND"]).title())}</div>'
+            '</div>'
+        )
+    return f'<div class="tech-chart"><div class="tech-chart-title">SMA / Momentum Trend Score</div>{bars}</div>'
+
+
+def _split_narrative_sentences(text: str) -> list[str]:
+    cleaned = re.sub(r"\s+", " ", str(text or "")).strip()
+    if not cleaned:
+        return []
+    return [part.strip() for part in re.split(r"(?<=[.!?])\s+(?=[A-Z])", cleaned) if part.strip()]
+
+
+def _technical_narrative_sections(text: str) -> list[tuple[str, str, str]]:
+    sentences = _split_narrative_sentences(text)
+    buckets: dict[str, list[str]] = {
+        "Market Regime": [],
+        "Relative Strength Leadership": [],
+        "Laggards & Watch Areas": [],
+        "Confirmation & Key Levels": [],
+        "VWAP / Data Limits": [],
+    }
+    order = list(buckets.keys())
+    for idx, sentence in enumerate(sentences):
+        low = sentence.lower()
+        if "vwap" in low or "data" in low or "dataset" in low:
+            key = "VWAP / Data Limits"
+        elif "laggard" in low or "weakest" in low or "nifty it" in low or "bank" in low and "weak" in low:
+            key = "Laggards & Watch Areas"
+        elif re.search(r"\b(sma|rsi|macd|support|resistance|vcp)\b", low):
+            key = "Confirmation & Key Levels"
+        elif "relative strength" in low or "leader" in low or "rs_" in low or "leadership" in low:
+            key = "Relative Strength Leadership"
+        elif idx <= 1:
+            key = "Market Regime"
+        else:
+            key = "Confirmation & Key Levels"
+        buckets[key].append(sentence)
+
+    # Keep the first card meaningful even when the LLM opens with a technical sentence.
+    if not buckets["Market Regime"] and sentences:
+        first_non_empty = next((key for key in order if buckets[key]), "")
+        if first_non_empty:
+            buckets["Market Regime"].append(buckets[first_non_empty].pop(0))
+
+    css_map = {
+        "Laggards & Watch Areas": "tech-risk",
+        "VWAP / Data Limits": "tech-data",
+    }
+    return [
+        (label, " ".join(parts), css_map.get(label, ""))
+        for label, parts in buckets.items()
+        if parts
+    ]
+
+
+def _technical_narrative_html(text: str) -> str:
+    sections = _technical_narrative_sections(text)
+    if not sections:
+        return "<p><em>Narrative not available.</em></p>"
+    cards = ""
+    for label, body, css_cls in sections:
+        cards += (
+            f'<div class="tech-narr-section {css_cls}">'
+            f'<div class="tech-narr-label">{html_mod.escape(label)}</div>'
+            f'{_bullet_list_html(body, "tech-narr-list")}'
+            f'</div>'
+        )
+    return f'<div class="tech-narr-grid">{cards}</div>'
+
+
+def build_technical_view_tab_html(technical_view: dict | None) -> str:
+    view = technical_view or {}
+    metrics = view.get("metrics")
+    if metrics is None or not isinstance(metrics, pd.DataFrame) or metrics.empty:
+        narrative = str(view.get("narrative") or "Short-term technical view is unavailable because local index history is missing or insufficient.")
+        missing = view.get("missing_indices") or TECHNICAL_VIEW_INDEX_BASKET
+        return (
+            '<div class="sec-title">Short-Term Technical View</div>'
+            '<div class="sec-sub">Broader market and index technical assessment from local EOD index history.</div>'
+            '<div class="tech-narr"><h3>Broader Market Technical Narrative</h3>'
+            f'{_technical_narrative_html(narrative)}</div>'
+            '<div class="card"><p>Technical-view metrics are not available. Check '
+            '<code>data/nse_index_data.csv</code> for EOD index OHLC data.</p>'
+            f'<p style="font-size:12px;color:#64748b;margin-top:8px">Missing basket: {html_mod.escape(", ".join(map(str, missing)))}</p></div>'
+        )
+
+    rows = metrics.copy()
+    narrative = str(view.get("narrative") or _rule_based_technical_view_narrative(rows, view.get("missing_indices") or []))
+    missing_indices = [str(x) for x in (view.get("missing_indices") or [])]
+    latest_date = str(rows["DATE"].dropna().iloc[0]) if "DATE" in rows.columns and rows["DATE"].notna().any() else "—"
+    constructive = int(rows["TREND"].isin(["BULLISH", "CONSTRUCTIVE"]).sum()) if "TREND" in rows.columns else 0
+    vcp_count = int((rows.get("VCP_FLAG", pd.Series(dtype=str)) == "YES").sum())
+    leader = rows.sort_values(["RS_1M", "RET_1M"], ascending=False).iloc[0]
+    nifty = rows[rows["SYMBOL"] == "Nifty 50"]
+    nifty = nifty.iloc[0] if not nifty.empty else rows.iloc[0]
+
+    has_unavailable_vwap = (rows.get("VWAP_STATUS", pd.Series(dtype=str)) == "UNAVAILABLE").any()
+    note_parts = []
+    if missing_indices:
+        note_parts.append(f'Missing approved indices: {html_mod.escape(", ".join(missing_indices))}.')
+    if has_unavailable_vwap:
+        note_parts.append("VWAP is marked unavailable where index volume is absent or zero.")
+    note_html = f'<div class="tech-note">Data note: {" ".join(note_parts)}</div>' if note_parts else ""
+    card_html = (
+        '<div class="tech-grid">'
+        f'<div class="tech-card"><div class="tech-kicker">Nifty 50 Trend</div><div class="tech-main">{_trend_badge(nifty.get("TREND"))}</div>'
+        f'<div class="tech-sub">Close {_fmth(nifty.get("CLOSE"), digits=2)} · RSI {_fmth(nifty.get("RSI_14"), digits=1)} · MACD {html_mod.escape(str(nifty.get("MACD_SIGNAL", "—")).title())}</div></div>'
+        f'<div class="tech-card"><div class="tech-kicker">Constructive Breadth</div><div class="tech-main">{constructive}/{len(rows)}</div>'
+        '<div class="tech-sub">Approved indices in bullish or constructive short-term trend.</div></div>'
+        f'<div class="tech-card"><div class="tech-kicker">RS Leader</div><div class="tech-main">{html_mod.escape(str(leader.get("SYMBOL")))}</div>'
+        f'<div class="tech-sub">1M RS {_ret_cell(leader.get("RS_1M"))} · 1M return {_ret_cell(leader.get("RET_1M"))}</div></div>'
+        f'<div class="tech-card"><div class="tech-kicker">VCP Contraction</div><div class="tech-main">{vcp_count}</div>'
+        '<div class="tech-sub">Indices showing range contraction versus prior short-term volatility.</div></div>'
+        '</div>'
+    )
+    charts_html = (
+        '<div class="tech-charts">'
+        + _technical_bar_chart(rows, "RET_1M", "Normalized 1M Performance", "%")
+        + _technical_bar_chart(rows, "RS_1M", "Relative Strength vs Nifty 50", "%")
+        + _trend_score_chart(rows)
+        + _technical_bar_chart(rows.assign(RSI_DEV=pd.to_numeric(rows["RSI_14"], errors="coerce") - 50), "RSI_DEV", "RSI Momentum Above / Below 50", "")
+        + '</div>'
+    )
+    table_rows = ""
+    for _, r in rows.iterrows():
+        table_rows += (
+            '<tr>'
+            f'<td><strong>{html_mod.escape(str(r.get("SYMBOL", "")))}</strong><div style="font-size:10px;color:#64748b">{html_mod.escape(str(r.get("DATE", "")))}</div></td>'
+            f'<td class="num" data-val="{_fmth(r.get("CLOSE"), digits=2)}">{_fmth(r.get("CLOSE"), digits=2)}</td>'
+            f'<td class="num" data-val="{_fmth(r.get("RET_1W"))}">{_ret_cell(r.get("RET_1W"))}</td>'
+            f'<td class="num" data-val="{_fmth(r.get("RET_1M"))}">{_ret_cell(r.get("RET_1M"))}</td>'
+            f'<td class="num" data-val="{_fmth(r.get("RS_1M"))}">{_ret_cell(r.get("RS_1M"))}</td>'
+            f'<td>{_trend_badge(r.get("TREND"))}</td>'
+            f'<td>{html_mod.escape(str(r.get("SMA_ALIGNMENT", "—")).replace("_", " "))}</td>'
+            f'<td class="num" data-val="{_fmth(r.get("RSI_14"))}">{_rsi_cell(r.get("RSI_14"))}</td>'
+            f'<td>{html_mod.escape(str(r.get("MACD_SIGNAL", "—")).title())}</td>'
+            f'<td class="num">{_fmth(r.get("SUPPORT"), digits=2)}</td>'
+            f'<td class="num">{_fmth(r.get("RESISTANCE"), digits=2)}</td>'
+            f'<td>{html_mod.escape(str(r.get("VCP_FLAG", "NO")))}</td>'
+            f'<td>{_fmth(r.get("VWAP"), digits=2) if str(r.get("VWAP_STATUS")) == "AVAILABLE" else "Unavailable"}</td>'
+            '</tr>'
+        )
+    matrix_html = (
+        '<div class="tbl-wrap"><table><thead><tr>'
+        '<th>Index</th><th class="num">Close</th><th class="num">1W</th><th class="num">1M</th><th class="num">RS 1M</th>'
+        '<th>Trend</th><th>SMA</th><th class="num">RSI</th><th>MACD</th><th class="num">Support</th><th class="num">Resistance</th><th>VCP</th><th>VWAP</th>'
+        f'</tr></thead><tbody>{table_rows}</tbody></table></div>'
+    )
+    return (
+        '<div class="sec-title">Short-Term Technical View</div>'
+        f'<div class="sec-sub">Broader market and selected index view from local EOD index history. Latest data: {html_mod.escape(latest_date)}.</div>'
+        '<div class="tech-narr"><h3>Broader Market Technical Narrative</h3>'
+        f'{_technical_narrative_html(narrative)}</div>'
+        + note_html
+        + card_html
+        + charts_html
+        + '<div class="sec-title" style="margin-top:8px">Index Signal Matrix</div>'
+        + '<div class="sec-sub">RS, SMA, RSI, MACD, VCP, support/resistance, and VWAP availability for the approved basket.</div>'
+        + matrix_html
+    )
+
+
 def render_html_interactive(
     sector_rank: pd.DataFrame,
     candidates: pd.DataFrame,
@@ -2915,6 +3514,8 @@ def render_html_interactive(
     seasonal_calendar_html: str = "",
     global_corr_table_html: str = "",
     all_index_metrics: pd.DataFrame | None = None,
+    technical_view: dict | None = None,
+    darvas_df: "pd.DataFrame | None" = None,
 ) -> str:
     gen_date = generated_at.strftime("%Y-%m-%d")
     data_date = (
@@ -2995,7 +3596,7 @@ def render_html_interactive(
         ]
         brief_blocks = "".join(
             f'<div class="brief-block"><div class="brief-label">{html_mod.escape(label)}</div>'
-            f'<div class="brief-text">{html_mod.escape(str(text))}</div></div>'
+            f'<div class="brief-text">{_bullet_list_html(text, "brief-list")}</div></div>'
             for label, text in brief_items if str(text).strip()
         )
         if brief_blocks:
@@ -3043,9 +3644,14 @@ def render_html_interactive(
         f'</div>'
     )
 
+    if market_summary:
+        summary_body = _bullet_list_html(market_summary, "rotation-context-list")
+    else:
+        summary_body = f"<p><em>Analysing rotation across {len(sector_rank)} sectors vs Nifty 500 benchmark.</em></p>"
+
     summary_card = (
         f'<div class="summary-card"><h3>Market Rotation Context</h3>'
-        f'<p>{html_mod.escape(market_summary) if market_summary else "<em>Analysing rotation across " + str(len(sector_rank)) + " sectors vs Nifty 500 benchmark.</em>"}</p>'
+        f'{summary_body}'
         f'</div>'
     )
     buy_card = (
@@ -3549,7 +4155,9 @@ def render_html_interactive(
             + resilience_table
         )
 
-    # ---- BUILD STAGE SCREENER TAB (A1 + A3 + A6) ----
+    # ---- BUILD STAGE SCREENER TAB (A1 + A3 + A6 + A2) ----
+    _darvas_df = darvas_df  # closure capture
+
     def _build_screener_tab(cands: pd.DataFrame) -> str:
         try:
             from screeners import (
@@ -3559,6 +4167,7 @@ def render_html_interactive(
                 build_momentum_screener_tab_html,
                 turnaround_screener,
                 build_turnaround_tab_html,
+                build_darvas_tab_html,
             )
             screener_df = run_stage_screener(cands)
             stage_html = build_stage_screener_tab_html(screener_df)
@@ -3566,9 +4175,53 @@ def render_html_interactive(
             momentum_html = build_momentum_screener_tab_html(momentum_df)
             turnaround_df = turnaround_screener(screener_df)
             turnaround_html = build_turnaround_tab_html(turnaround_df)
-            return stage_html + momentum_html + turnaround_html
+            darv_html = build_darvas_tab_html(_darvas_df)
+
+            n_s2 = int((screener_df["STAGE"] == "STAGE_2").sum()) if not screener_df.empty and "STAGE" in screener_df.columns else 0
+            n_mom = len(momentum_df)
+            n_turn = len(turnaround_df)
+            n_darv = int((_darvas_df["DARVAS_STATUS"] == "BREAKOUT").sum()) if _darvas_df is not None and not _darvas_df.empty and "DARVAS_STATUS" in _darvas_df.columns else 0
+
+            nav_html = (
+                '<div class="scr-subnav">'
+                f'<button class="scr-subbtn active" data-scrpane="stage" onclick="scrSwitch(this)">'
+                f'Stage Analysis <span style="background:#1e40af;color:#fff;border-radius:10px;'
+                f'padding:1px 7px;font-size:10px;margin-left:4px">{n_s2}</span></button>'
+                f'<button class="scr-subbtn" data-scrpane="momentum" onclick="scrSwitch(this)">'
+                f'52W Momentum <span style="background:#6b7280;color:#fff;border-radius:10px;'
+                f'padding:1px 7px;font-size:10px;margin-left:4px">{n_mom}</span></button>'
+                f'<button class="scr-subbtn" data-scrpane="turnaround" onclick="scrSwitch(this)">'
+                f'Turnaround <span style="background:#6b7280;color:#fff;border-radius:10px;'
+                f'padding:1px 7px;font-size:10px;margin-left:4px">{n_turn}</span></button>'
+                f'<button class="scr-subbtn" data-scrpane="darvas" onclick="scrSwitch(this)">'
+                f'Darvas Box <span style="background:#6b7280;color:#fff;border-radius:10px;'
+                f'padding:1px 7px;font-size:10px;margin-left:4px">{n_darv}</span></button>'
+                '</div>'
+            )
+            panes_html = (
+                f'<div id="scr-pane-stage" class="scr-pane scr-active">{stage_html}</div>'
+                f'<div id="scr-pane-momentum" class="scr-pane">{momentum_html}</div>'
+                f'<div id="scr-pane-turnaround" class="scr-pane">{turnaround_html}</div>'
+                f'<div id="scr-pane-darvas" class="scr-pane">{darv_html}</div>'
+            )
+            scr_js = (
+                '<script>window.scrSwitch=function(btn){'
+                'var pane=btn.dataset.scrpane;'
+                'document.querySelectorAll(".scr-subbtn").forEach(function(b){b.classList.remove("active")});'
+                'btn.classList.add("active");'
+                'document.querySelectorAll(".scr-pane").forEach(function(p){p.classList.remove("scr-active")});'
+                'var el=document.getElementById("scr-pane-"+pane);'
+                'if(el)el.classList.add("scr-active");'
+                '};</script>'
+            )
+            return nav_html + panes_html + scr_js
         except Exception as exc:
-            return f'<div class="card"><p>Screener unavailable: {html_mod.escape(str(exc))}</p></div>'
+            import traceback
+            tb = html_mod.escape(traceback.format_exc())
+            return (
+                f'<div class="card"><p>Screener unavailable: {html_mod.escape(str(exc))}</p>'
+                f'<pre style="font-size:10px;overflow:auto;max-height:200px">{tb}</pre></div>'
+            )
 
     # ---- BUILD METHODOLOGY TAB ----
     methodology_html = (
@@ -3885,6 +4538,7 @@ def render_html_interactive(
         '<button class="nav-btn" data-tab="rotation">Sector Rotation</button>',
         '<button class="nav-btn" data-tab="candidates">Investment Candidates</button>',
         '<button class="nav-btn" data-tab="screeners">Screeners</button>',
+        '<button class="nav-btn" data-tab="technical-view">Technical View</button>',
         '<button class="nav-btn" data-tab="resilience">Peak Resilience</button>',
         '<button class="nav-btn" data-tab="indices">All Indices</button>',
         '<button class="nav-btn" data-tab="methodology">Methodology</button>',
@@ -3896,6 +4550,7 @@ def render_html_interactive(
         f'<section id="tab-rotation" class="tab-pane">{rotation_html}</section>',
         f'<section id="tab-candidates" class="tab-pane">{candidates_html}</section>',
         f'<section id="tab-screeners" class="tab-pane">{_build_screener_tab(candidates)}</section>',
+        f'<section id="tab-technical-view" class="tab-pane">{build_technical_view_tab_html(technical_view)}</section>',
         f'<section id="tab-resilience" class="tab-pane">{resilience_html}</section>',
         f'<section id="tab-indices" class="tab-pane">{build_indices_tab_html(all_index_metrics)}</section>',
         f'<section id="tab-methodology" class="tab-pane">{methodology_html}</section>',
@@ -4345,6 +5000,18 @@ def generate_report(top_n_sectors: int = 6, top_n_per_sector: int = 8) -> Report
         peak_resilience = enrich_with_peak_resilience(rotating_universe, history)
         peak_resilience = rank_peak_resilience_stocks(peak_resilience)
 
+    # Darvas Box pre-computation (A2)
+    darvas_df: pd.DataFrame = pd.DataFrame()
+    if history is not None:
+        try:
+            from screeners import run_darvas_screener
+            darvas_df = run_darvas_screener(candidates, history)
+            _n_brk = int((darvas_df["DARVAS_STATUS"] == "BREAKOUT").sum()) if not darvas_df.empty else 0
+            _n_near = int((darvas_df["DARVAS_STATUS"] == "NEAR_TOP").sum()) if not darvas_df.empty else 0
+            print(f"  Darvas boxes: {len(darvas_df)} valid ({_n_brk} breakouts, {_n_near} near top)")
+        except Exception as exc:
+            print(f"  Darvas screener skipped ({exc})")
+
     # Enrich with F&O derivative signals (P1-2)
     try:
         from fetch_fno_data import enrich_with_fno_signals
@@ -4421,6 +5088,14 @@ def generate_report(top_n_sectors: int = 6, top_n_per_sector: int = 8) -> Report
     )
 
     md = render_markdown(sector_rank, candidates, peak_resilience, source_file, generated_at, narratives=narratives)
+    try:
+        _idx_cols = ["SYMBOL", "OPEN", "HIGH", "LOW", "CLOSE", "TIMESTAMP", "TOTTRDQTY"]
+        _idx_history = pd.read_csv(INDEX_DATA_CSV, usecols=lambda c: c in _idx_cols)
+        technical_view = build_short_term_technical_view(_idx_history, use_llm=True)
+    except Exception as exc:
+        print(f"  Short-term technical view skipped ({exc}).")
+        technical_view = build_short_term_technical_view(pd.DataFrame(), use_llm=False)
+
     # PG: Build global correlation table HTML (B2) for the Sector Rotation tab
     _global_corr_table_html = ""
     try:
@@ -4430,7 +5105,7 @@ def generate_report(top_n_sectors: int = 6, top_n_per_sector: int = 8) -> Report
             _global_corr_table_html = render_correlation_table_html(_gcorr)
     except Exception:
         pass
-    html_text = render_html_interactive(sector_rank, candidates, peak_resilience, source_file, generated_at, narratives, regime_info=regime_info, flow_info=flow_info, cycle_info=cycle_info, macro_context=_macro_ctx, seasonal_calendar_html=_seasonal_calendar_html, global_corr_table_html=_global_corr_table_html, all_index_metrics=all_index_metrics)
+    html_text = render_html_interactive(sector_rank, candidates, peak_resilience, source_file, generated_at, narratives, regime_info=regime_info, flow_info=flow_info, cycle_info=cycle_info, macro_context=_macro_ctx, seasonal_calendar_html=_seasonal_calendar_html, global_corr_table_html=_global_corr_table_html, all_index_metrics=all_index_metrics, technical_view=technical_view, darvas_df=darvas_df if not darvas_df.empty else None)
     for path, text in [
         (paths.markdown, md),
         (paths.html, html_text),

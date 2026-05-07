@@ -6,6 +6,8 @@ import pandas as pd
 
 import sector_rotation_report
 from sector_rotation_report import (
+    build_technical_view_tab_html,
+    build_short_term_technical_view,
     _generate_rule_based_market_brief,
     _log_signals,
     calculate_peak_resilience,
@@ -583,6 +585,262 @@ class SectorRotationReportTests(unittest.TestCase):
         self.assertIn("Market Brief", html)
         self.assertIn("Market Read", html)
         self.assertIn("Defensive, add only on confirmation.", html)
+        self.assertIn("brief-list", html)
+        self.assertIn("<li>Bear trend with bullish divergence.</li>", html)
+        self.assertIn("<li>Defensive, add only on confirmation.</li>", html)
+
+    def test_market_rotation_context_renders_as_bulleted_summary(self):
+        sector_rank = pd.DataFrame(
+            [
+                {
+                    "SYMBOL": "NIFTYENERGY",
+                    "SECTOR_NAME": "Energy - Power",
+                    "CLOSE": 40806.65,
+                    "RET_1M": 15.3,
+                    "ROTATION_SCORE": 12.6,
+                }
+            ]
+        )
+        candidates = pd.DataFrame(
+            [
+                {
+                    "SYMBOL": "AAA",
+                    "COMPANY_NAME": "AAA Ltd",
+                    "SECTOR_NAME": "Energy - Power",
+                    "CURRENT_PRICE": 100,
+                    "TRADING_SIGNAL": "HOLD",
+                    "SETUP_CLASS": "NEUTRAL",
+                    "ACTION_BUCKET": "WATCHLIST",
+                    "INVESTMENT_SCORE": 50,
+                    "TECHNICAL_SCORE": 50,
+                    "ENHANCED_FUND_SCORE": 50,
+                    "RELATIVE_STRENGTH": 0,
+                    "RSI": 50,
+                    "SUPERTREND_STATE": "BULLISH",
+                    "PATTERN": "TRENDING_OR_CHOPPY",
+                    "VOLUME_RATIO": 1,
+                }
+            ]
+        )
+        market_summary = (
+            "Rotation leadership is concentrated in Energy - Power with a 12.6 rotation score. "
+            "Breadth is supportive in Energy - Power at 92% above 50DMA. "
+            "Tactical risk remains elevated because FII 5-day net flow is ₹-13,883 Cr."
+        )
+
+        html = render_html_interactive(
+            sector_rank,
+            candidates,
+            pd.DataFrame(),
+            Path("source.csv"),
+            pd.Timestamp("2026-05-02"),
+            {"sectors": {}, "stocks": {}, "market_summary": market_summary},
+        )
+
+        self.assertIn("Market Rotation Context", html)
+        self.assertIn("rotation-context-list", html)
+        self.assertIn("<li>Rotation leadership is concentrated in Energy - Power with a 12.6 rotation score.</li>", html)
+        self.assertIn("<li>Breadth is supportive in Energy - Power at 92% above 50DMA.</li>", html)
+
+    def test_stock_and_sector_narratives_render_bulleted_sections(self):
+        stock_html = sector_rotation_report._narrative_html(
+            "Momentum is improving. RSI remains firm.\n\n"
+            "Quality score is improving. Relative strength is positive.\n\n"
+            "Watch support at 100. Avoid chasing into resistance."
+        )
+        sector_html = sector_rotation_report._narrative_html(
+            "Sector rotation is broad. Leadership is improving.\n\n"
+            "Earnings drivers are constructive. Flows remain supportive.\n\n"
+            "Risk is elevated near resistance. Wait for confirmation.",
+            is_sector=True,
+        )
+
+        self.assertIn("narr-card", stock_html)
+        self.assertIn("narr-bullets", stock_html)
+        self.assertIn("<li>Momentum is improving.</li>", stock_html)
+        self.assertIn("<li>RSI remains firm.</li>", stock_html)
+        self.assertIn("Technical Setup", stock_html)
+        self.assertIn("narr-card sector-narr-card", sector_html)
+        self.assertIn("Rotation Dynamics", sector_html)
+        self.assertIn("<li>Sector rotation is broad.</li>", sector_html)
+        self.assertIn("<li>Leadership is improving.</li>", sector_html)
+
+    def test_short_term_technical_view_computes_index_metrics_and_vwap_unavailable(self):
+        rows = []
+        dates = pd.date_range("2026-01-01", periods=80, freq="D")
+        for name, base, step in [
+            ("Nifty 50", 1000, 4.0),
+            ("Nifty Bank", 1800, 2.5),
+        ]:
+            for i, dt in enumerate(dates):
+                close = base + i * step
+                rows.append(
+                    {
+                        "SYMBOL": name,
+                        "TIMESTAMP": dt,
+                        "OPEN": close - 1,
+                        "HIGH": close + 5,
+                        "LOW": close - 5,
+                        "CLOSE": close,
+                    }
+                )
+        index_history = pd.DataFrame(rows)
+
+        view = build_short_term_technical_view(index_history, index_basket=["Nifty 50", "Nifty Bank", "Nifty IT"])
+        metrics = view["metrics"].set_index("SYMBOL")
+
+        self.assertIn("Nifty 50", metrics.index)
+        self.assertIn("Nifty Bank", metrics.index)
+        self.assertIn("Nifty IT", view["missing_indices"])
+        self.assertGreater(float(metrics.loc["Nifty 50", "SMA_20"]), float(metrics.loc["Nifty 50", "SMA_50"]))
+        self.assertGreater(float(metrics.loc["Nifty 50", "RSI_14"]), 50)
+        self.assertIn(metrics.loc["Nifty 50", "MACD_SIGNAL"], {"BULLISH", "BEARISH", "NEUTRAL"})
+        self.assertGreater(float(metrics.loc["Nifty 50", "RESISTANCE"]), float(metrics.loc["Nifty 50", "SUPPORT"]))
+        self.assertEqual(metrics.loc["Nifty 50", "VWAP_STATUS"], "UNAVAILABLE")
+        self.assertIn("VWAP", view["narrative"])
+
+    def test_short_term_technical_view_html_tab_is_rendered_without_breaking_screeners_tab(self):
+        sector_rank = pd.DataFrame(
+            [
+                {
+                    "SYMBOL": "NIFTYFMCG",
+                    "SECTOR_NAME": "FMCG",
+                    "CLOSE": 1000,
+                    "RET_5D": 1,
+                    "RET_1M": 5,
+                    "RET_3M": 8,
+                    "RET_6M": 10,
+                    "RS_1M": 2,
+                    "ROTATION_SCORE": 16,
+                }
+            ]
+        )
+        candidates = pd.DataFrame(
+            [
+                {
+                    "SYMBOL": "AAA",
+                    "COMPANY_NAME": "AAA Ltd",
+                    "SECTOR_NAME": "FMCG",
+                    "CURRENT_PRICE": 100,
+                    "TRADING_SIGNAL": "HOLD",
+                    "SETUP_CLASS": "NEUTRAL",
+                    "ACTION_BUCKET": "WATCHLIST",
+                    "INVESTMENT_SCORE": 50,
+                    "TECHNICAL_SCORE": 50,
+                    "ENHANCED_FUND_SCORE": 50,
+                    "RELATIVE_STRENGTH": 0,
+                    "RSI": 50,
+                    "SUPERTREND_STATE": "BULLISH",
+                    "PATTERN": "TRENDING_OR_CHOPPY",
+                    "VOLUME_RATIO": 1,
+                }
+            ]
+        )
+        technical_view = {
+            "metrics": pd.DataFrame(
+                [
+                    {
+                        "SYMBOL": "Nifty 50",
+                        "DATE": "2026-05-06",
+                        "CLOSE": 24000,
+                        "RET_1W": 1.2,
+                        "RET_1M": 4.5,
+                        "RET_3M": 8.0,
+                        "RS_1M": 0.0,
+                        "RS_3M": 0.0,
+                        "RS_RANK": 1,
+                        "SMA_20": 23800,
+                        "SMA_50": 23200,
+                        "SMA_200": 22000,
+                        "SMA_ALIGNMENT": "ABOVE_20_50_200",
+                        "RSI_14": 62,
+                        "MACD": 120,
+                        "MACD_SIGNAL_LINE": 100,
+                        "MACD_HIST": 20,
+                        "MACD_SIGNAL": "BULLISH",
+                        "TREND": "BULLISH",
+                        "SUPPORT": 23400,
+                        "RESISTANCE": 24100,
+                        "VCP_FLAG": "NO",
+                        "VWAP": None,
+                        "VWAP_STATUS": "UNAVAILABLE",
+                    }
+                ]
+            ),
+            "missing_indices": [],
+            "narrative": "Broader market trend is constructive. VWAP is unavailable because index volume is absent.",
+        }
+
+        html = render_html_interactive(
+            sector_rank,
+            candidates,
+            pd.DataFrame(),
+            Path("source.csv"),
+            pd.Timestamp("2026-05-02"),
+            {"sectors": {}, "stocks": {}, "market_summary": ""},
+            technical_view=technical_view,
+        )
+
+        self.assertIn('data-tab="technical-view"', html)
+        self.assertIn('id="tab-technical-view"', html)
+        self.assertIn("Short-Term Technical View", html)
+        self.assertIn("Broader Market Technical Narrative", html)
+        self.assertIn("Nifty 50", html)
+        self.assertIn('data-tab="screeners"', html)
+
+    def test_technical_view_narrative_is_split_into_labelled_sections(self):
+        technical_view = {
+            "metrics": pd.DataFrame(
+                [
+                    {
+                        "SYMBOL": "Nifty 50",
+                        "DATE": "2026-05-06",
+                        "CLOSE": 24000,
+                        "RET_1W": 1.2,
+                        "RET_1M": 4.5,
+                        "RET_3M": 8.0,
+                        "RS_1M": 0.0,
+                        "RS_3M": 0.0,
+                        "RS_RANK": 1,
+                        "SMA_20": 23800,
+                        "SMA_50": 23200,
+                        "SMA_200": 22000,
+                        "SMA_ALIGNMENT": "ABOVE_20_50_200",
+                        "RSI_14": 62,
+                        "MACD": 120,
+                        "MACD_SIGNAL_LINE": 100,
+                        "MACD_HIST": 20,
+                        "MACD_SIGNAL": "BULLISH",
+                        "TREND": "BULLISH",
+                        "SUPPORT": 23400,
+                        "RESISTANCE": 24100,
+                        "VCP_FLAG": "YES",
+                        "VWAP": None,
+                        "VWAP_STATUS": "UNAVAILABLE",
+                    }
+                ]
+            ),
+            "missing_indices": [],
+            "narrative": (
+                "Short-term regime remains constructive with improving breadth. "
+                "Relative strength leadership is concentrated in Nifty Realty and Energy. "
+                "Laggards remain concentrated in Nifty IT and Bank. "
+                "SMA alignment and RSI/MACD confirmation are strongest in leaders. "
+                "Support/resistance positioning shows several leaders near resistance. "
+                "VWAP interpretation is limited because index volume is unavailable."
+            ),
+        }
+
+        html = build_technical_view_tab_html(technical_view)
+
+        self.assertIn("tech-narr-grid", html)
+        self.assertIn("Market Regime", html)
+        self.assertIn("Relative Strength Leadership", html)
+        self.assertIn("Laggards &amp; Watch Areas", html)
+        self.assertIn("Confirmation &amp; Key Levels", html)
+        self.assertIn("VWAP / Data Limits", html)
+        self.assertIn("tech-narr-list", html)
+        self.assertIn("<li>Short-term regime remains constructive with improving breadth.</li>", html)
 
 
 if __name__ == "__main__":
