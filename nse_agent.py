@@ -818,6 +818,35 @@ def _parse_followups(text: str) -> tuple[str, list[str]]:
     return clean, [q.strip() for q in questions[:3]]
 
 
+def _print_followup_line(num: int, question: str) -> None:
+    """
+    Render a follow-up question line with the command hint highlighted.
+
+    Handles two formats the LLM produces:
+      • "`/command ARG` — description text"       (backtick-quoted slash command)
+      • "`natural language prompt` — description" (backtick-quoted phrase)
+      • "plain question with no command hint"      (fallback)
+
+    Output:  [1]  /command ARG  —  description text
+                  ^^^^^^^^^^^      ^^^^^^^^^^^^^^^^
+                  bold cyan        white
+    """
+    # Extract backtick-quoted command hint at the start
+    m = re.match(r"`([^`]+)`\s*[-–—]\s*(.+)", question)
+    if m:
+        cmd_hint = m.group(1).strip()
+        desc     = m.group(2).strip()
+        # Colour the command hint: slash commands bright cyan, natural prompts dim cyan
+        if cmd_hint.startswith("/"):
+            cmd_rich = f"[bold cyan]{cmd_hint}[/bold cyan]"
+        else:
+            cmd_rich = f'[dim cyan]"{cmd_hint}"[/dim cyan]'
+        console.print(f"  [bold yellow]{num}[/bold yellow]  {cmd_rich}  [dim]—[/dim]  {desc}")
+    else:
+        # No command hint — render as plain text
+        console.print(f"  [bold yellow]{num}[/bold yellow]  {question}")
+
+
 def _mode_tag() -> str:
     tags = {
         "auto":       Fore.WHITE  + Style.DIM    + "[AUTO]"  + Style.RESET_ALL,
@@ -1015,8 +1044,8 @@ def _print_response(result: dict) -> None:
         console.rule("[bold yellow] 💬  What to explore next [/bold yellow]",
                      style="dim yellow")
         for i, q in enumerate(_followups, 1):
-            console.print(f"  [bold yellow]{i}[/bold yellow]  {q}")
-        console.print("[dim]  Reply 1 · 2 · 3 or ask your own question[/dim]")
+            _print_followup_line(i, q)
+        console.print("[dim]  Reply 1 · 2 · 3 or type the command directly[/dim]")
 
     console.print()
     _separator()
@@ -1699,8 +1728,8 @@ def _print_briefing_response(result: dict) -> None:
         console.rule("[bold yellow] 💬  Start your session [/bold yellow]",
                      style="dim yellow")
         for i, q in enumerate(_followups, 1):
-            console.print(f"  [bold yellow]{i}[/bold yellow]  {q}")
-        console.print("[dim]  Reply 1 · 2 · 3 or ask your own question[/dim]")
+            _print_followup_line(i, q)
+        console.print("[dim]  Reply 1 · 2 · 3 or type the command directly[/dim]")
 
     console.print()
     _separator()
@@ -2115,7 +2144,20 @@ def _chat_loop(agent, show_trace: bool) -> None:
             idx = int(text) - 1
             if idx < len(_followups):
                 text = _followups[idx]
-                console.print(f"[dim]  → {text}[/dim]")
+                # If the follow-up starts with a `command` — description, extract
+                # the slash command and route it directly (e.g. `/forensic RELIANCE`)
+                m_cmd = re.match(r"`(/\S+[^`]*)`\s*[-–—]\s*(.+)", text)
+                if m_cmd:
+                    slash_cmd = m_cmd.group(1).strip()
+                    description = m_cmd.group(2).strip()
+                    console.print(f"[dim]  → {slash_cmd}  —  {description}[/dim]")
+                    text = slash_cmd  # route as slash command
+                else:
+                    # Strip backtick natural-language prompt if present
+                    m_nl = re.match(r"`([^`]+)`\s*[-–—]\s*(.+)", text)
+                    if m_nl:
+                        text = m_nl.group(1).strip() + " — " + m_nl.group(2).strip()
+                    console.print(f"[dim]  → {text}[/dim]")
 
         # ── Apply mode prefix ──────────────────────────────────────────
         if _mode == "intraday":
