@@ -1185,6 +1185,14 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f1f5f9;color:#0f172
 .sec-hdr{padding:14px 18px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .sec-hdr h2{font-size:1rem;font-weight:600}
 .badge-count{background:#e2e8f0;border-radius:12px;padding:2px 10px;font-size:.8rem;font-weight:600;color:#475569}
+.snapshot-section{display:block}
+.snapshot-summary{cursor:pointer;list-style:none;padding:14px 18px;border-bottom:1px solid transparent;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.snapshot-summary::-webkit-details-marker{display:none}
+.snapshot-summary::before{content:"▶";font-size:.72rem;color:#059669;transition:transform .15s}
+.snapshot-section[open] .snapshot-summary{border-bottom-color:#e2e8f0}
+.snapshot-section[open] .snapshot-summary::before{transform:rotate(90deg)}
+.snapshot-summary h2{font-size:1rem;font-weight:600}
+.snapshot-toggle-hint{font-size:.75rem;color:#64748b;margin-left:auto}
 
 /* ── Toolbar ── */
 .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 14px;border-bottom:1px solid #e2e8f0;background:#fafafa}
@@ -1817,15 +1825,20 @@ def build_html_report(report: dict) -> str:
                 '</div>'
                 '</div>'
             )
+        visible_rows = rows[:30]
+        first_date = _H(str(visible_rows[0].get("snapshot_date", "—")))
+        last_date = _H(str(visible_rows[-1].get("snapshot_date", "—")))
         return (
-            '<div class="section">'
-            '<div class="sec-hdr"><h2>📅 Daily Stage Transitions</h2>'
-            f'<span class="badge-count">{len(rows[:30])}</span>'
-            '<span style="font-size:.75rem;color:#64748b;margin-left:8px">Latest EOD tracker history with adjacent-snapshot movement</span>'
-            '</div>'
+            '<details class="section snapshot-section">'
+            '<summary class="snapshot-summary">'
+            '<h2>📅 Daily Stage Transitions</h2>'
+            f'<span class="badge-count">{len(visible_rows)}</span>'
+            f'<span style="font-size:.75rem;color:#64748b">Latest EOD tracker history with adjacent-snapshot movement · {first_date} → {last_date}</span>'
+            '<span class="snapshot-toggle-hint">Show / hide daily transition cards</span>'
+            '</summary>'
             '<div class="snapshot-grid">'
             + "".join(cards)
-            + '</div></div>'
+            + '</div></details>'
         )
 
     snapshot_section = snapshot_history_html(snap_hist)

@@ -136,6 +136,28 @@ class SectorRotationTrackerTests(unittest.TestCase):
         self.assertIn("S1 → S2", html)
         self.assertIn("S2 → S3", html)
 
+    def test_daily_stage_transitions_are_collapsible_by_default(self):
+        html = build_html_report(
+            {
+                "snap_date": "2026-05-07",
+                "prev_date": "2026-05-06",
+                "week_snap": None,
+                "summary": {"stage_counts": {"STAGE_1": 0, "STAGE_2": 1, "STAGE_3": 0, "STAGE_4": 0}},
+                "snapshot_history": [
+                    {"snapshot_date": "2026-05-07", "compare_date": "2026-05-06", "total_stocks": 10, "stage2_count": 5},
+                    {"snapshot_date": "2026-05-06", "total_stocks": 10, "stage2_count": 4},
+                ],
+                "stage2_now": [],
+                "top_picks": [],
+            }
+        )
+
+        self.assertIn('<details class="section snapshot-section">', html)
+        self.assertIn('<summary class="snapshot-summary">', html)
+        self.assertIn("Show / hide daily transition cards", html)
+        self.assertNotIn('<details class="section snapshot-section" open>', html)
+        self.assertIn("snapshot-grid", html)
+
     def test_text_or_none_treats_nan_strings_as_missing(self):
         self.assertIsNone(_text_or_none(math.nan))
         self.assertIsNone(_text_or_none("nan"))
