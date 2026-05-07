@@ -229,7 +229,7 @@ Every external and internal data source the platform uses or will use. Items mar
 | **Phase 4 — Branch G: US / Global Market Intelligence** | | | |
 | G0 US/Global Market Intelligence Design | ✅ DONE | Codex | Design spec created for phased US indices, ETFs, stocks, screeners, India read-through, terminal/report integration |
 | G1 US Universe + yfinance Cache | ✅ DONE | Codex | `global_market_intelligence.py`; curated US/global universe, yfinance-compatible OHLCV normalization, daily cache, latest snapshot |
-| G2 US Technical Engine + RS | 🔜 READY | — | SMA, RSI, MACD, 52W distance, support/resistance, VCP, Stage 2, RS vs SPY/QQQ |
+| G2 US Technical Engine + RS | ✅ DONE | Codex | `compute_technical_metrics()`; returns, SMA, RSI, MACD, 52W distance, support/resistance, VCP, Stage 2, RS vs SPY/QQQ |
 | G3 US Screeners | 🔜 READY | — | Stage 2 leaders, VCP setups, 52W high momentum, sector ETF rotation, risk dashboard |
 | G4 India Read-Through Engine | 🔜 READY | — | Map Nasdaq, semis, crude, DXY, yields, VIX, credit, Russell signals to NSE sector implications |
 | G5 US/Global HTML Report | 🔜 READY | — | Standalone report plus latest pointer with summary, screeners, read-through, freshness, disclaimer |
@@ -2491,7 +2491,7 @@ def render_filing_report(analysis: dict, output_format: str = "html") -> Path:
 - Tests cover universe records, OHLCV normalization, cache writes, latest snapshot, and fresh-cache reuse.
 
 #### G2 — US Technical Engine + RS
-**Size:** M | **Priority:** High | **Status:** 🔜 READY
+**Size:** M | **Priority:** High | **Status:** ✅ DONE
 
 **What to build:**
 - Compute returns, SMA 20/50/200, RSI, MACD, 52W high distance, support/resistance, VCP, Stage 2, and RS vs `SPY`/`QQQ`.
@@ -2500,6 +2500,10 @@ def render_filing_report(analysis: dict, output_format: str = "html") -> Path:
 - Fixture data produces deterministic indicator outputs.
 - RS ranking works when benchmark data exists and degrades clearly when missing.
 - Stage/VCP outputs are compatible with existing NSE terminology.
+
+**Implementation note (2026-05-08):**
+- `compute_technical_metrics()` produces stable daily rows with returns, SMA alignment, RSI, MACD signal, 52W distance, support/resistance, VCP flag, Stage label, and RS vs `SPY`/`QQQ`.
+- Tests cover benchmark-available and benchmark-missing paths.
 
 #### G3 — US Screeners
 **Size:** M | **Priority:** High | **Status:** 🔜 READY

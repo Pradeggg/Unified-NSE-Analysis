@@ -278,6 +278,173 @@ class GlobalMarketDataLoader:
             }
 
 
+def _pct_return(close: pd.Series, periods: int) -> float | None:
+    clean = close.dropna()
+    if len(clean) <= periods:
+        return None
+    base = float(clean.iloc[-periods - 1])
+    latest = float(clean.iloc[-1])
+    if base == 0:
+        return None
+    return round((latest / base - 1) * 100, 2)
+
+
+def _rsi(close: pd.Series, period: int = 14) -> pd.Series:
+    delta = close.astype(float).diff()
+    gain = delta.clip(lower=0).rolling(period, min_periods=period).mean()
+    loss = (-delta.clip(upper=0)).rolling(period, min_periods=period).mean()
+    rs = gain / loss.replace(0, pd.NA)
+    rsi = 100 - (100 / (1 + rs))
+    return rsi.fillna(100).clip(0, 100)
+
+
+def _macd(close: pd.Series) -> pd.DataFrame:
+    close = close.astype(float)
+    ema12 = close.ewm(span=12, adjust=False).mean()
+    ema26 = close.ewm(span=26, adjust=False).mean()
+    line = ema12 - ema26
+    signal = line.ewm(span=9, adjust=False).mean()
+    hist = line - signal
+    return pd.DataFrame({"MACD": line, "MACD_SIGNAL_LINE": signal, "MACD_HIST": hist})
+
+
+def _support_resistance(hist: pd.DataFrame, window: int = 20) -> tuple[float | None, float | None]:
+    if hist.empty:
+        return None, None
+    recent = hist.tail(window)
+    support = float(pd.to_numeric(recent["LOW"], errors="coerce").min())
+    resistance = float(pd.to_numeric(recent["HIGH"], errors="coerce").max())
+    return round(support, 2), round(resistance, 2)
+
+
+def _stage_from_latest(close: float, sma50: float | None, sma200: float | None, sma50_slope: float | None) -> str:
+    if sma50 is None or sma200 is None or pd.isna(sma50) or pd.isna(sma200):
+        return "UNKNOWN"
+    if close > sma50 > sma200 and (sma50_slope or 0) >= 0:
+        return "STAGE_2"
+    if close < sma50 < sma200:
+        return "STAGE_4"
+    if close > sma200 and close < sma50:
+        return "STAGE_3"
+    return "STAGE_1"
+
+
+def _vcp_flag(hist: pd.DataFrame) -> bool:
+    if len(hist) < 60:
+        return False
+    high = pd.to_numeric(hist["HIGH"], errors="coerce")
+    low = pd.to_numeric(hist["LOW"], errors="coerce")
+    close = pd.to_numeric(hist["CLOSE"], errors="coerce")
+    range_pct = ((high - low) / close.replace(0, pd.NA)).rolling(10, min_periods=8).mean()
+    recent = float(range_pct.tail(10).mean())
+    prior = float(range_pct.tail(60).head(30).mean())
+    hi_52w = float(close.tail(252).max())
+    latest = float(close.iloc[-1])
+    near_high = hi_52w > 0 and latest >= hi_52w * 0.85
+    return bool(prior > 0 and recent < prior * 0.75 and near_high)
+
+
+def compute_technical_metrics(
+    prices: pd.DataFrame,
+    benchmark_symbols: tuple[str, str] = ("SPY", "QQQ"),
+) -> pd.DataFrame:
+    """Compute daily technical metrics for the US/global normalized OHLCV table."""
+    columns = [
+        "SYMBOL", "DATE", "CLOSE", "RET_1D", "RET_5D", "RET_1M", "RET_3M",
+        "SMA_20", "SMA_50", "SMA_200", "SMA_ALIGNMENT", "RSI_14",
+        "MACD", "MACD_SIGNAL_LINE", "MACD_HIST", "MACD_SIGNAL",
+        "DIST_52W_HIGH_PCT", "SUPPORT", "RESISTANCE", "VCP_FLAG",
+        "STAGE", "RS_SPY_1M", "RS_SPY_3M", "RS_QQQ_1M", "RS_QQQ_3M", "RS_STATUS",
+    ]
+    if prices is None or prices.empty:
+        return pd.DataFrame(columns=columns)
+
+    df = prices.copy()
+    df["SYMBOL"] = df["SYMBOL"].astype(str).str.upper()
+    df["DATE"] = pd.to_datetime(df["DATE"], errors="coerce")
+    for col in ["OPEN", "HIGH", "LOW", "CLOSE", "VOLUME"]:
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+    df = df.dropna(subset=["SYMBOL", "DATE", "CLOSE"]).sort_values(["SYMBOL", "DATE"])
+
+    benchmark_returns: dict[str, dict[str, float | None]] = {}
+    for benchmark in benchmark_symbols:
+        b_hist = df[df["SYMBOL"] == benchmark].sort_values("DATE")
+        b_close = b_hist["CLOSE"]
+        benchmark_returns[benchmark] = {
+            "1M": _pct_return(b_close, 21),
+            "3M": _pct_return(b_close, 63),
+        }
+
+    rows = []
+    for symbol, hist in df.groupby("SYMBOL", sort=False):
+        hist = hist.sort_values("DATE").copy()
+        close = hist["CLOSE"].astype(float)
+        latest_close = float(close.iloc[-1])
+        sma20_series = close.rolling(20, min_periods=10).mean()
+        sma50_series = close.rolling(50, min_periods=25).mean()
+        sma200_series = close.rolling(200, min_periods=100).mean()
+        sma20 = float(sma20_series.iloc[-1]) if not pd.isna(sma20_series.iloc[-1]) else None
+        sma50 = float(sma50_series.iloc[-1]) if not pd.isna(sma50_series.iloc[-1]) else None
+        sma200 = float(sma200_series.iloc[-1]) if not pd.isna(sma200_series.iloc[-1]) else None
+        sma50_prev = float(sma50_series.iloc[-11]) if len(sma50_series) > 10 and not pd.isna(sma50_series.iloc[-11]) else None
+        sma50_slope = None if sma50 is None or sma50_prev in (None, 0) else (sma50 / sma50_prev - 1)
+
+        if sma20 is not None and sma50 is not None and sma200 is not None and latest_close > sma20 > sma50 > sma200:
+            sma_alignment = "BULLISH"
+        elif sma20 is not None and sma50 is not None and sma200 is not None and latest_close < sma20 < sma50 < sma200:
+            sma_alignment = "BEARISH"
+        else:
+            sma_alignment = "MIXED"
+
+        macd_df = _macd(close)
+        macd_latest = macd_df.iloc[-1]
+        macd_signal = "BULLISH" if float(macd_latest["MACD_HIST"]) >= 0 else "BEARISH"
+        support, resistance = _support_resistance(hist)
+        hi_52w = float(close.tail(252).max())
+        dist_52w = round((latest_close / hi_52w - 1) * 100, 2) if hi_52w else None
+        ret_1m = _pct_return(close, 21)
+        ret_3m = _pct_return(close, 63)
+
+        spy_1m = benchmark_returns.get("SPY", {}).get("1M")
+        spy_3m = benchmark_returns.get("SPY", {}).get("3M")
+        qqq_1m = benchmark_returns.get("QQQ", {}).get("1M")
+        qqq_3m = benchmark_returns.get("QQQ", {}).get("3M")
+        rs_status = "OK" if spy_1m is not None and qqq_1m is not None else "BENCHMARK_UNAVAILABLE"
+
+        rows.append(
+            {
+                "SYMBOL": symbol,
+                "DATE": hist["DATE"].iloc[-1],
+                "CLOSE": round(latest_close, 2),
+                "RET_1D": _pct_return(close, 1),
+                "RET_5D": _pct_return(close, 5),
+                "RET_1M": ret_1m,
+                "RET_3M": ret_3m,
+                "SMA_20": round(sma20, 2) if sma20 is not None else None,
+                "SMA_50": round(sma50, 2) if sma50 is not None else None,
+                "SMA_200": round(sma200, 2) if sma200 is not None else None,
+                "SMA_ALIGNMENT": sma_alignment,
+                "RSI_14": round(float(_rsi(close).iloc[-1]), 2),
+                "MACD": round(float(macd_latest["MACD"]), 4),
+                "MACD_SIGNAL_LINE": round(float(macd_latest["MACD_SIGNAL_LINE"]), 4),
+                "MACD_HIST": round(float(macd_latest["MACD_HIST"]), 4),
+                "MACD_SIGNAL": macd_signal,
+                "DIST_52W_HIGH_PCT": dist_52w,
+                "SUPPORT": support,
+                "RESISTANCE": resistance,
+                "VCP_FLAG": _vcp_flag(hist),
+                "STAGE": _stage_from_latest(latest_close, sma50, sma200, sma50_slope),
+                "RS_SPY_1M": round(ret_1m - spy_1m, 2) if ret_1m is not None and spy_1m is not None else pd.NA,
+                "RS_SPY_3M": round(ret_3m - spy_3m, 2) if ret_3m is not None and spy_3m is not None else pd.NA,
+                "RS_QQQ_1M": round(ret_1m - qqq_1m, 2) if ret_1m is not None and qqq_1m is not None else pd.NA,
+                "RS_QQQ_3M": round(ret_3m - qqq_3m, 2) if ret_3m is not None and qqq_3m is not None else pd.NA,
+                "RS_STATUS": rs_status,
+            }
+        )
+
+    return pd.DataFrame(rows).reindex(columns=columns)
+
+
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Agent Adda US/global market intelligence")
     parser.add_argument("--root-dir", default=str(DEFAULT_ROOT))

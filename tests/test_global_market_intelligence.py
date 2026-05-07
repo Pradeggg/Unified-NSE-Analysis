@@ -7,6 +7,7 @@ import pandas as pd
 from global_market_intelligence import (
     DEFAULT_US_UNIVERSE,
     GlobalMarketDataLoader,
+    compute_technical_metrics,
     normalize_ohlcv,
     universe_records,
 )
@@ -93,6 +94,67 @@ class GlobalMarketIntelligenceTests(unittest.TestCase):
             self.assertEqual(first["status"], "ok")
             self.assertEqual(second["status"], "ok")
             self.assertEqual(len(calls), 1)
+
+    def test_compute_technical_metrics_adds_rs_stage_and_vcp_columns(self):
+        dates = pd.date_range("2025-06-01", periods=260, freq="D")
+        rows = []
+        for i, date in enumerate(dates):
+            spy_close = 100 + i * 0.25
+            qqq_close = 120 + i * 0.35
+            nvda_close = 80 + i * 0.80
+            for symbol, close, volume in [
+                ("SPY", spy_close, 1_000_000),
+                ("QQQ", qqq_close, 1_200_000),
+                ("NVDA", nvda_close, 2_000_000),
+            ]:
+                rows.append(
+                    {
+                        "SYMBOL": symbol,
+                        "DATE": date,
+                        "OPEN": close - 0.5,
+                        "HIGH": close + 1.0,
+                        "LOW": close - 1.0,
+                        "CLOSE": close,
+                        "VOLUME": volume,
+                        "SOURCE": "fixture",
+                    }
+                )
+        prices = pd.DataFrame(rows)
+
+        metrics = compute_technical_metrics(prices)
+        nvda = metrics.set_index("SYMBOL").loc["NVDA"]
+
+        self.assertGreater(nvda["RET_1M"], 0)
+        self.assertEqual(nvda["SMA_ALIGNMENT"], "BULLISH")
+        self.assertEqual(nvda["MACD_SIGNAL"], "BULLISH")
+        self.assertEqual(nvda["STAGE"], "STAGE_2")
+        self.assertGreater(nvda["RS_SPY_3M"], 0)
+        self.assertGreater(nvda["RS_QQQ_3M"], 0)
+        self.assertIn("VCP_FLAG", metrics.columns)
+        self.assertIn("SUPPORT", metrics.columns)
+        self.assertIn("RESISTANCE", metrics.columns)
+
+    def test_compute_technical_metrics_degrades_when_benchmark_missing(self):
+        dates = pd.date_range("2026-01-01", periods=60, freq="D")
+        prices = pd.DataFrame(
+            {
+                "SYMBOL": ["AAPL"] * len(dates),
+                "DATE": dates,
+                "OPEN": range(100, 160),
+                "HIGH": range(101, 161),
+                "LOW": range(99, 159),
+                "CLOSE": range(100, 160),
+                "VOLUME": [1_000_000] * len(dates),
+                "SOURCE": ["fixture"] * len(dates),
+            }
+        )
+
+        metrics = compute_technical_metrics(prices)
+        row = metrics.iloc[0]
+
+        self.assertTrue(pd.isna(row["RS_SPY_1M"]))
+        self.assertTrue(pd.isna(row["RS_QQQ_1M"]))
+        self.assertEqual(row["RS_STATUS"], "BENCHMARK_UNAVAILABLE")
 
 
 if __name__ == "__main__":
