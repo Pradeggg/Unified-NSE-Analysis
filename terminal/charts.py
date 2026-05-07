@@ -550,7 +550,7 @@ def render_html_chart(
             "modeBarButtonsToAdd": ["drawline", "drawopenpath", "eraseshape"],
             "modeBarButtonsToRemove": ["lasso2d", "select2d"],
         },
-        include_plotlyjs="cdn",
+        include_plotlyjs=True,          # embed full Plotly JS — works offline, no CSP issues
         full_html=True,
     )
 
