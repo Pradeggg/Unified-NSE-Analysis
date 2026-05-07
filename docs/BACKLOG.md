@@ -203,6 +203,17 @@ Every external and internal data source the platform uses or will use. Items mar
 | E2 Peer Comparison Engine | ⏳ BLOCKED | — | Needs Screener.in peers scrape (source N) |
 | E3 Management Quality Score | ⏳ BLOCKED | — | Needs P1-4 insider data + concall history (D4) |
 | E4 Event-Driven Alert Engine | 🔜 READY | — | BSE/NSE corporate actions API (source M) |
+| **Phase 4 — Branch F: Financial Filing Intelligence** | | | |
+| F0 Filing Intelligence Design + Implementation Plan | ✅ DONE | Codex | Design spec + implementation plan created for XBRL-first, evidence-grounded filing analysis |
+| F1 Filing Registry + Direct Link Ingestion | ✅ DONE | Codex | `financial_filing_agent.py`; direct URL ingestion, document type detection, manifest, idempotency, Blue Star PDF smoke tested |
+| F2 NSE/BSE Filing Discovery | 🔜 READY | — | Auto-discover latest financial-results filings by symbol/quarter; prefer Integrated Filing XBRL/iXBRL |
+| F3 XBRL/iXBRL Parser + Canonical Facts | 🔜 READY | — | Parse structured tags into canonical financial facts with contexts/units |
+| F4 Multi-Page PDF Extractor + Evidence Map | 🔜 READY | — | Extract page text/tables with page/table evidence trail |
+| F5 Reconciliation + Verification Agent | 🔜 READY | — | Reconcile XBRL facts against PDF tables; mark verified/partial/conflict |
+| F6 LLM-Based Filing Analysis Agents | 🔜 READY | — | Numbers, balance sheet, cash flow, segment, risk, narrative agents over canonical evidence |
+| F7 HTML + Markdown Filing Report Generator | 🔜 READY | — | Self-contained reports with evidence-backed metrics and disclaimer |
+| F8 Terminal / Agent Adda Integration | 🔜 READY | — | `/filing` commands and NLP routes for direct-link and symbol-driven analysis |
+| F9 Batch Earnings Intelligence | 💤 DEFERRED | — | Portfolio/watchlist/Nifty500 batch filing analysis after F2-F7 |
 
 ---
 
@@ -2142,6 +2153,266 @@ def generate_event_alerts(candidates: pd.DataFrame, events: pd.DataFrame) -> pd.
 - Stocks with results in next 7 days flagged with `RESULT_UPCOMING` badge.
 - Buyback above CMP shown with ₹target and % premium.
 - Missing events = empty field, not error.
+
+---
+
+### Phase 4 — Branch F: Financial Filing Intelligence Agent
+
+This branch builds first-class quarterly/annual filing analysis from NSE/BSE/company IR filings. It is intentionally separate from Screener.in-derived fundamentals because exchange filings are the primary evidence source, while Screener.in remains a convenient comparison layer.
+
+#### F0 — Filing Intelligence Design + Implementation Plan
+**Size:** S | **Priority:** Critical | **Status:** ✅ DONE | **Owner:** Codex
+
+**What to build:**
+- Write a design spec for an auditable filing-analysis pipeline.
+- Write an implementation plan with small TDD tasks.
+- Define canonical storage, parsed schema, report schema, evidence trail, and failure modes.
+
+**Files to create/modify:**
+- `docs/superpowers/specs/2026-05-07-financial-filing-intelligence-design.md`
+- `docs/superpowers/plans/2026-05-07-financial-filing-intelligence.md`
+- `docs/BACKLOG.md`
+
+**Acceptance criteria:**
+- Spec names the boundary between deterministic extraction and LLM interpretation.
+- Plan covers XBRL/iXBRL, PDF, direct-link ingestion, NSE auto-discovery, HTML/MD output, and tests.
+- Every later F-item maps back to a task in the plan.
+
+#### F1 — Filing Registry + Direct Link Ingestion
+**Size:** M | **Priority:** Critical | **Status:** ✅ DONE | **Owner:** Codex
+
+**What to build:**
+```python
+def ingest_filing_url(url: str, symbol: str | None = None, period: str | None = None) -> dict:
+    """
+    Download a user-provided filing URL and register it under:
+    data/filings/{SYMBOL_OR_UNKNOWN}/{PERIOD_OR_UNKNOWN}/raw/
+
+    Detect document type:
+      - PDF: .pdf or application/pdf
+      - XBRL/XML: .xml, .xbrl, .zip, text/xml, application/xml
+      - iXBRL/HTML: .html/.htm with XBRL namespaces
+
+    Return manifest JSON:
+      symbol, period, source_url, local_path, sha256, content_type,
+      document_type, fetched_at, status, error
+    """
+```
+
+**Files to create/modify:**
+- `financial_filing_agent.py`
+- `tests/test_financial_filing_agent.py`
+- `data/filings/` generated at runtime only
+
+**Acceptance criteria:**
+- Blue Star PDF link can be downloaded and registered without manual file work.
+- Existing local files are not re-downloaded if SHA/path already exists unless `force=True`.
+- Bad URL returns a structured error, not an exception.
+- Unit tests cover PDF, XML/XBRL, iXBRL/HTML, unknown extension, and network failure using mocks.
+
+#### F2 — NSE/BSE Filing Discovery
+**Size:** L | **Priority:** High | **Status:** 🔜 READY
+
+**What to build:**
+```python
+def discover_financial_filings(symbol: str, quarter: str | None = None, max_results: int = 10) -> list[dict]:
+    """
+    Resolve symbol, query NSE financial-results / integrated-filing pages, then BSE/company IR fallback.
+    Prefer Integrated Filing - Financial XBRL/iXBRL when available; collect PDF as evidence.
+
+    Return records:
+      symbol, company_name, filing_date, reporting_period, filing_type,
+      consolidated_or_standalone, xbrl_url, ixbrl_url, pdf_url, source, confidence
+    """
+```
+
+**Files to create/modify:**
+- `financial_filing_agent.py`
+- `terminal/tools.py` — add `discover_financial_filings` tool
+- `terminal/agent.py` — route "latest quarterly report/results filing" queries
+- `tests/test_financial_filing_discovery.py`
+
+**Acceptance criteria:**
+- `discover_financial_filings("BLUESTARCO")` returns the latest available filing candidates when network is available.
+- Direct URL path remains supported when NSE discovery fails.
+- Result ranking prefers XBRL/iXBRL over PDF-only filings.
+- All network calls use browser-like headers, timeout, retry, and cache.
+
+#### F3 — XBRL/iXBRL Parser + Canonical Financial Facts
+**Size:** L | **Priority:** Critical | **Status:** 🔜 READY
+
+**What to build:**
+```python
+def parse_xbrl_filing(path: str) -> dict:
+    """
+    Parse XBRL/iXBRL into canonical facts:
+      company metadata, reporting period, standalone/consolidated flag,
+      revenue, other income, expenses, EBITDA/operating profit, finance cost,
+      PBT, tax, PAT, EPS, assets, liabilities, equity, cash flow, segment data.
+
+    Preserve:
+      raw tag, context id, unit, decimals, period start/end, source file, fact confidence.
+    """
+```
+
+**Files to create/modify:**
+- `financial_filing_agent.py`
+- `tests/fixtures/filings/sample_integrated_filing_ixbrl.html`
+- `tests/test_financial_filing_xbrl.py`
+
+**Acceptance criteria:**
+- Parser can read NSE integrated-filing-style iXBRL tables and regular XML.
+- Canonical JSON is stable even when tag names differ.
+- Unit normalization handles Rs crore/lakh/absolute INR.
+- Missing facts are `None` with warnings, never hallucinated.
+
+#### F4 — Multi-Page PDF Extractor + Evidence Map
+**Size:** L | **Priority:** High | **Status:** 🔜 READY
+
+**What to build:**
+```python
+def parse_pdf_filing(path: str) -> dict:
+    """
+    Extract page text and tables from multi-page financial-results PDFs.
+    Build evidence map:
+      page_number, table_index, row_label, column_label, extracted_value, confidence.
+
+    OCR fallback is optional and disabled by default in first version.
+    """
+```
+
+**Files to create/modify:**
+- `financial_filing_agent.py`
+- `tests/fixtures/filings/sample_financial_result.pdf`
+- `tests/test_financial_filing_pdf.py`
+
+**Acceptance criteria:**
+- Multi-page PDF produces page-level text chunks.
+- Tables are extracted into normalized row/column records.
+- Page/table references are available to the final report.
+- If PDF parser dependency is missing, tool returns actionable install guidance.
+
+#### F5 — Reconciliation + Verification Agent
+**Size:** M | **Priority:** Critical | **Status:** 🔜 READY
+
+**What to build:**
+```python
+def reconcile_filing_facts(xbrl_facts: dict | None, pdf_facts: dict | None) -> dict:
+    """
+    Compare XBRL facts and PDF extracted facts.
+    Detect:
+      unit mismatch, standalone/consolidated mismatch, period mismatch,
+      total mismatch, missing prior-period columns, rounded-value differences.
+
+    Output verification status:
+      VERIFIED, PARTIAL, CONFLICT, UNAVAILABLE
+    """
+```
+
+**Files to create/modify:**
+- `financial_filing_agent.py`
+- `tests/test_financial_filing_reconciliation.py`
+
+**Acceptance criteria:**
+- XBRL values are source of truth when present.
+- PDF-only facts are allowed but marked lower confidence.
+- Final narrative cannot use a key metric unless it has source evidence or an explicit unverified label.
+
+#### F6 — LLM-Based Filing Analysis Agents
+**Size:** L | **Priority:** High | **Status:** 🔜 READY
+
+**What to build:**
+- Add agent prompts for:
+  - Numbers Analyst
+  - Balance Sheet Analyst
+  - Cash Flow Analyst
+  - Segment/Product Analyst
+  - Risk/Auditor Notes Analyst
+  - Narrative Writer
+- Inputs must be canonical JSON + evidence map, not raw unbounded PDF text.
+- Output must be structured JSON before rendering.
+
+**Files to create/modify:**
+- `financial_filing_agent.py`
+- `tests/test_financial_filing_analysis.py`
+- `terminal/tools.py` — add `analyze_financial_filing`
+
+**Acceptance criteria:**
+- LLM output contains executive summary, key financial metrics, growth/margin analysis, balance sheet, cash conversion, segment/product commentary, risks, and source trail.
+- Prompt requires "Not investment advice" disclaimer.
+- Tests use a fake LLM callback and assert prompt inputs include evidence references.
+
+#### F7 — HTML + Markdown Filing Report Generator
+**Size:** M | **Priority:** High | **Status:** 🔜 READY
+
+**What to build:**
+```python
+def render_filing_report(analysis: dict, output_format: str = "html") -> Path:
+    """
+    Render reports/filings/{SYMBOL}_{PERIOD}_financial_analysis.html|md
+    Sections:
+      Executive Summary, Financial Snapshot, Growth & Margins,
+      Balance Sheet, Cash Flow, Segment/Product Review,
+      Risks & Watch Items, Extracted Tables, Source Evidence, Disclaimer.
+    """
+```
+
+**Files to create/modify:**
+- `financial_filing_agent.py`
+- `tests/test_financial_filing_report.py`
+- `reports/filings/` generated at runtime only
+
+**Acceptance criteria:**
+- HTML report is self-contained and readable offline.
+- Markdown report is generated for versioned research notes.
+- Every material metric links back to page/table/fact evidence.
+
+#### F8 — Terminal / Agent Adda Integration
+**Size:** M | **Priority:** Medium | **Status:** 🔜 READY
+
+**What to build:**
+- Add commands:
+  - `/filing <symbol>` — discover latest filings.
+  - `/filing analyze <url>` — direct-link analysis.
+  - `/filing analyze <symbol> <quarter>` — discover + analyze.
+- Add NLP route:
+  - "analyze latest quarterly report for Blue Star"
+  - "read this financial result PDF"
+  - "summarize Q4 results with balance sheet and cash flow"
+
+**Files to create/modify:**
+- `nse_agent.py`
+- `terminal/tools.py`
+- `terminal/agent.py`
+- `tests/test_terminal_filing_agent.py`
+
+**Acceptance criteria:**
+- User-provided PDF link can produce report path from terminal.
+- Symbol-driven route uses discovery first and falls back to asking for link.
+- Chat response distinguishes extracted facts from LLM interpretation.
+
+#### F9 — Batch Earnings Intelligence
+**Size:** XL | **Priority:** Medium | **Status:** 💤 DEFERRED
+
+**What to build:**
+- Run filing analysis for watchlist, portfolio holdings, Stage 2 stocks, or Nifty 500 result calendar.
+- Produce ranked earnings-quality dashboard:
+  - earnings acceleration
+  - margin expansion
+  - cash conversion
+  - debt stress
+  - segment momentum
+  - management tone
+
+**Files to create/modify:**
+- `financial_filing_agent.py`
+- `reports/filings/earnings_quality_dashboard.html`
+- `tests/test_financial_filing_batch.py`
+
+**Acceptance criteria:**
+- Batch mode can skip companies with missing filings and continue.
+- Dashboard highlights best/worst filings with source trails.
+- Results can feed sector rotation candidate narratives later.
 
 ---
 

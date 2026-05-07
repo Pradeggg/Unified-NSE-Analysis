@@ -43,6 +43,7 @@ reports/_test_*
 reports/temp/
 data/_sector_rotation_*.csv
 data/_missing_fund_symbols.txt
+data/filings/
 working-sector/output/sector_rotation_missing_fundamentals.txt
 nse_analysis.db
 
