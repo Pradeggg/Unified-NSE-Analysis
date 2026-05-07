@@ -277,17 +277,18 @@ def _print_prompts_library(filter_key: str = "") -> None:
 
 
 
-# ASCII art generated with pyfiglet slant font (hardcoded for portability)
+# ASCII art generated with pyfiglet 'big' font (hardcoded for portability)
 _BANNER = [
-    (Fore.CYAN   + Style.BRIGHT, r"    ___   _____________   ________     ___    ____  ____  ___ "),
-    (Fore.CYAN   + Style.BRIGHT, r"   /   | / ____/ ____/ | / /_  __/    /   |  / __ \/ __ \/   |"),
-    (Fore.GREEN  + Style.BRIGHT, r"  / /| |/ / __/ __/ /  |/ / / /      / /| | / / / / / / / /| |"),
-    (Fore.YELLOW + Style.BRIGHT, r" / ___ / /_/ / /___/ /|  / / /      / ___ |/ /_/ / /_/ / ___ |"),
-    (Fore.YELLOW + Style.BRIGHT, r"/_/  |_\____/_____/_/ |_/ /_/      /_/  |_/_____/_____/_/  |_|"),
+    (Fore.CYAN   + Style.BRIGHT, r"          _____ ______ _   _ _______             _____  _____"),
+    (Fore.CYAN   + Style.BRIGHT, r"    /\   / ____|  ____| \ | |__   __|      /\   |  __ \|  __ \   /\ "),
+    (Fore.GREEN  + Style.BRIGHT, r"   /  \ | |  __| |__  |  \| |  | |        /  \  | |  | | |  | | /  \ "),
+    (Fore.GREEN  + Style.BRIGHT, r"  / /\ \| | |_ |  __| | . ` |  | |       / /\ \ | |  | | |  | |/ /\ \ "),
+    (Fore.YELLOW + Style.BRIGHT, r" / ____ \ |__| | |____| |\  |  | |      / ____ \| |__| | |__| / ____ \ "),
+    (Fore.YELLOW + Style.BRIGHT, r"/_/    \_\_____|______|_| \_|  |_|     /_/    \_\_____/|_____/_/    \_\ "),
 ]
 
-# Box dimensions: art width = 62, box_w = 66, total visible = 70
-_BOX_W = 66
+# Box dimensions: art width = 71, box_w = 71, total visible = 75
+_BOX_W = 71
 _BOX_MID = _BOX_W - 4  # usable interior (after 2-space left + 2-space right margins)
 
 
