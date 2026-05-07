@@ -373,6 +373,17 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/strategy NIFTY long_straddle",    "Long straddle on NIFTY"),
     ("/strategy NIFTY bull_call_spread", "Bull call spread on NIFTY"),
     ("/strategy BANKNIFTY iron_condor",  "Iron condor on BANKNIFTY"),
+    # ── Chart commands ─────────────────────────────────────────────────────
+    ("/chart",                  "ASCII candlestick chart (candles + volume + RSI)"),
+    ("/chart NIFTY",            "NIFTY 3-month chart"),
+    ("/chart BANKNIFTY",        "BANKNIFTY 3-month chart"),
+    ("/chart RELIANCE",         "RELIANCE 3-month chart"),
+    ("/chart HDFCBANK",         "HDFCBANK 3-month chart"),
+    ("/chart NIFTY 1y",         "NIFTY 1-year chart"),
+    ("/chart NIFTY 6mo",        "NIFTY 6-month chart"),
+    ("/chart NIFTY 1mo rsi",    "NIFTY 1-month with RSI panel"),
+    ("/chart RELIANCE 3mo rsi macd", "RELIANCE with RSI + MACD panels"),
+    ("/chart RELIANCE 3mo volume rsi macd", "RELIANCE full chart: candles+volume+RSI+MACD"),
     ("/live",             "Switch to LIVE mode (real-time NSE API)"),
     ("/eod",              "Switch to EOD mode (historical CSV/DB)"),
     ("/auto",             "Switch to AUTO mode (keyword detect)"),
@@ -1375,6 +1386,12 @@ def _print_help() -> None:
             "  [dim]Strategies: long_call · long_put · bull_call_spread · bear_put_spread ·[/dim]\n"
             "  [dim]            long_straddle · long_strangle · iron_condor · covered_call ·[/dim]\n"
             "  [dim]            protective_put · calendar_spread[/dim]\n\n"
+            "[bold green]CHARTS 📈[/bold green]\n"
+            "  [green]/chart RELIANCE[/green]          — ASCII candlestick chart (3mo, candles+RSI)\n"
+            "  [green]/chart NIFTY 1y[/green]          — 1-year chart\n"
+            "  [green]/chart HDFCBANK 6mo rsi macd[/green] — Custom timeframe + indicators\n"
+            "  [dim]Timeframes: 1d · 5d · 1mo · 3mo · 6mo · 1y · 2y[/dim]\n"
+            "  [dim]Indicators: volume · rsi · macd (default: volume rsi)[/dim]\n\n"
             "[bold cyan]GLOBAL MARKET[/bold cyan]\n"
             "  [green]/global[/green]                 — Global risk regime and India read-through\n\n"
             "[bold cyan]PROMPT LIBRARY[/bold cyan]\n"
@@ -1760,6 +1777,38 @@ def _chat_loop(agent, show_trace: bool) -> None:
             else:
                 text = f"Run EOD screener {arg} and show top results"
                 console.print(f"[dim]  → EOD screener: {arg}[/dim]")
+
+        # ── /chart <symbol> [tf] [indicators...] — ASCII chart ────────
+        if text.lower().startswith("/chart"):
+            parts = text.split()
+            sym   = parts[1].upper() if len(parts) > 1 else "NIFTY"
+            # Detect timeframe: token matching TF pattern
+            _valid_tfs = {"1d", "5d", "1mo", "3mo", "6mo", "1y", "2y"}
+            tf = "3mo"
+            remaining = []
+            for p in parts[2:]:
+                if p.lower() in _valid_tfs:
+                    tf = p.lower()
+                else:
+                    remaining.append(p.lower())
+            # Remaining tokens are indicator names
+            _valid_inds = {"rsi", "macd", "volume"}
+            indicators = [r for r in remaining if r in _valid_inds] or ["volume", "rsi"]
+            console.print(f"[dim]  → Chart: {sym} [{tf}] indicators: {', '.join(indicators)}[/dim]")
+            try:
+                from terminal.charts import render_chart
+                chart_out = render_chart(sym, tf, indicators)
+                console.print()
+                console.print(chart_out)
+                console.print()
+            except Exception as _e:
+                console.print(f"[bold red]  ❌  Chart error: {_e}[/bold red]")
+            # Also ask agent for technical commentary
+            text = (
+                f"Give a brief technical summary for {sym} chart ({tf}): "
+                f"trend direction, key support/resistance levels, RSI reading, "
+                f"MACD status, and what to watch for next."
+            )
 
         # ── /chain <symbol> [expiry] — live option chain ───────────────
         if text.lower().startswith("/chain"):

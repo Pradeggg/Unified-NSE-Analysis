@@ -31,6 +31,11 @@ from terminal.options_analysis import (
     build_strategy,
     recommend_strategies,
     STRATEGY_CATALOG,
+    analyze_buying_opportunity,
+    scan_options_buying_opportunities,
+    calc_expected_move,
+    theta_decay_profile,
+    calc_chain_ivs,
 )
 
 # ── Web research module (screener.in, Yahoo Finance, multi-site search) ───────
@@ -40,6 +45,9 @@ from terminal.web_research import (
     multi_source_web_search,
     comprehensive_stock_research,
 )
+
+# ── Chart module ─────────────────────────────────────────────────────────────
+from terminal.charts import render_chart, chart_summary
 
 # ── Intraday screener engine ──────────────────────────────────────────────────
 from terminal.intraday import (
@@ -2988,6 +2996,32 @@ def get_fno_data_status() -> dict:
     }
 
 
+def analyze_options_buying(symbol: str, direction: str = "bullish",
+                            expiry: str | None = None) -> dict:
+    """
+    Deep options buying analysis for a symbol.
+    Returns: ATM IV + regime, IV rank (estimated), expected move, strike selection guide
+    (ITM/ATM/OTM with delta/theta/breakeven/probability), theta decay profile,
+    OI support/resistance context, buying verdict (BUY / SPREAD / AVOID).
+    direction: 'bullish' | 'bearish' | 'volatile'
+    """
+    return analyze_buying_opportunity(symbol, direction, expiry, use_live=True)
+
+
+def scan_options_buys(direction: str = "bullish",
+                       max_iv: float = 25.0,
+                       min_oi: int = 500_000,
+                       top_n: int = 10) -> dict:
+    """
+    Scan all F&O-eligible stocks and indices for the best options buying opportunities.
+    Ranks by: low ATM IV (cheap options) + adequate OI liquidity + ideal DTE.
+    Returns top N symbols with ATM IV, straddle cost, expected move, and buying score.
+    direction: 'bullish' | 'bearish' | 'volatile'
+    max_iv: IV ceiling (default 25%) — lower = cheaper options only
+    """
+    return scan_options_buying_opportunities(direction, min_oi, max_iv, top_n)
+
+
 # Register F&O tools
 TOOL_REGISTRY.update({
     "get_option_chain": (
@@ -3101,6 +3135,87 @@ TOOL_REGISTRY.update({
             "Use at the start of any F&O session to confirm data availability."
         ),
         {"type": "object", "properties": {}, "required": []},
+    ),
+})
+
+
+# ── Chart tool wrapper ────────────────────────────────────────────────────────
+
+def get_chart_summary(symbol: str, timeframe: str = "3mo") -> dict:
+    """
+    Get chart data summary for a symbol: current price, change%, RSI, MACD,
+    EMA positions, period high/low, trend context.
+    Does NOT render the ASCII chart — call render_chart() for that.
+    """
+    return chart_summary(symbol, timeframe)
+
+
+# Register chart + options buying tools
+TOOL_REGISTRY.update({
+    "get_chart_summary": (
+        get_chart_summary,
+        (
+            "Get chart data and technical summary for a stock or index. Returns current price, "
+            "daily change%, RSI(14), MACD signal (bullish/bearish), EMA20/EMA50 positions, "
+            "period high/low. Use for: 'chart for X', 'technical levels', 'trend analysis', "
+            "'is X above its moving average', 'show me the chart', 'price action for X'."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbol":    {"type": "string", "description": "NSE symbol e.g. RELIANCE, NIFTY"},
+                "timeframe": {
+                    "type": "string",
+                    "enum": ["1d", "5d", "1mo", "3mo", "6mo", "1y", "2y"],
+                    "description": "Chart timeframe (default 3mo)",
+                },
+            },
+            "required": ["symbol"],
+        },
+    ),
+    "analyze_options_buying": (
+        analyze_options_buying,
+        (
+            "Deep options buying analysis for a symbol. Returns ATM IV + regime (cheap/fair/rich), "
+            "IV rank estimate, expected move (±1σ/±2σ), strike selection guide (ITM/ATM/OTM with "
+            "delta/theta/breakeven/probability), theta decay profile, OI context, and buying verdict "
+            "(BUY / USE SPREAD / AVOID). "
+            "Use for: 'should I buy calls on X', 'best strike to buy', 'options buying setup for X', "
+            "'what call should I buy', 'options trade idea for X', 'options opportunity for X'."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbol":    {"type": "string"},
+                "direction": {
+                    "type": "string",
+                    "enum": ["bullish", "bearish", "volatile"],
+                    "description": "Trade direction (default: bullish)",
+                },
+                "expiry":    {"type": "string", "description": "Expiry date YYYY-MM-DD (optional)"},
+            },
+            "required": ["symbol"],
+        },
+    ),
+    "scan_options_buys": (
+        scan_options_buys,
+        (
+            "Scan all F&O-eligible stocks/indices for the best options buying opportunities. "
+            "Ranks by: low ATM IV (cheap options) + OI liquidity + ideal DTE. "
+            "Returns top symbols with ATM IV, straddle cost, expected move, and buying score. "
+            "Use for: 'scan for options buying opportunities', 'which stocks have cheap options', "
+            "'best stocks for buying calls today', 'low IV options scan', 'options buying scan'."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "direction": {"type": "string", "enum": ["bullish", "bearish", "volatile"]},
+                "max_iv":    {"type": "number", "description": "Max ATM IV% (default 25)"},
+                "min_oi":    {"type": "integer", "description": "Min OI for liquidity (default 500000)"},
+                "top_n":     {"type": "integer", "description": "Number of results to return (default 10)"},
+            },
+            "required": [],
+        },
     ),
 })
 
