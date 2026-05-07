@@ -228,7 +228,7 @@ Every external and internal data source the platform uses or will use. Items mar
 | F9 Batch Earnings Intelligence | 💤 DEFERRED | — | Portfolio/watchlist/Nifty500 batch filing analysis after F2-F7 |
 | **Phase 4 — Branch G: US / Global Market Intelligence** | | | |
 | G0 US/Global Market Intelligence Design | ✅ DONE | Codex | Design spec created for phased US indices, ETFs, stocks, screeners, India read-through, terminal/report integration |
-| G1 US Universe + yfinance Cache | 🔜 READY | — | Curated US/global universe, daily OHLCV fetch, cache freshness, normalized price store |
+| G1 US Universe + yfinance Cache | ✅ DONE | Codex | `global_market_intelligence.py`; curated US/global universe, yfinance-compatible OHLCV normalization, daily cache, latest snapshot |
 | G2 US Technical Engine + RS | 🔜 READY | — | SMA, RSI, MACD, 52W distance, support/resistance, VCP, Stage 2, RS vs SPY/QQQ |
 | G3 US Screeners | 🔜 READY | — | Stage 2 leaders, VCP setups, 52W high momentum, sector ETF rotation, risk dashboard |
 | G4 India Read-Through Engine | 🔜 READY | — | Map Nasdaq, semis, crude, DXY, yields, VIX, credit, Russell signals to NSE sector implications |
@@ -2467,7 +2467,7 @@ def render_filing_report(analysis: dict, output_format: str = "html") -> Path:
 - Design defines phased US/global architecture, data sources, terminal commands, reports, testing, and India read-through.
 
 #### G1 — US Universe + yfinance Cache
-**Size:** M | **Priority:** High | **Status:** 🔜 READY
+**Size:** M | **Priority:** High | **Status:** ✅ DONE
 
 **What to build:**
 - Create curated US/global universe config covering indices, ETFs, and starter stocks.
@@ -2484,6 +2484,11 @@ def render_filing_report(analysis: dict, output_format: str = "html") -> Path:
 - `SPY`, `QQQ`, sector ETFs, and starter stocks can be fetched and cached.
 - Cache reload works without network.
 - Missing tickers do not fail the full pipeline.
+
+**Implementation note (2026-05-08):**
+- `global_market_intelligence.py` defines the curated starter universe and `GlobalMarketDataLoader`.
+- `prices.csv`, `latest_snapshot.csv`, and `universe.json` are written under `data/global_market/`.
+- Tests cover universe records, OHLCV normalization, cache writes, latest snapshot, and fresh-cache reuse.
 
 #### G2 — US Technical Engine + RS
 **Size:** M | **Priority:** High | **Status:** 🔜 READY

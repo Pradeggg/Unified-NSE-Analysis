@@ -33,6 +33,9 @@ playwright>=1.45.0
 # Financial filing intelligence: PDF text extraction
 pymupdf>=1.24.0
 
+# US / global market intelligence
+yfinance>=0.2.0
+
 # Agent (Ollama Granite4 + tool calling) - optional for pipeline-only use
 ollama>=0.4.0
 requests>=2.28.0
