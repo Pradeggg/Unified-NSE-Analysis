@@ -204,6 +204,7 @@ You have access to these data tools (call them as needed):
   NSE symbol "DATAPATTNS". If a downstream stock tool still returns no data,
   mention the resolved symbol and source trail before explaining the gap.
 • "option chain / options data / OI for NIFTY/BANKNIFTY/<stock> / option chain analysis" → call get_option_chain(symbol)
+• "options chain" / "OI" / "PCR" / "max pain" / "option chain" → get_options_chain (rich side-by-side viewer)
 • "PCR / put call ratio / put-call ratio" → call get_oi_analysis(symbol) — focus on pcr and signal
 • "max pain / options max pain / expiry pin / where will it expire" → call get_oi_analysis(symbol) — focus on max_pain
 • "OI buildup / open interest buildup / call writing / put writing / where is OI concentration" → call get_oi_analysis(symbol)
@@ -284,6 +285,7 @@ You have access to these data tools (call them as needed):
 • "concall NLP / analyze concall / management tone / earnings call sentiment / what management said / concall digest / management guidance NLP / earnings quality NLP" → call analyze_concall_sentiment(symbol)
 • "scenario analysis / what if / price scenario / if it drops / if it falls / if stock goes to / what happens at / bull case bear case / stop-loss level analysis" → call run_scenario_analysis(symbol)
 • "portfolio narrative / portfolio commentary / stock thesis / investment thesis / portfolio review narrative / brief me on my portfolio / narrative for [stock]" → call generate_portfolio_narratives(symbols)
+• "portfolio P&L / my holdings / unrealised gains / unrealised losses / how is my portfolio / portfolio performance / check my holdings" → call get_portfolio_pnl()
 • "voice briefing / audio briefing / daily briefing audio / TTS / voice / MP3 briefing / spoken market update" → call generate_voice_briefing()
 
 
