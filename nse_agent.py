@@ -428,6 +428,13 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/events NIFTY 50",                  "Event calendar for NIFTY 50 stocks (next 14 days)"),
     ("/events RELIANCE",                  "Upcoming events for a specific stock"),
     # ── Seasonal / macro / new commands ─────────────────────────────────────
+    ("/us",                               "US/global market summary + report"),
+    ("/us indices",                       "US index tape: SPY, QQQ, Nasdaq, Dow, Russell, VIX"),
+    ("/us sectors",                       "US sector ETF rotation"),
+    ("/us stage2",                        "US Stage 2 leaders"),
+    ("/us vcp",                           "US VCP setups"),
+    ("/us stock NVDA",                    "US stock technical context with report link"),
+    ("/global readthrough",               "US/global signals mapped to NSE sector implications"),
     ("/heat",                             "B3 Sector seasonal heatmap — current-month TAILWIND/HEADWIND"),
     ("/heat 5",                           "Sector heat calendar for May"),
     ("/cycle",                            "B5 Economic cycle phase + preferred/avoid sectors"),
@@ -1284,6 +1291,113 @@ def _print_context_summary(agent) -> None:
     console.print()
 
 
+_US_INDEX_SYMBOLS = ["^GSPC", "^IXIC", "^NDX", "^DJI", "^RUT", "^VIX", "SPY", "QQQ", "DIA", "IWM"]
+_US_SECTOR_SYMBOLS = ["SPY", "QQQ", "XLK", "XLF", "XLE", "XLY", "XLI", "XLU", "XLV", "XLP", "XLB", "XLRE", "SMH", "SOXX", "ARKK"]
+
+
+def _parse_us_global_command(text: str) -> dict | None:
+    """Parse direct US/global slash commands into a deterministic request."""
+    raw = (text or "").strip()
+    parts = raw.split()
+    if not parts:
+        return None
+    cmd = parts[0].lower()
+
+    if cmd == "/global" and len(parts) >= 2 and parts[1].lower() == "readthrough":
+        return {"view": "readthrough", "label": "Global India Read-Through", "symbols": None, "stock": None}
+
+    if cmd != "/us":
+        return None
+
+    view = parts[1].lower() if len(parts) >= 2 else "summary"
+    if view == "indices":
+        return {"view": "indices", "label": "US Indices", "symbols": _US_INDEX_SYMBOLS, "stock": None}
+    if view in ("sectors", "sector"):
+        return {"view": "sectors", "label": "US Sector Rotation", "symbols": _US_SECTOR_SYMBOLS, "stock": None}
+    if view == "stage2":
+        return {"view": "stage2", "label": "US Stage 2 Leaders", "symbols": None, "stock": None}
+    if view == "vcp":
+        return {"view": "vcp", "label": "US VCP Setups", "symbols": None, "stock": None}
+    if view == "stock" and len(parts) >= 3:
+        stock = parts[2].upper()
+        return {"view": "stock", "label": f"US Stock: {stock}", "symbols": ["SPY", "QQQ", stock], "stock": stock}
+    return {"view": "summary", "label": "US Market Summary", "symbols": None, "stock": None}
+
+
+def _format_us_global_terminal_summary(request: dict, bundle: dict, report_result: dict) -> str:
+    """Create a compact Markdown summary for direct terminal output."""
+    readthrough = bundle.get("india_readthrough", {}) or {}
+    risk = bundle.get("risk_dashboard", {}) or {}
+    stage2 = bundle.get("stage2")
+    sectors = bundle.get("sector_rotation")
+    vcp = bundle.get("vcp")
+
+    lines = [
+        f"### {request.get('label', 'US / Global Market')}",
+        f"- **Regime**: {readthrough.get('global_regime') or risk.get('regime', 'unavailable')}",
+        f"- **Report**: `{report_result.get('report_path', '-')}`",
+    ]
+
+    if stage2 is not None and not stage2.empty:
+        top = ", ".join(str(x) for x in stage2.get("SYMBOL", []).head(5).tolist())
+        if top:
+            lines.append(f"- **Stage 2 leaders**: {top}")
+    if sectors is not None and not sectors.empty:
+        top = ", ".join(str(x) for x in sectors.get("SYMBOL", []).head(5).tolist())
+        if top:
+            lines.append(f"- **Sector ETF leaders**: {top}")
+    if vcp is not None and not vcp.empty:
+        top = ", ".join(str(x) for x in vcp.get("SYMBOL", []).head(5).tolist())
+        if top:
+            lines.append(f"- **VCP setups**: {top}")
+
+    implications = readthrough.get("india_sector_implications", [])
+    if implications:
+        lines.append("- **India read-through**:")
+        for item in implications[:5]:
+            symbols = ", ".join(item.get("symbols", []))
+            lines.append(
+                f"  - {item.get('stance', 'watch').upper()}: "
+                f"{item.get('nse_sector', '-')} via {symbols or '-'} "
+                f"({item.get('confidence', '-')})"
+            )
+
+    warnings = bundle.get("warnings") or []
+    if warnings:
+        lines.append("- **Warnings**: " + "; ".join(str(w) for w in warnings[:3]))
+
+    return "\n".join(lines)
+
+
+def _handle_us_global_command(text: str) -> bool:
+    """Run direct US/global command. Returns True when text was handled."""
+    request = _parse_us_global_command(text)
+    if not request:
+        return False
+
+    console.print(f"[dim]  → {request['label']}[/dim]")
+    try:
+        from global_market_intelligence import (
+            GlobalMarketDataLoader,
+            build_us_market_bundle,
+            render_us_market_report,
+        )
+
+        loader = GlobalMarketDataLoader()
+        result = loader.load(symbols=request.get("symbols"), force=False, lookback_days=365)
+        if result.get("status") not in {"ok", "empty"}:
+            warning = "; ".join(result.get("warnings", [])) or "US/global data unavailable."
+            console.print(f"[bold red]  ❌  {warning}[/bold red]")
+            return True
+
+        bundle = build_us_market_bundle(result["prices"], warnings=result.get("warnings", []))
+        report_result = render_us_market_report(bundle)
+        console.print(Markdown(_format_us_global_terminal_summary(request, bundle, report_result)))
+    except Exception as exc:
+        console.print(f"[bold red]  ❌  US/global command failed: {exc}[/bold red]")
+    return True
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Background monitor — alert rendering + queue drain
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1864,6 +1978,11 @@ def _chat_loop(agent, show_trace: bool) -> None:
                 f"[bold yellow]  🔄  New session started[/bold yellow]"
                 f"[dim]  (cleared {n} turn{'s' if n != 1 else ''} of context)[/dim]"
             )
+            continue
+
+        # ── /us and /global readthrough: deterministic US/global layer ─
+        if _handle_us_global_command(text):
+            _separator()
             continue
 
         # ── /monitor: background alert workers ────────────────────────

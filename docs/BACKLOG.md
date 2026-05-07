@@ -233,7 +233,7 @@ Every external and internal data source the platform uses or will use. Items mar
 | G3 US Screeners | ✅ DONE | Codex | Stage 2 leaders, VCP setups, sector ETF rotation, risk dashboard built on `compute_technical_metrics()` |
 | G4 India Read-Through Engine | ✅ DONE | Codex | `build_india_readthrough()` maps Nasdaq, semis, crude, DXY, VIX/credit/Russell and financials/gold signals to NSE sector implications |
 | G5 US/Global HTML Report | ✅ DONE | Codex | `render_us_market_report()` writes dated/latest HTML with summary, screeners, read-through, freshness, disclaimer |
-| G6 Terminal + NLP Integration | 🔜 READY | — | `/us`, `/us indices`, `/us sectors`, `/us stage2`, `/us vcp`, `/us stock`, `/global readthrough` |
+| G6 Terminal + NLP Integration | ✅ DONE | Codex | `/us`, `/us indices`, `/us sectors`, `/us stage2`, `/us vcp`, `/us stock`, `/global readthrough` direct terminal routes |
 | G7 Sector Report Global Tab | 🔜 READY | — | Embed US/global context tab/section in `sector_rotation_report.py` without breaking NSE report generation |
 | G8 Intraday US Extension | 💤 DEFERRED | — | Add US intraday scanning after daily US/global layer is stable |
 
@@ -2566,7 +2566,7 @@ def render_filing_report(analysis: dict, output_format: str = "html") -> Path:
 - Tests verify dated and latest HTML outputs plus key report sections and disclaimer.
 
 #### G6 — Terminal + NLP Integration
-**Size:** M | **Priority:** High | **Status:** 🔜 READY
+**Size:** M | **Priority:** High | **Status:** ✅ DONE
 
 **What to build:**
 - Add terminal commands:
@@ -2586,6 +2586,11 @@ def render_filing_report(analysis: dict, output_format: str = "html") -> Path:
 **Acceptance criteria:**
 - Existing `/global` behavior is preserved and enriched.
 - `/us` commands return concise terminal summaries and report paths.
+
+**Implementation note (2026-05-08):**
+- Added deterministic command parsing and terminal summary helpers in `nse_agent.py`.
+- Direct commands call the US/global cache, build the report bundle, render HTML, and print concise report-linked summaries.
+- Existing `/global <topic>` LLM shortcut remains available; only `/global readthrough` is intercepted.
 
 #### G7 — Sector Report Global Tab
 **Size:** M | **Priority:** Medium | **Status:** 🔜 READY
