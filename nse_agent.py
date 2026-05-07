@@ -875,7 +875,7 @@ def _print_followup_line(num: int, question: str) -> None:
     # Extract backtick-quoted command hint at the start
     m = re.match(r"`([^`]+)`\s*[-–—]\s*(.+)", question)
     if m:
-        cmd_hint = m.group(1).strip()
+        cmd_hint = m.group(1).strip().strip('"').strip("'")  # remove any LLM-added quotes
         desc     = m.group(2).strip()
         # Colour the command hint: slash commands bright cyan, natural prompts dim cyan
         if cmd_hint.startswith("/"):

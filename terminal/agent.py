@@ -381,10 +381,10 @@ Produce a rich, detailed analysis with these sections as applicable:
     `/screen momentum`           — 52W high momentum leaders
     `/global`                    — global risk regime + India read-through
     Natural language prompts:
-    `"forensic screen my portfolio"`   — if portfolio context exists
-    `"show SYMBOL 15m intraday"`       — intraday analysis with signals
-    `"deep dive SYMBOL"`               — full 11-vertical deep search
-    `"what are upcoming results this week"` — results calendar
+    `forensic screen my portfolio`         — if portfolio context exists
+    `show SYMBOL 15m intraday`             — intraday analysis with signals
+    `deep dive SYMBOL`                     — full 11-vertical deep search
+    `what are upcoming results this week`  — results calendar
 
   RULES FOR FOLLOW-UPS:
   • TOOL-AWARE: Always start with the most relevant command/prompt hint in backticks
