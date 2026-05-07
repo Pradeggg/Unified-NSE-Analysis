@@ -115,6 +115,77 @@ def _bb(closes: list[float], window: int = 20, num_std: float = 2.0):
     return (mid - num_std * std).tolist(), mid.tolist(), (mid + num_std * std).tolist()
 
 
+def _atr(highs: list[float], lows: list[float], closes: list[float], period: int = 14) -> list[float]:
+    h = pd.Series(highs, dtype=float)
+    l = pd.Series(lows, dtype=float)
+    c = pd.Series(closes, dtype=float)
+    tr = pd.concat([h - l, (h - c.shift()).abs(), (l - c.shift()).abs()], axis=1).max(axis=1)
+    return tr.ewm(span=period, adjust=False).mean().tolist()
+
+
+def _stoch(highs: list[float], lows: list[float], closes: list[float], k: int = 14, d: int = 3):
+    h = pd.Series(highs, dtype=float)
+    l = pd.Series(lows, dtype=float)
+    c = pd.Series(closes, dtype=float)
+    lo = l.rolling(k).min()
+    hi = h.rolling(k).max()
+    pct_k = 100 * (c - lo) / (hi - lo + 1e-9)
+    pct_d = pct_k.rolling(d).mean()
+    return pct_k.tolist(), pct_d.tolist()
+
+
+def _heikin_ashi(opens, highs, lows, closes):
+    ha_c = [(o + h + l + c) / 4 for o, h, l, c in zip(opens, highs, lows, closes)]
+    ha_o = [0.0] * len(opens)
+    ha_o[0] = (opens[0] + closes[0]) / 2
+    for i in range(1, len(opens)):
+        ha_o[i] = (ha_o[i - 1] + ha_c[i - 1]) / 2
+    ha_h = [max(h, ho, hc) for h, ho, hc in zip(highs, ha_o, ha_c)]
+    ha_l = [min(l, lo, lc) for l, lo, lc in zip(lows, ha_o, ha_c)]
+    return ha_o, ha_h, ha_l, ha_c
+
+
+def _supertrend(highs, lows, closes, period: int = 7, mult: float = 3.0):
+    atr = pd.Series(_atr(highs, lows, closes, period))
+    hl2 = pd.Series([(h + l) / 2 for h, l in zip(highs, lows)])
+    upper = (hl2 + mult * atr).tolist()
+    lower = (hl2 - mult * atr).tolist()
+    n = len(closes)
+    st = [0.0] * n
+    direction = [1] * n  # 1=bullish, -1=bearish
+    for i in range(1, n):
+        upper[i] = min(upper[i], upper[i - 1]) if closes[i - 1] > upper[i - 1] else upper[i]
+        lower[i] = max(lower[i], lower[i - 1]) if closes[i - 1] < lower[i - 1] else lower[i]
+        if direction[i - 1] == -1 and closes[i] > upper[i - 1]:
+            direction[i] = 1
+        elif direction[i - 1] == 1 and closes[i] < lower[i - 1]:
+            direction[i] = -1
+        else:
+            direction[i] = direction[i - 1]
+        st[i] = lower[i] if direction[i] == 1 else upper[i]
+    return direction, st
+
+
+def _pivot_sr(highs: list[float], lows: list[float], n: int = 5, tol: float = 0.005) -> list[float]:
+    """Swing-pivot S/R: local max/min over n bars each side, clustered within tol."""
+    hi = pd.Series(highs)
+    lo = pd.Series(lows)
+    levels: list[float] = []
+    for i in range(n, len(hi) - n):
+        if hi[i] == hi[i - n: i + n + 1].max():
+            levels.append(float(hi[i]))
+        if lo[i] == lo[i - n: i + n + 1].min():
+            levels.append(float(lo[i]))
+    levels.sort()
+    clustered: list[float] = []
+    for lv in levels:
+        if clustered and abs(lv - clustered[-1]) / (clustered[-1] + 1e-9) < tol:
+            clustered[-1] = (clustered[-1] + lv) / 2
+        else:
+            clustered.append(lv)
+    return clustered
+
+
 def _strip_ansi(s: str) -> str:
     return re.sub(r'\x1b\[[0-9;]*m', '', s)
 
@@ -144,6 +215,7 @@ def render_chart(
     timeframe: str = "3mo",
     indicators: Optional[list[str]] = None,
     width: Optional[int] = None,
+    height: Optional[int] = None,
 ) -> str:
     """
     Render an ASCII candlestick chart in the terminal using plotext.
@@ -189,8 +261,11 @@ def render_chart(
 
     n_panels = 1 + show_volume + show_rsi + show_macd
 
-    # Height allocation
-    h_candle = max(16, 30 - 4 * (n_panels - 1))
+    # Height allocation — use caller-supplied height if provided
+    if height is not None:
+        h_candle = max(10, height - 4 * (n_panels - 1))
+    else:
+        h_candle = max(16, 30 - 4 * (n_panels - 1))
     h_vol    = 6
     h_rsi    = 7
     h_macd   = 7
@@ -279,10 +354,115 @@ def render_chart(
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# HTML CHART (Plotly) — first-class quality
+# HTML CHART (Plotly) — enhanced, first-class quality
 # ═════════════════════════════════════════════════════════════════════════════
 
 _HTML_CHART_DIR = ROOT / "data" / "charts"
+
+
+def _build_chart_html(
+    symbol: str,
+    timeframe: str,
+    plotly_div: str,
+    sr_count: int,
+    ema_spans: list[int],
+) -> str:
+    """Wrap Plotly chart div in a dark GitHub-style HTML page with toolbar."""
+    ema_btns = " ".join(
+        f'<button class="tb-btn active" data-name="EMA {s}" '
+        f"onclick=\"toggleTrace('EMA {s}')\">EMA{s}</button>"
+        for s in ema_spans
+    )
+    sr_label  = f"S/R ({sr_count})" if sr_count else "S/R"
+    sr_active = "active" if sr_count else ""
+
+    css = (
+        "body{margin:0;background:#0d1117;font-family:'Inter',system-ui,sans-serif;"
+        "color:#e6edf3;overflow-x:hidden}"
+        "#toolbar{padding:8px 14px;background:#161b22;border-bottom:1px solid #30363d;"
+        "display:flex;gap:6px;flex-wrap:wrap;align-items:center;"
+        "position:sticky;top:0;z-index:999;user-select:none}"
+        ".tb-sep{width:1px;height:20px;background:#30363d;margin:0 6px;flex-shrink:0}"
+        ".tb-label{font-size:11px;color:#8b949e;font-weight:500;white-space:nowrap;margin-right:2px}"
+        ".tb-btn{padding:3px 9px;border-radius:6px;border:1px solid #30363d;"
+        "background:#21262d;color:#c9d1d9;font-size:12px;cursor:pointer;"
+        "transition:background .12s,color .12s,border-color .12s;"
+        "white-space:nowrap;line-height:1.6}"
+        ".tb-btn.active{background:#1f6feb;color:#fff;border-color:#1f6feb}"
+        ".tb-btn:hover:not(.active){background:#30363d;color:#e6edf3}"
+        ".tb-shortcut{font-size:10px;color:#484f58;margin-left:auto;white-space:nowrap}"
+    )
+
+    sr_vis_init = "true" if sr_count else "false"
+    js = (
+        "var _gd=document.getElementById('chart');"
+        "var _srVisible=" + sr_vis_init + ";"
+        "function _getIdxs(name){"
+        "  if(!_gd||!_gd.data) return [];"
+        "  var r=[];_gd.data.forEach(function(t,i){if(t.name===name)r.push(i);});return r;"
+        "}"
+        "function toggleTrace(name){"
+        "  var ids=_getIdxs(name);if(!ids.length)return;"
+        "  var cur=_gd.data[ids[0]].visible;"
+        "  var nxt=(cur===false)?true:false;"
+        "  Plotly.restyle(_gd,{visible:nxt},ids);"
+        "  document.querySelectorAll('[data-name=\"'+name+'\"]').forEach(function(b){"
+        "    b.classList.toggle('active',nxt!==false);"
+        "  });"
+        "}"
+        "var _CT=['Candlestick','OHLC','Price','Heikin Ashi'];"
+        "function setChartType(name){"
+        "  var ids=[],vis=[];"
+        "  _CT.forEach(function(n){var i=_getIdxs(n);if(i.length){ids.push(i[0]);vis.push(n===name);}});"
+        "  Plotly.restyle(_gd,{visible:vis},ids);"
+        "  document.querySelectorAll('.tb-ctype').forEach(function(b){"
+        "    b.classList.toggle('active',b.dataset.name===name);"
+        "  });"
+        "}"
+        "function toggleSR(){"
+        "  var ids=[];if(_gd&&_gd.data)_gd.data.forEach(function(t,i){if(t.name==='S/R')ids.push(i);});"
+        "  _srVisible=!_srVisible;"
+        "  if(ids.length)Plotly.restyle(_gd,{visible:_srVisible},ids);"
+        "  var b=document.getElementById('sr-btn');"
+        "  if(b)b.classList.toggle('active',_srVisible);"
+        "}"
+        "document.addEventListener('keydown',function(e){"
+        "  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')return;"
+        "  if(e.key==='1')setChartType('Candlestick');"
+        "  else if(e.key==='2')setChartType('OHLC');"
+        "  else if(e.key==='3')setChartType('Price');"
+        "  else if(e.key==='4')setChartType('Heikin Ashi');"
+        "});"
+    )
+
+    return (
+        "<!DOCTYPE html>\n"
+        "<html lang=\"en\">\n"
+        "<head><meta charset=\"utf-8\">"
+        "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+        f"<title>{symbol.upper()} \u2014 {timeframe.upper()} Chart</title>"
+        f"<style>{css}</style></head>\n"
+        "<body>"
+        "<div id=\"toolbar\">"
+        "  <span class=\"tb-label\">Type</span>"
+        "  <button class=\"tb-btn tb-ctype active\" data-name=\"Candlestick\" onclick=\"setChartType('Candlestick')\">Candle</button>"
+        "  <button class=\"tb-btn tb-ctype\" data-name=\"OHLC\" onclick=\"setChartType('OHLC')\">OHLC</button>"
+        "  <button class=\"tb-btn tb-ctype\" data-name=\"Price\" onclick=\"setChartType('Price')\">Line</button>"
+        "  <button class=\"tb-btn tb-ctype\" data-name=\"Heikin Ashi\" onclick=\"setChartType('Heikin Ashi')\">Heikin Ashi</button>"
+        "  <div class=\"tb-sep\"></div>"
+        "  <span class=\"tb-label\">EMA</span>"
+        f"  {ema_btns}"
+        "  <div class=\"tb-sep\"></div>"
+        "  <span class=\"tb-label\">Overlay</span>"
+        "  <button class=\"tb-btn active\" data-name=\"BB Bands\" onclick=\"toggleTrace('BB Bands')\">BB</button>"
+        "  <button class=\"tb-btn active\" data-name=\"Supertrend\" onclick=\"toggleTrace('Supertrend')\">Supertrend</button>"
+        f"  <button class=\"tb-btn {sr_active}\" id=\"sr-btn\" onclick=\"toggleSR()\">{sr_label}</button>"
+        "  <span class=\"tb-shortcut\">Keys: 1=Candle &middot; 2=OHLC &middot; 3=Line &middot; 4=Heikin Ashi</span>"
+        "</div>\n"
+        f"{plotly_div}\n"
+        f"<script>{js}</script>\n"
+        "</body></html>"
+    )
 
 
 def render_html_chart(
@@ -292,15 +472,14 @@ def render_html_chart(
     open_browser: bool = True,
 ) -> str:
     """
-    Generate a full-featured interactive HTML chart using Plotly.
+    Generate an enhanced interactive HTML chart.
 
-    Panels (top to bottom):
-      1. Candlestick with EMA20 / EMA50 / Bollinger Bands
-      2. Volume bars (green/red)
-      3. RSI(14) with overbought/oversold bands
-      4. MACD(12,26,9) — line + signal + histogram
+    Chart types: Candlestick / OHLC / Line / Heikin Ashi (toolbar + keys 1-4).
+    Overlays: EMA 9/13/20/50/100/200, Bollinger Bands, Supertrend(7,3), S/R pivot levels.
+    Panels: Volume | RSI(14) | Stochastic(14,3) | MACD(12,26,9).
+    Non-trading weekend gaps removed on daily/weekly charts.
 
-    Saves to data/charts/<symbol>_<timeframe>.html and auto-opens in browser.
+    Saves to data/charts/<SYMBOL>_<timeframe>.html and auto-opens in browser.
     Returns the file path.
     """
     try:
@@ -309,14 +488,11 @@ def render_html_chart(
     except ImportError:
         return "❌  plotly not installed. Run: pip install plotly"
 
-    if indicators is None:
-        indicators = ["volume", "rsi", "macd"]
-    indicators = [i.lower() for i in indicators]
-
     df = _fetch_ohlcv(symbol, timeframe)
     if df.empty:
         return f"❌  No data found for {symbol} (timeframe: {timeframe})"
 
+    period, interval = _TF_PERIOD_MAP.get(timeframe, ("3mo", "1d"))
     n = len(df)
     dates_raw = pd.to_datetime(df["Date"], utc=True).dt.tz_localize(None)
     opens  = df["Open"].tolist()
@@ -325,238 +501,258 @@ def render_html_chart(
     closes = df["Close"].tolist()
     vols   = df["Volume"].tolist() if "Volume" in df.columns else [0] * n
 
-    show_volume = "volume" in indicators
-    show_rsi    = "rsi" in indicators
-    show_macd   = "macd" in indicators
+    up_color   = "#26A69A"
+    down_color = "#EF5350"
 
-    # ── Build subplot grid ───────────────────────────────────────────────────
-    row_heights   = [0.55]
-    subplot_titles = [f"{symbol.upper()} — {timeframe.upper()}"]
-    specs         = [[ {"secondary_y": False} ]]
-
-    if show_volume:
-        row_heights.append(0.12)
-        subplot_titles.append("Volume")
-        specs.append([ {"secondary_y": False} ])
-    if show_rsi:
-        row_heights.append(0.15)
-        subplot_titles.append("RSI (14)")
-        specs.append([ {"secondary_y": False} ])
-    if show_macd:
-        row_heights.append(0.18)
-        subplot_titles.append("MACD (12, 26, 9)")
-        specs.append([ {"secondary_y": False} ])
-
-    n_rows = len(row_heights)
+    # 5 fixed panels: Price | Volume | RSI | Stoch | MACD
+    n_rows = 5
     fig = make_subplots(
         rows=n_rows, cols=1,
         shared_xaxes=True,
-        vertical_spacing=0.03,
-        row_heights=row_heights,
-        subplot_titles=subplot_titles,
-        specs=specs,
+        vertical_spacing=0.02,
+        row_heights=[0.50, 0.10, 0.13, 0.13, 0.14],
+        subplot_titles=[
+            f"{symbol.upper()} — {timeframe.upper()}",
+            "Volume", "RSI (14)", "Stoch (14,3)", "MACD (12,26,9)",
+        ],
     )
 
-    row = 1
+    # ── Row 1: four chart types ──────────────────────────────────────────────
 
-    # ── Row 1: Candlestick ───────────────────────────────────────────────────
-    up_color   = "#26A69A"   # teal
-    down_color = "#EF5350"   # red
-
+    # Candlestick (default)
     fig.add_trace(go.Candlestick(
-        x=dates_raw,
-        open=opens, high=highs, low=lows, close=closes,
-        increasing_line_color=up_color,
-        decreasing_line_color=down_color,
-        increasing_fillcolor=up_color,
-        decreasing_fillcolor=down_color,
-        name="Price",
-        showlegend=False,
-    ), row=row, col=1)
+        x=dates_raw, open=opens, high=highs, low=lows, close=closes,
+        increasing_line_color=up_color, decreasing_line_color=down_color,
+        increasing_fillcolor=up_color, decreasing_fillcolor=down_color,
+        name="Candlestick", showlegend=False,
+    ), row=1, col=1)
 
-    # EMA 20
+    # OHLC (hidden)
+    fig.add_trace(go.Ohlc(
+        x=dates_raw, open=opens, high=highs, low=lows, close=closes,
+        increasing_line_color=up_color, decreasing_line_color=down_color,
+        name="OHLC", showlegend=False, visible=False,
+    ), row=1, col=1)
+
+    # Line (hidden)
+    fig.add_trace(go.Scatter(
+        x=dates_raw, y=closes,
+        line=dict(color="#58A6FF", width=2),
+        name="Price", showlegend=False, visible=False, mode="lines",
+    ), row=1, col=1)
+
+    # Heikin Ashi (hidden)
+    ha_o, ha_h, ha_l, ha_c = _heikin_ashi(opens, highs, lows, closes)
+    fig.add_trace(go.Candlestick(
+        x=dates_raw, open=ha_o, high=ha_h, low=ha_l, close=ha_c,
+        increasing_line_color=up_color, decreasing_line_color=down_color,
+        increasing_fillcolor=up_color, decreasing_fillcolor=down_color,
+        name="Heikin Ashi", showlegend=False, visible=False,
+    ), row=1, col=1)
+
+    # ── EMAs ────────────────────────────────────────────────────────────────
+    ema_configs = [
+        (9,   "#FFB300", 1.0, "solid"),
+        (13,  "#FF7043", 1.0, "solid"),
+        (20,  "#00BCD4", 1.2, "solid"),
+        (50,  "#FF9800", 1.2, "solid"),
+        (100, "#66BB6A", 1.0, "solid"),
+        (200, "#AB47BC", 1.2, "dot"),
+    ]
+    ema_spans_added: list[int] = []
+    for span, color, width, dash in ema_configs:
+        if n >= span:
+            fig.add_trace(go.Scatter(
+                x=dates_raw, y=_ema(closes, span),
+                line=dict(color=color, width=width, dash=dash),
+                name=f"EMA {span}", mode="lines",
+            ), row=1, col=1)
+            ema_spans_added.append(span)
+
+    # ── Bollinger Bands ──────────────────────────────────────────────────────
     if n >= 20:
-        ema20 = _ema(closes, 20)
-        fig.add_trace(go.Scatter(
-            x=dates_raw, y=ema20,
-            line=dict(color="#00BCD4", width=1.2),
-            name="EMA 20", mode="lines",
-        ), row=row, col=1)
-
-    # EMA 50
-    if n >= 50:
-        ema50 = _ema(closes, 50)
-        fig.add_trace(go.Scatter(
-            x=dates_raw, y=ema50,
-            line=dict(color="#FF9800", width=1.2),
-            name="EMA 50", mode="lines",
-        ), row=row, col=1)
-
-    # EMA 200
-    if n >= 200:
-        ema200 = _ema(closes, 200)
-        fig.add_trace(go.Scatter(
-            x=dates_raw, y=ema200,
-            line=dict(color="#AB47BC", width=1.2, dash="dot"),
-            name="EMA 200", mode="lines",
-        ), row=row, col=1)
-
-    # Bollinger Bands
-    if n >= 20:
-        bb_lo, bb_mid, bb_hi = _bb(closes, 20, 2.0)
+        bb_lo, _bb_mid, bb_hi = _bb(closes, 20, 2.0)
         fig.add_trace(go.Scatter(
             x=dates_raw, y=bb_hi,
             line=dict(color="rgba(150,150,255,0.4)", width=1),
-            name="BB Upper", mode="lines", showlegend=False,
-        ), row=row, col=1)
+            name="BB Bands", mode="lines", showlegend=False,
+        ), row=1, col=1)
         fig.add_trace(go.Scatter(
             x=dates_raw, y=bb_lo,
-            fill="tonexty",
-            fillcolor="rgba(150,150,255,0.06)",
+            fill="tonexty", fillcolor="rgba(150,150,255,0.06)",
             line=dict(color="rgba(150,150,255,0.4)", width=1),
-            name="BB Bands", mode="lines",
-        ), row=row, col=1)
+            name="BB Bands", mode="lines", showlegend=False,
+        ), row=1, col=1)
 
-    row += 1
+    # ── Supertrend(7, 3) — two traces (bullish / bearish segments) ───────────
+    if n >= 14:
+        direction, st_vals = _supertrend(highs, lows, closes)
+        st_up = [v if d == 1  else None for v, d in zip(st_vals, direction)]
+        st_dn = [v if d == -1 else None for v, d in zip(st_vals, direction)]
+        fig.add_trace(go.Scatter(
+            x=dates_raw, y=st_up,
+            line=dict(color="#26A69A", width=1.5),
+            name="Supertrend", mode="lines", showlegend=False, connectgaps=False,
+        ), row=1, col=1)
+        fig.add_trace(go.Scatter(
+            x=dates_raw, y=st_dn,
+            line=dict(color="#EF5350", width=1.5),
+            name="Supertrend", mode="lines", showlegend=False, connectgaps=False,
+        ), row=1, col=1)
+
+    # ── S/R pivot levels ─────────────────────────────────────────────────────
+    sr_count = 0
+    if n >= 15:
+        sr_levels = _pivot_sr(highs, lows)
+        x0, x1 = dates_raw.iloc[0], dates_raw.iloc[-1]
+        for lv in sr_levels:
+            fig.add_trace(go.Scatter(
+                x=[x0, x1], y=[lv, lv],
+                mode="lines",
+                line=dict(color="rgba(255,210,80,0.5)", width=1, dash="dot"),
+                name="S/R", showlegend=False, hoverinfo="skip",
+            ), row=1, col=1)
+            sr_count += 1
 
     # ── Row 2: Volume ────────────────────────────────────────────────────────
-    if show_volume:
-        vol_colors = [up_color if c >= o else down_color
-                      for c, o in zip(closes, opens)]
-        fig.add_trace(go.Bar(
-            x=dates_raw, y=vols,
-            marker_color=vol_colors,
-            name="Volume", showlegend=False,
-        ), row=row, col=1)
-        row += 1
+    vol_colors = [up_color if c >= o else down_color for c, o in zip(closes, opens)]
+    fig.add_trace(go.Bar(
+        x=dates_raw, y=vols, marker_color=vol_colors,
+        name="Volume", showlegend=False,
+    ), row=2, col=1)
 
-    # ── Row 3: RSI ───────────────────────────────────────────────────────────
-    if show_rsi:
-        rsi_vals = _rsi(closes, 14)
-        fig.add_trace(go.Scatter(
-            x=dates_raw, y=rsi_vals,
-            line=dict(color="#F9A825", width=1.5),
-            name="RSI(14)", mode="lines",
-        ), row=row, col=1)
-        # Overbought/oversold fill bands
-        fig.add_hrect(y0=70, y1=100, fillcolor="rgba(239,83,80,0.08)",
-                      line_width=0, row=row, col=1)
-        fig.add_hrect(y0=0,  y1=30,  fillcolor="rgba(38,166,154,0.08)",
-                      line_width=0, row=row, col=1)
-        for lvl, col in [(70, "#EF5350"), (50, "rgba(255,255,255,0.3)"), (30, "#26A69A")]:
-            fig.add_hline(y=lvl, line_dash="dot",
-                          line_color=col, line_width=0.8,
-                          row=row, col=1)
-        fig.update_yaxes(range=[0, 100], row=row, col=1)
-        row += 1
+    # ── Row 3: RSI(14) ───────────────────────────────────────────────────────
+    rsi_vals = _rsi(closes, 14)
+    fig.add_trace(go.Scatter(
+        x=dates_raw, y=rsi_vals,
+        line=dict(color="#F9A825", width=1.5),
+        name="RSI(14)", mode="lines", showlegend=False,
+    ), row=3, col=1)
+    fig.add_hrect(y0=70, y1=100, fillcolor="rgba(239,83,80,0.08)",  line_width=0, row=3, col=1)
+    fig.add_hrect(y0=0,  y1=30,  fillcolor="rgba(38,166,154,0.08)", line_width=0, row=3, col=1)
+    for lvl, lc in [(70, "#EF5350"), (50, "rgba(255,255,255,0.2)"), (30, "#26A69A")]:
+        fig.add_hline(y=lvl, line_dash="dot", line_color=lc, line_width=0.8, row=3, col=1)
+    fig.update_yaxes(range=[0, 100], row=3, col=1)
 
-    # ── Row 4: MACD ──────────────────────────────────────────────────────────
-    if show_macd:
-        macd_line, sig_line, hist_vals = _macd(closes)
-        hist_colors = [up_color if h >= 0 else down_color for h in hist_vals]
-        fig.add_trace(go.Bar(
-            x=dates_raw, y=hist_vals,
-            marker_color=hist_colors,
-            name="MACD Hist", showlegend=False,
-            opacity=0.7,
-        ), row=row, col=1)
-        fig.add_trace(go.Scatter(
-            x=dates_raw, y=macd_line,
-            line=dict(color="#00BCD4", width=1.5),
-            name="MACD", mode="lines",
-        ), row=row, col=1)
-        fig.add_trace(go.Scatter(
-            x=dates_raw, y=sig_line,
-            line=dict(color="#FF9800", width=1.5),
-            name="Signal", mode="lines",
-        ), row=row, col=1)
-        fig.add_hline(y=0, line_dash="dot",
-                      line_color="rgba(255,255,255,0.3)", line_width=0.8,
-                      row=row, col=1)
+    # ── Row 4: Stochastic(14,3) ───────────────────────────────────────────────
+    stoch_k, stoch_d = _stoch(highs, lows, closes)
+    fig.add_trace(go.Scatter(
+        x=dates_raw, y=stoch_k,
+        line=dict(color="#42A5F5", width=1.5),
+        name="Stoch %K", mode="lines", showlegend=False,
+    ), row=4, col=1)
+    fig.add_trace(go.Scatter(
+        x=dates_raw, y=stoch_d,
+        line=dict(color="#FF7043", width=1.5),
+        name="Stoch %D", mode="lines", showlegend=False,
+    ), row=4, col=1)
+    fig.add_hrect(y0=80, y1=100, fillcolor="rgba(239,83,80,0.08)",  line_width=0, row=4, col=1)
+    fig.add_hrect(y0=0,  y1=20,  fillcolor="rgba(38,166,154,0.08)", line_width=0, row=4, col=1)
+    for lvl in [80, 50, 20]:
+        fig.add_hline(y=lvl, line_dash="dot", line_color="rgba(255,255,255,0.2)",
+                      line_width=0.8, row=4, col=1)
+    fig.update_yaxes(range=[0, 100], row=4, col=1)
 
-    # ── Layout — dark TradingView-like theme ─────────────────────────────────
+    # ── Row 5: MACD(12,26,9) ─────────────────────────────────────────────────
+    macd_line, sig_line, hist_vals = _macd(closes)
+    hist_colors = [up_color if h >= 0 else down_color for h in hist_vals]
+    fig.add_trace(go.Bar(
+        x=dates_raw, y=hist_vals, marker_color=hist_colors,
+        name="MACD Hist", showlegend=False, opacity=0.7,
+    ), row=5, col=1)
+    fig.add_trace(go.Scatter(
+        x=dates_raw, y=macd_line,
+        line=dict(color="#00BCD4", width=1.5),
+        name="MACD", mode="lines", showlegend=False,
+    ), row=5, col=1)
+    fig.add_trace(go.Scatter(
+        x=dates_raw, y=sig_line,
+        line=dict(color="#FF9800", width=1.5),
+        name="Signal", mode="lines", showlegend=False,
+    ), row=5, col=1)
+    fig.add_hline(y=0, line_dash="dot", line_color="rgba(255,255,255,0.2)",
+                  line_width=0.8, row=5, col=1)
+
+    # ── Layout ───────────────────────────────────────────────────────────────
     current_price = closes[-1]
-    prev          = closes[-2] if n >= 2 else closes[-1]
-    chg_pct       = 100 * (current_price - prev) / prev if prev else 0.0
-    sign          = "▲" if chg_pct >= 0 else "▼"
+    prev    = closes[-2] if n >= 2 else closes[-1]
+    chg_pct = 100 * (current_price - prev) / prev if prev else 0.0
+    sign    = "\u25b2" if chg_pct >= 0 else "\u25bc"
+    chg_clr = "#26A69A" if chg_pct >= 0 else "#EF5350"
 
     fig.update_layout(
         title=dict(
             text=(
                 f"<b>{symbol.upper()}</b>  "
-                f"₹{current_price:,.2f}  "
-                f"<span style='color:{'#26A69A' if chg_pct >= 0 else '#EF5350'}'>"
-                f"{sign} {abs(chg_pct):.2f}%</span>"
-                f"  <span style='font-size:13px;color:#888'>{timeframe.upper()}</span>"
+                f"\u20b9{current_price:,.2f}  "
+                f"<span style='color:{chg_clr}'>{sign} {abs(chg_pct):.2f}%</span>"
+                f"  <span style='font-size:12px;color:#6e7681'>{timeframe.upper()}</span>"
             ),
-            font=dict(size=18, color="#E0E0E0"),
+            font=dict(size=17, color="#e6edf3"),
             x=0.01,
         ),
-        paper_bgcolor="#131722",
-        plot_bgcolor="#131722",
-        font=dict(family="Inter, Arial, sans-serif", size=12, color="#D1D4DC"),
+        paper_bgcolor="#0d1117",
+        plot_bgcolor="#0d1117",
+        font=dict(family="Inter, system-ui, sans-serif", size=12, color="#8b949e"),
         legend=dict(
-            bgcolor="rgba(19,23,34,0.8)",
-            bordercolor="#2A2E39",
-            borderwidth=1,
+            bgcolor="rgba(13,17,23,0.85)",
+            bordercolor="#30363d", borderwidth=1,
             font=dict(size=11),
-            orientation="h",
-            yanchor="bottom", y=1.01,
-            xanchor="left", x=0,
+            orientation="h", yanchor="bottom", y=1.01, xanchor="left", x=0,
         ),
         xaxis_rangeslider_visible=False,
         hovermode="x unified",
-        hoverlabel=dict(
-            bgcolor="#1E222D",
-            bordercolor="#2A2E39",
-            font=dict(color="#D1D4DC", size=12),
-        ),
-        margin=dict(l=60, r=30, t=80, b=40),
-        height=750 + 80 * (n_rows - 1),
+        hoverlabel=dict(bgcolor="#161b22", bordercolor="#30363d",
+                        font=dict(color="#e6edf3", size=12)),
+        margin=dict(l=60, r=60, t=80, b=40),
+        height=920,
     )
 
-    # Style all axes
     axis_style = dict(
-        gridcolor="#1E222D",
-        gridwidth=1,
-        linecolor="#2A2E39",
-        tickcolor="#2A2E39",
-        tickfont=dict(color="#787B86", size=11),
-        zerolinecolor="#2A2E39",
-        showgrid=True,
+        gridcolor="#21262d", gridwidth=1,
+        linecolor="#30363d", tickcolor="#30363d",
+        tickfont=dict(color="#6e7681", size=11),
+        zerolinecolor="#30363d", showgrid=True,
     )
     for i in range(1, n_rows + 1):
         fig.update_xaxes(axis_style, row=i, col=1)
-        fig.update_yaxes(axis_style, row=i, col=1)
+        fig.update_yaxes({**axis_style, "side": "right"}, row=i, col=1)
 
-    # Spike lines for crosshair
+    # Crosshair spike lines
     for i in range(1, n_rows + 1):
         fig.update_xaxes(
-            showspikes=True, spikecolor="#787B86",
-            spikethickness=1, spikedash="dot", spikemode="across",
-            row=i, col=1,
+            showspikes=True, spikecolor="#6e7681",
+            spikethickness=1, spikedash="dot", spikemode="across", row=i, col=1,
         )
         fig.update_yaxes(
-            showspikes=True, spikecolor="#787B86",
-            spikethickness=1, spikedash="dot",
-            row=i, col=1,
+            showspikes=True, spikecolor="#6e7681",
+            spikethickness=1, spikedash="dot", row=i, col=1,
         )
 
-    # ── Save and open ────────────────────────────────────────────────────────
-    _HTML_CHART_DIR.mkdir(parents=True, exist_ok=True)
-    fname = f"{symbol.upper()}_{timeframe}.html"
-    fpath = _HTML_CHART_DIR / fname
-    fig.write_html(
-        str(fpath),
+    # Remove weekend gaps on daily/weekly charts
+    if interval in ("1d", "1wk"):
+        rb = [dict(bounds=["sat", "mon"])]
+        for i in range(1, n_rows + 1):
+            fig.update_xaxes(rangebreaks=rb, row=i, col=1)
+
+    # ── Build and save ────────────────────────────────────────────────────────
+    plotly_div = fig.to_html(
+        full_html=False,
+        include_plotlyjs=True,
+        div_id="chart",
         config={
             "scrollZoom": True,
             "displayModeBar": True,
             "modeBarButtonsToAdd": ["drawline", "drawopenpath", "eraseshape"],
             "modeBarButtonsToRemove": ["lasso2d", "select2d"],
         },
-        include_plotlyjs=True,          # embed full Plotly JS — works offline, no CSP issues
-        full_html=True,
     )
+
+    html = _build_chart_html(symbol, timeframe, plotly_div, sr_count, ema_spans_added)
+    _HTML_CHART_DIR.mkdir(parents=True, exist_ok=True)
+    fname = f"{symbol.upper()}_{timeframe}.html"
+    fpath = _HTML_CHART_DIR / fname
+    fpath.write_text(html, encoding="utf-8")
 
     if open_browser:
         webbrowser.open(f"file://{fpath}")

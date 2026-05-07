@@ -456,6 +456,17 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/export html",      "Export session to HTML file (opens in browser)"),
     ("/export pdf",       "Export session to PDF (requires weasyprint or pdfkit)"),
     ("/help",             "Show all commands"),
+    # ── Theme / scale commands ─────────────────────────────────────────────
+    ("/theme ",           "Show available color themes"),
+    ("/theme dark",       "Switch to Dark theme (default)"),
+    ("/theme dracula",    "Switch to Dracula theme"),
+    ("/theme solarized",  "Switch to Solarized Dark theme"),
+    ("/theme high-contrast", "Switch to High Contrast theme"),
+    ("/theme nord",       "Switch to Nord theme"),
+    ("/scale ",           "Show layout scale options"),
+    ("/scale compact",    "Compact layout — fits small terminals"),
+    ("/scale normal",     "Normal layout — default balanced layout"),
+    ("/scale large",      "Large layout — wide terminals / big screens"),
 ]
 
 # Well-known NSE symbols & index names for stock query completion
@@ -1913,6 +1924,10 @@ def _single_query(agent, query: str, show_trace: bool) -> None:
 def _chat_loop(agent, show_trace: bool) -> None:
     global _mode, _followups
 
+    from terminal.theme import get_theme, get_scale
+    _theme = get_theme()
+    _scale = get_scale()
+
     session = PromptSession(
         history=InMemoryHistory(),
         completer=_AgentCompleter(),
@@ -2003,7 +2018,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
                     console.print("[dim]  No alerts set. Use /alert add SYMBOL price_above 1500[/dim]")
                 else:
                     from rich.table import Table
-                    tbl = Table(title="🔔 Watchlist Alerts", show_header=True, header_style="bold cyan")
+                    tbl = Table(title="🔔 Watchlist Alerts", show_header=True, header_style=_theme["header"])
                     tbl.add_column("ID", style="dim", width=4)
                     tbl.add_column("Symbol", style="bold yellow")
                     tbl.add_column("Trigger", style="cyan")
@@ -2237,7 +2252,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
                 console.print(f"[dim]  → ASCII Chart: {sym} [{tf}] indicators: {', '.join(indicators)}[/dim]")
                 try:
                     from terminal.charts import render_chart
-                    chart_out = render_chart(sym, tf, indicators)
+                    chart_out = render_chart(sym, tf, indicators, width=_scale["chart_width"], height=_scale["chart_height"])
                     import sys as _sys
                     _sys.stdout.write("\n" + chart_out + "\n")
                     _sys.stdout.flush()
@@ -2643,7 +2658,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
                 tbl = Table(
                     title="💼 Portfolio — Unrealised P&L",
                     show_header=True,
-                    header_style="bold cyan",
+                    header_style=_theme["header"],
                     box=_box.SIMPLE_HEAVY,
                     padding=(0,1)
                 )
@@ -2657,8 +2672,8 @@ def _chat_loop(agent, show_trace: bool) -> None:
                 tbl.add_column("Day%",     justify="right", width=8)
 
                 for r in result["rows"]:
-                    pnl_color = "green" if r["pnl"] >= 0 else "red"
-                    day_color = "green" if r["day_chg_pct"] >= 0 else "red"
+                    pnl_color = _theme["profit"] if r["pnl"] >= 0 else _theme["loss"]
+                    day_color = _theme["profit"] if r["day_chg_pct"] >= 0 else _theme["loss"]
                     pnl_sign  = "+" if r["pnl"] >= 0 else ""
                     day_sign  = "+" if r["day_chg_pct"] >= 0 else ""
                     tbl.add_row(
@@ -2675,9 +2690,9 @@ def _chat_loop(agent, show_trace: bool) -> None:
                 console.print(tbl)
 
                 # Totals footer
-                tot_color = "green" if result["total_pnl"] >= 0 else "red"
+                tot_color = _theme["profit"] if result["total_pnl"] >= 0 else _theme["loss"]
                 tot_sign  = "+" if result["total_pnl"] >= 0 else ""
-                day_color = "green" if result["total_day_pnl"] >= 0 else "red"
+                day_color = _theme["profit"] if result["total_day_pnl"] >= 0 else _theme["loss"]
                 console.print(f"  [bold]Invested:[/bold]  ₹{result['total_invested']:,.0f}")
                 console.print(f"  [bold]Current:[/bold]   ₹{result['total_current']:,.0f}")
                 console.print(f"  [bold]Total P&L:[/bold] [{tot_color}]{tot_sign}₹{result['total_pnl']:,.0f}  ({tot_sign}{result['total_pnl_pct']:.1f}%)[/]")
@@ -2868,6 +2883,55 @@ def _chat_loop(agent, show_trace: bool) -> None:
             )
             console.print(f"[dim]  → Strategy: {strat} on {sym}[/dim]")
 
+        # ── /theme — select color theme ────────────────────────────────────
+        if text.lower().startswith("/theme"):
+            from terminal.theme import get_theme_name, set_theme, list_themes, THEMES
+            parts = text.split()
+            if len(parts) == 1:
+                current = get_theme_name()
+                console.print(f"\n  [bold]Available Themes[/bold]  [dim](current: {current})[/dim]\n")
+                for tname, tdef in THEMES.items():
+                    marker = "▶" if tname == current else " "
+                    swatch = ""
+                    for label, color in tdef["preview"]:
+                        swatch += f"[{color}]{label}[/{color}]"
+                    console.print(f"  {marker} [bold {'cyan' if tname==current else 'white'}]{tname:<15}[/]  {swatch}")
+                console.print(f"\n  Usage: [dim]/theme dracula[/dim]  |  [dim]/theme dark[/dim]  |  [dim]/theme nord[/dim]\n")
+            else:
+                tname = parts[1].lower()
+                try:
+                    tdef = set_theme(tname)
+                    _theme = tdef
+                    console.print(f"  [bold]Theme set:[/bold] [{_theme['accent']}]{tdef['name']}[/{_theme['accent']}] ✅")
+                    for label, color in tdef["preview"]:
+                        console.print(f"    [{color}]{label}[/{color}]")
+                except ValueError as e:
+                    console.print(f"  [red]{e}[/red]")
+            continue
+
+        # ── /scale — layout density ────────────────────────────────────────
+        if text.lower().startswith("/scale"):
+            from terminal.theme import get_scale_name, set_scale, SCALES
+            parts = text.split()
+            if len(parts) == 1:
+                current = get_scale_name()
+                console.print(f"\n  [bold]Layout Scale[/bold]  [dim](current: {current})[/dim]\n")
+                for sname, sdef in SCALES.items():
+                    marker = "▶" if sname == current else " "
+                    console.print(f"  {marker} [bold {'cyan' if sname==current else 'white'}]{sname:<10}[/]  [dim]{sdef['description']}[/dim]  [dim]chart {sdef['chart_width']}×{sdef['chart_height']}[/dim]")
+                console.print(f"\n  Usage: [dim]/scale compact[/dim]  |  [dim]/scale normal[/dim]  |  [dim]/scale large[/dim]")
+                console.print(f"  [dim]Tip: To change actual font size, use your terminal's Cmd+= / Ctrl+= shortcut.[/dim]\n")
+            else:
+                sname = parts[1].lower()
+                try:
+                    sdef = set_scale(sname)
+                    _scale = sdef
+                    console.print(f"  [bold]Scale set:[/bold] [cyan]{sdef['name']}[/cyan] — {sdef['description']} ✅")
+                    console.print(f"  [dim]Charts will render at {sdef['chart_width']}×{sdef['chart_height']}. Restart not required.[/dim]")
+                except ValueError as e:
+                    console.print(f"  [red]{e}[/red]")
+            continue
+
         # ── p<n> prompt library shortcut ───────────────────────────────
         import re as _re
         _pm = _re.fullmatch(r"p(\d{1,3})", text.lower())
@@ -2942,10 +3006,21 @@ def main() -> None:
                         help="Default data mode (default: auto)")
     parser.add_argument("--no-briefing", "-nb", action="store_true",
                         help="Skip the startup market briefing")
+    parser.add_argument("--theme", default=None,
+                        help="Color theme: dark, dracula, solarized, high-contrast, nord")
+    parser.add_argument("--scale", default=None,
+                        help="Layout scale: compact, normal, large")
     args = parser.parse_args()
 
     global _mode
     _mode = args.mode
+
+    if args.theme:
+        from terminal.theme import set_theme
+        set_theme(args.theme)
+    if args.scale:
+        from terminal.theme import set_scale
+        set_scale(args.scale)
 
     print_banner()
 
