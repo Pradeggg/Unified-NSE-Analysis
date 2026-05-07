@@ -681,8 +681,8 @@ cache_data_for_project <- function(stock_data, index_data) {
 # Automatically detect the latest date in existing data and download till specified end date
 USE_DATE_RANGE <- TRUE
 
-# Set the target end date (March 7, 2026)
-END_DATE <- as.Date("2026-03-07")
+# Set the target end date — always use today so we fetch the latest bhavcopy
+END_DATE <- Sys.Date()
 
 # Automatically detect the latest date in existing data
 stock_file <- file.path(project_data_dir, "nse_sec_full_data.csv")

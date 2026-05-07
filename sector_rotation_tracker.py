@@ -541,6 +541,28 @@ def write_snapshot(
     except Exception as e:
         print(f"  Warning: could not build comp lookup: {e}")
 
+    # Load fundamental scores DB (same pipeline as sector_rotation_report.py merge_fundamental_scores)
+    fund_scores_lookup: dict[str, dict] = {}
+    fund_scores_path = ROOT / "organized" / "data" / "fundamental_scores_database.csv"
+    try:
+        if fund_scores_path.exists():
+            fs_df = pd.read_csv(fund_scores_path)
+            for _, fsr in fs_df.iterrows():
+                sym_key = str(fsr.get("symbol", "")).strip().upper()
+                if sym_key:
+                    fund_scores_lookup[sym_key] = fsr.to_dict()
+            print(f"  Loaded {len(fund_scores_lookup)} entries from fundamental_scores_database.csv")
+    except Exception as e:
+        print(f"  Warning: could not load fundamental scores DB: {e}")
+
+    def _get_fund_score(sym_up: str, comp_row: dict, key_upper: str, key_lower: str) -> float | None:
+        """Get fund score: comp_lookup first (comprehensive CSV), fall back to fundamental_scores_database."""
+        v = _f(comp_row.get(key_upper))
+        if v is not None:
+            return v
+        fs_row = fund_scores_lookup.get(sym_up, {})
+        return _f(fs_row.get(key_lower) or fs_row.get(key_upper))
+
     rows = []
     for _, r in screener_df.iterrows():
         sym = str(r.get("SYMBOL", ""))
@@ -569,11 +591,11 @@ def write_snapshot(
             "source_csv": csv_path.name,
             "sector": sector_map.get(sym_up, "Other"),
             "fundamental_score": _f(comp_row.get("FUNDAMENTAL_SCORE")),
-            "enhanced_fund_score": _f(comp_row.get("ENHANCED_FUND_SCORE")),
-            "earnings_quality": _f(comp_row.get("EARNINGS_QUALITY")),
-            "sales_growth": _f(comp_row.get("SALES_GROWTH")),
-            "financial_strength": _f(comp_row.get("FINANCIAL_STRENGTH")),
-            "institutional_backing": _f(comp_row.get("INSTITUTIONAL_BACKING")),
+            "enhanced_fund_score": _get_fund_score(sym_up, comp_row, "ENHANCED_FUND_SCORE", "ENHANCED_FUND_SCORE"),
+            "earnings_quality": _get_fund_score(sym_up, comp_row, "EARNINGS_QUALITY", "EARNINGS_QUALITY"),
+            "sales_growth": _get_fund_score(sym_up, comp_row, "SALES_GROWTH", "SALES_GROWTH"),
+            "financial_strength": _get_fund_score(sym_up, comp_row, "FINANCIAL_STRENGTH", "FINANCIAL_STRENGTH"),
+            "institutional_backing": _get_fund_score(sym_up, comp_row, "INSTITUTIONAL_BACKING", "INSTITUTIONAL_BACKING"),
             "can_slim_score": _f(comp_row.get("CAN_SLIM_SCORE")),
             "minervini_score": _f(comp_row.get("MINERVINI_SCORE")),
         }

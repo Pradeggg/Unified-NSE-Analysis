@@ -171,6 +171,8 @@ Every external and internal data source the platform uses or will use. Items mar
 | P3-1 Causal Inference Model | ⏳ BLOCKED | — | Needs 6+ months of P0-1 signal data |
 | P3-2 Voice Briefing | 🔜 READY | — | `generate_voice_briefing.py`. Needs OpenAI TTS key. |
 | P3-3 Real-Time Mode | 💤 DEFERRED | — | Needs live NSE data subscription |
+| P3-4 Installable Agent Adda CLI | 🔒 IN PROGRESS | Codex | `pyproject.toml`; `agent_adda` package; `agent-adda setup`, `doctor`, `data bootstrap --historical`; local config + SQLite historical bootstrap foundation |
+| P3-5 Intraday Single-Stock Fallback | ✅ DONE | Codex | `/intraday <stock>` now resolves the actual stock symbol, tries SQLite-backed setup first, then explicitly calls `get_intraday_analysis` as Yahoo Finance/EOD fallback when `intraday_ohlcv` is missing/stale; fallback is labeled research-only |
 | **Phase 4 — Branch A: Advanced Screeners** | | | |
 | A1 Stage Analysis Screener | 🔜 READY | — | William O'Neil 4-stage classification; Stage 2 only buy zone |
 | A2 Darvas Box Breakout | 🔜 READY | — | Box top/bottom detection; breakout + volume confirmation |

@@ -142,8 +142,15 @@ def enrich_with_stage(
     hist_all = history.copy()
     hist_all["TIMESTAMP"] = pd.to_datetime(hist_all["TIMESTAMP"])
 
+    hist_groups = {
+        sym: grp.sort_values("TIMESTAMP")
+        for sym, grp in hist_all.groupby("SYMBOL", sort=False)
+    }
+
     for sym in df["SYMBOL"].dropna().unique():
-        sym_hist = hist_all[hist_all["SYMBOL"] == sym].sort_values("TIMESTAMP")
+        sym_hist = hist_groups.get(sym)
+        if sym_hist is None:
+            continue
         features = _compute_stage_features(sym_hist)
         mask = df["SYMBOL"] == sym
         for k, v in features.items():
@@ -702,6 +709,247 @@ def build_turnaround_tab_html(screener_df: pd.DataFrame) -> str:
         f'<div style="margin-top:8px;font-size:11px;color:var(--muted)">'
         f'{len(screener_df)} turnaround candidates · Earlier recovery = better risk/reward entry</div>'
         '</div>'
+    )
+
+
+# ---------------------------------------------------------------------------
+# A2 — Darvas Box Breakout Screener
+# ---------------------------------------------------------------------------
+
+def _compute_darvas_for_symbol(hist: pd.DataFrame, lookback: int = 52) -> dict | None:
+    """Detect Darvas box for a single symbol.
+
+    Returns a dict with box metrics, or None if no valid box found.
+    """
+    import numpy as np
+
+    h = hist.copy().sort_values("TIMESTAMP").tail(lookback * 5)
+    if len(h) < 10:
+        return None
+
+    closes = pd.to_numeric(h["CLOSE"], errors="coerce").values
+    vol_col = "TOTTRDQTY" if "TOTTRDQTY" in h.columns else "VOLUME" if "VOLUME" in h.columns else None
+    if vol_col:
+        vols = pd.to_numeric(h[vol_col], errors="coerce").fillna(0).values
+    else:
+        vols = np.zeros(len(closes))
+
+    peak_idx = int(np.argmax(closes))
+    box_top = float(closes[peak_idx])
+    if peak_idx >= len(closes) - 3:
+        return None  # need at least 3 days after the peak for consolidation
+
+    post = closes[peak_idx + 1:]
+    if float(post.max()) > box_top * 1.002:
+        return None  # new high made → box not formed
+
+    box_bottom = float(post.min())
+    box_width_pct = (box_top - box_bottom) / box_bottom * 100.0
+    if box_width_pct > 30.0 or box_width_pct < 0.5:
+        return None
+
+    days_in_box = len(post)
+    last_close = float(closes[-1])
+    last_vol = float(vols[-1]) if len(vols) > 0 else 0.0
+    avg_vol = float(np.mean(vols[-20:])) if len(vols) >= 20 else (float(np.mean(vols)) if len(vols) > 0 else 0.0)
+
+    breakout = last_close > box_top and (avg_vol == 0 or last_vol >= avg_vol * 1.3)
+    near_top = (not breakout) and last_close >= box_top * 0.98
+
+    vs_top_pct = (last_close - box_top) / box_top * 100.0
+
+    if breakout:
+        status = "BREAKOUT"
+    elif near_top:
+        status = "NEAR_TOP"
+    else:
+        status = "IN_BOX"
+
+    return {
+        "BOX_TOP": round(box_top, 2),
+        "BOX_BOTTOM": round(box_bottom, 2),
+        "BOX_WIDTH_PCT": round(box_width_pct, 2),
+        "DAYS_IN_BOX": days_in_box,
+        "BREAKOUT_CONFIRMED": breakout,
+        "NEAR_BOX_TOP": near_top,
+        "VS_TOP_PCT": round(vs_top_pct, 2),
+        "BOX_STOP_LOSS": round(box_bottom * 0.99, 2),
+        "DARVAS_STATUS": status,
+    }
+
+
+def run_darvas_screener(candidates: pd.DataFrame, history: pd.DataFrame) -> pd.DataFrame:
+    """Run Darvas Box screener over all candidate symbols.
+
+    Returns DataFrame with box metrics; sorted BREAKOUT → NEAR_TOP → IN_BOX,
+    then by BOX_WIDTH_PCT ascending (tighter box = higher quality).
+    """
+    rows: list[dict] = []
+    status_order = {"BREAKOUT": 0, "NEAR_TOP": 1, "IN_BOX": 2}
+
+    for _, row in candidates.iterrows():
+        sym = str(row.get("SYMBOL", ""))
+        if not sym:
+            continue
+        sym_hist = history[history["SYMBOL"] == sym] if "SYMBOL" in history.columns else pd.DataFrame()
+        if sym_hist.empty:
+            continue
+        result = _compute_darvas_for_symbol(sym_hist)
+        if result is None:
+            continue
+        entry = {k: row.get(k) for k in ["SYMBOL", "COMPANY_NAME", "SECTOR_NAME",
+                                           "CURRENT_PRICE", "CLOSE", "RSI", "VOL_RATIO"]}
+        entry.update(result)
+        rows.append(entry)
+
+    if not rows:
+        return pd.DataFrame()
+
+    df = pd.DataFrame(rows)
+    df["_sort_key"] = df["DARVAS_STATUS"].map(status_order).fillna(9)
+    df = df.sort_values(["_sort_key", "BOX_WIDTH_PCT"]).drop(columns=["_sort_key"]).reset_index(drop=True)
+    return df
+
+
+def build_darvas_tab_html(screener_df: pd.DataFrame | None) -> str:
+    """Build HTML for the A2 Darvas Box screener pane."""
+    import html as html_mod
+
+    if screener_df is None or (hasattr(screener_df, "empty") and screener_df.empty):
+        return (
+            '<div class="card" style="margin-top:16px">'
+            '<div class="sec-title">Darvas Box Breakout — A2</div>'
+            '<p style="color:var(--muted)">No Darvas boxes found in current candidates.</p></div>'
+        )
+
+    total = len(screener_df)
+    n_brk = int((screener_df["DARVAS_STATUS"] == "BREAKOUT").sum())
+    n_near = int((screener_df["DARVAS_STATUS"] == "NEAR_TOP").sum())
+    n_box = int((screener_df["DARVAS_STATUS"] == "IN_BOX").sum())
+
+    def _h(v: object) -> str:
+        return html_mod.escape(str(v)) if v not in (None, "", float("nan")) else "—"
+
+    def _num(v: object, d: int = 2) -> str:
+        try:
+            return f"{float(v):,.{d}f}"
+        except (TypeError, ValueError):
+            return "—"
+
+    def _pct(v: object, plus: bool = False) -> str:
+        try:
+            f = float(v)
+            return f"{f:+.2f}%" if plus else f"{f:.2f}%"
+        except (TypeError, ValueError):
+            return "—"
+
+    summary_cards = (
+        f'<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">'
+        f'<div style="background:#dcfce7;border-radius:8px;padding:10px 18px;text-align:center">'
+        f'<div style="font-size:22px;font-weight:700;color:#15803d">{n_brk}</div>'
+        f'<div style="font-size:11px;color:#166534;font-weight:600">BREAKOUTS</div></div>'
+        f'<div style="background:#fef9c3;border-radius:8px;padding:10px 18px;text-align:center">'
+        f'<div style="font-size:22px;font-weight:700;color:#a16207">{n_near}</div>'
+        f'<div style="font-size:11px;color:#854d0e;font-weight:600">NEAR TOP</div></div>'
+        f'<div style="background:#f0f9ff;border-radius:8px;padding:10px 18px;text-align:center">'
+        f'<div style="font-size:22px;font-weight:700;color:#0369a1">{n_box}</div>'
+        f'<div style="font-size:11px;color:#0c4a6e;font-weight:600">IN BOX</div></div>'
+        f'</div>'
+    )
+
+    filter_chips = (
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">'
+        '<button onclick="darvFilter(\'ALL\')" class="darv-chip darv-active" data-darvcat="ALL">'
+        f'All ({total})</button>'
+        f'<button onclick="darvFilter(\'BREAKOUT\')" class="darv-chip" data-darvcat="BREAKOUT">'
+        f'Breakout ({n_brk})</button>'
+        f'<button onclick="darvFilter(\'NEAR_TOP\')" class="darv-chip" data-darvcat="NEAR_TOP">'
+        f'Near Top ({n_near})</button>'
+        f'<button onclick="darvFilter(\'IN_BOX\')" class="darv-chip" data-darvcat="IN_BOX">'
+        f'In Box ({n_box})</button>'
+        '<input id="darvSearch" type="text" placeholder="Search symbol…" '
+        'oninput="darvFilterSearch()" style="margin-left:auto;padding:4px 10px;'
+        'border:1px solid #e2e8f0;border-radius:6px;font-size:12px">'
+        '</div>'
+    )
+
+    rows_html = ""
+    for rank, (_, row) in enumerate(screener_df.iterrows(), start=1):
+        status = str(row.get("DARVAS_STATUS", "IN_BOX"))
+        if status == "BREAKOUT":
+            st_bg, st_fg = "#dcfce7", "#15803d"
+        elif status == "NEAR_TOP":
+            st_bg, st_fg = "#fef9c3", "#a16207"
+        else:
+            st_bg, st_fg = "#f0f9ff", "#0369a1"
+
+        rows_html += (
+            f'<tr data-darvcat="{html_mod.escape(status)}">'
+            f'<td class="num">{rank}</td>'
+            f'<td><strong>{_h(row.get("SYMBOL"))}</strong></td>'
+            f'<td>{_h(row.get("COMPANY_NAME", row.get("SYMBOL", "")))}</td>'
+            f'<td>{_h(row.get("SECTOR_NAME", ""))}</td>'
+            f'<td class="num">{_num(row.get("CURRENT_PRICE") or row.get("CLOSE"))}</td>'
+            f'<td class="num" style="color:#15803d;font-weight:600">{_num(row.get("BOX_TOP"))}</td>'
+            f'<td class="num" style="color:#dc2626;font-weight:600">{_num(row.get("BOX_BOTTOM"))}</td>'
+            f'<td class="num">{_pct(row.get("BOX_WIDTH_PCT"))}</td>'
+            f'<td class="num">{_pct(row.get("VS_TOP_PCT"), plus=True)}</td>'
+            f'<td class="num">{int(row.get("DAYS_IN_BOX", 0) or 0)}</td>'
+            f'<td class="num" style="color:#dc2626">{_num(row.get("BOX_STOP_LOSS"))}</td>'
+            f'<td class="num">{_num(row.get("RSI"), 1)}</td>'
+            f'<td style="text-align:center">'
+            f'<span style="background:{st_bg};color:{st_fg};padding:2px 8px;border-radius:10px;'
+            f'font-size:10px;font-weight:700">{html_mod.escape(status)}</span></td>'
+            f'</tr>'
+        )
+
+    darv_js = """
+<script>
+window.darvFilter = function(cat) {
+    document.querySelectorAll('.darv-chip').forEach(function(b) {
+        b.classList.toggle('darv-active', b.dataset.darvcat === cat);
+    });
+    document.querySelectorAll('#darvTbody tr').forEach(function(r) {
+        r.style.display = (cat === 'ALL' || r.dataset.darvcat === cat) ? '' : 'none';
+    });
+};
+window.darvFilterSearch = function() {
+    var q = document.getElementById('darvSearch').value.toUpperCase();
+    document.querySelectorAll('#darvTbody tr').forEach(function(r) {
+        r.style.display = r.textContent.toUpperCase().includes(q) ? '' : 'none';
+    });
+};
+</script>"""
+
+    darv_css = """
+<style>
+.darv-chip{padding:4px 12px;border:1px solid #e2e8f0;border-radius:16px;font-size:11px;
+  font-weight:600;cursor:pointer;background:#f8fafc;color:#64748b}
+.darv-chip.darv-active{background:#1e40af;color:#fff;border-color:#1e40af}
+</style>"""
+
+    return (
+        '<div class="card" style="margin-top:16px">'
+        '<div class="sec-title">Darvas Box Breakout — A2</div>'
+        '<div class="sec-sub">Nicolas Darvas box technique: stock makes a new high → consolidates ≥3 days '
+        '→ box top/bottom locked → BREAKOUT on close above box top with volume ≥1.3× average. '
+        'Stop loss = box bottom − 1%.</div>'
+        + darv_css
+        + summary_cards
+        + filter_chips
+        + f'<div class="tbl-wrap"><table>'
+        f'<thead><tr>'
+        f'<th>#</th><th>Symbol</th><th>Company</th><th>Sector</th>'
+        f'<th class="num">Price</th><th class="num">Box Top</th><th class="num">Box Bottom</th>'
+        f'<th class="num">Width%</th><th class="num">vs Top%</th><th class="num">Days</th>'
+        f'<th class="num">Stop Loss</th><th class="num">RSI</th><th>Status</th>'
+        f'</tr></thead>'
+        f'<tbody id="darvTbody">{rows_html}</tbody>'
+        f'</table></div>'
+        f'<div style="margin-top:8px;font-size:11px;color:var(--muted)">'
+        f'{total} valid boxes · {n_brk} breakouts · {n_near} near top · {n_box} in box</div>'
+        '</div>'
+        + darv_js
     )
 
 

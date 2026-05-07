@@ -74,17 +74,48 @@ def _section(title: str) -> None:
 # Pipeline steps
 # ─────────────────────────────────────────────────────────────────────────────
 
+def step_fetch_eod_data(dry_run: bool) -> bool:
+    """Fetch EOD bhavcopy from NSE archives and sync to local data directory."""
+    _section("STEP 0 — Fetch EOD Bhavcopy (NSE Archives)")
+
+    ok = _run(
+        "Download latest NSE bhavcopy",
+        ["Rscript", "load_latest_nse_data_comprehensive.R"],
+        dry_run=dry_run,
+    )
+
+    # Sync OneDrive data files → local data directory (sector_rotation_report.py
+    # uses ROOT-relative paths, so local files must be up to date)
+    if not dry_run and ok:
+        import shutil
+        onedrive = Path(
+            "/Users/pgorai/Library/CloudStorage/OneDrive-Deloitte(O365D)"
+            "/Documents/Data Visualization/Analytics/Financial Markets"
+            "/Unified-NSE-Analysis/data"
+        )
+        local_data = ROOT / "data"
+        for fname in ("nse_index_data.csv", "nse_sec_full_data.csv",
+                      "nse_index_cache.RData", "nse_stock_cache.RData"):
+            src = onedrive / fname
+            dst = local_data / fname
+            if src.exists():
+                shutil.copy2(src, dst)
+        print("   ✅ Synced EOD data to local data/")
+
+    return ok
+
+
 def step_fetch_auxiliary(dry_run: bool) -> dict[str, bool]:
     """Fetch FII/DII, F&O, corporate events, insider alerts, macro proxies."""
     _section("STEP 1 — Fetch Auxiliary Market Data")
     results = {}
 
     scripts = [
-        ("FII/DII Flows",        ["python", "fetch_fii_dii_flows.py"]),
-        ("F&O OI + PCR",         ["python", "fetch_fno_data.py"]),
-        ("Corporate Events",     ["python", "fetch_corporate_events.py"]),
-        ("Insider Alerts",       ["python", "fetch_insider_alerts.py"]),
-        ("Macro Proxies",        ["python", "fetch_macro_proxies.py"]),
+        ("FII/DII Flows",        ["python3", "fetch_fii_dii_flows.py"]),
+        ("F&O OI + PCR",         ["python3", "fetch_fno_data.py"]),
+        ("Corporate Events",     ["python3", "fetch_corporate_events.py"]),
+        ("Insider Alerts",       ["python3", "fetch_insider_alerts.py"]),
+        ("Macro Proxies",        ["python3", "fetch_macro_proxies.py"]),
     ]
     for label, cmd in scripts:
         ok = _run(label, cmd, dry_run=dry_run)
@@ -100,7 +131,7 @@ def step_comprehensive_analysis(dry_run: bool) -> bool:
     # fixed_nse_universe_analysis.py generates comprehensive_nse_enhanced_*.csv
     return _run(
         "NSE Universe Analysis",
-        ["python", "fixed_nse_universe_analysis.py"],
+        ["python3", "fixed_nse_universe_analysis.py"],
         dry_run=dry_run,
     )
 
@@ -113,14 +144,14 @@ def step_tracker_snapshot(dry_run: bool, live_only: bool = False) -> bool:
         # Fast path: only refresh live prices (no screener re-run)
         return _run(
             "Update live prices (NSE India + YF fallback)",
-            ["python", "sector_rotation_tracker.py", "--update-live"],
+            ["python3", "sector_rotation_tracker.py", "--update-live"],
             dry_run=dry_run,
         )
     else:
         # Full snapshot: re-run screener + fetch live prices
         ok = _run(
             "EOD snapshot (screener + live prices)",
-            ["python", "sector_rotation_tracker.py", "--snapshot"],
+            ["python3", "sector_rotation_tracker.py", "--snapshot"],
             dry_run=dry_run,
         )
         return ok
@@ -131,7 +162,7 @@ def step_generate_report(dry_run: bool) -> bool:
     _section("STEP 4 — Generate HTML Report")
     return _run(
         "Stage 2 Tracker HTML Report",
-        ["python", "sector_rotation_tracker.py", "--report", "--html"],
+        ["python3", "sector_rotation_tracker.py", "--report", "--html"],
         dry_run=dry_run,
     )
 
@@ -141,9 +172,55 @@ def step_sector_rotation_report(dry_run: bool) -> bool:
     _section("STEP 5 — Sector Rotation Report (optional)")
     return _run(
         "Sector Rotation Full Report",
-        ["python", "sector_rotation_report.py"],
+        ["python3", "sector_rotation_report.py"],
         dry_run=dry_run,
     )
+
+
+def step_comprehensive_r_reports(dry_run: bool) -> bool:
+    """Run R-based comprehensive reports: All Indexes + All Sectors HTML.
+
+    Both scripts read the latest comprehensive_nse_enhanced_*.csv from the
+    OneDrive reports/ directory and write HTML + CSV outputs there.
+    After generation, outputs are synced to the local reports/nse_analysis/2026/
+    directory so they're accessible alongside all other local reports.
+    """
+    _section("STEP 6 — Comprehensive R Reports (Indexes + Sectors)")
+    import shutil, glob
+
+    onedrive_rpt = Path(
+        "/Users/pgorai/Library/CloudStorage/OneDrive-Deloitte(O365D)"
+        "/Documents/Data Visualization/Analytics/Financial Markets"
+        "/Unified-NSE-Analysis/reports"
+    )
+    local_r_out = ROOT / "reports" / "nse_analysis" / "2026"
+    local_r_out.mkdir(parents=True, exist_ok=True)
+
+    ok = True
+    for label, script in [
+        ("All Indexes HTML",  "analyze_all_indexes.R"),
+        ("All Sectors HTML",  "analyze_all_sectors.R"),
+    ]:
+        result = _run(label, ["Rscript", script], dry_run=dry_run)
+        ok = ok and result
+
+    if not dry_run and ok:
+        patterns = [
+            "All_Indexes_Analysis_Report_*.html",
+            "All_Sectors_Analysis_Report_*.html",
+            "all_indexes_top5_analysis_*.csv",
+            "all_sectors_top5_analysis_*.csv",
+        ]
+        synced = 0
+        for pat in patterns:
+            for src in sorted(onedrive_rpt.glob(pat)):
+                dst = local_r_out / src.name
+                if not dst.exists():
+                    shutil.copy2(src, dst)
+                    synced += 1
+        print(f"   ✅ Synced {synced} new R report file(s) → reports/nse_analysis/2026/")
+
+    return ok
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -160,6 +237,8 @@ def main() -> int:
                         help="Skip auxiliary data fetch (FII/DII, F&O, events)")
     parser.add_argument("--full-report",     action="store_true",
                         help="Also regenerate full sector rotation report")
+    parser.add_argument("--comprehensive",   action="store_true",
+                        help="Also run R-based comprehensive index + sector HTML reports")
     parser.add_argument("--dry-run",         action="store_true",
                         help="Print plan without executing anything")
     args = parser.parse_args()
@@ -184,6 +263,11 @@ def main() -> int:
         return 1 if failed else 0
 
     # ── Full pipeline ────────────────────────────────────────────────────────
+
+    # 0. EOD data fetch (bhavcopy) — must run before analysis
+    if not args.skip_analysis:
+        if not step_fetch_eod_data(args.dry_run):
+            print("\n  ⚠️  EOD data fetch failed — will use latest cached data")
 
     # 1. Auxiliary data
     if not args.skip_aux:
@@ -211,6 +295,11 @@ def main() -> int:
     if args.full_report:
         if not step_sector_rotation_report(args.dry_run):
             failed.append("Sector rotation report")
+
+    # 6. Optional comprehensive R reports (All Indexes + All Sectors HTML)
+    if args.comprehensive:
+        if not step_comprehensive_r_reports(args.dry_run):
+            failed.append("Comprehensive R reports")
 
     _print_summary(failed, t_total, args.dry_run)
     return 1 if failed else 0
