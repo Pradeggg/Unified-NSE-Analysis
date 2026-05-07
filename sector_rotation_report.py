@@ -3669,6 +3669,7 @@ def render_html_interactive(
     all_index_metrics: pd.DataFrame | None = None,
     technical_view: dict | None = None,
     darvas_df: "pd.DataFrame | None" = None,
+    global_us_context_html: str = "",
 ) -> str:
     gen_date = generated_at.strftime("%Y-%m-%d")
     data_date = (
@@ -3729,6 +3730,7 @@ def render_html_interactive(
     except Exception:
         pass
 
+    _global_us_context_html = global_us_context_html or build_global_us_context_tab_html()
     sec_narratives = narratives.get("sectors", {})
     stk_narratives = narratives.get("stocks", {})
     market_summary = narratives.get("market_summary", "")
@@ -4692,6 +4694,7 @@ def render_html_interactive(
         '<button class="nav-btn" data-tab="candidates">Investment Candidates</button>',
         '<button class="nav-btn" data-tab="screeners">Screeners</button>',
         '<button class="nav-btn" data-tab="technical-view">Technical View</button>',
+        '<button class="nav-btn" data-tab="global-us">Global / US</button>',
         '<button class="nav-btn" data-tab="resilience">Peak Resilience</button>',
         '<button class="nav-btn" data-tab="indices">All Indices</button>',
         '<button class="nav-btn" data-tab="methodology">Methodology</button>',
@@ -4704,6 +4707,7 @@ def render_html_interactive(
         f'<section id="tab-candidates" class="tab-pane">{candidates_html}</section>',
         f'<section id="tab-screeners" class="tab-pane">{_build_screener_tab(candidates)}</section>',
         f'<section id="tab-technical-view" class="tab-pane">{build_technical_view_tab_html(technical_view)}</section>',
+        f'<section id="tab-global-us" class="tab-pane">{_global_us_context_html}</section>',
         f'<section id="tab-resilience" class="tab-pane">{resilience_html}</section>',
         f'<section id="tab-indices" class="tab-pane">{build_indices_tab_html(all_index_metrics)}</section>',
         f'<section id="tab-methodology" class="tab-pane">{methodology_html}</section>',

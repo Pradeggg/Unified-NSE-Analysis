@@ -234,7 +234,7 @@ Every external and internal data source the platform uses or will use. Items mar
 | G4 India Read-Through Engine | ✅ DONE | Codex | `build_india_readthrough()` maps Nasdaq, semis, crude, DXY, VIX/credit/Russell and financials/gold signals to NSE sector implications |
 | G5 US/Global HTML Report | ✅ DONE | Codex | `render_us_market_report()` writes dated/latest HTML with summary, screeners, read-through, freshness, disclaimer |
 | G6 Terminal + NLP Integration | ✅ DONE | Codex | `/us`, `/us indices`, `/us sectors`, `/us stage2`, `/us vcp`, `/us stock`, `/global readthrough` direct terminal routes |
-| G7 Sector Report Global Tab | 🔜 READY | — | Embed US/global context tab/section in `sector_rotation_report.py` without breaking NSE report generation |
+| G7 Sector Report Global Tab | ✅ DONE | Codex | Global / US tab in sector report links latest standalone report and summarizes cache-only regime, ETF rotation, Stage 2, VCP, and India read-through |
 | G8 Intraday US Extension | 💤 DEFERRED | — | Add US intraday scanning after daily US/global layer is stable |
 
 ---
@@ -2593,7 +2593,7 @@ def render_filing_report(analysis: dict, output_format: str = "html") -> Path:
 - Existing `/global <topic>` LLM shortcut remains available; only `/global readthrough` is intercepted.
 
 #### G7 — Sector Report Global Tab
-**Size:** M | **Priority:** Medium | **Status:** 🔜 READY
+**Size:** M | **Priority:** Medium | **Status:** ✅ DONE
 
 **What to build:**
 - Embed US/global context in `sector_rotation_report.py` as a tab or section.
@@ -2602,6 +2602,11 @@ def render_filing_report(analysis: dict, output_format: str = "html") -> Path:
 **Acceptance criteria:**
 - Sector rotation report still generates if US/global module fails.
 - Global tab includes freshness and source warnings.
+
+**Implementation note (2026-05-08):**
+- Added `build_global_us_context_tab_html()` to render a cache-only Global / US context tab in `sector_rotation_report.py`.
+- The tab links to `reports/latest/us_market_report.html` when available and degrades to an unavailable card when the report/cache is missing.
+- Summary cards cover US/global regime, sector ETF leader, Stage 2 leaders, VCP watchlist, and India read-through without fetching data during NSE report rendering.
 
 #### G8 — Intraday US Extension
 **Size:** L | **Priority:** Medium | **Status:** 💤 DEFERRED
