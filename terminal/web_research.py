@@ -44,11 +44,15 @@ def _get(url: str, extra_headers: dict | None = None, **kw) -> requests.Response
 
 
 def _decode_ddg_url(raw: str) -> str:
-    """Extract real URL from DuckDuckGo redirect (/l/?uddg=<encoded>)."""
+    """Extract real URL from DuckDuckGo redirect (/l/?uddg=<encoded>).
+    Returns '' for DDG ad/tracking URLs (y.js) so they get filtered out."""
     if not raw:
         return ""
     if raw.startswith("//"):
         raw = "https:" + raw
+    # DDG ad tracking URLs — opaque Bing redirect chains, not useful results
+    if "duckduckgo.com/y.js" in raw:
+        return ""
     parsed = urllib.parse.urlparse(raw)
     qs = urllib.parse.parse_qs(parsed.query)
     return qs["uddg"][0] if "uddg" in qs else raw

@@ -788,6 +788,80 @@ class SectorRotationReportTests(unittest.TestCase):
         self.assertIn("Nifty 50", html)
         self.assertIn('data-tab="screeners"', html)
 
+    def test_global_us_context_tab_helper_links_available_latest_report(self):
+        with TemporaryDirectory() as td:
+            latest_report = Path(td) / "us_market_report.html"
+            latest_report.write_text("<html><body>US report</body></html>")
+
+            html = sector_rotation_report.build_global_us_context_tab_html(latest_report)
+
+        self.assertIn("Global / US Context", html)
+        self.assertIn("Standalone US/global market report", html)
+        self.assertIn("Open US/global report", html)
+        self.assertIn("us_market_report.html", html)
+        self.assertNotIn("unavailable", html.lower())
+
+    def test_global_us_context_tab_helper_handles_missing_latest_report(self):
+        html = sector_rotation_report.build_global_us_context_tab_html(Path("missing-us-report.html"))
+
+        self.assertIn("Global / US Context", html)
+        self.assertIn("US/global context is unavailable", html)
+        self.assertIn("sector rotation report still generated", html)
+
+    def test_global_us_context_tab_is_rendered_without_breaking_existing_tabs(self):
+        sector_rank = pd.DataFrame(
+            [
+                {
+                    "SYMBOL": "NIFTYFMCG",
+                    "SECTOR_NAME": "FMCG",
+                    "CLOSE": 1000,
+                    "RET_5D": 1,
+                    "RET_1M": 5,
+                    "RET_3M": 8,
+                    "RET_6M": 10,
+                    "RS_1M": 2,
+                    "ROTATION_SCORE": 16,
+                }
+            ]
+        )
+        candidates = pd.DataFrame(
+            [
+                {
+                    "SYMBOL": "AAA",
+                    "COMPANY_NAME": "AAA Ltd",
+                    "SECTOR_NAME": "FMCG",
+                    "CURRENT_PRICE": 100,
+                    "TRADING_SIGNAL": "HOLD",
+                    "SETUP_CLASS": "NEUTRAL",
+                    "ACTION_BUCKET": "WATCHLIST",
+                    "INVESTMENT_SCORE": 50,
+                    "TECHNICAL_SCORE": 50,
+                    "ENHANCED_FUND_SCORE": 50,
+                    "RELATIVE_STRENGTH": 0,
+                    "RSI": 50,
+                    "SUPERTREND_STATE": "BULLISH",
+                    "PATTERN": "TRENDING_OR_CHOPPY",
+                    "VOLUME_RATIO": 1,
+                }
+            ]
+        )
+
+        html = render_html_interactive(
+            sector_rank,
+            candidates,
+            pd.DataFrame(),
+            Path("source.csv"),
+            pd.Timestamp("2026-05-02"),
+            {"sectors": {}, "stocks": {}, "market_summary": ""},
+            global_us_context_html='<div class="global-us-card">Global report test</div>',
+        )
+
+        self.assertIn('data-tab="global-us"', html)
+        self.assertIn('id="tab-global-us"', html)
+        self.assertIn("Global report test", html)
+        self.assertIn('data-tab="screeners"', html)
+        self.assertIn('data-tab="technical-view"', html)
+
     def test_technical_view_narrative_is_split_into_labelled_sections(self):
         technical_view = {
             "metrics": pd.DataFrame(

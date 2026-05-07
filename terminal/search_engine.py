@@ -77,6 +77,9 @@ def _decode_ddg_url(raw: str) -> str:
         return ""
     if raw.startswith("//"):
         raw = "https:" + raw
+    # DDG ad tracking URLs — opaque Bing redirect chains, not useful results
+    if "duckduckgo.com/y.js" in raw:
+        return ""
     parsed = urllib.parse.urlparse(raw)
     qs = urllib.parse.parse_qs(parsed.query)
     return qs["uddg"][0] if "uddg" in qs else raw

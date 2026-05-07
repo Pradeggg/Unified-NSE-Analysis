@@ -1559,13 +1559,17 @@ def search_latest_catalysts(symbol: str, max_results: int = 5) -> dict:
         parser.feed(resp.text)
 
         def _decode_url(raw: str) -> str:
-            """Extract real URL from DuckDuckGo redirect (/l/?uddg=<encoded>)."""
+            """Extract real URL from DuckDuckGo redirect (/l/?uddg=<encoded>).
+            Returns '' for DDG ad/tracking URLs (y.js) so they get filtered out."""
             import urllib.parse
             if not raw:
                 return ""
             # Add scheme if missing
             if raw.startswith("//"):
                 raw = "https:" + raw
+            # DDG ad tracking URLs — opaque Bing redirect chains, not useful results
+            if "duckduckgo.com/y.js" in raw:
+                return ""
             parsed = urllib.parse.urlparse(raw)
             qs = urllib.parse.parse_qs(parsed.query)
             if "uddg" in qs:
@@ -1575,9 +1579,12 @@ def search_latest_catalysts(symbol: str, max_results: int = 5) -> dict:
         results = []
         for r in parser.results[:max_results]:
             if r.get("title") and len(r["title"]) > 5:
+                decoded_url = _decode_url(r.get("url", ""))
+                if not decoded_url:  # skip DDG ad/tracking URLs
+                    continue
                 results.append({
                     "title":   r.get("title", ""),
-                    "url":     _decode_url(r.get("url", "")),
+                    "url":     decoded_url,
                     "snippet": r.get("snippet", ""),
                 })
 

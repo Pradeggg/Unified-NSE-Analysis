@@ -2444,6 +2444,143 @@ def _narrative_html(text: str, is_sector: bool = False) -> str:
     return "\n".join(html_parts)
 
 
+def _global_us_context_from_cache(data_root: Path | str = ROOT / "data" / "global_market") -> dict:
+    """Build a compact US/global summary from local cache only."""
+    root = Path(data_root)
+    prices_path = root / "prices.csv"
+    if not prices_path.exists():
+        return {"available": False, "reason": "US/global price cache is not available yet."}
+
+    try:
+        from global_market_intelligence import build_us_market_bundle
+
+        prices = pd.read_csv(prices_path)
+        if prices.empty:
+            return {"available": False, "reason": "US/global price cache is empty."}
+        bundle = build_us_market_bundle(prices)
+        metrics = bundle.get("metrics", pd.DataFrame())
+        dates = pd.to_datetime(prices.get("DATE"), errors="coerce") if "DATE" in prices.columns else pd.Series(dtype="datetime64[ns]")
+        latest_date = dates.dropna().max().strftime("%Y-%m-%d") if not dates.dropna().empty else "N/A"
+
+        sector_df = bundle.get("sector_rotation", pd.DataFrame())
+        stage2_df = bundle.get("stage2", pd.DataFrame())
+        vcp_df = bundle.get("vcp", pd.DataFrame())
+        readthrough = bundle.get("india_readthrough", {})
+
+        top_sector = {}
+        if isinstance(sector_df, pd.DataFrame) and not sector_df.empty:
+            row = sector_df.iloc[0]
+            top_sector = {
+                "symbol": str(row.get("SYMBOL", "")),
+                "name": str(row.get("NAME", row.get("SYMBOL", ""))),
+                "ret_1m": row.get("RET_1M"),
+                "rs_spy": row.get("RS_SPY_3M"),
+            }
+
+        stage2_names = []
+        if isinstance(stage2_df, pd.DataFrame) and not stage2_df.empty:
+            stage2_names = [str(v) for v in stage2_df.get("SYMBOL", pd.Series(dtype=object)).head(5).tolist()]
+
+        vcp_names = []
+        if isinstance(vcp_df, pd.DataFrame) and not vcp_df.empty:
+            vcp_names = [str(v) for v in vcp_df.get("SYMBOL", pd.Series(dtype=object)).head(5).tolist()]
+
+        implications = readthrough.get("india_sector_implications", []) if isinstance(readthrough, dict) else []
+        implication_labels = [
+            f"{item.get('nse_sector', 'Broad Market')}: {item.get('stance', 'watch')}"
+            for item in implications[:4]
+            if isinstance(item, dict)
+        ]
+
+        return {
+            "available": True,
+            "latest_date": latest_date,
+            "symbols": int(metrics["SYMBOL"].nunique()) if isinstance(metrics, pd.DataFrame) and "SYMBOL" in metrics.columns else 0,
+            "regime": readthrough.get("global_regime", "N/A") if isinstance(readthrough, dict) else "N/A",
+            "top_sector": top_sector,
+            "stage2": stage2_names,
+            "vcp": vcp_names,
+            "india_readthrough": implication_labels,
+        }
+    except Exception as exc:
+        return {"available": False, "reason": f"US/global cache could not be summarized: {exc}"}
+
+
+def _simple_list_html(items: list[str], empty_text: str) -> str:
+    if not items:
+        return f'<p class="global-us-empty">{html_mod.escape(empty_text)}</p>'
+    return "<ul>" + "".join(f"<li>{html_mod.escape(item)}</li>" for item in items) + "</ul>"
+
+
+def build_global_us_context_tab_html(
+    latest_report_path: Path | str = REPORTS_DIR / "latest" / "us_market_report.html",
+    data_root: Path | str = ROOT / "data" / "global_market",
+) -> str:
+    """Render the Global / US Context tab without blocking the NSE report."""
+    report_path = Path(latest_report_path)
+    context = _global_us_context_from_cache(data_root)
+
+    if not report_path.exists():
+        reason = context.get("reason", "Run the US/global report command to generate this section.")
+        return (
+            '<div class="summary-card global-us-context">'
+            '<h3>Global / US Context</h3>'
+            '<p><strong>US/global context is unavailable.</strong> The sector rotation report still generated '
+            'without blocking NSE analysis.</p>'
+            f'<p class="global-us-note">{html_mod.escape(str(reason))}</p>'
+            '</div>'
+        )
+
+    report_href = html_mod.escape(report_path.resolve().as_uri(), quote=True)
+    report_label = html_mod.escape(report_path.name)
+    generated_hint = datetime.fromtimestamp(report_path.stat().st_mtime).strftime("%Y-%m-%d %H:%M")
+
+    if context.get("available"):
+        top_sector = context.get("top_sector") or {}
+        top_sector_text = "No sector ETF leader available."
+        if top_sector:
+            top_sector_text = (
+                f"{top_sector.get('symbol', 'N/A')} - {top_sector.get('name', 'N/A')} "
+                f"1M {_fmth(top_sector.get('ret_1m'), '%')} | RS/SPY {_fmth(top_sector.get('rs_spy'))}"
+            )
+        body_html = (
+            '<div class="global-us-grid">'
+            '<div class="global-us-card"><div class="global-us-label">Regime</div>'
+            f'<div class="global-us-value">{html_mod.escape(str(context.get("regime", "N/A")).upper())}</div>'
+            f'<div class="global-us-meta">Latest cache: {html_mod.escape(str(context.get("latest_date", "N/A")))} | Symbols: {int(context.get("symbols", 0))}</div></div>'
+            '<div class="global-us-card"><div class="global-us-label">Sector ETF Leader</div>'
+            f'<div class="global-us-text">{html_mod.escape(top_sector_text)}</div></div>'
+            '<div class="global-us-card"><div class="global-us-label">US Stage 2 Leaders</div>'
+            f'{_simple_list_html(context.get("stage2", []), "No Stage 2 leaders in cache.")}</div>'
+            '<div class="global-us-card"><div class="global-us-label">VCP / Contraction Watch</div>'
+            f'{_simple_list_html(context.get("vcp", []), "No VCP setups in cache.")}</div>'
+            '<div class="global-us-card global-us-wide"><div class="global-us-label">India Read-Through</div>'
+            f'{_simple_list_html(context.get("india_readthrough", []), "No strong India read-through signals crossed thresholds.")}</div>'
+            '</div>'
+        )
+    else:
+        body_html = (
+            '<div class="global-us-grid">'
+            '<div class="global-us-card global-us-wide">'
+            '<div class="global-us-label">Cache Summary</div>'
+            f'<p class="global-us-empty">{html_mod.escape(str(context.get("reason", "Cache summary unavailable.")))}</p>'
+            '</div></div>'
+        )
+
+    return (
+        '<div class="summary-card global-us-context">'
+        '<h3>Global / US Context</h3>'
+        '<p>Standalone US/global market report with index tape, sector ETF rotation, screeners, and India read-through.</p>'
+        '<div class="global-us-link-row">'
+        f'<a class="global-us-link" href="{report_href}" target="_blank" rel="noopener">Open US/global report</a>'
+        f'<span class="global-us-note">Latest file: {report_label} | Generated: {html_mod.escape(generated_hint)}</span>'
+        '</div>'
+        f'{body_html}'
+        '<p class="global-us-note">This tab uses local US/global cache only. It does not fetch data while rendering the NSE report.</p>'
+        '</div>'
+    )
+
+
 # ===== INTERACTIVE HTML RENDERING =====
 
 _CSS = """
@@ -2527,6 +2664,22 @@ a{color:var(--primary-alt);text-decoration:none}
 .brief-list li:last-child{margin-bottom:0}
 .brief-list li::before{content:"";position:absolute;left:0;top:.72em;width:5px;height:5px;border-radius:50%;background:#3b82f6}
 @media(max-width:900px){.brief-grid{grid-template-columns:1fr}}
+.global-us-context h3{font-size:15px;color:var(--primary);margin-bottom:8px}
+.global-us-link-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:12px 0 14px}
+.global-us-link{display:inline-flex;align-items:center;justify-content:center;padding:8px 12px;border-radius:6px;background:var(--primary);color:#fff;font-size:12px;font-weight:800}
+.global-us-link:hover{background:#16324f;color:#fff}
+.global-us-note{font-size:11px;color:var(--muted);line-height:1.5}
+.global-us-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:10px}
+.global-us-card{background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:12px;min-width:0}
+.global-us-wide{grid-column:span 2}
+.global-us-label{font-size:10px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:#475569;margin-bottom:6px}
+.global-us-value{font-size:1.25rem;font-weight:900;color:var(--primary)}
+.global-us-text,.global-us-card li{font-size:12px;line-height:1.55;color:#1f2937}
+.global-us-meta,.global-us-empty{font-size:11px;line-height:1.45;color:var(--muted)}
+.global-us-card ul{list-style:none;margin:0;padding:0}
+.global-us-card li{position:relative;padding-left:12px;margin-bottom:4px}
+.global-us-card li::before{content:"";position:absolute;left:0;top:.72em;width:5px;height:5px;border-radius:50%;background:var(--primary-alt)}
+@media(max-width:900px){.global-us-grid{grid-template-columns:1fr}.global-us-wide{grid-column:auto}}
 .buy-list{list-style:none;padding:0}
 .buy-list li{padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;display:flex;align-items:center;gap:8px}
 .buy-list li:last-child{border-bottom:none}
