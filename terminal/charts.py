@@ -222,6 +222,7 @@ def render_chart(
     if n >= 50:
         _plt.plot(dates, _ema(closes, 50), color="orange")
 
+    chg_colour = "green" if chg_pct >= 0 else "red"
     _plt.title(
         f"{symbol.upper()}  Rs.{current_price:,.1f}  "
         f"{sign}{abs(chg_pct):.2f}%  ({tf_label})"
@@ -247,11 +248,14 @@ def render_chart(
         if n_panels > 1:
             _plt.subplot(panel, 1)
         rsi_vals = _rsi(closes, 14)
-        _plt.plot(xs, rsi_vals, color="yellow")
+        cur_rsi  = rsi_vals[-1]
+        # Color the RSI line: red if overbought, green if oversold, yellow otherwise
+        rsi_color = "red" if cur_rsi >= 70 else ("green" if cur_rsi <= 30 else "yellow")
+        _plt.plot(xs, rsi_vals, color=rsi_color)
         _plt.hline(70, color="red")
-        _plt.hline(50, color="white")
+        _plt.hline(50, color=(204, 204, 204))   # light gray midline
         _plt.hline(30, color="green")
-        _plt.title(f"RSI(14)  current={rsi_vals[-1]:.1f}")
+        _plt.title(f"RSI(14)  current={cur_rsi:.1f}")
         _plt.ylim(0, 100)
         _plt.plotsize(w, h_rsi)
         panel += 1
@@ -265,13 +269,13 @@ def render_chart(
         _plt.plot(xs, sig_line,  color="orange")
         h_colors = ["green" if h >= 0 else "red" for h in hist_vals]
         _plt.bar(xs, hist_vals, color=h_colors)
-        _plt.hline(0, color="white")
+        _plt.hline(0, color=(204, 204, 204))
         sig_str = "BULL" if macd_line[-1] > sig_line[-1] else "BEAR"
         _plt.title(f"MACD(12,26,9)  {sig_str}  hist={hist_vals[-1]:.2f}")
         _plt.plotsize(w, h_macd)
 
     out = _plt.build()
-    return _strip_ansi(out)
+    return out   # return with ANSI colors intact
 
 
 # ═════════════════════════════════════════════════════════════════════════════

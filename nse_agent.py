@@ -1961,9 +1961,9 @@ def _chat_loop(agent, show_trace: bool) -> None:
                 try:
                     from terminal.charts import render_chart
                     chart_out = render_chart(sym, tf, indicators)
-                    console.print()
-                    console.print(chart_out)
-                    console.print()
+                    import sys as _sys
+                    _sys.stdout.write("\n" + chart_out + "\n")
+                    _sys.stdout.flush()
                 except Exception as _e:
                     console.print(f"[bold red]  ❌  Chart error: {_e}[/bold red]")
                 text = (
