@@ -11,8 +11,8 @@ from __future__ import annotations
 
 import math
 import os
-import contextlib
 import warnings
+from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FutureTimeout
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -21,12 +21,20 @@ import pandas as pd
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 
+# Max parallel downloads in screener (keeps network load manageable)
+_SCREENER_WORKERS = 10
+# Per-stock download timeout in seconds
+_STOCK_TIMEOUT    = 8
+
 
 def _quiet_yf_download(yf, *args, **kwargs) -> pd.DataFrame:
-    """Run yfinance download while suppressing its noisy failed-ticker output."""
-    with open(os.devnull, "w") as devnull:
-        with contextlib.redirect_stdout(devnull), contextlib.redirect_stderr(devnull):
-            return yf.download(*args, **kwargs)
+    """Run yfinance download with output suppressed (thread-safe via logging)."""
+    import logging
+    # Raise log thresholds for noisy libraries — safe to do per-call since
+    # contextlib.redirect_stdout is NOT thread-safe and corrupts parallel workers.
+    for name in ("yfinance", "peewee", "urllib3", "requests"):
+        logging.getLogger(name).setLevel(logging.CRITICAL)
+    return yf.download(*args, **kwargs)
 
 
 def _f(v: Any, digits: int = 2) -> float | None:
@@ -1424,7 +1432,7 @@ def run_intraday_screener(
     direction_filter: str = "all",
     min_rr: float = 1.5,
 ) -> dict:
-    """Scan multiple stocks for intraday signals.
+    """Scan multiple stocks for intraday signals (parallel downloads).
 
     Args:
         symbols:          List of NSE tickers to scan.
@@ -1443,21 +1451,38 @@ def run_intraday_screener(
     scanned = 0
     errors  = []
 
-    for sym in symbols:
-        df = get_intraday_candles(sym, interval)
-        if df.empty or len(df) < 10:
-            errors.append(sym)
-            continue
-        scanned += 1
-        sigs = run_all_signals(df, strategies)
-        for sig in sigs:
-            sig["symbol"] = sym
-            if sig["direction"] == "BUY"  and (sig.get("rr") or 0) >= min_rr:
-                all_buy.append(sig)
-            elif sig["direction"] == "SELL" and (sig.get("rr") or 0) >= min_rr:
-                all_sell.append(sig)
-            elif sig["direction"] == "WATCH":
-                all_watch.append(sig)
+    def _scan_one(sym: str) -> tuple[str, list, list, list, bool]:
+        """Download + signal scan for a single symbol. Returns (sym, buy, sell, watch, ok)."""
+        try:
+            df = get_intraday_candles(sym, interval)
+            if df.empty or len(df) < 10:
+                return sym, [], [], [], False
+            sigs = run_all_signals(df, strategies)
+            buy   = [dict(s, symbol=sym) for s in sigs
+                     if s["direction"] == "BUY"  and (s.get("rr") or 0) >= min_rr]
+            sell  = [dict(s, symbol=sym) for s in sigs
+                     if s["direction"] == "SELL" and (s.get("rr") or 0) >= min_rr]
+            watch = [dict(s, symbol=sym) for s in sigs if s["direction"] == "WATCH"]
+            return sym, buy, sell, watch, True
+        except Exception:
+            return sym, [], [], [], False
+
+    with ThreadPoolExecutor(max_workers=_SCREENER_WORKERS) as pool:
+        futures = {pool.submit(_scan_one, sym): sym for sym in symbols}
+        for future in as_completed(futures, timeout=120):
+            try:
+                sym, buy, sell, watch, ok = future.result(timeout=_STOCK_TIMEOUT)
+            except (FutureTimeout, Exception):
+                sym = futures[future]
+                errors.append(sym)
+                continue
+            if not ok:
+                errors.append(sym)
+                continue
+            scanned += 1
+            all_buy.extend(buy)
+            all_sell.extend(sell)
+            all_watch.extend(watch)
 
     # Sort by R:R descending
     all_buy.sort(key=lambda x: x.get("rr") or 0, reverse=True)

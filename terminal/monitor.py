@@ -215,8 +215,9 @@ class AlertWorker(threading.Thread):
         return alerts
 
     def run(self):
-        # Brief initial delay to let the session warm up
-        time.sleep(5)
+        # Longer initial delay — gives the session time to warm up before heavy
+        # yfinance downloads start competing with the main thread's API calls.
+        time.sleep(60)
         while not self._stop_event.is_set():
             try:
                 alerts = self._run_scan()
