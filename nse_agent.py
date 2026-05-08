@@ -1862,14 +1862,16 @@ def _handle_monitor_command(parts: list[str]) -> None:
         strategy     = parts[2].lower()  if len(parts) > 2 else "all"
         # Parse: /monitor start [strategy] [index] [interval_min] [direction]
         # Example: /monitor start breakout NIFTY 500 15 buy
+        # NOTE: Only canonical interval values (1,3,5,10,15,30,60) are treated as
+        # interval — this prevents "50" in "NIFTY 50" from being misread as interval.
+        _VALID_INTERVALS = {1, 3, 5, 10, 15, 30, 60}
         idx_parts = []
         interval  = 15
         direction = "all"
 
-        # Consume remaining args: digits → interval, buy/sell/all → direction, rest → index
         remaining = parts[3:] if len(parts) > 3 else []
         for tok in remaining:
-            if tok.isdigit():
+            if tok.isdigit() and int(tok) in _VALID_INTERVALS:
                 interval = int(tok)
             elif tok.lower() in ("buy", "sell", "all"):
                 direction = tok.lower()
