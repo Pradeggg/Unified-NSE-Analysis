@@ -69,6 +69,71 @@ except ImportError:
 # ── Rich console — force_terminal so ANSI codes always work ──────────────────
 console = Console(highlight=False, force_terminal=True)
 
+# ── Direct console — writes to sys.__stdout__ bypassing prompt_toolkit's
+#    patched sys.stdout. Use for monitor/alert output rendered during the
+#    chat loop to prevent Rich+prompt_toolkit cursor conflict.
+def _mcon() -> Console:
+    """Return a Console writing directly to sys.__stdout__."""
+    return Console(highlight=False, force_terminal=True,
+                   file=sys.__stdout__ or sys.stdout)
+
+
+# ── LLM alert parser ──────────────────────────────────────────────────────────
+
+def _parse_alert_with_llm(raw: str) -> dict | None:
+    """Use OpenAI to parse a natural-language alert description into structured fields.
+
+    Returns dict with keys: symbol, trigger, value, tf, note.
+    Returns None on API error or missing key — caller falls back to positional parse.
+
+    Examples:
+      "NIFTY rsi above 70 in 15min"
+        → {symbol: NIFTY, trigger: rsi_above, value: 70.0, tf: 15m, note: ""}
+      "RELIANCE breakout"
+        → {symbol: RELIANCE, trigger: intraday_breakout, value: 0.0, tf: 1d, note: ""}
+      "TCS price above 3500 near earnings"
+        → {symbol: TCS, trigger: price_above, value: 3500.0, tf: 1d, note: "near earnings"}
+    """
+    import json as _json
+    api_key = os.getenv("OPENAI_API_KEY", "")
+    if not api_key:
+        return None
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=api_key)
+        system = (
+            "You parse stock alert commands into structured JSON. "
+            "Extract these fields:\n"
+            "  symbol   — uppercase NSE ticker or index (NIFTY, BANKNIFTY, RELIANCE, TCS…)\n"
+            "  trigger  — one of: price_above, price_below, rsi_above, rsi_below, "
+            "breakout_above, breakout_below, intraday_breakout\n"
+            "  value    — float threshold (0.0 for intraday_breakout when not given)\n"
+            "  tf       — timeframe string: '1d' for daily/default, '15m', '5m', '1h', "
+            "'30m' etc. for intraday (parse from phrases like 'in 15 min', '15-minute', '5m timeframe')\n"
+            "  note     — remaining free-text after extraction (empty string if none)\n"
+            "Aliases: 'breakout'/'orb' → intraday_breakout; 'above' alone → breakout_above; "
+            "'below' alone → breakout_below; 'rsi above' → rsi_above; 'rsi below' → rsi_below.\n"
+            "Respond with ONLY valid JSON: "
+            '{"symbol":"","trigger":"","value":0.0,"tf":"1d","note":""}'
+        )
+        resp = client.chat.completions.create(
+            model="gpt-4o-mini",
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user",   "content": raw},
+            ],
+            max_tokens=120,
+            temperature=0,
+        )
+        parsed = _json.loads(resp.choices[0].message.content)
+        # Basic sanity — must have symbol and trigger
+        if parsed.get("symbol") and parsed.get("trigger"):
+            return parsed
+        return None
+    except Exception:
+        return None
+
 # ── Global chat state ─────────────────────────────────────────────────────────
 _mode             = "auto"   # "auto" | "intraday" | "historical"
 _followups: list[str] = []   # current follow-up suggestions (up to 3)
@@ -368,8 +433,8 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/monitor stop",    "Stop a monitor (e.g. /monitor stop breakout)"),
     ("/monitor stop all","Stop ALL active monitors"),
     # ── Watchlist alert commands ───────────────────────────────────────────
-    ("/alert list",       "List all price/RSI alerts"),
-    ("/alert add ",       "Add alert: /alert add SYMBOL breakout  |  /alert add SYMBOL price_above 1500"),
+    ("/alert list",       "List all price/RSI alerts (shows timeframe column)"),
+    ("/alert add ",       "Add alert (natural language): /alert add NIFTY rsi above 70 in 15min  |  /alert add RELIANCE breakout"),
     ("/alert del ",       "Delete an alert by ID: /alert del 1"),
     ("/alert check",      "Check all alerts against live prices/RSI now"),
     ("/alert monitor",    "Toggle background alert monitor (polls every 5 min, market hours)"),
@@ -1690,14 +1755,15 @@ def _render_alert_batch(event: dict) -> None:
             f"[{conf_style}]{a.confidence_bar}[/{conf_style}]",
         )
 
-    console.print()
-    console.print(Rule(
+    mc = _mcon()
+    mc.print()
+    mc.print(Rule(
         f"[bold magenta]🔔 MONITOR ALERT  [{strategy}]  {index}  ·  {as_of}  ·  scan #{run_n}[/bold magenta]",
         style="magenta",
     ))
-    console.print(tbl)
-    console.print("[dim]  ━ Not investment advice. Research only. ━[/dim]")
-    console.print()
+    mc.print(tbl)
+    mc.print("[dim]  ━ Not investment advice. Research only. ━[/dim]")
+    mc.print()
 
 
 def _render_monitor_heartbeat(event: dict) -> None:
@@ -1706,7 +1772,7 @@ def _render_monitor_heartbeat(event: dict) -> None:
     index    = event["index"]
     as_of    = event["as_of"]
     run_n    = event.get("run_n", "?")
-    console.print(
+    _mcon().print(
         f"  ⏱  Monitor '{strategy}' — scan #{run_n} complete, no new signals"
         f"  ({index} @ {as_of})",
         style="dim",
@@ -1725,7 +1791,7 @@ def _check_monitor_alerts() -> None:
         elif ev.get("type") == "heartbeat":
             _render_monitor_heartbeat(ev)
         elif ev.get("type") == "error":
-            console.print(
+            _mcon().print(
                 f"  ⚠  Monitor '{ev.get('strategy')}' error: {ev.get('message')}",
                 style="dim red", markup=False,
             )
@@ -1735,8 +1801,9 @@ def _print_monitor_status() -> None:
     """Show status table for all running monitors."""
     mon = get_monitor()
     workers = mon.status()
+    mc = _mcon()
     if not workers:
-        console.print("[dim]  No monitors active. Use /monitor start [strategy] to activate.[/dim]")
+        mc.print("[dim]  No monitors active. Use /monitor start [strategy] to activate.[/dim]")
         return
 
     tbl = Table(box=box.SIMPLE_HEAD, header_style="bold cyan", expand=False)
@@ -1757,9 +1824,9 @@ def _print_monitor_status() -> None:
             str(w["run_count"]), str(w["last_count"]), str(w["errors"]),
         )
 
-    console.print()
-    console.print(Panel(tbl, title="[bold magenta]🔔 Background Monitors[/bold magenta]", expand=False))
-    console.print()
+    mc.print()
+    mc.print(Panel(tbl, title="[bold magenta]🔔 Background Monitors[/bold magenta]", expand=False))
+    mc.print()
 
 
 def _handle_monitor_command(parts: list[str]) -> None:
@@ -1768,15 +1835,16 @@ def _handle_monitor_command(parts: list[str]) -> None:
     sub = parts[1].lower() if len(parts) > 1 else "status"
 
     if sub == "list":
+        mc = _mcon()
         tbl = Table(box=box.SIMPLE_HEAD, header_style="bold cyan", expand=False)
         tbl.add_column("Strategy", style="bold white", min_width=12)
         tbl.add_column("Description", style="dim")
         for k, v in MONITOR_STRATEGIES.items():
             tbl.add_row(k, v["description"])
-        console.print()
-        console.print(Panel(tbl, title="[bold cyan]Available Monitor Strategies[/bold cyan]", expand=False))
-        console.print("[dim]  Usage: /monitor start breakout [NIFTY 500] [15] [buy|sell|all][/dim]")
-        console.print()
+        mc.print()
+        mc.print(Panel(tbl, title="[bold cyan]Available Monitor Strategies[/bold cyan]", expand=False))
+        mc.print("[dim]  Usage: /monitor start breakout [NIFTY 500] [15] [buy|sell|all][/dim]")
+        mc.print()
         return
 
     if sub == "status":
@@ -1787,7 +1855,7 @@ def _handle_monitor_command(parts: list[str]) -> None:
         strategy = parts[2].lower() if len(parts) > 2 else "all"
         index    = " ".join(parts[3:]).upper() if len(parts) > 3 else None
         msg      = mon.stop(strategy, index)
-        console.print(f"  {msg}", markup=False)
+        _mcon().print(f"  {msg}", markup=False)
         return
 
     if sub == "start":
@@ -1823,7 +1891,7 @@ def _handle_monitor_command(parts: list[str]) -> None:
         return
 
     # Unknown subcommand
-    console.print(
+    _mcon().print(
         "[dim]  Usage: /monitor [start|stop|status|list]  strategy  [index]  [interval_min]  [buy|sell|all][/dim]\n"
         "[dim]  Example: /monitor start breakout NIFTY 500 15 buy[/dim]"
     )
@@ -2261,61 +2329,78 @@ def _chat_loop(agent, show_trace: bool) -> None:
 
             if sub == "list":
                 from terminal.alerts import list_alerts
+                from rich.table import Table as _Table
                 alerts = list_alerts()
                 if not alerts:
-                    console.print("[dim]  No alerts set. Use /alert add SYMBOL breakout  or  /alert add SYMBOL price_above 1500[/dim]")
+                    console.print("[dim]  No alerts set. Try: /alert add NIFTY rsi above 70 in 15min[/dim]")
                 else:
-                    from rich.table import Table
-                    tbl = Table(title="🔔 Watchlist Alerts", show_header=True, header_style=_theme["header"])
-                    tbl.add_column("ID", style="dim", width=4)
-                    tbl.add_column("Symbol", style="bold yellow")
+                    tbl = _Table(title="🔔 Watchlist Alerts", show_header=True, header_style=_theme["header"])
+                    tbl.add_column("ID",      style="dim",         width=4)
+                    tbl.add_column("Symbol",  style="bold yellow")
                     tbl.add_column("Trigger", style="cyan")
-                    tbl.add_column("Value", style="green", justify="right")
-                    tbl.add_column("Note", style="dim")
+                    tbl.add_column("Value",   style="green",       justify="right")
+                    tbl.add_column("TF",      style="magenta",     width=6)
+                    tbl.add_column("Note",    style="dim")
                     for a in alerts:
-                        tbl.add_row(str(a["id"]), a["symbol"], a["trigger"], str(a["value"]), a.get("note", ""))
+                        tbl.add_row(
+                            str(a["id"]), a["symbol"], a["trigger"],
+                            str(a["value"]) if a.get("value") else "—",
+                            a.get("tf", "1d"),
+                            a.get("note", ""),
+                        )
                     console.print(tbl)
                 continue
 
-            elif sub == "add" and len(parts) >= 4:
-                # /alert add SYMBOL trigger [value] [note...]
-                # Breakout triggers don't need a value:
+            elif sub == "add" and len(parts) >= 3:
+                # Use LLM to parse natural language; fall back to positional parse.
+                # Examples:
+                #   /alert add NIFTY rsi above 70 in 15min
                 #   /alert add RELIANCE breakout
-                #   /alert add RELIANCE intraday_breakout
-                # Price/RSI/level triggers need a value:
-                #   /alert add RELIANCE price_above 1500
-                #   /alert add RELIANCE breakout_above 1580
-                sym     = parts[2].upper()
-                trigger = parts[3].lower()
-                _no_value_triggers = {
-                    "breakout", "orb", "intraday", "intraday_breakout",
-                }
-                if trigger in _no_value_triggers:
-                    val  = 0.0
-                    note = " ".join(parts[4:]) if len(parts) > 4 else ""
-                elif len(parts) >= 5:
-                    try:
-                        val = float(parts[4])
-                    except ValueError:
-                        console.print(
-                            f"[red]  Value must be a number for '{trigger}' trigger[/red]\n"
-                            "  [dim]Breakout triggers need no value: /alert add RELIANCE breakout[/dim]"
-                        )
-                        continue
-                    note = " ".join(parts[5:]) if len(parts) > 5 else ""
+                #   /alert add TCS price above 3500
+                raw_input = " ".join(parts[2:])   # everything after "/alert add"
+
+                console.print("[dim]  Parsing alert…[/dim]", end="\r")
+                parsed = _parse_alert_with_llm(raw_input)
+
+                if parsed:
+                    sym     = parsed["symbol"].upper()
+                    trigger = parsed["trigger"]
+                    val     = float(parsed.get("value") or 0.0)
+                    tf      = parsed.get("tf") or "1d"
+                    note    = parsed.get("note") or ""
                 else:
-                    console.print(
-                        f"[red]  Missing value for trigger '{trigger}'[/red]\n"
-                        "  [dim]Usage: /alert add SYMBOL trigger value  "
-                        "  (breakout triggers: /alert add SYMBOL breakout)[/dim]"
-                    )
-                    continue
+                    # Positional fallback: SYMBOL trigger [value] [note…]
+                    sym     = parts[2].upper()
+                    trigger = parts[3].lower() if len(parts) > 3 else ""
+                    _no_val = {"breakout", "orb", "intraday", "intraday_breakout"}
+                    if not trigger:
+                        console.print("[red]  Usage: /alert add SYMBOL trigger [value][/red]")
+                        continue
+                    if trigger in _no_val:
+                        val, tf, note = 0.0, "1d", " ".join(parts[4:]) if len(parts) > 4 else ""
+                    elif len(parts) >= 5:
+                        try:
+                            val = float(parts[4])
+                        except ValueError:
+                            console.print(f"[red]  Value must be a number for '{trigger}'[/red]")
+                            continue
+                        tf   = "1d"
+                        note = " ".join(parts[5:]) if len(parts) > 5 else ""
+                    else:
+                        console.print(f"[red]  Missing value for trigger '{trigger}'[/red]")
+                        continue
+
                 from terminal.alerts import add_alert
                 try:
-                    alert = add_alert(sym, trigger, val, note)
-                    label = alert["trigger"]
+                    alert   = add_alert(sym, trigger, val, note, tf)
+                    tf_str  = f" [{alert['tf']}]" if alert.get("tf") and alert["tf"] != "1d" else ""
                     val_str = f" {alert['value']}" if alert["value"] else ""
-                    console.print(f"[green]  ✅ Alert #{alert['id']} added: {sym} {label}{val_str}[/green]")
+                    console.print(
+                        f"[green]  ✅ Alert #{alert['id']} added: "
+                        f"{sym} {alert['trigger']}{val_str}{tf_str}[/green]"
+                    )
+                    if parsed:
+                        console.print(f"[dim]  (parsed via LLM — tf={alert['tf']}, note='{note}')[/dim]")
                 except ValueError as e:
                     console.print(f"[red]  {e}[/red]")
                 continue
