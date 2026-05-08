@@ -190,22 +190,6 @@ def step_comprehensive_r_reports(dry_run: bool) -> bool:
         print(f"   ✅ R reports written to {local_r_out}")
 
     return ok
-        patterns = [
-            "All_Indexes_Analysis_Report_*.html",
-            "All_Sectors_Analysis_Report_*.html",
-            "all_indexes_top5_analysis_*.csv",
-            "all_sectors_top5_analysis_*.csv",
-        ]
-        synced = 0
-        for pat in patterns:
-            for src in sorted(onedrive_rpt.glob(pat)):
-                dst = local_r_out / src.name
-                if not dst.exists():
-                    shutil.copy2(src, dst)
-                    synced += 1
-        print(f"   ✅ Synced {synced} new R report file(s) → reports/nse_analysis/2026/")
-
-    return ok
 
 
 # ─────────────────────────────────────────────────────────────────────────────

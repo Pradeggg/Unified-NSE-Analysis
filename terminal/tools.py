@@ -528,28 +528,32 @@ def run_screener_query(screen_type: str = "stage2", top_n: int = 10) -> dict:
         ),
         "breakouts": (
             f"SELECT {_base_cols} {_base_from} AND stage='STAGE_2' "
-            "AND COALESCE(relative_strength, 0) > 0 "
-            "AND COALESCE(change_1m_pct, 0) > 0 "
-            "AND COALESCE(rsi, 0) >= 55 "
-            "ORDER BY investment_score DESC, relative_strength DESC, change_1m_pct DESC"
+            "AND COALESCE(change_1m_pct, 0) > 3.0 "
+            "AND COALESCE(rsi, 0) BETWEEN 55 AND 85 "
+            "AND supertrend_state='BULLISH' "
+            "ORDER BY investment_score DESC, change_1m_pct DESC"
         ),
         "supertrend_buy": (
             "SELECT symbol, company_name, stage_score, investment_score, price, "
             "relative_strength, change_1d_pct, rsi, trading_signal, sector "
-            f"{_base_from} AND supertrend_state='BUY' "
-            "ORDER BY technical_score DESC"
+            f"{_base_from} AND supertrend_state='BULLISH' "
+            "AND stage IN ('STAGE_1','STAGE_2') "
+            "ORDER BY investment_score DESC, rsi DESC"
         ),
         "strong_buy": (
-            f"SELECT {_base_cols} {_base_from} AND trading_signal='STRONG_BUY' "
+            f"SELECT {_base_cols} {_base_from} AND trading_signal IN ('STRONG_BUY','BUY','HOLD') "
+            "AND stage='STAGE_2' AND supertrend_state='BULLISH' "
             "ORDER BY investment_score DESC"
         ),
         "new_entrants": (
             "SELECT s.symbol, s.company_name, s.stage_score, s.investment_score, "
             "s.price, s.relative_strength, s.change_1m_pct, s.rsi, s.trading_signal, s.sector "
             "FROM stage_snapshots s "
-            "LEFT JOIN stage_changes c ON s.symbol=c.symbol AND c.new_stage='STAGE_2' "
+            "LEFT JOIN stage_changes c ON s.symbol=c.symbol AND c.stage_now='STAGE_2' "
+            "AND c.stage_prev != 'STAGE_2' "
             "WHERE s.snapshot_date=? AND s.stage='STAGE_2' "
-            "AND c.change_date >= date(?, '-14 days') ORDER BY s.investment_score DESC"
+            "AND (c.change_date >= date(?, '-14 days') OR c.change_date IS NULL) "
+            "ORDER BY s.investment_score DESC"
         ),
 
         # ── New EOD screeners ─────────────────────────────────────────────────
@@ -558,19 +562,20 @@ def run_screener_query(screen_type: str = "stage2", top_n: int = 10) -> dict:
         # Classic "buy strength" — trend-following stocks leading the market.
         "momentum_52w": (
             f"SELECT {_base_cols} {_base_from} AND stage='STAGE_2' "
-            "AND COALESCE(relative_strength, 0) >= 1.0 "
-            "AND COALESCE(change_1m_pct, 0) > 2.0 "
-            "AND COALESCE(rsi, 0) BETWEEN 50 AND 80 "
-            "ORDER BY relative_strength DESC, change_1m_pct DESC"
+            "AND COALESCE(change_1m_pct, 0) > 5.0 "
+            "AND COALESCE(rsi, 0) BETWEEN 50 AND 85 "
+            "AND supertrend_state='BULLISH' "
+            "ORDER BY change_1m_pct DESC, investment_score DESC"
         ),
 
         # Top RS ranked stocks — market leaders by relative strength score.
         # RS > 1.15 means outperforming 85%+ of the market.
         "high_rs": (
             f"SELECT {_base_cols} {_base_from} "
-            "AND COALESCE(relative_strength, 0) >= 1.15 "
             "AND stage IN ('STAGE_2', 'STAGE_1') "
-            "ORDER BY relative_strength DESC, investment_score DESC"
+            "AND COALESCE(change_1m_pct, 0) > 8.0 "
+            "AND COALESCE(rsi, 0) >= 55 "
+            "ORDER BY change_1m_pct DESC, investment_score DESC"
         ),
 
         # Turnaround candidates: down >20% from recent highs but showing recovery.
@@ -580,9 +585,8 @@ def run_screener_query(screen_type: str = "stage2", top_n: int = 10) -> dict:
             "AND stage IN ('STAGE_1', 'STAGE_2') "
             "AND COALESCE(change_1m_pct, 0) > 5.0 "
             "AND COALESCE(rsi, 0) BETWEEN 40 AND 65 "
-            "AND COALESCE(relative_strength, 0) > 0.8 "
             "AND COALESCE(investment_score, 0) < 60 "
-            "ORDER BY change_1m_pct DESC, relative_strength DESC"
+            "ORDER BY change_1m_pct DESC, investment_score DESC"
         ),
 
         # Stage 1 basing stocks — consolidating sideways before a potential breakout.
@@ -598,10 +602,10 @@ def run_screener_query(screen_type: str = "stage2", top_n: int = 10) -> dict:
         # VCP-like setup — volatility contraction precedes explosive moves.
         "tight_range": (
             f"SELECT {_base_cols} {_base_from} AND stage='STAGE_2' "
-            "AND COALESCE(relative_strength, 0) >= 1.0 "
+            "AND supertrend_state='BULLISH' "
             "AND ABS(COALESCE(change_1w_pct, 0)) < 2.0 "
             "AND COALESCE(rsi, 0) BETWEEN 45 AND 65 "
-            "ORDER BY relative_strength DESC, investment_score DESC"
+            "ORDER BY investment_score DESC, rsi DESC"
         ),
 
         # Oversold stocks in Stage 2 uptrend — mean-reversion bounce candidates.
@@ -609,9 +613,8 @@ def run_screener_query(screen_type: str = "stage2", top_n: int = 10) -> dict:
         "oversold_bounce": (
             f"SELECT {_base_cols} {_base_from} AND stage='STAGE_2' "
             "AND COALESCE(rsi, 0) < 40 "
-            "AND COALESCE(relative_strength, 0) > 0.9 "
-            "AND supertrend_state='BUY' "
-            "ORDER BY rsi ASC, relative_strength DESC"
+            "AND supertrend_state='BULLISH' "
+            "ORDER BY rsi ASC, investment_score DESC"
         ),
     }
 
