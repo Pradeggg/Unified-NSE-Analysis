@@ -308,7 +308,7 @@ class MonitorManager:
 
         key = self._worker_key(strategy, index)
         if key in self._workers and self._workers[key].is_running:
-            return f"Monitor [{strategy}] on {index} is already running."
+            return f"⚠️  Monitor '{strategy}' on {index} is already running."
 
         worker = AlertWorker(
             strategy     = strategy,
@@ -321,7 +321,7 @@ class MonitorManager:
         worker.start()
         self._workers[key] = worker
         return (
-            f"✅ Monitor [{strategy}] started — scanning {index} every {interval_min}m. "
+            f"✅ Monitor '{strategy}' started — scanning {index} every {interval_min}m. "
             f"Alerts will appear automatically. Use /monitor stop {strategy} to deactivate."
         )
 

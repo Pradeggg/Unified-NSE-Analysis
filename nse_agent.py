@@ -1707,8 +1707,9 @@ def _render_monitor_heartbeat(event: dict) -> None:
     as_of    = event["as_of"]
     run_n    = event.get("run_n", "?")
     console.print(
-        f"[dim]  ⏱  Monitor [{strategy}] — scan #{run_n} complete, no new signals  "
-        f"({index} @ {as_of})[/dim]"
+        f"  ⏱  Monitor '{strategy}' — scan #{run_n} complete, no new signals"
+        f"  ({index} @ {as_of})",
+        style="dim",
     )
 
 
@@ -1725,7 +1726,10 @@ def _check_monitor_alerts() -> None:
             _render_monitor_heartbeat(ev)
         elif ev.get("type") == "error":
             console.print(
-                f"[dim red]  ⚠  Monitor [{ev.get('strategy')}] error: {ev.get('message')}[/dim red]"
+                console.print(
+                    f"  ⚠  Monitor '{ev.get('strategy')}' error: {ev.get('message')}",
+                    style="dim red", markup=False,
+                )
             )
 
 
@@ -1785,7 +1789,7 @@ def _handle_monitor_command(parts: list[str]) -> None:
         strategy = parts[2].lower() if len(parts) > 2 else "all"
         index    = " ".join(parts[3:]).upper() if len(parts) > 3 else None
         msg      = mon.stop(strategy, index)
-        console.print(f"  {msg}")
+        console.print(f"  {msg}", markup=False)
         return
 
     if sub == "start":
@@ -1814,7 +1818,7 @@ def _handle_monitor_command(parts: list[str]) -> None:
             direction    = direction,
         )
         console.print()
-        console.print(f"  {msg}")
+        console.print(f"  {msg}", markup=False)
         console.print(f"  [dim]Scanning: {index}  ·  Interval: {interval}m  ·  Direction: {direction}[/dim]")
         console.print()
         return
