@@ -720,18 +720,19 @@ def recommend_strategies(symbol: str, expiry: str | None = None,
         })
 
     # ── Low IV + directional → plain long call/put ───────────────────────────
+    _iv_str = f"{avg_iv:.0f}%" if avg_iv is not None else "N/A"
     if iv_regime == "low":
         if pcr and pcr >= 1.0:
             recommendations.append({
                 "rank": 2,
                 "strategy": "long_call",
-                "rationale": f"Low IV ({avg_iv:.0f}%) → cheap to buy calls; bullish PCR {pcr:.2f}",
+                "rationale": f"Low IV ({_iv_str}) → cheap to buy calls; bullish PCR {pcr:.2f}",
             })
         else:
             recommendations.append({
                 "rank": 2,
                 "strategy": "long_put",
-                "rationale": f"Low IV ({avg_iv:.0f}%) → cheap to buy puts; bearish PCR {pcr:.2f}" if pcr else "Low IV → buying puts is cost-effective",
+                "rationale": f"Low IV ({_iv_str}) → cheap to buy puts; bearish PCR {pcr:.2f}" if pcr else "Low IV → buying puts is cost-effective",
             })
 
     # ── Pre-event (DTE ≤ 7) → straddle/strangle ─────────────────────────────
@@ -745,13 +746,13 @@ def recommend_strategies(symbol: str, expiry: str | None = None,
         recommendations.append({
             "rank": 3,
             "strategy": "long_strangle",
-            "rationale": f"IV at {avg_iv:.0f}% — OTM strangle is affordable; captures moves beyond ±1 strike",
+            "rationale": f"IV at {_iv_str} — OTM strangle is affordable; captures moves beyond ±1 strike",
         })
     else:
         recommendations.append({
             "rank": 3,
             "strategy": "iron_condor",
-            "rationale": f"High IV ({avg_iv:.0f}%) — selling iron condor collects rich premium in range-bound market",
+            "rationale": f"High IV ({_iv_str}) — selling iron condor collects rich premium in range-bound market",
         })
 
     # Deduplicate
