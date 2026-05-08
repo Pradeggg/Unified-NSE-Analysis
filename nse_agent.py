@@ -57,6 +57,7 @@ from prompt_toolkit.formatted_text import ANSI
 from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.styles import Style as PTStyle
+from prompt_toolkit.patch_stdout import patch_stdout as _pt_patch_stdout
 
 colorama.init(autoreset=True)
 
@@ -1713,6 +1714,95 @@ _ALERT_DIR_STYLE = {"BUY": "bold green", "SELL": "bold red", "WATCH": "bold yell
 _CONF_COLOURS    = {"high": "green", "medium": "yellow", "low": "dim white"}
 
 
+def _live_con() -> Console:
+    """Console that writes to sys.stdout — goes through prompt_toolkit's
+    patch_stdout proxy so output appears above the active input line."""
+    return Console(highlight=False, force_terminal=True, file=sys.stdout)
+
+
+def _render_monitor_event_live(ev: dict) -> None:
+    """Render one monitor event through sys.stdout (patch_stdout safe).
+    Called by the auto-display thread while user is idle at the prompt."""
+    con = _live_con()
+    kind = ev.get("type")
+    if kind == "alerts":
+        from terminal.monitor import Alert
+        alerts: list[Alert] = ev.get("alerts", [])
+        strategy = ev["strategy"].upper()
+        index    = ev["index"]
+        as_of    = ev["as_of"]
+        run_n    = ev.get("run_n", "?")
+        tbl = Table(box=box.SIMPLE_HEAD, show_header=True,
+                    header_style="bold cyan", expand=False, padding=(0, 1))
+        tbl.add_column("",  width=2)
+        tbl.add_column("Symbol",  style="bold white", min_width=12)
+        tbl.add_column("Signal",  style="cyan",       min_width=20)
+        tbl.add_column("Dir",     min_width=5)
+        tbl.add_column("Entry",   justify="right", min_width=8)
+        tbl.add_column("Target",  justify="right", min_width=8)
+        tbl.add_column("SL",      justify="right", min_width=8)
+        tbl.add_column("R:R",     justify="right", min_width=4)
+        for a in alerts[:10]:
+            ds = _ALERT_DIR_STYLE.get(a.direction, "white")
+            cs = _CONF_COLOURS.get(a.confidence, "white")
+            tbl.add_row(
+                a.emoji, a.symbol, a.signal[:22],
+                f"[{ds}]{a.direction}[/{ds}]",
+                f"₹{a.entry:.1f}"    if a.entry    else "—",
+                f"₹{a.target:.1f}"   if a.target   else "—",
+                f"₹{a.stoploss:.1f}" if a.stoploss else "—",
+                f"[{cs}]{a.rr:.1f}[/{cs}]" if a.rr else "—",
+            )
+        con.print()
+        con.print(Rule(
+            f"[bold magenta]🔔 MONITOR ALERT  [{strategy}]  {index}  ·  {as_of}  ·  scan #{run_n}[/bold magenta]",
+            style="magenta",
+        ))
+        con.print(tbl)
+        con.print("[dim]  ━ Not investment advice. Research only. ━[/dim]")
+        con.print()
+    elif kind == "heartbeat":
+        strategy = ev["strategy"]
+        index    = ev["index"]
+        as_of    = ev["as_of"]
+        run_n    = ev.get("run_n", "?")
+        con.print(
+            f"  ⏱  Monitor '{strategy}' — scan #{run_n} complete, no signals  ({index} @ {as_of})",
+            style="dim",
+        )
+    elif kind == "error":
+        con.print(
+            f"  ⚠  Monitor '{ev.get('strategy')}' error: {ev.get('message')}",
+            style="dim red", markup=False,
+        )
+
+
+# ── Auto-display thread — drains the alert queue every 3s while user is idle ──
+_alert_autodisplay_stop = threading.Event()
+
+
+def _start_alert_autodisplay() -> threading.Thread:
+    """Start background thread that auto-prints monitor alerts via patch_stdout."""
+    _alert_autodisplay_stop.clear()
+
+    def _loop():
+        while not _alert_autodisplay_stop.is_set():
+            _alert_autodisplay_stop.wait(timeout=3)
+            if _alert_autodisplay_stop.is_set():
+                break
+            try:
+                mon = get_monitor()
+                events = mon.drain_alerts()
+                for ev in events:
+                    _render_monitor_event_live(ev)
+            except Exception:
+                pass
+
+    t = threading.Thread(target=_loop, daemon=True, name="alert-autodisplay")
+    t.start()
+    return t
+
+
 def _render_alert_batch(event: dict) -> None:
     """Render a batch of alerts from a background monitor worker."""
     from terminal.monitor import Alert
@@ -1784,17 +1874,8 @@ def _check_monitor_alerts() -> None:
     mon = get_monitor()
     if not mon.any_active():
         return
-    events = mon.drain_alerts()
-    for ev in events:
-        if ev.get("type") == "alerts":
-            _render_alert_batch(ev)
-        elif ev.get("type") == "heartbeat":
-            _render_monitor_heartbeat(ev)
-        elif ev.get("type") == "error":
-            _mcon().print(
-                f"  ⚠  Monitor '{ev.get('strategy')}' error: {ev.get('message')}",
-                style="dim red", markup=False,
-            )
+    for ev in mon.drain_alerts():
+        _render_monitor_event_live(ev)
 
 
 def _print_monitor_status() -> None:
@@ -1829,6 +1910,33 @@ def _print_monitor_status() -> None:
     mc.print()
 
 
+_VALID_MONITOR_INTERVALS = {1, 3, 5, 10, 15, 30, 60}
+
+
+def _parse_monitor_start_args(parts: list[str]) -> dict[str, object]:
+    """Parse `/monitor start` arguments without treating `NIFTY 50` as interval."""
+    strategy = parts[2].lower() if len(parts) > 2 else "all"
+    idx_parts: list[str] = []
+    interval = 15
+    direction = "all"
+
+    remaining = parts[3:] if len(parts) > 3 else []
+    for tok in remaining:
+        if tok.isdigit() and int(tok) in _VALID_MONITOR_INTERVALS:
+            interval = int(tok)
+        elif tok.lower() in ("buy", "sell", "all"):
+            direction = tok.lower()
+        else:
+            idx_parts.append(tok.upper())
+
+    return {
+        "strategy": strategy,
+        "index": " ".join(idx_parts) if idx_parts else "NIFTY 500",
+        "interval": interval,
+        "direction": direction,
+    }
+
+
 def _handle_monitor_command(parts: list[str]) -> None:
     """Handle /monitor [start|stop|status|list] [strategy] [index]."""
     mon = get_monitor()
@@ -1859,25 +1967,11 @@ def _handle_monitor_command(parts: list[str]) -> None:
         return
 
     if sub == "start":
-        strategy     = parts[2].lower()  if len(parts) > 2 else "all"
-        # Parse: /monitor start [strategy] [index] [interval_min] [direction]
-        # Example: /monitor start breakout NIFTY 500 15 buy
-        # NOTE: Only canonical interval values (1,3,5,10,15,30,60) are treated as
-        # interval — this prevents "50" in "NIFTY 50" from being misread as interval.
-        _VALID_INTERVALS = {1, 3, 5, 10, 15, 30, 60}
-        idx_parts = []
-        interval  = 15
-        direction = "all"
-
-        remaining = parts[3:] if len(parts) > 3 else []
-        for tok in remaining:
-            if tok.isdigit() and int(tok) in _VALID_INTERVALS:
-                interval = int(tok)
-            elif tok.lower() in ("buy", "sell", "all"):
-                direction = tok.lower()
-            else:
-                idx_parts.append(tok.upper())
-        index = " ".join(idx_parts) if idx_parts else "NIFTY 500"
+        parsed = _parse_monitor_start_args(parts)
+        strategy = str(parsed["strategy"])
+        index = str(parsed["index"])
+        interval = int(parsed["interval"])
+        direction = str(parsed["direction"])
 
         msg = mon.start(
             strategy     = strategy,
@@ -1896,6 +1990,38 @@ def _handle_monitor_command(parts: list[str]) -> None:
     _mcon().print(
         "[dim]  Usage: /monitor [start|stop|status|list]  strategy  [index]  [interval_min]  [buy|sell|all][/dim]\n"
         "[dim]  Example: /monitor start breakout NIFTY 500 15 buy[/dim]"
+    )
+
+
+_SCAN_ALIASES = {
+    "orb":      ("opening_range_breakout", "Opening Range Breakout"),
+    "gap":      ("gap_and_go",             "Gap & Go"),
+    "macd":     ("macd_crossover",         "MACD Crossover"),
+    "rsi":      ("rsi_divergence",         "RSI Divergence"),
+    "bb":       ("bb_squeeze",             "Bollinger Squeeze"),
+    "vwap":     ("vwap_reclaim",           "VWAP Reclaim"),
+    "vcp":      ("vcp",                    "VCP"),
+    "momentum": ("momentum",               "Momentum"),
+}
+
+
+def _rewrite_scan_command(text: str) -> tuple[str, str]:
+    """Return the agent query and status label for a `/scan` shortcut."""
+    parts = text.split(maxsplit=1)
+    arg = parts[1].strip() if len(parts) > 1 else ""
+    alias_key = arg.lower()
+
+    if alias_key in _SCAN_ALIASES:
+        screen_type, label = _SCAN_ALIASES[alias_key]
+        return (
+            f"Run intraday screener {screen_type} on NIFTY 500 on 15m charts",
+            f"Intraday screener: {label}",
+        )
+
+    index = arg.upper() if arg else "NIFTY 50"
+    return (
+        f"Scan {index} for intraday research setups using all strategies on 15m charts",
+        f"Intraday scan: {index}",
     )
 
 
@@ -2257,12 +2383,18 @@ def _chat_loop(agent, show_trace: bool) -> None:
     console.print("[dim]  Tip: /live  /eod  /auto  │  /prompts  │  /ric  │  1·2·3 = follow-ups  │  /new  │  /help  │  exit[/dim]")
     console.print()
 
+    # Start background alert auto-display thread.
+    # Uses patch_stdout so alerts print above the active input line automatically.
+    _start_alert_autodisplay()
+
     while True:
-        # ── Drain background monitor alerts before each prompt ─────────
+        # ── Restart auto-display + drain any queued alerts before prompt ─
+        _start_alert_autodisplay()
         _check_monitor_alerts()
 
         try:
-            raw = session.prompt(_build_prompt(agent))
+            with _pt_patch_stdout(raw=True):
+                raw = session.prompt(_build_prompt(agent))
         except KeyboardInterrupt:
             console.print()
             continue
@@ -2272,6 +2404,9 @@ def _chat_loop(agent, show_trace: bool) -> None:
         text = raw.strip()
         if not text:
             continue
+
+        # Stop auto-display thread while processing (avoids interleaved output)
+        _alert_autodisplay_stop.set()
 
         # ── Exit ──────────────────────────────────────────────────────
         if text.lower() in ("exit", "quit", "q", ":q"):
@@ -2620,28 +2755,8 @@ def _chat_loop(agent, show_trace: bool) -> None:
 
         # ── /scan shortcut: run intraday screener ──────────────────────
         if text.lower().startswith("/scan"):
-            parts = text.split(maxsplit=1)
-            arg   = parts[1].strip() if len(parts) > 1 else ""
-            # Map short aliases to screener types
-            _scan_aliases = {
-                "orb":      ("opening_range_breakout", "Opening Range Breakout"),
-                "gap":      ("gap_and_go",             "Gap & Go"),
-                "macd":     ("macd_crossover",         "MACD Crossover"),
-                "rsi":      ("rsi_divergence",         "RSI Divergence"),
-                "bb":       ("bb_squeeze",             "Bollinger Squeeze"),
-                "vwap":     ("vwap_reclaim",           "VWAP Reclaim"),
-                "vcp":      ("vcp",                    "VCP"),
-                "momentum": ("momentum",               "Momentum"),
-            }
-            alias_key = arg.lower()
-            if alias_key in _scan_aliases:
-                st, st_label = _scan_aliases[alias_key]
-                text = f"Run intraday screener {st} on NIFTY 500 on 15m charts"
-                console.print(f"[dim]  → Intraday screener: {st_label}[/dim]")
-            else:
-                idx = arg.upper() if arg else "NIFTY 50"
-                text = f"Scan {idx} for intraday research setups using all strategies on 15m charts"
-                console.print(f"[dim]  → Intraday scan: {idx}[/dim]")
+            text, status = _rewrite_scan_command(text)
+            console.print(f"[dim]  → {status}[/dim]")
 
         # ── /screen shortcut: run EOD screener ────────────────────────
         if text.lower().startswith("/screen"):
