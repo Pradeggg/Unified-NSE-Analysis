@@ -53,6 +53,75 @@ class NSEAgentGlobalUSTests(unittest.TestCase):
         self.assertIn("IT & Technology", text)
         self.assertIn("reports/global/us_market_report_20260508.html", text)
 
+    def test_us_indices_summary_includes_elaborate_table_and_takeaways(self):
+        request = {"view": "indices", "label": "US Indices", "symbols": _US_INDEX_SYMBOLS}
+        bundle = {
+            "metrics": pd.DataFrame(
+                [
+                    {
+                        "SYMBOL": "SPY",
+                        "CLOSE": 731.58,
+                        "RET_1D": -0.31,
+                        "RET_1M": 8.22,
+                        "RSI_14": 69.1,
+                        "SMA_ALIGNMENT": "BULLISH",
+                        "MACD_SIGNAL": "BULLISH",
+                        "STAGE": "STAGE_2",
+                        "DIST_52W_HIGH_PCT": -0.3,
+                    },
+                    {
+                        "SYMBOL": "QQQ",
+                        "CLOSE": 694.94,
+                        "RET_1D": -0.12,
+                        "RET_1M": 14.66,
+                        "RSI_14": 78.8,
+                        "SMA_ALIGNMENT": "BULLISH",
+                        "MACD_SIGNAL": "BULLISH",
+                        "STAGE": "STAGE_2",
+                        "DIST_52W_HIGH_PCT": -0.1,
+                    },
+                    {
+                        "SYMBOL": "^VIX",
+                        "CLOSE": 17.08,
+                        "RET_1D": -1.78,
+                        "RET_1M": -18.82,
+                        "RSI_14": 40.0,
+                        "SMA_ALIGNMENT": "MIXED",
+                        "MACD_SIGNAL": "BULLISH",
+                        "STAGE": "STAGE_1",
+                        "DIST_52W_HIGH_PCT": -30.0,
+                    },
+                ]
+            ),
+            "stage2": pd.DataFrame([{"SYMBOL": "QQQ", "SCREENER_SCORE": 19.3}]),
+            "sector_rotation": pd.DataFrame(),
+            "vcp": pd.DataFrame([{"SYMBOL": "SPY", "SCREENER_SCORE": 8.1}]),
+            "risk_dashboard": {
+                "regime": "risk-on",
+                "score": 3,
+                "signals": ["QQQ vs SPY 1M: +6.44pp", "VIX 1M: -18.82%"],
+            },
+            "india_readthrough": {
+                "global_regime": "risk-on",
+                "india_sector_implications": [
+                    {"nse_sector": "IT & Technology", "stance": "positive", "symbols": ["QQQ"], "confidence": "medium"}
+                ],
+            },
+        }
+        report = {"report_path": "reports/global/us_market_report_20260508.html"}
+
+        text = _format_us_global_terminal_summary(request, bundle, report)
+
+        self.assertIn("Executive Read", text)
+        self.assertIn("US Index Tape", text)
+        self.assertIn("| Symbol | Close | 1D | 1M | RSI | SMA | MACD | Stage | 52W% |", text)
+        self.assertIn("QQQ", text)
+        self.assertIn("14.66%", text)
+        self.assertIn("Risk / Regime Signals", text)
+        self.assertIn("QQQ vs SPY", text)
+        self.assertIn("Technical Takeaways", text)
+        self.assertIn("Strongest 1M index", text)
+
     def test_subset_us_command_renders_report_from_full_cache(self):
         load_calls = []
         rendered_prices = []

@@ -1,0 +1,713 @@
+[
+  {
+    "asset_type": "index",
+    "benchmark": "SPY",
+    "group": "indices",
+    "india_readthrough_tags": [
+      "global_risk"
+    ],
+    "name": "S&P 500",
+    "symbol": "^GSPC"
+  },
+  {
+    "asset_type": "index",
+    "benchmark": "QQQ",
+    "group": "indices",
+    "india_readthrough_tags": [
+      "it",
+      "growth"
+    ],
+    "name": "Nasdaq Composite",
+    "symbol": "^IXIC"
+  },
+  {
+    "asset_type": "index",
+    "benchmark": "QQQ",
+    "group": "indices",
+    "india_readthrough_tags": [
+      "it",
+      "growth"
+    ],
+    "name": "Nasdaq 100",
+    "symbol": "^NDX"
+  },
+  {
+    "asset_type": "index",
+    "benchmark": "DIA",
+    "group": "indices",
+    "india_readthrough_tags": [
+      "industrials"
+    ],
+    "name": "Dow Jones Industrial Average",
+    "symbol": "^DJI"
+  },
+  {
+    "asset_type": "index",
+    "benchmark": "IWM",
+    "group": "indices",
+    "india_readthrough_tags": [
+      "risk_on",
+      "smallcaps"
+    ],
+    "name": "Russell 2000",
+    "symbol": "^RUT"
+  },
+  {
+    "asset_type": "index",
+    "benchmark": "SPY",
+    "group": "risk",
+    "india_readthrough_tags": [
+      "risk_off"
+    ],
+    "name": "CBOE Volatility Index",
+    "symbol": "^VIX"
+  },
+  {
+    "asset_type": "etf",
+    "benchmark": "SPY",
+    "group": "core_etf",
+    "india_readthrough_tags": [
+      "global_risk"
+    ],
+    "name": "SPDR S&P 500 ETF",
+    "symbol": "SPY"
+  },
+  {
+    "asset_type": "etf",
+    "benchmark": "QQQ",
+    "group": "core_etf",
+    "india_readthrough_tags": [
+      "it",
+      "growth"
+    ],
+    "name": "Invesco QQQ Trust",
+    "symbol": "QQQ"
+  },
+  {
+    "asset_type": "etf",
+    "benchmark": "SPY",
+    "group": "core_etf",
+    "india_readthrough_tags": [
+      "industrials"
+    ],
+    "name": "SPDR Dow Jones Industrial Average ETF",
+    "symbol": "DIA"
+  },
+  {
+    "asset_type": "etf",
+    "benchmark": "SPY",
+    "group": "core_etf",
+    "india_readthrough_tags": [
+      "risk_on",
+      "smallcaps"
+    ],
+    "name": "iShares Russell 2000 ETF",
+    "symbol": "IWM"
+  },
+  {
+    "asset_type": "etf",
+    "benchmark": "SPY",
+    "group": "sector_etf",
+    "india_readthrough_tags": [
+      "it"
+    ],
+    "name": "Technology Select Sector SPDR",
+    "symbol": "XLK"
+  },
+  {
+    "asset_type": "etf",
+    "benchmark": "SPY",
+    "group": "sector_etf",
+    "india_readthrough_tags": [
+      "banks",
+      "nbfc"
+    ],
+    "name": "Financial Select Sector SPDR",
+    "symbol": "XLF"
+  },
+  {
+    "asset_type": "etf",
+    "benchmark": "SPY",
+    "group": "sector_etf",
+    "india_readthrough_tags": [
+      "energy"
+    ],
+    "name": "Energy Select Sector SPDR",
+    "symbol": "XLE"
+  },
+  {
+    "asset_type": "etf",
+    "benchmark": "SPY",
+    "group": "sector_etf",
+    "india_readthrough_tags": [
+      "consumption"
+    ],
+    "name": "Consumer Discretionary Select Sector SPDR",
+    "symbol": "XLY"
+  },
+  {
+    "asset_type": "etf",
+    "benchmark": "SPY",
+    "group": "sector_etf",
+    "india_readthrough_tags": [
+      "industrials",
+      "capital_goods"
+    ],
+    "name": "Industrial Select Sector SPDR",
+    "symbol": "XLI"
+  },
+  {
+    "asset_type": "etf",
+    "benchmark": "SPY",
+    "group": "sector_etf",
+    "india_readthrough_tags": [
+      "defensive",
+      "power"
+    ],
+    "name": "Utilities Select Sector SPDR",
+    "symbol": "XLU"
+  },
+  {
+    "asset_type": "etf",
+    "benchmark": "SPY",
+    "group": "sector_etf",
+    "india_readthrough_tags": [
+      "pharma",
+      "healthcare"
+    ],
+    "name": "Health Care Select Sector SPDR",
+    "symbol": "XLV"
+  },
+  {
+    "asset_type": "etf",
+    "benchmark": "SPY",
+    "group": "sector_etf",
+    "india_readthrough_tags": [
+      "fmcg",
+      "defensive"
+    ],
+    "name": "Consumer Staples Select Sector SPDR",
+    "symbol": "XLP"
+  },
+  {
+    "asset_type": "etf",
+    "benchmark": "SPY",
+    "group": "sector_etf",
+    "india_readthrough_tags": [
+      "metals",
+      "chemicals"
+    ],
+    "name": "Materials Select Sector SPDR",
+    "symbol": "XLB"
+  },
+  {
+    "asset_type": "etf",
+    "benchmark": "SPY",
+    "group": "sector_etf",
+    "india_readthrough_tags": [
+      "realty"
+    ],
+    "name": "Real Estate Select Sector SPDR",
+    "symbol": "XLRE"
+  },
+  {
+    "asset_type": "etf",
+    "benchmark": "QQQ",
+    "group": "theme_etf",
+    "india_readthrough_tags": [
+      "semiconductors",
+      "ems",
+      "it"
+    ],
+    "name": "VanEck Semiconductor ETF",
+    "symbol": "SMH"
+  },
+  {
+    "asset_type": "etf",
+    "benchmark": "QQQ",
+    "group": "theme_etf",
+    "india_readthrough_tags": [
+      "semiconductors",
+      "ems",
+      "it"
+    ],
+    "name": "iShares Semiconductor ETF",
+    "symbol": "SOXX"
+  },
+  {
+    "asset_type": "etf",
+    "benchmark": "QQQ",
+    "group": "theme_etf",
+    "india_readthrough_tags": [
+      "growth",
+      "risk_on"
+    ],
+    "name": "ARK Innovation ETF",
+    "symbol": "ARKK"
+  },
+  {
+    "asset_type": "rates_proxy",
+    "benchmark": "SPY",
+    "group": "macro_etf",
+    "india_readthrough_tags": [
+      "rates",
+      "fii_flows"
+    ],
+    "name": "iShares 20+ Year Treasury Bond ETF",
+    "symbol": "TLT"
+  },
+  {
+    "asset_type": "rates_proxy",
+    "benchmark": "SPY",
+    "group": "macro_etf",
+    "india_readthrough_tags": [
+      "credit",
+      "risk_on"
+    ],
+    "name": "iShares High Yield Corporate Bond ETF",
+    "symbol": "HYG"
+  },
+  {
+    "asset_type": "rates_proxy",
+    "benchmark": "SPY",
+    "group": "macro_etf",
+    "india_readthrough_tags": [
+      "credit"
+    ],
+    "name": "iShares Investment Grade Corporate Bond ETF",
+    "symbol": "LQD"
+  },
+  {
+    "asset_type": "commodity",
+    "benchmark": "SPY",
+    "group": "macro_etf",
+    "india_readthrough_tags": [
+      "gold",
+      "risk_off"
+    ],
+    "name": "SPDR Gold Shares",
+    "symbol": "GLD"
+  },
+  {
+    "asset_type": "commodity",
+    "benchmark": "SPY",
+    "group": "macro_etf",
+    "india_readthrough_tags": [
+      "crude",
+      "energy"
+    ],
+    "name": "United States Oil Fund",
+    "symbol": "USO"
+  },
+  {
+    "asset_type": "currency",
+    "benchmark": "SPY",
+    "group": "macro_etf",
+    "india_readthrough_tags": [
+      "dxy",
+      "fii_flows"
+    ],
+    "name": "Invesco DB US Dollar Index Bullish Fund",
+    "symbol": "UUP"
+  },
+  {
+    "asset_type": "stock",
+    "benchmark": "QQQ",
+    "group": "mag7",
+    "india_readthrough_tags": [
+      "it",
+      "electronics"
+    ],
+    "name": "Apple",
+    "symbol": "AAPL"
+  },
+  {
+    "asset_type": "stock",
+    "benchmark": "QQQ",
+    "group": "mag7",
+    "india_readthrough_tags": [
+      "it",
+      "cloud"
+    ],
+    "name": "Microsoft",
+    "symbol": "MSFT"
+  },
+  {
+    "asset_type": "stock",
+    "benchmark": "QQQ",
+    "group": "mag7",
+    "india_readthrough_tags": [
+      "semiconductors",
+      "ai",
+      "ems"
+    ],
+    "name": "NVIDIA",
+    "symbol": "NVDA"
+  },
+  {
+    "asset_type": "stock",
+    "benchmark": "QQQ",
+    "group": "mag7",
+    "india_readthrough_tags": [
+      "consumption",
+      "cloud"
+    ],
+    "name": "Amazon",
+    "symbol": "AMZN"
+  },
+  {
+    "asset_type": "stock",
+    "benchmark": "QQQ",
+    "group": "mag7",
+    "india_readthrough_tags": [
+      "internet",
+      "growth"
+    ],
+    "name": "Meta Platforms",
+    "symbol": "META"
+  },
+  {
+    "asset_type": "stock",
+    "benchmark": "QQQ",
+    "group": "mag7",
+    "india_readthrough_tags": [
+      "internet",
+      "it"
+    ],
+    "name": "Alphabet",
+    "symbol": "GOOGL"
+  },
+  {
+    "asset_type": "stock",
+    "benchmark": "QQQ",
+    "group": "mag7",
+    "india_readthrough_tags": [
+      "auto",
+      "ev"
+    ],
+    "name": "Tesla",
+    "symbol": "TSLA"
+  },
+  {
+    "asset_type": "stock",
+    "benchmark": "QQQ",
+    "group": "semis_ai",
+    "india_readthrough_tags": [
+      "semiconductors",
+      "it"
+    ],
+    "name": "Advanced Micro Devices",
+    "symbol": "AMD"
+  },
+  {
+    "asset_type": "stock",
+    "benchmark": "QQQ",
+    "group": "semis_ai",
+    "india_readthrough_tags": [
+      "semiconductors",
+      "it"
+    ],
+    "name": "Broadcom",
+    "symbol": "AVGO"
+  },
+  {
+    "asset_type": "stock",
+    "benchmark": "QQQ",
+    "group": "semis_ai",
+    "india_readthrough_tags": [
+      "semiconductors",
+      "memory"
+    ],
+    "name": "Micron Technology",
+    "symbol": "MU"
+  },
+  {
+    "asset_type": "stock",
+    "benchmark": "QQQ",
+    "group": "semis_ai",
+    "india_readthrough_tags": [
+      "semiconductors",
+      "ip"
+    ],
+    "name": "Arm Holdings",
+    "symbol": "ARM"
+  },
+  {
+    "asset_type": "stock",
+    "benchmark": "QQQ",
+    "group": "semis_ai",
+    "india_readthrough_tags": [
+      "semiconductors",
+      "ems"
+    ],
+    "name": "Taiwan Semiconductor",
+    "symbol": "TSM"
+  },
+  {
+    "asset_type": "stock",
+    "benchmark": "QQQ",
+    "group": "semis_ai",
+    "india_readthrough_tags": [
+      "semiconductors",
+      "capital_goods"
+    ],
+    "name": "ASML Holding",
+    "symbol": "ASML"
+  },
+  {
+    "asset_type": "stock",
+    "benchmark": "QQQ",
+    "group": "semis_ai",
+    "india_readthrough_tags": [
+      "semiconductors",
+      "networking"
+    ],
+    "name": "Marvell Technology",
+    "symbol": "MRVL"
+  },
+  {
+    "asset_type": "stock",
+    "benchmark": "SPY",
+    "group": "financials",
+    "india_readthrough_tags": [
+      "banks"
+    ],
+    "name": "JPMorgan Chase",
+    "symbol": "JPM"
+  },
+  {
+    "asset_type": "stock",
+    "benchmark": "SPY",
+    "group": "financials",
+    "india_readthrough_tags": [
+      "banks"
+    ],
+    "name": "Bank of America",
+    "symbol": "BAC"
+  },
+  {
+    "asset_type": "stock",
+    "benchmark": "SPY",
+    "group": "financials",
+    "india_readthrough_tags": [
+      "capital_markets"
+    ],
+    "name": "Goldman Sachs",
+    "symbol": "GS"
+  },
+  {
+    "asset_type": "stock",
+    "benchmark": "SPY",
+    "group": "financials",
+    "india_readthrough_tags": [
+      "capital_markets"
+    ],
+    "name": "Morgan Stanley",
+    "symbol": "MS"
+  },
+  {
+    "asset_type": "stock",
+    "benchmark": "SPY",
+    "group": "financials",
+    "india_readthrough_tags": [
+      "payments",
+      "consumption"
+    ],
+    "name": "Visa",
+    "symbol": "V"
+  },
+  {
+    "asset_type": "stock",
+    "benchmark": "SPY",
+    "group": "financials",
+    "india_readthrough_tags": [
+      "payments",
+      "consumption"
+    ],
+    "name": "Mastercard",
+    "symbol": "MA"
+  },
+  {
+    "asset_type": "stock",
+    "benchmark": "SPY",
+    "group": "energy_industrial_defense",
+    "india_readthrough_tags": [
+      "energy",
+      "crude"
+    ],
+    "name": "Exxon Mobil",
+    "symbol": "XOM"
+  },
+  {
+    "asset_type": "stock",
+    "benchmark": "SPY",
+    "group": "energy_industrial_defense",
+    "india_readthrough_tags": [
+      "energy",
+      "crude"
+    ],
+    "name": "Chevron",
+    "symbol": "CVX"
+  },
+  {
+    "asset_type": "stock",
+    "benchmark": "SPY",
+    "group": "energy_industrial_defense",
+    "india_readthrough_tags": [
+      "capital_goods",
+      "industrials"
+    ],
+    "name": "Caterpillar",
+    "symbol": "CAT"
+  },
+  {
+    "asset_type": "stock",
+    "benchmark": "SPY",
+    "group": "energy_industrial_defense",
+    "india_readthrough_tags": [
+      "capital_goods",
+      "defense"
+    ],
+    "name": "GE Aerospace",
+    "symbol": "GE"
+  },
+  {
+    "asset_type": "stock",
+    "benchmark": "SPY",
+    "group": "energy_industrial_defense",
+    "india_readthrough_tags": [
+      "defense"
+    ],
+    "name": "Lockheed Martin",
+    "symbol": "LMT"
+  },
+  {
+    "asset_type": "stock",
+    "benchmark": "SPY",
+    "group": "energy_industrial_defense",
+    "india_readthrough_tags": [
+      "defense"
+    ],
+    "name": "RTX",
+    "symbol": "RTX"
+  },
+  {
+    "asset_type": "stock",
+    "benchmark": "SPY",
+    "group": "consumer_retail",
+    "india_readthrough_tags": [
+      "fmcg",
+      "consumption"
+    ],
+    "name": "Walmart",
+    "symbol": "WMT"
+  },
+  {
+    "asset_type": "stock",
+    "benchmark": "SPY",
+    "group": "consumer_retail",
+    "india_readthrough_tags": [
+      "fmcg",
+      "consumption"
+    ],
+    "name": "Costco",
+    "symbol": "COST"
+  },
+  {
+    "asset_type": "stock",
+    "benchmark": "SPY",
+    "group": "consumer_retail",
+    "india_readthrough_tags": [
+      "realty",
+      "consumption"
+    ],
+    "name": "Home Depot",
+    "symbol": "HD"
+  },
+  {
+    "asset_type": "stock",
+    "benchmark": "SPY",
+    "group": "consumer_retail",
+    "india_readthrough_tags": [
+      "consumption"
+    ],
+    "name": "McDonald's",
+    "symbol": "MCD"
+  },
+  {
+    "asset_type": "stock",
+    "benchmark": "SPY",
+    "group": "consumer_retail",
+    "india_readthrough_tags": [
+      "consumption"
+    ],
+    "name": "Nike",
+    "symbol": "NKE"
+  },
+  {
+    "asset_type": "stock",
+    "benchmark": "QQQ",
+    "group": "software_cloud",
+    "india_readthrough_tags": [
+      "it",
+      "cloud"
+    ],
+    "name": "Salesforce",
+    "symbol": "CRM"
+  },
+  {
+    "asset_type": "stock",
+    "benchmark": "QQQ",
+    "group": "software_cloud",
+    "india_readthrough_tags": [
+      "it",
+      "cloud"
+    ],
+    "name": "Oracle",
+    "symbol": "ORCL"
+  },
+  {
+    "asset_type": "stock",
+    "benchmark": "QQQ",
+    "group": "software_cloud",
+    "india_readthrough_tags": [
+      "it",
+      "software"
+    ],
+    "name": "Adobe",
+    "symbol": "ADBE"
+  },
+  {
+    "asset_type": "stock",
+    "benchmark": "QQQ",
+    "group": "software_cloud",
+    "india_readthrough_tags": [
+      "it",
+      "software"
+    ],
+    "name": "ServiceNow",
+    "symbol": "NOW"
+  },
+  {
+    "asset_type": "stock",
+    "benchmark": "QQQ",
+    "group": "software_cloud",
+    "india_readthrough_tags": [
+      "it",
+      "cloud"
+    ],
+    "name": "Snowflake",
+    "symbol": "SNOW"
+  },
+  {
+    "asset_type": "stock",
+    "benchmark": "QQQ",
+    "group": "software_cloud",
+    "india_readthrough_tags": [
+      "it",
+      "ai"
+    ],
+    "name": "Palantir",
+    "symbol": "PLTR"
+  }
+]

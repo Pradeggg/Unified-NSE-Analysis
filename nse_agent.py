@@ -369,7 +369,7 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/monitor stop all","Stop ALL active monitors"),
     # ── Watchlist alert commands ───────────────────────────────────────────
     ("/alert list",       "List all price/RSI alerts"),
-    ("/alert add ",       "Add an alert: /alert add SYMBOL price_above 1500 [note]"),
+    ("/alert add ",       "Add alert: /alert add SYMBOL breakout  |  /alert add SYMBOL price_above 1500"),
     ("/alert del ",       "Delete an alert by ID: /alert del 1"),
     ("/alert check",      "Check all alerts against live prices/RSI now"),
     ("/alert monitor",    "Toggle background alert monitor (polls every 5 min, market hours)"),
@@ -1726,10 +1726,8 @@ def _check_monitor_alerts() -> None:
             _render_monitor_heartbeat(ev)
         elif ev.get("type") == "error":
             console.print(
-                console.print(
-                    f"  ⚠  Monitor '{ev.get('strategy')}' error: {ev.get('message')}",
-                    style="dim red", markup=False,
-                )
+                f"  ⚠  Monitor '{ev.get('strategy')}' error: {ev.get('message')}",
+                style="dim red", markup=False,
             )
 
 
@@ -1817,10 +1815,11 @@ def _handle_monitor_command(parts: list[str]) -> None:
             interval_min = interval,
             direction    = direction,
         )
-        console.print()
-        console.print(f"  {msg}", markup=False)
-        console.print(f"  [dim]Scanning: {index}  ·  Interval: {interval}m  ·  Direction: {direction}[/dim]")
-        console.print()
+        # Use sys.__stdout__ directly — Rich+prompt_toolkit cursor conflict can swallow console.print()
+        _out = sys.__stdout__ or sys.stdout
+        _out.write(f"\n  {msg}\n")
+        _out.write(f"  Scanning: {index}  ·  Interval: {interval}m  ·  Direction: {direction}\n\n")
+        _out.flush()
         return
 
     # Unknown subcommand
@@ -2264,7 +2263,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
                 from terminal.alerts import list_alerts
                 alerts = list_alerts()
                 if not alerts:
-                    console.print("[dim]  No alerts set. Use /alert add SYMBOL price_above 1500[/dim]")
+                    console.print("[dim]  No alerts set. Use /alert add SYMBOL breakout  or  /alert add SYMBOL price_above 1500[/dim]")
                 else:
                     from rich.table import Table
                     tbl = Table(title="🔔 Watchlist Alerts", show_header=True, header_style=_theme["header"])
@@ -2278,20 +2277,45 @@ def _chat_loop(agent, show_trace: bool) -> None:
                     console.print(tbl)
                 continue
 
-            elif sub == "add" and len(parts) >= 5:
-                # /alert add SYMBOL trigger value [note...]
-                sym = parts[2].upper()
+            elif sub == "add" and len(parts) >= 4:
+                # /alert add SYMBOL trigger [value] [note...]
+                # Breakout triggers don't need a value:
+                #   /alert add RELIANCE breakout
+                #   /alert add RELIANCE intraday_breakout
+                # Price/RSI/level triggers need a value:
+                #   /alert add RELIANCE price_above 1500
+                #   /alert add RELIANCE breakout_above 1580
+                sym     = parts[2].upper()
                 trigger = parts[3].lower()
-                try:
-                    val = float(parts[4])
-                except ValueError:
-                    console.print("[red]  Value must be a number[/red]")
+                _no_value_triggers = {
+                    "breakout", "orb", "intraday", "intraday_breakout",
+                }
+                if trigger in _no_value_triggers:
+                    val  = 0.0
+                    note = " ".join(parts[4:]) if len(parts) > 4 else ""
+                elif len(parts) >= 5:
+                    try:
+                        val = float(parts[4])
+                    except ValueError:
+                        console.print(
+                            f"[red]  Value must be a number for '{trigger}' trigger[/red]\n"
+                            "  [dim]Breakout triggers need no value: /alert add RELIANCE breakout[/dim]"
+                        )
+                        continue
+                    note = " ".join(parts[5:]) if len(parts) > 5 else ""
+                else:
+                    console.print(
+                        f"[red]  Missing value for trigger '{trigger}'[/red]\n"
+                        "  [dim]Usage: /alert add SYMBOL trigger value  "
+                        "  (breakout triggers: /alert add SYMBOL breakout)[/dim]"
+                    )
                     continue
-                note = " ".join(parts[5:]) if len(parts) > 5 else ""
                 from terminal.alerts import add_alert
                 try:
                     alert = add_alert(sym, trigger, val, note)
-                    console.print(f"[green]  ✅ Alert #{alert['id']} added: {sym} {trigger} {val}[/green]")
+                    label = alert["trigger"]
+                    val_str = f" {alert['value']}" if alert["value"] else ""
+                    console.print(f"[green]  ✅ Alert #{alert['id']} added: {sym} {label}{val_str}[/green]")
                 except ValueError as e:
                     console.print(f"[red]  {e}[/red]")
                 continue
@@ -2352,7 +2376,15 @@ def _chat_loop(agent, show_trace: bool) -> None:
                 continue
 
             else:
-                console.print("[dim]  Usage: /alert list | /alert add SYMBOL trigger value [note] | /alert del ID | /alert check | /alert monitor[/dim]")
+                console.print(
+                    "[dim]  Usage:[/dim]\n"
+                    "  [cyan]/alert list[/cyan]\n"
+                    "  [cyan]/alert add SYMBOL breakout[/cyan]           [dim]← 15m ORB auto-detect[/dim]\n"
+                    "  [cyan]/alert add SYMBOL price_above 1500[/cyan]   [dim]← price trigger[/dim]\n"
+                    "  [cyan]/alert add SYMBOL breakout_above 1580[/cyan][dim]← 15m break above level[/dim]\n"
+                    "  [cyan]/alert add SYMBOL rsi_above 70[/cyan]       [dim]← RSI trigger[/dim]\n"
+                    "  [cyan]/alert del ID | /alert check | /alert monitor[/cyan]"
+                )
                 continue
 
 

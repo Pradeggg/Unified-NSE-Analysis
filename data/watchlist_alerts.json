@@ -1,1 +1,18 @@
-[]
+[
+  {
+    "id": 1,
+    "symbol": "NIFTY",
+    "trigger": "rsi_above",
+    "value": 70.0,
+    "note": "in 15min timeframe",
+    "active": true
+  },
+  {
+    "id": 2,
+    "symbol": "TITAN",
+    "trigger": "intraday_breakout",
+    "value": 0.0,
+    "note": "",
+    "active": true
+  }
+]

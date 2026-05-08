@@ -366,8 +366,11 @@ def _build_chart_html(
     plotly_div: str,
     sr_count: int,
     ema_spans: list[int],
+    panel_traces: "dict[str, list[int]]",
 ) -> str:
     """Wrap Plotly chart div in a dark GitHub-style HTML page with toolbar."""
+    import json as _json
+
     ema_btns = " ".join(
         f'<button class="tb-btn active" data-name="EMA {s}" '
         f"onclick=\"toggleTrace('EMA {s}')\">EMA{s}</button>"
@@ -376,7 +379,19 @@ def _build_chart_html(
     sr_label  = f"S/R ({sr_count})" if sr_count else "S/R"
     sr_active = "active" if sr_count else ""
 
+    # Indicator panel toggle buttons (only for panels that were actually added)
+    _panel_order = [("volume", "Volume"), ("rsi", "RSI"), ("stoch", "Stoch"), ("macd", "MACD")]
+    panel_btns = " ".join(
+        f'<button class="tb-btn active" data-panel="{key}" onclick="togglePanel(\'{key}\')">{label}</button>'
+        for key, label in _panel_order
+        if key in panel_traces
+    )
+    # JS data for panel → trace indices mapping
+    pt_json        = _json.dumps(panel_traces)
+    active_json    = _json.dumps([k for k, _ in _panel_order if k in panel_traces])
+
     css = (
+        "@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');"
         "body{margin:0;background:#0d1117;font-family:'Inter',system-ui,sans-serif;"
         "color:#e6edf3;overflow-x:hidden}"
         "#toolbar{padding:8px 14px;background:#161b22;border-bottom:1px solid #30363d;"
@@ -391,48 +406,82 @@ def _build_chart_html(
         ".tb-btn.active{background:#1f6feb;color:#fff;border-color:#1f6feb}"
         ".tb-btn:hover:not(.active){background:#30363d;color:#e6edf3}"
         ".tb-shortcut{font-size:10px;color:#484f58;margin-left:auto;white-space:nowrap}"
+        ".plotly-graph-div{display:block!important}"
     )
 
     sr_vis_init = "true" if sr_count else "false"
     js = (
         "var _gd=document.getElementById('chart');"
         "var _srVisible=" + sr_vis_init + ";"
+        # ── Panel-toggle state ────────────────────────────────────────────────
+        f"var _PT={pt_json};"
+        f"var _activePanels={active_json};"
+        # Redistributes y-axis domains whenever a panel is shown/hidden
+        "function _computeDomains(active){"
+        "var W={price:0.50,volume:0.10,rsi:0.13,stoch:0.13,macd:0.14},SP=0.025;"
+        "var order=['macd','stoch','rsi','volume','price'].filter(function(p){"
+        "  return p==='price'||active.indexOf(p)>=0;});"
+        "var totalW=order.reduce(function(s,p){return s+W[p];},0);"
+        "var usable=1.0-SP*(order.length-1),y=0.0,dom={};"
+        "order.forEach(function(p){"
+        "  var h=W[p]/totalW*usable;"
+        "  dom[p]=[Math.round(y*1e4)/1e4,Math.round((y+h)*1e4)/1e4];y+=h+SP;});"
+        "var AX={price:'',volume:'2',rsi:'3',stoch:'4',macd:'5'};"
+        "var LABELS={volume:'Volume',rsi:'RSI (14)',stoch:'Stoch (14,3)',macd:'MACD (12,26,9)'};"
+        "var upd={};"
+        "['price','volume','rsi','stoch','macd'].forEach(function(p){"
+        "  var ax='yaxis'+AX[p];"
+        "  if(dom[p]){upd[ax+'.domain']=dom[p];upd[ax+'.visible']=true;}"
+        "  else{upd[ax+'.domain']=[0,0.001];upd[ax+'.visible']=false;}});"
+        "upd['annotations']=['volume','rsi','stoch','macd']"
+        "  .filter(function(p){return !!dom[p];})"
+        "  .map(function(p){return{font:{size:11,color:'#8b949e'},showarrow:false,"
+        "    text:LABELS[p],x:0.5,xanchor:'center',xref:'paper',"
+        "    y:dom[p][0],yanchor:'bottom',yref:'paper'};});"
+        "return upd;}"
+        "function togglePanel(panel){"
+        "  var i=_activePanels.indexOf(panel);"
+        "  if(i>=0)_activePanels.splice(i,1); else _activePanels.push(panel);"
+        "  var allT=Object.keys(_PT).reduce(function(a,k){return a.concat(_PT[k]);},[]);"
+        "  var visT=_activePanels.reduce(function(a,k){return _PT[k]?a.concat(_PT[k]):a;},[]);"
+        "  var hideT=allT.filter(function(x){return visT.indexOf(x)<0;});"
+        "  if(hideT.length)Plotly.restyle(_gd,{visible:false},hideT);"
+        "  if(visT.length)Plotly.restyle(_gd,{visible:true},visT);"
+        "  Plotly.relayout(_gd,_computeDomains(_activePanels));"
+        "  var btn=document.querySelector('[data-panel=\"'+panel+'\"]');"
+        "  if(btn)btn.classList.toggle('active',_activePanels.indexOf(panel)>=0);}"
+        # ── Overlay / EMA toggles ─────────────────────────────────────────────
         "function _getIdxs(name){"
-        "  if(!_gd||!_gd.data) return [];"
-        "  var r=[];_gd.data.forEach(function(t,i){if(t.name===name)r.push(i);});return r;"
-        "}"
+        "  if(!_gd||!_gd.data)return [];"
+        "  var r=[];_gd.data.forEach(function(t,i){if(t.name===name)r.push(i);});return r;}"
         "function toggleTrace(name){"
         "  var ids=_getIdxs(name);if(!ids.length)return;"
-        "  var cur=_gd.data[ids[0]].visible;"
-        "  var nxt=(cur===false)?true:false;"
+        "  var nxt=(_gd.data[ids[0]].visible===false)?true:false;"
         "  Plotly.restyle(_gd,{visible:nxt},ids);"
         "  document.querySelectorAll('[data-name=\"'+name+'\"]').forEach(function(b){"
-        "    b.classList.toggle('active',nxt!==false);"
-        "  });"
-        "}"
+        "    b.classList.toggle('active',nxt!==false);});}"
+        # ── Chart type switching ──────────────────────────────────────────────
         "var _CT=['Candlestick','OHLC','Price','Heikin Ashi'];"
         "function setChartType(name){"
         "  var ids=[],vis=[];"
         "  _CT.forEach(function(n){var i=_getIdxs(n);if(i.length){ids.push(i[0]);vis.push(n===name);}});"
         "  Plotly.restyle(_gd,{visible:vis},ids);"
         "  document.querySelectorAll('.tb-ctype').forEach(function(b){"
-        "    b.classList.toggle('active',b.dataset.name===name);"
-        "  });"
-        "}"
+        "    b.classList.toggle('active',b.dataset.name===name);});}"
+        # ── S/R toggle ────────────────────────────────────────────────────────
         "function toggleSR(){"
         "  var ids=[];if(_gd&&_gd.data)_gd.data.forEach(function(t,i){if(t.name==='S/R')ids.push(i);});"
         "  _srVisible=!_srVisible;"
         "  if(ids.length)Plotly.restyle(_gd,{visible:_srVisible},ids);"
         "  var b=document.getElementById('sr-btn');"
-        "  if(b)b.classList.toggle('active',_srVisible);"
-        "}"
+        "  if(b)b.classList.toggle('active',_srVisible);}"
+        # ── Keyboard shortcuts ────────────────────────────────────────────────
         "document.addEventListener('keydown',function(e){"
         "  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')return;"
         "  if(e.key==='1')setChartType('Candlestick');"
         "  else if(e.key==='2')setChartType('OHLC');"
         "  else if(e.key==='3')setChartType('Price');"
-        "  else if(e.key==='4')setChartType('Heikin Ashi');"
-        "});"
+        "  else if(e.key==='4')setChartType('Heikin Ashi');});"
     )
 
     return (
@@ -457,7 +506,10 @@ def _build_chart_html(
         "  <button class=\"tb-btn active\" data-name=\"BB Bands\" onclick=\"toggleTrace('BB Bands')\">BB</button>"
         "  <button class=\"tb-btn active\" data-name=\"Supertrend\" onclick=\"toggleTrace('Supertrend')\">Supertrend</button>"
         f"  <button class=\"tb-btn {sr_active}\" id=\"sr-btn\" onclick=\"toggleSR()\">{sr_label}</button>"
-        "  <span class=\"tb-shortcut\">Keys: 1=Candle &middot; 2=OHLC &middot; 3=Line &middot; 4=Heikin Ashi</span>"
+        "  <div class=\"tb-sep\"></div>"
+        "  <span class=\"tb-label\">Panels</span>"
+        f"  {panel_btns}"
+        "  <span class=\"tb-shortcut\">Keys: 1=Candle &middot; 2=OHLC &middot; 3=Line &middot; 4=HA</span>"
         "</div>\n"
         f"{plotly_div}\n"
         f"<script>{js}</script>\n"
@@ -511,10 +563,8 @@ def render_html_chart(
         shared_xaxes=True,
         vertical_spacing=0.02,
         row_heights=[0.50, 0.10, 0.13, 0.13, 0.14],
-        subplot_titles=[
-            f"{symbol.upper()} — {timeframe.upper()}",
-            "Volume", "RSI (14)", "Stoch (14,3)", "MACD (12,26,9)",
-        ],
+        # Empty string for row-1 — title lives in layout.title, not here
+        subplot_titles=["", "Volume", "RSI (14)", "Stoch (14,3)", "MACD (12,26,9)"],
     )
 
     # ── Row 1: four chart types ──────────────────────────────────────────────
@@ -615,7 +665,9 @@ def render_html_chart(
             sr_count += 1
 
     # ── Row 2: Volume ────────────────────────────────────────────────────────
+    panel_traces: dict[str, list[int]] = {}
     vol_colors = [up_color if c >= o else down_color for c, o in zip(closes, opens)]
+    panel_traces["volume"] = [len(fig.data)]
     fig.add_trace(go.Bar(
         x=dates_raw, y=vols, marker_color=vol_colors,
         name="Volume", showlegend=False,
@@ -623,6 +675,7 @@ def render_html_chart(
 
     # ── Row 3: RSI(14) ───────────────────────────────────────────────────────
     rsi_vals = _rsi(closes, 14)
+    panel_traces["rsi"] = [len(fig.data)]
     fig.add_trace(go.Scatter(
         x=dates_raw, y=rsi_vals,
         line=dict(color="#F9A825", width=1.5),
@@ -636,6 +689,7 @@ def render_html_chart(
 
     # ── Row 4: Stochastic(14,3) ───────────────────────────────────────────────
     stoch_k, stoch_d = _stoch(highs, lows, closes)
+    panel_traces["stoch"] = [len(fig.data), len(fig.data) + 1]
     fig.add_trace(go.Scatter(
         x=dates_raw, y=stoch_k,
         line=dict(color="#42A5F5", width=1.5),
@@ -656,6 +710,7 @@ def render_html_chart(
     # ── Row 5: MACD(12,26,9) ─────────────────────────────────────────────────
     macd_line, sig_line, hist_vals = _macd(closes)
     hist_colors = [up_color if h >= 0 else down_color for h in hist_vals]
+    panel_traces["macd"] = [len(fig.data), len(fig.data) + 1, len(fig.data) + 2]
     fig.add_trace(go.Bar(
         x=dates_raw, y=hist_vals, marker_color=hist_colors,
         name="MACD Hist", showlegend=False, opacity=0.7,
@@ -690,33 +745,45 @@ def render_html_chart(
             ),
             font=dict(size=17, color="#e6edf3"),
             x=0.01,
+            y=0.99,
+            yanchor="top",
         ),
         paper_bgcolor="#0d1117",
         plot_bgcolor="#0d1117",
         font=dict(family="Inter, system-ui, sans-serif", size=12, color="#8b949e"),
+        # Legend inside the top-right of the price pane — no collision with title
+        showlegend=True,
         legend=dict(
-            bgcolor="rgba(13,17,23,0.85)",
+            bgcolor="rgba(13,17,23,0.8)",
             bordercolor="#30363d", borderwidth=1,
-            font=dict(size=11),
-            orientation="h", yanchor="bottom", y=1.01, xanchor="left", x=0,
+            font=dict(size=10, color="#c9d1d9"),
+            orientation="h",
+            yanchor="top", y=0.99,
+            xanchor="right", x=0.99,
         ),
         xaxis_rangeslider_visible=False,
         hovermode="x unified",
         hoverlabel=dict(bgcolor="#161b22", bordercolor="#30363d",
                         font=dict(color="#e6edf3", size=12)),
-        margin=dict(l=60, r=60, t=80, b=40),
+        margin=dict(l=10, r=70, t=60, b=30),
         height=920,
+        autosize=True,
+    )
+
+    # Style subplot title annotations — make them legible on dark background
+    fig.update_annotations(
+        font=dict(size=11, color="#8b949e"),
     )
 
     axis_style = dict(
         gridcolor="#21262d", gridwidth=1,
         linecolor="#30363d", tickcolor="#30363d",
-        tickfont=dict(color="#6e7681", size=11),
+        tickfont=dict(color="#6e7681", size=10),
         zerolinecolor="#30363d", showgrid=True,
     )
     for i in range(1, n_rows + 1):
         fig.update_xaxes(axis_style, row=i, col=1)
-        fig.update_yaxes({**axis_style, "side": "right"}, row=i, col=1)
+        fig.update_yaxes({**axis_style, "side": "right", "ticklen": 4}, row=i, col=1)
 
     # Crosshair spike lines
     for i in range(1, n_rows + 1):
@@ -743,12 +810,13 @@ def render_html_chart(
         config={
             "scrollZoom": True,
             "displayModeBar": True,
+            "responsive": True,
             "modeBarButtonsToAdd": ["drawline", "drawopenpath", "eraseshape"],
             "modeBarButtonsToRemove": ["lasso2d", "select2d"],
         },
     )
 
-    html = _build_chart_html(symbol, timeframe, plotly_div, sr_count, ema_spans_added)
+    html = _build_chart_html(symbol, timeframe, plotly_div, sr_count, ema_spans_added, panel_traces)
     _HTML_CHART_DIR.mkdir(parents=True, exist_ok=True)
     fname = f"{symbol.upper()}_{timeframe}.html"
     fpath = _HTML_CHART_DIR / fname

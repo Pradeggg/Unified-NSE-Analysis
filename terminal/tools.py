@@ -196,17 +196,49 @@ def _supertrend(grp: pd.DataFrame, period: int = 10, mult: float = 3.0) -> str |
     return "BUY" if direction == 1 else "SELL"
 
 
+# F&O index alias mapping — maps common user names to NSE derivatives symbols
+_FO_INDEX_ALIASES: dict[str, str] = {
+    # MIDCPNIFTY (Nifty Midcap Select)
+    "NIFTY MIDCAP":            "MIDCPNIFTY",
+    "NIFTY MIDCAP 50":         "MIDCPNIFTY",
+    "NIFTY MIDCAP SELECT":     "MIDCPNIFTY",
+    "NIFTY MIDCAP100":         "MIDCPNIFTY",
+    "NIFTY MIDCAP 100":        "MIDCPNIFTY",
+    "MIDCAP NIFTY":            "MIDCPNIFTY",
+    "MIDCPNIFTY":              "MIDCPNIFTY",
+    # BANKNIFTY
+    "NIFTY BANK":              "BANKNIFTY",
+    "BANK NIFTY":              "BANKNIFTY",
+    "BANKNIFTY":               "BANKNIFTY",
+    # FINNIFTY
+    "NIFTY FINANCIAL":         "FINNIFTY",
+    "NIFTY FINANCIAL SERVICES": "FINNIFTY",
+    "NIFTY FIN":               "FINNIFTY",
+    "FINNIFTY":                "FINNIFTY",
+    # NIFTY
+    "NIFTY":                   "NIFTY",
+    "NIFTY 50":                "NIFTY",
+    "NIFTY50":                 "NIFTY",
+    # NIFTY NEXT 50
+    "NIFTY NEXT 50":           "NIFTYNXT50",
+    "NIFTY NXT 50":            "NIFTYNXT50",
+    "NIFTYNXT50":              "NIFTYNXT50",
+}
+
+
 def _all_symbols_map() -> dict[str, str]:
     """Return {normalized_name: symbol, symbol: symbol} for fuzzy resolution."""
+    # Start with F&O index aliases — always available
+    mapping: dict[str, str] = dict(_FO_INDEX_ALIASES)
+
     if not DB_PATH.exists():
-        return {}
+        return mapping
     conn = _db_conn()
     rows = conn.execute(
         "SELECT DISTINCT symbol, company_name FROM stage_snapshots "
         "WHERE snapshot_date=(SELECT MAX(snapshot_date) FROM stage_snapshots)"
     ).fetchall()
     conn.close()
-    mapping: dict[str, str] = {}
     for sym, name in rows:
         mapping[sym.upper()] = sym.upper()
         if name:
@@ -1591,6 +1623,44 @@ def search_latest_catalysts(symbol: str, max_results: int = 5) -> dict:
                     "snippet": r.get("snippet", ""),
                 })
 
+        # Fetch article content for top results — gives LLM real text to summarize
+        for item in results[:3]:
+            url = item.get("url", "")
+            if not url:
+                continue
+            try:
+                art_resp = requests.get(
+                    url,
+                    headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"},
+                    timeout=6,
+                    allow_redirects=True,
+                )
+                if art_resp.status_code == 200 and "text/html" in art_resp.headers.get("Content-Type", ""):
+                    from bs4 import BeautifulSoup
+                    soup = BeautifulSoup(art_resp.text, "lxml")
+                    # Remove noise: scripts, styles, nav, ads, footers
+                    for tag in soup(["script", "style", "nav", "footer", "header",
+                                     "aside", "iframe", "form", "noscript"]):
+                        tag.decompose()
+                    # Extract article body — try common selectors first
+                    body = (
+                        soup.select_one("article") or
+                        soup.select_one('[class*="article"]') or
+                        soup.select_one('[class*="story"]') or
+                        soup.select_one('[class*="content"]') or
+                        soup.select_one("main") or
+                        soup.body
+                    )
+                    if body:
+                        text = body.get_text(separator="\n", strip=True)
+                        # Clean up: collapse whitespace, take first ~2000 chars
+                        import re as _re
+                        text = _re.sub(r'\n{3,}', '\n\n', text)
+                        text = _re.sub(r'[ \t]{2,}', ' ', text)
+                        item["article_text"] = text[:2000]
+            except Exception:
+                pass  # Fetch failed — snippet is still available
+
         return {
             "symbol":  symbol.upper(),
             "company": company,
@@ -1601,6 +1671,66 @@ def search_latest_catalysts(symbol: str, max_results: int = 5) -> dict:
         }
     except Exception as e:
         return {"symbol": symbol.upper(), "error": str(e), "results": []}
+
+
+def fetch_article_content(url: str, max_chars: int = 3000) -> dict:
+    """Fetch and extract readable text from a news article URL.
+
+    Strips navigation, ads, footers — returns clean article body text.
+    Use this to read full articles found via search tools when you need
+    deeper context for summary and opinion.
+    """
+    import requests
+    try:
+        resp = requests.get(
+            url,
+            headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"},
+            timeout=8,
+            allow_redirects=True,
+        )
+        if resp.status_code != 200:
+            return {"url": url, "error": f"HTTP {resp.status_code}"}
+        if "text/html" not in resp.headers.get("Content-Type", ""):
+            return {"url": url, "error": "Not an HTML page"}
+
+        from bs4 import BeautifulSoup
+        import re as _re
+        soup = BeautifulSoup(resp.text, "lxml")
+        # Remove noise
+        for tag in soup(["script", "style", "nav", "footer", "header",
+                         "aside", "iframe", "form", "noscript"]):
+            tag.decompose()
+        # Try common article selectors, fall back to body
+        body = (
+            soup.select_one("article") or
+            soup.select_one('[class*="article"]') or
+            soup.select_one('[class*="story"]') or
+            soup.select_one('[class*="content"]') or
+            soup.select_one("main") or
+            soup.body
+        )
+        if not body:
+            return {"url": url, "error": "No readable content found"}
+
+        text = body.get_text(separator="\n", strip=True)
+        text = _re.sub(r'\n{3,}', '\n\n', text)
+        text = _re.sub(r'[ \t]{2,}', ' ', text)
+
+        # Extract title
+        title = ""
+        title_tag = soup.find("title")
+        if title_tag:
+            title = title_tag.get_text(strip=True)
+
+        return {
+            "url": url,
+            "title": title,
+            "text": text[:max_chars],
+            "truncated": len(text) > max_chars,
+            "total_chars": len(text),
+        }
+    except Exception as e:
+        return {"url": url, "error": str(e)}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -3829,7 +3959,9 @@ TOOL_REGISTRY: dict[str, Any] = {
     ),
     "search_latest_catalysts": (
         search_latest_catalysts,
-        "Search for recent news and catalysts for a stock symbol via web search",
+        "Search for recent news and catalysts for a stock symbol via web search. "
+        "Fetches actual article content from top 3 results — read the 'article_text' "
+        "field to provide detailed summary and opinion.",
         {
             "type": "object",
             "properties": {
@@ -5015,6 +5147,22 @@ TOOL_REGISTRY.update({
                 "format": {"type": "string", "enum": ["html", "pdf"], "default": "html"},
                 "symbol": {"type": "string"},
             },
+        },
+    ),
+    "fetch_article_content": (
+        fetch_article_content,
+        (
+            "Fetch and read the full text of a news article from its URL. "
+            "Use this to get deeper context from articles found via search tools "
+            "when you need to provide a thorough summary and opinion."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "url":       {"type": "string", "description": "Full URL of the article to fetch"},
+                "max_chars": {"type": "integer", "default": 3000},
+            },
+            "required": ["url"],
         },
     ),
 })

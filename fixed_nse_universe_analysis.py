@@ -606,7 +606,7 @@ def analyze_stocks(stock_data, index_data, fundamental_data, company_names, late
     error_count = 0
     
     # Get NIFTY500 index data for relative strength calculation
-    nifty500_data = index_data[index_data['SYMBOL'] == 'NIFTY 500'].copy() if 'SYMBOL' in index_data.columns else None
+    nifty500_data = index_data[index_data['SYMBOL'].str.upper() == 'NIFTY 500'].copy() if 'SYMBOL' in index_data.columns else None
     
     for idx, stock_row in filtered_stocks.iterrows():
         symbol = stock_row['SYMBOL']
