@@ -2417,15 +2417,25 @@ def _chat_loop(agent, show_trace: bool) -> None:
             proc = _sp.Popen(cmd, stdout=_log_file, stderr=_sp.STDOUT, env=_env)
             _chat_loop._refresh_proc = proc
 
-            # Background thread to notify when done
-            def _watch(p, lf, label):
-                p.wait()
-                lf.close()
+            # Background thread — use sys.__stdout__ directly (avoid Rich console threading issues)
+            def _watch(p, lf, label, lp):
+                try:
+                    p.wait()
+                finally:
+                    try:
+                        lf.close()
+                    except Exception:
+                        pass
                 rc = p.returncode
                 icon = "✅" if rc == 0 else "❌"
-                console.print(f"\n  {icon} [bold]Refresh complete[/bold] ({label}) — exit code {rc}")
-                console.print(f"  [dim]Check log: {log_path}[/dim]\n")
-            _thr.Thread(target=_watch, args=(proc, _log_file, mode_label), daemon=True).start()
+                msg = f"\n  {icon} Refresh complete ({label}) — exit code {rc}\n  Log: {lp}\n"
+                try:
+                    import sys as _sys
+                    (_sys.__stdout__ or _sys.stdout).write(msg)
+                    (_sys.__stdout__ or _sys.stdout).flush()
+                except Exception:
+                    pass
+            _thr.Thread(target=_watch, args=(proc, _log_file, mode_label, str(log_path)), daemon=True).start()
             continue
 
         # ── /export — export session to HTML/PDF ──────────────────────
