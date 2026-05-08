@@ -456,7 +456,18 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/export",           "Export session to HTML report"),
     ("/export html",      "Export session to HTML file (opens in browser)"),
     ("/export pdf",       "Export session to PDF (requires weasyprint or pdfkit)"),
-    ("/help",             "Show all commands"),
+    ("/help",             "Show all commands (table of contents)"),
+    ("/help charts",      "Help: charts section"),
+    ("/help screens",     "Help: EOD screeners"),
+    ("/help scan",        "Help: intraday scanner"),
+    ("/help fno",         "Help: F&O / options"),
+    ("/help search",      "Help: deep search engine"),
+    ("/help forensic",    "Help: forensic accounting"),
+    ("/help monitors",    "Help: background monitors & alerts"),
+    ("/help ric",         "Help: recursive investigations"),
+    ("/help refresh",     "Help: data refresh"),
+    ("/help appearance",  "Help: themes & scale"),
+    ("/help macro",       "Help: seasonal & macro"),
     # ── Theme / scale commands ─────────────────────────────────────────────
     ("/theme ",           "Show available color themes"),
     ("/theme dark",       "Switch to Dark theme (default)"),
@@ -2208,8 +2219,9 @@ def _chat_loop(agent, show_trace: bool) -> None:
             continue
 
         # ── Utility commands ───────────────────────────────────────────
-        if text.lower() in ("/help", "?", "/h"):
-            _print_help()
+        if text.lower() in ("/help", "?", "/h") or text.lower().startswith("/help "):
+            from terminal.help import print_help as _ph
+            _ph(console, text[5:].strip() if text.lower().startswith("/help ") else "")
             continue
         if text.lower() in ("/clear", "clear", "cls"):
             _followups = []

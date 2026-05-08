@@ -1,0 +1,467 @@
+"""
+terminal/help.py — First-class help system for Agent Adda
+  /help             → compact TOC
+  /help <section>   → full section detail
+  /help <keyword>   → search across all commands + descriptions
+"""
+from __future__ import annotations
+from typing import NamedTuple
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+from rich.text import Text
+from rich import box
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Help data model
+# ─────────────────────────────────────────────────────────────────────────────
+
+class HelpEntry(NamedTuple):
+    cmd: str          # e.g. "/chart RELIANCE 6mo"
+    desc: str         # short description
+    section: str      # section key
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# All help entries — one source of truth
+# ─────────────────────────────────────────────────────────────────────────────
+
+SECTIONS: dict[str, dict] = {
+    "modes": {
+        "title":  "Mode Commands",
+        "icon":   "🔀",
+        "color":  "cyan",
+        "aliases": ["mode", "modes", "live", "eod", "auto"],
+        "entries": [
+            ("/live  or  /l",       "Live / Intraday  (real-time NSE API)"),
+            ("/eod  or  /e",        "EOD / Historical (CSV + DB snapshot)"),
+            ("/auto  or  /a",       "Auto-detect from query keywords"),
+        ],
+    },
+    "screens": {
+        "title":  "EOD Screeners",
+        "icon":   "🔎",
+        "color":  "cyan",
+        "aliases": ["screen", "screener", "screeners", "stage2", "momentum", "rs"],
+        "entries": [
+            ("/screen stage2",      "Stage 2 uptrend stocks (William O'Neil buy zone)"),
+            ("/screen momentum",    "Near-52W-high momentum leaders"),
+            ("/screen highrs",      "High RS + change_1m > 8% market leaders"),
+            ("/screen turnaround",  "Dip recovery setups — RSI 40–65, rising"),
+            ("/screen base",        "Stage 1 basing/coiling — pre-breakout"),
+            ("/screen tight",       "Tight weekly range (VCP-like consolidation)"),
+            ("/screen dip",         "Oversold bounce in Stage 2 — RSI < 40"),
+            ("/screen supertrend",  "Supertrend BULLISH state + Stage 1/2"),
+            ("/screen strong",      "HOLD/BUY + Stage 2 + BULLISH supertrend"),
+            ("/screen new",         "New Stage 2 entrants (last 14 days)"),
+        ],
+    },
+    "scan": {
+        "title":  "Intraday Scanner",
+        "icon":   "⚡",
+        "color":  "green",
+        "aliases": ["scan", "intraday", "orb", "vwap", "gap", "macd", "vcp"],
+        "entries": [
+            ("/scan",                       "Scan NIFTY 50 — all strategies, 15m candles"),
+            ("/scan NIFTY BANK",            "Scan any index (NIFTY IT, PHARMA, MIDCAP…)"),
+            ("/scan orb",                   "Opening Range Breakout"),
+            ("/scan gap",                   "Gap & Go continuation"),
+            ("/scan macd",                  "MACD Crossover"),
+            ("/scan rsi",                   "RSI Divergence + Bollinger"),
+            ("/scan bb",                    "Bollinger Band Squeeze"),
+            ("/scan vwap",                  "VWAP Reclaim/Loss"),
+            ("/scan vcp",                   "VCP Contraction Pattern"),
+            ("/scan momentum",              "MACD + RSI + Supertrend aligned"),
+        ],
+    },
+    "charts": {
+        "title":  "Charts",
+        "icon":   "📈",
+        "color":  "green",
+        "aliases": ["chart", "charts", "html", "ascii", "candle"],
+        "entries": [
+            ("/chart RELIANCE",             "ASCII candlestick (3mo, volume + RSI)"),
+            ("/chart NIFTY 6mo rsi macd",   "Custom timeframe + indicators"),
+            ("/chart RELIANCE --html",       "Interactive HTML chart → browser"),
+            ("/chart NIFTY 1y --html",       "1-year interactive HTML chart"),
+            ("",                            "Timeframes: 1d · 5d · 1mo · 3mo · 6mo · 1y · 2y"),
+            ("",                            "Indicators: volume · rsi · macd"),
+        ],
+    },
+    "fno": {
+        "title":  "F&O / Options",
+        "icon":   "📊",
+        "color":  "yellow",
+        "aliases": ["fno", "options", "chain", "oi", "pcr", "straddle", "greeks"],
+        "entries": [
+            ("/options NIFTY",                      "Live options chain (PCR, max pain, IV)"),
+            ("/options BANKNIFTY",                  "BANKNIFTY options chain (nearest expiry)"),
+            ("/options NIFTY 1",                    "NIFTY next expiry (index 1)"),
+            ("/chain NIFTY",                        "Full chain: OI, greeks, PCR, max pain"),
+            ("/oi NIFTY",                           "OI analysis (support/resistance, PCR)"),
+            ("/fno NIFTY",                          "Full F&O overview (chain + futures + strategy)"),
+            ("/strategy NIFTY long_straddle",       "Build a specific options strategy"),
+            ("/strategy NIFTY bull_call_spread",    "Bull call spread with pricing"),
+            ("",                                    "Strategies: long_call · long_put · bull_call_spread · bear_put_spread · long_straddle · long_strangle · iron_condor · covered_call · protective_put · calendar_spread"),
+        ],
+    },
+    "search": {
+        "title":  "Deep Search Engine",
+        "icon":   "🔍",
+        "color":  "magenta",
+        "aliases": ["search", "deep", "news", "insider", "analyst", "broker", "mf", "concall", "social", "shareholding"],
+        "entries": [
+            ("/search RELIANCE",                "Full deep-dive (11 parallel verticals)"),
+            ("/search RELIANCE dividend",       "Dividends, splits, bonuses (NSE live)"),
+            ("/search RELIANCE insider",        "Insider/promoter trade disclosures"),
+            ("/search RELIANCE shareholding",   "Promoter/FII/DII/pledge trend"),
+            ("/search RELIANCE analyst",        "Analyst targets + broker reports"),
+            ("/search RELIANCE broker",         "Broker house research & price targets"),
+            ("/search RELIANCE mf",             "Mutual fund & institutional holdings"),
+            ("/search RELIANCE concall",        "Concall transcripts & mgmt commentary"),
+            ("/search RELIANCE news",           "6-portal sector news pulse"),
+            ("/search RELIANCE social",         "Reddit, Valuepickr, Traderji buzz"),
+        ],
+    },
+    "forensic": {
+        "title":  "Forensic Accounting",
+        "icon":   "🧪",
+        "color":  "red",
+        "aliases": ["forensic", "beneish", "piotroski", "altman", "fraud", "quality"],
+        "entries": [
+            ("/forensic RELIANCE",          "Beneish M-score + Piotroski F-score + Altman Z'"),
+            ("/forensic TCS INFY WIPRO",    "Forensic screen across multiple stocks"),
+            ("",                            "Beneish M > -1.78 = manipulation risk"),
+            ("",                            "Piotroski F: 7+ = strong, 0–3 = weak"),
+            ("",                            "Altman Z' < 1.1 = distress zone"),
+        ],
+    },
+    "events": {
+        "title":  "Event Calendar",
+        "icon":   "📅",
+        "color":  "yellow",
+        "aliases": ["events", "calendar", "dividends", "results", "agm", "board"],
+        "entries": [
+            ("/events",                 "Upcoming events for NIFTY 50 (next 14 days)"),
+            ("/events NIFTY 50",        "Dividends, splits, results, AGMs, board meetings"),
+            ("/events RELIANCE",        "Upcoming events for a specific stock"),
+            ("/events NIFTY 50 30",     "Extend window to 30 days"),
+        ],
+    },
+    "macro": {
+        "title":  "Seasonal & Macro",
+        "icon":   "🌡",
+        "color":  "blue",
+        "aliases": ["heat", "cycle", "scenario", "narrative", "voice", "macro", "seasonal", "concall", "global"],
+        "entries": [
+            ("/heat",                   "Sector seasonal heatmap (current month)"),
+            ("/heat 3",                 "Seasonal signals for March"),
+            ("/cycle",                  "Economic cycle phase + sector positioning"),
+            ("/scenario TCS",           "What-if price scenarios for TCS"),
+            ("/narrative",              "Portfolio investment narratives"),
+            ("/narrative TCS INFY",     "Narratives for specific stocks"),
+            ("/voice",                  "Generate daily voice briefing (MP3)"),
+            ("/concall TCS",            "Concall NLP: sentiment + themes + guidance"),
+            ("/global",                 "Global risk regime and India read-through"),
+        ],
+    },
+    "monitors": {
+        "title":  "Background Monitors",
+        "icon":   "🔔",
+        "color":  "magenta",
+        "aliases": ["monitor", "monitors", "alert", "alerts", "background", "notification"],
+        "entries": [
+            ("/monitor list",                       "Show available strategies"),
+            ("/monitor status",                     "Show active monitors"),
+            ("/monitor start breakout",             "Start breakout alert every 15m"),
+            ("/monitor start all 15 buy",           "All strategies, 15m, BUY only"),
+            ("/monitor start momentum NIFTY BANK 10", "Custom index + interval"),
+            ("/monitor stop breakout",              "Stop a specific monitor"),
+            ("/monitor stop all",                   "Stop all monitors"),
+            ("/alert add RELIANCE price > 1500",    "Add watchlist price alert"),
+            ("/alert list",                         "Show all active alerts"),
+            ("/alert monitor",                      "Start background alert polling"),
+        ],
+    },
+    "ric": {
+        "title":  "RIC — Recursive Investigations",
+        "icon":   "🕵",
+        "color":  "yellow",
+        "aliases": ["ric", "recursive", "investigation", "sherlock", "xray", "earnings"],
+        "entries": [
+            ("/ric",                                "Show all 8 prebuilt RICs"),
+            ("/ric sherlock RELIANCE",              "5-step stock investigation"),
+            ("/ric sector-xray IT",                 "4-step sector deep dive"),
+            ("/ric earnings-playbook TCS",          "5-step earnings analysis"),
+            ("/ric breakout-hunter",                "5-step breakout scan"),
+            ("/ric morning-intel",                  "5-step morning briefing"),
+            ("/ric risk-radar",                     "4-step risk assessment"),
+            ("/ric index-pulse NIFTY BANK",         "4-step index analysis"),
+            ("/ric peer-battle TCS,INFY,WIPRO",     "4-step peer comparison"),
+        ],
+    },
+    "portfolio": {
+        "title":  "Portfolio & P&L",
+        "icon":   "💼",
+        "color":  "green",
+        "aliases": ["pnl", "portfolio", "holdings", "profit", "loss"],
+        "entries": [
+            ("/pnl",                        "Live portfolio P&L from data/holdings.csv"),
+            ("",                            "Edit data/holdings.csv: symbol, qty, avg_cost, buy_date"),
+        ],
+    },
+    "prompts": {
+        "title":  "Prompt Library",
+        "icon":   "📚",
+        "color":  "yellow",
+        "aliases": ["prompts", "prompt", "library", "p7", "p23"],
+        "entries": [
+            ("/prompts",                "Browse 60 curated prompts"),
+            ("/prompts intraday",       "Filter by category"),
+            ("p<number>",               "Run prompt by number  (e.g. p7, p23)"),
+        ],
+    },
+    "refresh": {
+        "title":  "Data Refresh",
+        "icon":   "🔄",
+        "color":  "green",
+        "aliases": ["refresh", "pipeline", "data", "snapshot", "bhavcopy"],
+        "entries": [
+            ("/refresh",                "Fast snapshot refresh (stage DB, ~1–2 min)"),
+            ("/refresh live",           "Live prices only (~30s)"),
+            ("/refresh full",           "Full pipeline: R bhavcopy → analysis → snapshot"),
+            ("/refresh analysis",       "Analysis + snapshot (skips aux fetch)"),
+            ("/refresh status",         "Check if refresh is running"),
+            ("/refresh stop",           "Cancel a running refresh"),
+        ],
+    },
+    "export": {
+        "title":  "Session Export",
+        "icon":   "📤",
+        "color":  "cyan",
+        "aliases": ["export", "pdf", "html", "save", "session"],
+        "entries": [
+            ("/export",                 "Export session to HTML (dark-theme)"),
+            ("/export pdf",             "Export session to PDF"),
+            ("/export html RELIANCE",   "Tag export with a symbol name"),
+        ],
+    },
+    "appearance": {
+        "title":  "Appearance",
+        "icon":   "🎨",
+        "color":  "magenta",
+        "aliases": ["theme", "scale", "appearance", "color", "font", "size", "dracula", "nord", "solarized"],
+        "entries": [
+            ("/theme",              "Browse & switch color themes"),
+            ("/theme dracula",      "Switch to Dracula theme"),
+            ("/theme dark",         "Dark (default)"),
+            ("/theme solarized",    "Solarized"),
+            ("/theme high-contrast","High contrast"),
+            ("/theme nord",         "Nord"),
+            ("/scale",              "Browse & switch layout scale"),
+            ("/scale compact",      "Compact: 80×16 columns"),
+            ("/scale normal",       "Normal: 100×20 columns (default)"),
+            ("/scale large",        "Large: 120×28 — wide charts, spacious tables"),
+        ],
+    },
+    "session": {
+        "title":  "Session & Context",
+        "icon":   "💬",
+        "color":  "cyan",
+        "aliases": ["context", "new", "reset", "session", "clear", "history"],
+        "entries": [
+            ("/context",            "Show conversation history + token budget"),
+            ("/new  or  /reset",    "Fresh session (clears history)"),
+            ("/clear  or  cls",     "Clear terminal screen"),
+            ("1 / 2 / 3",          "Ask the numbered follow-up question"),
+            ("exit / quit",         "Exit Agent Adda"),
+        ],
+    },
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Flat entry list for search
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _all_entries() -> list[HelpEntry]:
+    entries = []
+    for key, sec in SECTIONS.items():
+        for cmd, desc in sec["entries"]:
+            entries.append(HelpEntry(cmd=cmd, desc=desc, section=key))
+    return entries
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Renderers
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _section_key(query: str) -> str | None:
+    """Return matching section key for query, or None."""
+    q = query.lower().strip().lstrip("/")
+    for key, sec in SECTIONS.items():
+        if q == key or q in sec.get("aliases", []):
+            return key
+    return None
+
+
+def _render_toc(console: Console) -> None:
+    """Print the compact table-of-contents overview."""
+    table = Table(
+        box=box.SIMPLE_HEAD,
+        show_header=True,
+        header_style="bold cyan",
+        padding=(0, 2),
+        expand=False,
+    )
+    table.add_column("Section", style="bold", min_width=18)
+    table.add_column("Command", style="dim", min_width=22)
+    table.add_column("What it does", min_width=44)
+
+    for key, sec in SECTIONS.items():
+        first_cmd, first_desc = "", ""
+        for cmd, desc in sec["entries"]:
+            if cmd:
+                first_cmd, first_desc = cmd, desc
+                break
+        icon = sec.get("icon", "")
+        color = sec.get("color", "white")
+        section_label = f"[{color}]{icon} {sec['title']}[/{color}]"
+        table.add_row(section_label, first_cmd, first_desc)
+
+    panel_text = (
+        "[bold cyan]Agent Adda Help[/bold cyan]\n\n"
+        "[dim]Usage:[/dim]  "
+        "[green]/help <section>[/green]  to expand a section   "
+        "[yellow]/help <keyword>[/yellow]  to search\n\n"
+        "[dim]Examples:[/dim]  "
+        "[green]/help charts[/green]   "
+        "[green]/help fno[/green]   "
+        "[green]/help refresh[/green]   "
+        "[yellow]/help rsi[/yellow]   "
+        "[yellow]/help macd[/yellow]   "
+        "[yellow]/help straddle[/yellow]\n"
+    )
+    console.print()
+    console.print(Panel(panel_text, border_style="cyan", padding=(0, 2)))
+    console.print(table)
+    console.print()
+
+
+def _render_section(console: Console, key: str) -> None:
+    """Print full detail for one section."""
+    sec = SECTIONS[key]
+    color = sec.get("color", "white")
+    icon  = sec.get("icon", "")
+    title = f"{icon}  {sec['title']}"
+
+    table = Table(
+        box=box.SIMPLE,
+        show_header=False,
+        padding=(0, 2),
+        expand=False,
+    )
+    table.add_column("Command", style=f"bold {color}", min_width=40)
+    table.add_column("Description", style="white", min_width=50)
+
+    for cmd, desc in sec["entries"]:
+        if not cmd:
+            table.add_row(f"[dim]{desc}[/dim]", "")
+        else:
+            table.add_row(cmd, desc)
+
+    console.print()
+    console.print(Panel(table, title=f"[bold {color}]{title}[/bold {color}]",
+                        border_style=color, padding=(0, 1)))
+    console.print(
+        f"  [dim]Type [bold]/help[/bold] for the full table of contents, "
+        f"or [bold]/help <keyword>[/bold] to search.[/dim]\n"
+    )
+
+
+def _render_search(console: Console, query: str) -> None:
+    """Search all entries for keyword, print matches."""
+    q = query.lower()
+    hits: list[tuple[HelpEntry, int]] = []
+
+    for entry in _all_entries():
+        score = 0
+        cmd_l  = entry.cmd.lower()
+        desc_l = entry.desc.lower()
+        sec_l  = entry.section.lower()
+        aliases = " ".join(SECTIONS[entry.section].get("aliases", []))
+
+        if q in cmd_l:
+            score += 3
+        if q in desc_l:
+            score += 2
+        if q in sec_l or q in aliases:
+            score += 1
+        if score:
+            hits.append((entry, score))
+
+    hits.sort(key=lambda x: -x[1])
+
+    console.print()
+    if not hits:
+        console.print(f"  [yellow]No commands found matching '[bold]{query}[/bold]'.[/yellow]")
+        console.print("  [dim]Try: /help   or   /help <section name>[/dim]\n")
+        return
+
+    table = Table(
+        box=box.SIMPLE_HEAD,
+        show_header=True,
+        header_style="bold cyan",
+        padding=(0, 2),
+    )
+    table.add_column("Command", style="bold green", min_width=40)
+    table.add_column("Section", style="dim", min_width=18)
+    table.add_column("Description", min_width=44)
+
+    seen: set[str] = set()
+    for entry, _ in hits:
+        if not entry.cmd or entry.cmd in seen:
+            continue
+        seen.add(entry.cmd)
+        sec_title = SECTIONS[entry.section]["title"]
+        # Highlight the matched part in description
+        desc = entry.desc
+        idx = desc.lower().find(q)
+        if idx >= 0:
+            desc = desc[:idx] + f"[bold yellow]{desc[idx:idx+len(q)]}[/bold yellow]" + desc[idx+len(q):]
+        table.add_row(entry.cmd, sec_title, desc)
+
+    console.print(Panel(
+        table,
+        title=f"[bold cyan]Search: '{query}'[/bold cyan]  [dim]({len(seen)} matches)[/dim]",
+        border_style="cyan",
+        padding=(0, 1),
+    ))
+    console.print(
+        f"  [dim]Showing commands matching '[bold]{query}[/bold]'. "
+        f"Type [bold]/help <section>[/bold] for full details.[/dim]\n"
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Public entry point
+# ─────────────────────────────────────────────────────────────────────────────
+
+def print_help(console: Console, args: str = "") -> None:
+    """
+    Main help dispatcher.
+      args=""          → TOC
+      args="charts"    → section detail
+      args="rsi"       → search
+    """
+    query = args.strip().lower().lstrip("/")
+
+    if not query:
+        _render_toc(console)
+        return
+
+    key = _section_key(query)
+    if key:
+        _render_section(console, key)
+    else:
+        # Try search — fall back to a polite "not found"
+        _render_search(console, query)
