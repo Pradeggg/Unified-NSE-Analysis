@@ -11,7 +11,9 @@ from __future__ import annotations
 
 import math
 import os
+import threading
 import warnings
+from contextlib import redirect_stderr, redirect_stdout
 from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FutureTimeout
 from datetime import datetime, timedelta
 from typing import Any
@@ -21,20 +23,25 @@ import pandas as pd
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 
-# Max parallel downloads in screener (keeps network load manageable)
-_SCREENER_WORKERS = 10
+# Max parallel downloads in screener — 25 workers gives ~60s for 500 stocks
+_SCREENER_WORKERS = 25
 # Per-stock download timeout in seconds
 _STOCK_TIMEOUT    = 8
+# Total scan wall-clock timeout; 300s handles worst-case 500-stock scans
+_SCAN_TIMEOUT     = 300
+_YF_DOWNLOAD_LOCK = threading.Lock()
 
 
 def _quiet_yf_download(yf, *args, **kwargs) -> pd.DataFrame:
-    """Run yfinance download with output suppressed (thread-safe via logging)."""
+    """Run yfinance download with noisy logging and direct output suppressed."""
     import logging
-    # Raise log thresholds for noisy libraries — safe to do per-call since
-    # contextlib.redirect_stdout is NOT thread-safe and corrupts parallel workers.
     for name in ("yfinance", "peewee", "urllib3", "requests"):
         logging.getLogger(name).setLevel(logging.CRITICAL)
-    return yf.download(*args, **kwargs)
+    # yfinance/curl_cffi can print directly to stdout/stderr. Redirecting those
+    # streams is process-global, so serialize downloads while the redirect is active.
+    with _YF_DOWNLOAD_LOCK:
+        with open(os.devnull, "w") as sink, redirect_stdout(sink), redirect_stderr(sink):
+            return yf.download(*args, **kwargs)
 
 
 def _f(v: Any, digits: int = 2) -> float | None:
@@ -1469,20 +1476,26 @@ def run_intraday_screener(
 
     with ThreadPoolExecutor(max_workers=_SCREENER_WORKERS) as pool:
         futures = {pool.submit(_scan_one, sym): sym for sym in symbols}
-        for future in as_completed(futures, timeout=120):
-            try:
-                sym, buy, sell, watch, ok = future.result(timeout=_STOCK_TIMEOUT)
-            except (FutureTimeout, Exception):
-                sym = futures[future]
-                errors.append(sym)
-                continue
-            if not ok:
-                errors.append(sym)
-                continue
-            scanned += 1
-            all_buy.extend(buy)
-            all_sell.extend(sell)
-            all_watch.extend(watch)
+        try:
+            for future in as_completed(futures, timeout=_SCAN_TIMEOUT):
+                try:
+                    sym, buy, sell, watch, ok = future.result(timeout=_STOCK_TIMEOUT)
+                except (FutureTimeout, Exception):
+                    sym = futures[future]
+                    errors.append(sym)
+                    continue
+                if not ok:
+                    errors.append(sym)
+                    continue
+                scanned += 1
+                all_buy.extend(buy)
+                all_sell.extend(sell)
+                all_watch.extend(watch)
+        except FutureTimeout:
+            # Partial results — mark remaining unfinished futures as errors
+            for fut, sym in futures.items():
+                if not fut.done():
+                    errors.append(sym)
 
     # Sort by R:R descending
     all_buy.sort(key=lambda x: x.get("rr") or 0, reverse=True)

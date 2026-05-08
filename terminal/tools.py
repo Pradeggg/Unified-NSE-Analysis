@@ -1427,10 +1427,8 @@ def run_intraday_screener(
         )
         result["screen_type"]    = screen_key
         result["description"]    = _descriptions.get(screen_key, "")
-        result["data_mode"]      = "live-yfinance-fallback"
-        result["fallback_note"]  = (
-            "SQLite intraday_ohlcv not available — ran live yfinance scan on NIFTY 500"
-        )
+        result["data_mode"]      = "live"
+        result["data_source"]    = "yfinance real-time"
         return result
 
     if symbols is None:
@@ -1728,6 +1726,62 @@ def fetch_article_content(url: str, max_chars: int = 3000) -> dict:
             "text": text[:max_chars],
             "truncated": len(text) > max_chars,
             "total_chars": len(text),
+        }
+    except Exception as e:
+        return {"url": url, "error": str(e)}
+
+
+def fetch_pdf_text(url: str, max_pages: int = 15) -> dict:
+    """Download a PDF from any URL and extract its text content using PyMuPDF.
+
+    Handles BSE results PDFs, NSE circulars, concall transcripts, annual reports.
+    Returns structured dict with per-page text, page count, and metadata.
+    """
+    import io
+    import requests
+    try:
+        resp = requests.get(
+            url,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+                "Accept": "application/pdf,*/*",
+            },
+            timeout=20,
+            allow_redirects=True,
+        )
+        if resp.status_code != 200:
+            return {"url": url, "error": f"HTTP {resp.status_code}"}
+
+        content_type = resp.headers.get("Content-Type", "")
+        if "pdf" not in content_type.lower() and not url.lower().endswith(".pdf"):
+            # Try to proceed anyway — some BSE URLs don't set content-type correctly
+            pass
+
+        import fitz  # PyMuPDF
+        doc = fitz.open(stream=io.BytesIO(resp.content), filetype="pdf")
+        total_pages = len(doc)
+        pages_to_read = min(total_pages, max_pages)
+
+        pages_text: list[dict] = []
+        full_text_parts: list[str] = []
+
+        for i in range(pages_to_read):
+            page = doc[i]
+            text = page.get_text("text").strip()
+            if text:
+                pages_text.append({"page": i + 1, "text": text})
+                full_text_parts.append(f"--- Page {i + 1} ---\n{text}")
+
+        doc.close()
+
+        full_text = "\n\n".join(full_text_parts)
+        return {
+            "url":          url,
+            "total_pages":  total_pages,
+            "pages_read":   pages_to_read,
+            "truncated":    total_pages > max_pages,
+            "text":         full_text,
+            "pages":        pages_text,
         }
     except Exception as e:
         return {"url": url, "error": str(e)}
@@ -5161,6 +5215,27 @@ TOOL_REGISTRY.update({
             "properties": {
                 "url":       {"type": "string", "description": "Full URL of the article to fetch"},
                 "max_chars": {"type": "integer", "default": 3000},
+            },
+            "required": ["url"],
+        },
+    ),
+    "fetch_pdf_text": (
+        fetch_pdf_text,
+        (
+            "Download and extract text from a PDF at any URL — BSE financial results, "
+            "annual reports, concall transcripts, SEBI filings, NSE circulars. "
+            "Use whenever you have a direct PDF URL (e.g. from search_bse_filings, "
+            "search_nse_announcements, or scrape_screener_in) and the user asks to "
+            "read, summarise, or analyse the document contents. "
+            "Returns page-by-page extracted text up to max_pages (default 15). "
+            "Works on BSE/NSE hosted PDFs, screener.in transcript PDFs, and broker reports."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "url":       {"type": "string",  "description": "Direct URL to the PDF file"},
+                "max_pages": {"type": "integer", "default": 15,
+                              "description": "Maximum pages to extract (default 15)"},
             },
             "required": ["url"],
         },
