@@ -39,6 +39,7 @@ from datetime import datetime
 from pathlib import Path
 
 import colorama
+import pandas as pd
 from colorama import Fore, Style
 
 from rich.console import Console
@@ -467,6 +468,13 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/scale compact",    "Compact layout — fits small terminals"),
     ("/scale normal",     "Normal layout — default balanced layout"),
     ("/scale large",      "Large layout — wide terminals / big screens"),
+    ("/refresh",          "Run data refresh pipeline (snapshot mode)"),
+    ("/refresh snapshot", "Fast snapshot: skip analysis, just update stage DB"),
+    ("/refresh live",     "Live prices only — fastest (~30s)"),
+    ("/refresh full",     "Full pipeline: R bhavcopy + analysis + snapshot"),
+    ("/refresh analysis", "Analysis + snapshot (skips aux data fetch)"),
+    ("/refresh status",   "Check if refresh is running"),
+    ("/refresh stop",     "Stop a running refresh"),
 ]
 
 # Well-known NSE symbols & index names for stock query completion
@@ -1335,19 +1343,194 @@ def _parse_us_global_command(text: str) -> dict | None:
     return {"view": "summary", "label": "US Market Summary", "symbols": None, "stock": None}
 
 
+def _is_non_empty_df(value) -> bool:
+    return value is not None and hasattr(value, "empty") and not value.empty
+
+
+def _fmt_us_value(value, digits: int = 2, suffix: str = "") -> str:
+    if value is None:
+        return "-"
+    try:
+        if pd.isna(value):
+            return "-"
+    except (TypeError, ValueError):
+        pass
+    if isinstance(value, str):
+        return value or "-"
+    try:
+        return f"{float(value):,.{digits}f}{suffix}"
+    except (TypeError, ValueError):
+        return str(value) or "-"
+
+
+def _markdown_table(headers: list[str], rows: list[list[str]]) -> str:
+    if not rows:
+        return ""
+    header = "| " + " | ".join(headers) + " |"
+    separator = "| " + " | ".join("---" for _ in headers) + " |"
+    body = ["| " + " | ".join(str(cell) if str(cell) else "-" for cell in row) + " |" for row in rows]
+    return "\n".join([header, separator, *body])
+
+
+def _metrics_for_symbols(metrics, symbols: list[str] | None = None):
+    if not _is_non_empty_df(metrics) or "SYMBOL" not in metrics.columns:
+        return pd.DataFrame()
+    df = metrics.copy()
+    df["SYMBOL"] = df["SYMBOL"].astype(str)
+    if symbols:
+        order = {str(symbol): idx for idx, symbol in enumerate(symbols)}
+        df = df[df["SYMBOL"].isin(order)].copy()
+        if df.empty:
+            return df
+        df["_ORDER"] = df["SYMBOL"].map(order)
+        df = df.sort_values("_ORDER").drop(columns=["_ORDER"])
+    return df.reset_index(drop=True)
+
+
+def _format_us_metric_table(metrics, symbols: list[str] | None = None, limit: int = 10) -> str:
+    df = _metrics_for_symbols(metrics, symbols).head(limit)
+    rows: list[list[str]] = []
+    for _, row in df.iterrows():
+        rows.append(
+            [
+                _fmt_us_value(row.get("SYMBOL"), 0),
+                _fmt_us_value(row.get("CLOSE"), 2),
+                _fmt_us_value(row.get("RET_1D"), 2, "%"),
+                _fmt_us_value(row.get("RET_1M"), 2, "%"),
+                _fmt_us_value(row.get("RSI_14"), 1),
+                _fmt_us_value(row.get("SMA_ALIGNMENT"), 0),
+                _fmt_us_value(row.get("MACD_SIGNAL"), 0),
+                _fmt_us_value(row.get("STAGE"), 0),
+                _fmt_us_value(row.get("DIST_52W_HIGH_PCT"), 2, "%"),
+            ]
+        )
+    return _markdown_table(["Symbol", "Close", "1D", "1M", "RSI", "SMA", "MACD", "Stage", "52W%"], rows)
+
+
+def _format_us_sector_table(sectors, limit: int = 8) -> str:
+    if not _is_non_empty_df(sectors):
+        return ""
+    rows: list[list[str]] = []
+    for _, row in sectors.head(limit).iterrows():
+        rows.append(
+            [
+                _fmt_us_value(row.get("SYMBOL"), 0),
+                _fmt_us_value(row.get("RET_1M"), 2, "%"),
+                _fmt_us_value(row.get("RET_3M"), 2, "%"),
+                _fmt_us_value(row.get("RS_SPY_3M"), 2),
+                _fmt_us_value(row.get("ROTATION_SCORE"), 1),
+                _fmt_us_value(row.get("SMA_ALIGNMENT"), 0),
+                _fmt_us_value(row.get("MACD_SIGNAL"), 0),
+            ]
+        )
+    return _markdown_table(["Symbol", "1M", "3M", "RS/SPY", "Score", "SMA", "MACD"], rows)
+
+
+def _format_us_screener_table(frame, limit: int = 8) -> str:
+    if not _is_non_empty_df(frame):
+        return ""
+    rows: list[list[str]] = []
+    for _, row in frame.head(limit).iterrows():
+        rows.append(
+            [
+                _fmt_us_value(row.get("SYMBOL"), 0),
+                _fmt_us_value(row.get("RET_1M"), 2, "%"),
+                _fmt_us_value(row.get("RS_SPY_3M"), 2),
+                _fmt_us_value(row.get("RSI_14"), 1),
+                _fmt_us_value(row.get("SMA_ALIGNMENT"), 0),
+                _fmt_us_value(row.get("MACD_SIGNAL"), 0),
+                _fmt_us_value(row.get("SCREENER_SCORE"), 1),
+            ]
+        )
+    return _markdown_table(["Symbol", "1M", "RS/SPY", "RSI", "SMA", "MACD", "Score"], rows)
+
+
+def _format_us_vcp_table(frame, limit: int = 8) -> str:
+    if not _is_non_empty_df(frame):
+        return ""
+    rows: list[list[str]] = []
+    for _, row in frame.head(limit).iterrows():
+        rows.append(
+            [
+                _fmt_us_value(row.get("SYMBOL"), 0),
+                _fmt_us_value(row.get("RET_1M"), 2, "%"),
+                _fmt_us_value(row.get("RS_SPY_3M"), 2),
+                _fmt_us_value(row.get("DIST_52W_HIGH_PCT"), 2, "%"),
+                _fmt_us_value(row.get("SETUP"), 0),
+                _fmt_us_value(row.get("SCREENER_SCORE"), 1),
+            ]
+        )
+    return _markdown_table(["Symbol", "1M", "RS/SPY", "52W%", "Setup", "Score"], rows)
+
+
+def _format_us_technical_takeaways(metrics, symbols: list[str] | None = None) -> list[str]:
+    df = _metrics_for_symbols(metrics, symbols)
+    if df.empty:
+        return ["- No index tape was available for technical takeaways."]
+
+    risk_df = df[~df["SYMBOL"].isin(["^VIX"])].copy()
+    if risk_df.empty:
+        risk_df = df.copy()
+
+    takeaways: list[str] = []
+    if "RET_1M" in risk_df.columns:
+        ret_1m = pd.to_numeric(risk_df["RET_1M"], errors="coerce").dropna()
+        strongest = risk_df.loc[ret_1m.idxmax()] if not ret_1m.empty else None
+    else:
+        strongest = None
+    if strongest is not None:
+        takeaways.append(
+            f"- **Strongest 1M index**: {strongest.get('SYMBOL', '-')} at "
+            f"{_fmt_us_value(strongest.get('RET_1M'), 2, '%')}."
+        )
+
+    total = len(risk_df)
+    if total:
+        sma_bullish = risk_df.get("SMA_ALIGNMENT", pd.Series([], dtype=str)).astype(str).str.upper().eq("BULLISH").sum()
+        macd_bullish = risk_df.get("MACD_SIGNAL", pd.Series([], dtype=str)).astype(str).str.upper().eq("BULLISH").sum()
+        takeaways.append(
+            f"- **Trend confirmation**: {int(sma_bullish)}/{total} symbols have bullish SMA alignment; "
+            f"{int(macd_bullish)}/{total} have bullish MACD."
+        )
+
+    if "RSI_14" in risk_df.columns:
+        rsi = pd.to_numeric(risk_df["RSI_14"], errors="coerce")
+        stretched = risk_df.loc[rsi >= 70, "SYMBOL"].astype(str).head(4).tolist()
+        if stretched:
+            takeaways.append(f"- **Momentum stretch**: {', '.join(stretched)} have RSI above 70, so follow-through needs confirmation.")
+
+    vix_row = df[df["SYMBOL"].eq("^VIX")]
+    if not vix_row.empty:
+        vix = vix_row.iloc[0]
+        takeaways.append(
+            f"- **Volatility read**: ^VIX is at {_fmt_us_value(vix.get('CLOSE'), 2)} with "
+            f"{_fmt_us_value(vix.get('RET_1M'), 2, '%')} over 1M."
+        )
+
+    return takeaways or ["- Technical breadth is mixed; use the linked report for the full chart table."]
+
+
 def _format_us_global_terminal_summary(request: dict, bundle: dict, report_result: dict) -> str:
-    """Create a compact Markdown summary for direct terminal output."""
+    """Create a detailed Markdown summary for direct terminal output."""
     readthrough = bundle.get("india_readthrough", {}) or {}
     risk = bundle.get("risk_dashboard", {}) or {}
+    metrics = bundle.get("metrics")
     stage2 = bundle.get("stage2")
     sectors = bundle.get("sector_rotation")
     vcp = bundle.get("vcp")
+    view = request.get("view", "summary")
+    symbols = request.get("symbols")
+    regime = readthrough.get("global_regime") or risk.get("regime", "unavailable")
 
     lines = [
         f"### {request.get('label', 'US / Global Market')}",
-        f"- **Regime**: {readthrough.get('global_regime') or risk.get('regime', 'unavailable')}",
+        "",
+        "#### Executive Read",
+        f"- **Regime**: {regime}",
         f"- **Report**: `{report_result.get('report_path', '-')}`",
     ]
+    if risk.get("score") is not None:
+        lines.append(f"- **Risk score**: {_fmt_us_value(risk.get('score'), 0)}")
 
     if stage2 is not None and not stage2.empty:
         top = ", ".join(str(x) for x in stage2.get("SYMBOL", []).head(5).tolist())
@@ -1362,20 +1545,50 @@ def _format_us_global_terminal_summary(request: dict, bundle: dict, report_resul
         if top:
             lines.append(f"- **VCP setups**: {top}")
 
+    if view in {"indices", "stock", "summary", "readthrough"}:
+        metric_table = _format_us_metric_table(metrics, symbols=symbols if view in {"indices", "stock"} else _US_INDEX_SYMBOLS)
+        if metric_table:
+            lines.extend(["", "#### US Index Tape", metric_table])
+
+    if view in {"sectors", "summary", "readthrough"}:
+        sector_table = _format_us_sector_table(sectors)
+        if sector_table:
+            lines.extend(["", "#### Sector Rotation Snapshot", sector_table])
+
+    if view in {"stage2", "summary"}:
+        stage2_table = _format_us_screener_table(stage2)
+        if stage2_table:
+            lines.extend(["", "#### Stage 2 Leaders", stage2_table])
+
+    if view in {"vcp", "indices", "summary"}:
+        vcp_table = _format_us_vcp_table(vcp)
+        if vcp_table:
+            lines.extend(["", "#### VCP Setups", vcp_table])
+
+    risk_signals = risk.get("signals") or []
+    if risk_signals:
+        lines.extend(["", "#### Risk / Regime Signals"])
+        for signal in risk_signals[:6]:
+            lines.append(f"- {signal}")
+
+    if view in {"indices", "stock", "summary"}:
+        lines.extend(["", "#### Technical Takeaways"])
+        lines.extend(_format_us_technical_takeaways(metrics, symbols=symbols if view in {"indices", "stock"} else _US_INDEX_SYMBOLS))
+
     implications = readthrough.get("india_sector_implications", [])
     if implications:
-        lines.append("- **India read-through**:")
+        lines.extend(["", "#### India Read-Through"])
         for item in implications[:5]:
             symbols = ", ".join(item.get("symbols", []))
             lines.append(
-                f"  - {item.get('stance', 'watch').upper()}: "
+                f"- **{item.get('stance', 'watch').upper()}**: "
                 f"{item.get('nse_sector', '-')} via {symbols or '-'} "
                 f"({item.get('confidence', '-')})"
             )
 
     warnings = bundle.get("warnings") or []
     if warnings:
-        lines.append("- **Warnings**: " + "; ".join(str(w) for w in warnings[:3]))
+        lines.extend(["", "#### Warnings", "- " + "\n- ".join(str(w) for w in warnings[:3])])
 
     return "\n".join(lines)
 
@@ -1717,10 +1930,23 @@ def _print_help() -> None:
             "[bold cyan]SESSION & CONTEXT[/bold cyan]\n"
             "  [magenta]/context[/magenta]               — Show conversation history + budget\n"
             "  [magenta]/new[/magenta]  or  [magenta]/reset[/magenta]      — Fresh session (clears history)\n\n"
+            "[bold cyan]DATA REFRESH[/bold cyan]\n"
+            "  [green]/refresh[/green]               — Fast snapshot refresh (stage DB, ~1–2 min)\n"
+            "  [green]/refresh live[/green]           — Live prices only (~30s)\n"
+            "  [green]/refresh full[/green]           — Full pipeline: R bhavcopy → analysis → snapshot\n"
+            "  [green]/refresh analysis[/green]       — Analysis + snapshot (skips aux fetch)\n"
+            "  [green]/refresh status[/green]         — Check if refresh is running\n"
+            "  [green]/refresh stop[/green]           — Cancel a running refresh\n\n"
+            "[bold cyan]APPEARANCE[/bold cyan]\n"
+            "  [magenta]/theme[/magenta]                  — Browse & switch color themes\n"
+            "  [magenta]/theme dracula[/magenta]          — Switch to Dracula theme\n"
+            "  [magenta]/scale[/magenta]                  — Browse & switch layout scale\n"
+            "  [magenta]/scale large[/magenta]            — Wide charts, spacious tables\n\n"
             "[bold cyan]FOLLOW-UPS[/bold cyan]\n"
             "  [yellow]1 / 2 / 3[/yellow]              — Ask the numbered follow-up question\n\n"
             "[bold cyan]OTHER[/bold cyan]\n"
-            "  [dim]/clear[/dim]  [dim]exit / quit[/dim]  [dim]Ctrl-C[/dim]\n"
+            "  [dim]/clear  cls  clear[/dim]    — Clear screen\n"
+            "  [dim]exit / quit / Ctrl-C[/dim]  — Exit\n"
         ),
         title="[bold cyan]Agent Adda Help[/bold cyan]",
         border_style="cyan",
@@ -2127,6 +2353,79 @@ def _chat_loop(agent, show_trace: bool) -> None:
         # ── /context: show session summary ────────────────────────────
         if text.lower() in ("/context", "/session", "/history"):
             _print_context_summary(agent)
+            continue
+
+        # ── /refresh — run daily data refresh pipeline async ──────────────
+        if text.lower().startswith("/refresh"):
+            import subprocess as _sp, threading as _thr, os as _os
+            parts = text.split()
+            sub   = parts[1].lower() if len(parts) > 1 else "snapshot"
+
+            _refresh_proc = getattr(_chat_loop, "_refresh_proc", None)
+
+            if sub == "status":
+                if _refresh_proc and _refresh_proc.poll() is None:
+                    console.print(f"  [yellow]⏳ Refresh running (PID {_refresh_proc.pid})…[/yellow]")
+                elif _refresh_proc:
+                    rc = _refresh_proc.returncode
+                    icon = "✅" if rc == 0 else "❌"
+                    console.print(f"  {icon} Last refresh exited with code {rc}")
+                else:
+                    console.print("  [dim]No refresh has been run this session.[/dim]")
+                continue
+
+            if sub == "stop":
+                if _refresh_proc and _refresh_proc.poll() is None:
+                    _refresh_proc.terminate()
+                    console.print("  [yellow]⏹ Refresh process terminated.[/yellow]")
+                else:
+                    console.print("  [dim]No refresh process running.[/dim]")
+                continue
+
+            # Already running?
+            if _refresh_proc and _refresh_proc.poll() is None:
+                console.print(f"  [yellow]⏳ Refresh already running (PID {_refresh_proc.pid}). Use /refresh status or /refresh stop.[/yellow]")
+                continue
+
+            # Build command
+            _py = str(__import__('pathlib').Path(__file__).resolve().parent / ".venv" / "bin" / "python3")
+            _script = str(__import__('pathlib').Path(__file__).resolve().parent / "daily_refresh.py")
+            if sub in ("snapshot", "snap"):
+                cmd = [_py, _script, "--skip-analysis", "--skip-aux"]
+                mode_label = "snapshot only (fast ~1–2 min)"
+            elif sub == "live":
+                cmd = [_py, _script, "--live-only"]
+                mode_label = "live prices only (~30s)"
+            elif sub == "full":
+                cmd = [_py, _script]
+                mode_label = "full pipeline (R + analysis + snapshot, ~10–15 min)"
+            elif sub == "analysis":
+                cmd = [_py, _script, "--skip-aux"]
+                mode_label = "analysis + snapshot (skips aux fetch)"
+            else:
+                console.print(f"  [red]Unknown refresh mode '{sub}'. Use: snapshot · live · full · analysis · status · stop[/red]")
+                continue
+
+            _env = {**_os.environ, "PROJECT_ROOT": str(__import__('pathlib').Path(__file__).resolve().parent)}
+            log_path = __import__('pathlib').Path(__file__).resolve().parent / "data" / "refresh.log"
+
+            console.print(f"\n  [bold cyan]🔄 Starting refresh[/bold cyan] — {mode_label}")
+            console.print(f"  [dim]Log: {log_path}[/dim]")
+            console.print(f"  [dim]Use /refresh status to check · /refresh stop to cancel[/dim]\n")
+
+            _log_file = open(log_path, "w")
+            proc = _sp.Popen(cmd, stdout=_log_file, stderr=_sp.STDOUT, env=_env)
+            _chat_loop._refresh_proc = proc
+
+            # Background thread to notify when done
+            def _watch(p, lf, label):
+                p.wait()
+                lf.close()
+                rc = p.returncode
+                icon = "✅" if rc == 0 else "❌"
+                console.print(f"\n  {icon} [bold]Refresh complete[/bold] ({label}) — exit code {rc}")
+                console.print(f"  [dim]Check log: {log_path}[/dim]\n")
+            _thr.Thread(target=_watch, args=(proc, _log_file, mode_label), daemon=True).start()
             continue
 
         # ── /export — export session to HTML/PDF ──────────────────────

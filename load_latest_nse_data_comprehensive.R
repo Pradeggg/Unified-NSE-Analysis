@@ -20,16 +20,29 @@ suppressPackageStartupMessages({
 # Configuration and Setup
 # =============================================================================
 
-# Set working directory to NSE data location
-nse_data_path <- "/Users/pgorai/Library/CloudStorage/OneDrive-Deloitte(O365D)/Documents/Data Visualization/Analytics/Financial Markets/NSE-index"
-project_data_dir <- "/Users/pgorai/Library/CloudStorage/OneDrive-Deloitte(O365D)/Documents/Data Visualization/Analytics/Financial Markets/Unified-NSE-Analysis/data"
-
-# Create directories if they don't exist
-if (!dir.exists(project_data_dir)) {
-  dir.create(project_data_dir, recursive = TRUE)
+# ── Resolve project root (works when run via Rscript from any cwd) ──────────
+# Priority: env var PROJECT_ROOT → script's own directory → current directory
+.project_root <- Sys.getenv("PROJECT_ROOT", unset = "")
+if (.project_root == "") {
+  # Try to detect from script path when invoked via Rscript
+  args <- commandArgs(trailingOnly = FALSE)
+  script_arg <- grep("^--file=", args, value = TRUE)
+  if (length(script_arg) > 0) {
+    .project_root <- dirname(normalizePath(sub("^--file=", "", script_arg[1])))
+  } else {
+    .project_root <- normalizePath(".")
+  }
 }
 
-# Set working directory
+# Raw bhavcopy cache lives locally — no OneDrive dependency
+nse_data_path    <- file.path(.project_root, "data", "nse-raw")
+project_data_dir <- file.path(.project_root, "data")
+
+# Create directories if they don't exist
+dir.create(nse_data_path,    recursive = TRUE, showWarnings = FALSE)
+dir.create(project_data_dir, recursive = TRUE, showWarnings = FALSE)
+
+# Set working directory to raw data cache
 setwd(nse_data_path)
 
 cat("=== COMPREHENSIVE NSE DATA LOADER ===\n")

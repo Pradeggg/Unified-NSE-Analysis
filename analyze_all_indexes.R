@@ -10,8 +10,18 @@ suppressPackageStartupMessages({
 
 cat("=== ANALYZING TOP STOCKS FOR ALL NSE INDEXES ===\n\n")
 
-# Set working directory
-setwd("/Users/pgorai/Library/CloudStorage/OneDrive-Deloitte(O365D)/Documents/Data Visualization/Analytics/Financial Markets/Unified-NSE-Analysis")
+# Set working directory — use PROJECT_ROOT env var (set by daily_refresh.py) or script location
+.project_root <- Sys.getenv("PROJECT_ROOT", unset = "")
+if (.project_root == "") {
+  args <- commandArgs(trailingOnly = FALSE)
+  script_arg <- grep("^--file=", args, value = TRUE)
+  if (length(script_arg) > 0) {
+    .project_root <- dirname(normalizePath(sub("^--file=", "", script_arg[1])))
+  } else {
+    .project_root <- normalizePath(".")
+  }
+}
+setwd(.project_root)
 
 # Load latest comprehensive analysis results
 analysis_files <- list.files("reports", pattern = "comprehensive_nse_enhanced_.*\\.csv", full.names = TRUE)

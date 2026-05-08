@@ -35,14 +35,16 @@ except ImportError:
 # =============================================================================
 
 # Set paths
-BASE_DIR = Path('/Users/pgorai/Library/CloudStorage/OneDrive-Deloitte(O365D)/Documents/Data Visualization/Analytics/Financial Markets/Unified-NSE-Analysis')
-NSE_DATA_DIR = Path('/Users/pgorai/Library/CloudStorage/OneDrive-Deloitte(O365D)/Documents/Data Visualization/Analytics/Financial Markets/NSE-index')
-DATA_DIR = BASE_DIR / 'data'
-REPORTS_DIR = BASE_DIR / 'reports'
+ROOT         = Path(__file__).resolve().parent
+BASE_DIR     = ROOT                          # project root
+NSE_DATA_DIR = ROOT / "data" / "nse-raw"    # raw bhavcopy cache (local)
+DATA_DIR     = ROOT / "data"
+REPORTS_DIR  = ROOT / "reports"
 REPORTS_DIR.mkdir(exist_ok=True, parents=True)
+NSE_DATA_DIR.mkdir(exist_ok=True, parents=True)
 
 # Database path
-DB_PATH = BASE_DIR / 'nse_analysis.db'
+DB_PATH = ROOT / "nse_analysis.db"
 
 print("Starting ENHANCED NSE Universe Analysis (Python)...")
 

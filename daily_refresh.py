@@ -41,11 +41,11 @@ def _now_ist() -> str:
     return datetime.fromtimestamp(ist_ts, tz=timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%d %H:%M IST")
 
 
-def _run(label: str, cmd: list[str], dry_run: bool = False, cwd: Path | None = None) -> bool:
+def _run(label: str, cmd: list[str], dry_run: bool = False, cwd: Path | None = None, env: dict | None = None) -> bool:
     """Run a subprocess step. Returns True on success."""
     print(f"\n{'─'*60}")
     print(f"▶  {label}")
-    print(f"   {' '.join(cmd)}")
+    print(f"   {' '.join(str(c) for c in cmd)}")
     if dry_run:
         print("   [DRY RUN — skipped]")
         return True
@@ -54,6 +54,7 @@ def _run(label: str, cmd: list[str], dry_run: bool = False, cwd: Path | None = N
         cmd,
         cwd=str(cwd or ROOT),
         capture_output=False,
+        env=env,
     )
     elapsed = time.time() - t0
     if result.returncode == 0:
@@ -75,33 +76,20 @@ def _section(title: str) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def step_fetch_eod_data(dry_run: bool) -> bool:
-    """Fetch EOD bhavcopy from NSE archives and sync to local data directory."""
+    """Fetch EOD bhavcopy from NSE archives → writes directly to local data/."""
     _section("STEP 0 — Fetch EOD Bhavcopy (NSE Archives)")
 
+    # Pass PROJECT_ROOT so R script resolves paths relative to repo root
+    import os
+    env = {**os.environ, "PROJECT_ROOT": str(ROOT)}
     ok = _run(
-        "Download latest NSE bhavcopy",
-        ["Rscript", "load_latest_nse_data_comprehensive.R"],
+        "Download latest NSE bhavcopy → data/nse-raw/ + data/",
+        ["Rscript", str(ROOT / "load_latest_nse_data_comprehensive.R")],
         dry_run=dry_run,
+        env=env,
     )
-
-    # Sync OneDrive data files → local data directory (sector_rotation_report.py
-    # uses ROOT-relative paths, so local files must be up to date)
-    if not dry_run and ok:
-        import shutil
-        onedrive = Path(
-            "/Users/pgorai/Library/CloudStorage/OneDrive-Deloitte(O365D)"
-            "/Documents/Data Visualization/Analytics/Financial Markets"
-            "/Unified-NSE-Analysis/data"
-        )
-        local_data = ROOT / "data"
-        for fname in ("nse_index_data.csv", "nse_sec_full_data.csv",
-                      "nse_index_cache.RData", "nse_stock_cache.RData"):
-            src = onedrive / fname
-            dst = local_data / fname
-            if src.exists():
-                shutil.copy2(src, dst)
-        print("   ✅ Synced EOD data to local data/")
-
+    if ok and not dry_run:
+        print(f"   ✅ NSE data written to {ROOT / 'data'}")
     return ok
 
 
@@ -180,31 +168,28 @@ def step_sector_rotation_report(dry_run: bool) -> bool:
 def step_comprehensive_r_reports(dry_run: bool) -> bool:
     """Run R-based comprehensive reports: All Indexes + All Sectors HTML.
 
-    Both scripts read the latest comprehensive_nse_enhanced_*.csv from the
-    OneDrive reports/ directory and write HTML + CSV outputs there.
-    After generation, outputs are synced to the local reports/nse_analysis/2026/
-    directory so they're accessible alongside all other local reports.
+    R scripts use PROJECT_ROOT env var to resolve paths locally.
+    Outputs are written to local reports/nse_analysis/2026/.
     """
     _section("STEP 6 — Comprehensive R Reports (Indexes + Sectors)")
-    import shutil, glob
 
-    onedrive_rpt = Path(
-        "/Users/pgorai/Library/CloudStorage/OneDrive-Deloitte(O365D)"
-        "/Documents/Data Visualization/Analytics/Financial Markets"
-        "/Unified-NSE-Analysis/reports"
-    )
+    import os
     local_r_out = ROOT / "reports" / "nse_analysis" / "2026"
     local_r_out.mkdir(parents=True, exist_ok=True)
+    env = {**os.environ, "PROJECT_ROOT": str(ROOT)}
 
     ok = True
     for label, script in [
         ("All Indexes HTML",  "analyze_all_indexes.R"),
         ("All Sectors HTML",  "analyze_all_sectors.R"),
     ]:
-        result = _run(label, ["Rscript", script], dry_run=dry_run)
+        result = _run(label, ["Rscript", str(ROOT / script)], dry_run=dry_run, env=env)
         ok = ok and result
 
     if not dry_run and ok:
+        print(f"   ✅ R reports written to {local_r_out}")
+
+    return ok
         patterns = [
             "All_Indexes_Analysis_Report_*.html",
             "All_Sectors_Analysis_Report_*.html",
