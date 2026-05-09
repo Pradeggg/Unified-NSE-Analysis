@@ -1469,7 +1469,7 @@ def _load_fundamental_details(symbols: list[str]) -> dict:
             try:
                 sp.run(
                     ["Rscript", str(rscript), syms_path, str(out_csv)],
-                    capture_output=True, text=True, timeout=300, cwd=str(ROOT),
+                    capture_output=True, text=True, timeout=90, cwd=str(ROOT),
                 )
                 if out_csv.exists():
                     fetched = _read_src(out_csv)
@@ -1487,6 +1487,18 @@ def _load_fundamental_details(symbols: list[str]) -> dict:
                             out_csv.unlink()
             except Exception as exc:
                 print(f"  Fundamental fetch failed ({exc}); using available data only.")
+        # Add empty stubs for any symbols still missing so future runs skip the fetch
+        still_missing = [s for s in missing if s not in set(existing["SYMBOL"].tolist())]
+        if still_missing:
+            stubs = pd.DataFrame([{"SYMBOL": s, "pnl_summary": "", "quarterly_summary": "", "balance_sheet_summary": "", "ratios_summary": ""} for s in still_missing])
+            existing = pd.concat([existing, stubs], ignore_index=True)
+            # Persist stubs to cache so next run is fast
+            cache_df = _read_src(CACHE) if CACHE.exists() else pd.DataFrame(columns=fund_cols)
+            if cache_df is None:
+                cache_df = pd.DataFrame(columns=fund_cols)
+            merged = pd.concat([cache_df, stubs]).drop_duplicates("SYMBOL", keep="first")
+            merged.to_csv(CACHE, index=False)
+            print(f"  Added {len(still_missing)} stub entries to cache (no Screener data available).")
         try:
             import os; os.unlink(syms_path)
         except OSError:
