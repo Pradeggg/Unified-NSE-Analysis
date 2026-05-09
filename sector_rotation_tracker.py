@@ -1029,7 +1029,29 @@ def build_change_report(
                 result["week_snap"] = week_snap
                 result["week_new_stage2"]  = chg_w[chg_w.change_type == "NEW_STAGE2"].to_dict("records")
                 result["week_exit_stage2"] = chg_w[chg_w.change_type == "EXIT_STAGE2"].to_dict("records")
-                result["week_price_changes"] = chg_w[chg_w.stage_now == "STAGE_2"].to_dict("records")
+
+                # For "price changes this week": join stage_snapshots (full data) with
+                # week price from stage_changes so we get all columns for rendering
+                s2_week_syms = chg_w.loc[chg_w.stage_now == "STAGE_2", ["symbol", "price_prev", "price_chg_pct", "live_vs_prev_pct"]]
+                s2_snap = pd.read_sql_query(
+                    "SELECT * FROM stage_snapshots WHERE snapshot_date=? AND stage='STAGE_2'",
+                    conn, params=(today_snap,)
+                )
+                # Merge: snapshot provides all rich columns; chg_w provides week price_prev + week chg%
+                merged = s2_snap.merge(
+                    s2_week_syms.rename(columns={
+                        "price_prev":       "week_price_prev",
+                        "price_chg_pct":    "week_price_chg_pct",
+                        "live_vs_prev_pct": "week_live_vs_prev_pct",
+                    }),
+                    on="symbol", how="left"
+                )
+                # Expose week_price_chg_pct as a readable field for the table
+                merged["price_chg_pct"]    = merged["week_price_chg_pct"]
+                merged["live_vs_prev_pct"] = merged["week_live_vs_prev_pct"]
+                result["week_price_changes"] = merged.sort_values(
+                    "stage_score", ascending=False
+                ).to_dict("records")
 
     result["summary"] = {
         "total_stage2": len(s2_now),
@@ -2067,7 +2089,7 @@ def build_html_report(report: dict) -> str:
         f'{s2_table(w_new, show_prev=True)}'
         f'<h3 style="font-size:.9rem;font-weight:600;padding:14px 18px 6px;color:#dc2626">Stage 2 exits this week ({len(w_exit)})</h3>'
         f'{s2_table(w_exit, show_prev=True)}'
-        f'<h3 style="font-size:.9rem;font-weight:600;padding:14px 18px 6px;color:#2563eb">Stage 2 price changes this week ({len(w_price)})</h3>'
+        f'<h3 style="font-size:.9rem;font-weight:600;padding:14px 18px 6px;color:#2563eb">Stage 2 — all {len(w_price)} stocks (vs {week})</h3>'
         f'{s2_table(w_price)}'
         f'</div>'
         f'<div class="tab-panel" id="t-help">{help_tab_content}</div>'
