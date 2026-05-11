@@ -8,8 +8,10 @@ data, execute shell commands, or access the network beyond approved sources.
 from __future__ import annotations
 
 import json
+import os
 import re
 import sqlite3
+import warnings
 from difflib import SequenceMatcher
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -82,8 +84,10 @@ from terminal.intraday import (
     run_intraday_screener as _run_intraday_screener,
     get_intraday_candles,
     key_levels as _intraday_key_levels,
+    _quiet_yf_download,
     run_all_signals as _run_intraday_all_signals,
 )
+from terminal.intraday_storage import persist_intraday_snapshot
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 ROOT      = Path(__file__).parent.parent
@@ -93,6 +97,14 @@ INDEX_CSV = ROOT / "data" / "nse_index_data.csv"
 GLOBAL_INDEX_CSV = ROOT / "data" / "global_indices.csv"
 GLOBAL_CORR_CSV  = ROOT / "data" / "global_correlations.csv"
 REPORTS   = ROOT / "reports"
+PG_DSN    = os.environ.get("AGENT_ADDA_PG_DSN") or os.environ.get("PG_DSN") or "dbname=nse_market user=nse_admin host=/tmp"
+_INDEX_REFERENCE_ALIAS_CACHE: dict[str, str] | None = None
+
+try:
+    from dotenv import load_dotenv  # type: ignore
+    load_dotenv(ROOT / ".env")
+except Exception:
+    pass
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -103,7 +115,38 @@ def _db_conn():
     return sqlite3.connect(DB_PATH, check_same_thread=False)
 
 
+def _pg_conn():
+    import psycopg2
+    return psycopg2.connect(PG_DSN)
+
+
+def _pg_fetchall(sql: str, params: tuple | list | None = None) -> list[tuple]:
+    conn = _pg_conn()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(sql, params or ())
+            return cur.fetchall()
+    finally:
+        conn.close()
+
+
+def _pg_read_df(sql: str, params: tuple | list | None = None) -> pd.DataFrame:
+    conn = _pg_conn()
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", UserWarning)
+            return pd.read_sql_query(sql, conn, params=params)
+    finally:
+        conn.close()
+
+
 def _latest_snapshot_date() -> str:
+    try:
+        rows = _pg_fetchall("SELECT MAX(snapshot_date)::text FROM scores.stage_snapshots")
+        if rows and rows[0][0]:
+            return rows[0][0]
+    except Exception:
+        pass
     if not DB_PATH.exists():
         return "N/A"
     conn = _db_conn()
@@ -113,9 +156,33 @@ def _latest_snapshot_date() -> str:
 
 
 def _load_price_history(symbol: str, days: int = 400) -> pd.DataFrame:
+    cutoff = (date.today() - timedelta(days=days)).isoformat()
+    try:
+        df = _pg_read_df(
+            """
+            SELECT symbol AS "SYMBOL",
+                   trade_date AS "TIMESTAMP",
+                   open AS "OPEN",
+                   high AS "HIGH",
+                   low AS "LOW",
+                   close AS "CLOSE",
+                   volume AS "TOTTRDQTY"
+            FROM market.equity_eod
+            WHERE symbol = %s
+              AND trade_date >= %s
+            ORDER BY trade_date
+            """,
+            (symbol, cutoff),
+        )
+        if not df.empty:
+            out = _normalise_price_history_frame(symbol, df)
+            out.attrs["data_source"] = "PostgreSQL market.equity_eod"
+            return out
+    except Exception:
+        pass
+
     if not STOCK_CSV.exists():
         return pd.DataFrame()
-    cutoff = (date.today() - timedelta(days=days)).isoformat()
     df = pd.read_csv(
         STOCK_CSV,
         usecols=["SYMBOL", "TIMESTAMP", "OPEN", "HIGH", "LOW", "CLOSE", "TOTTRDQTY"],
@@ -125,7 +192,174 @@ def _load_price_history(symbol: str, days: int = 400) -> pd.DataFrame:
     df["TIMESTAMP"] = pd.to_datetime(df["TIMESTAMP"])
     for c in ["OPEN", "HIGH", "LOW", "CLOSE", "TOTTRDQTY"]:
         df[c] = pd.to_numeric(df[c], errors="coerce")
-    return df.sort_values("TIMESTAMP")
+    out = df.sort_values("TIMESTAMP")
+    out.attrs["data_source"] = "EOD CSV"
+    return out
+
+
+def _normalise_price_history_frame(symbol: str, df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty:
+        return pd.DataFrame()
+    out = df.copy()
+    if "TIMESTAMP" not in out.columns:
+        if "Date" in out.columns:
+            out["TIMESTAMP"] = out["Date"]
+        elif out.index.name or not isinstance(out.index, pd.RangeIndex):
+            out["TIMESTAMP"] = out.index
+    rename = {
+        "Open": "OPEN",
+        "High": "HIGH",
+        "Low": "LOW",
+        "Close": "CLOSE",
+        "Volume": "TOTTRDQTY",
+    }
+    out = out.rename(columns={k: v for k, v in rename.items() if k in out.columns})
+    out["SYMBOL"] = symbol
+    required = ["SYMBOL", "TIMESTAMP", "OPEN", "HIGH", "LOW", "CLOSE", "TOTTRDQTY"]
+    missing = [col for col in required if col not in out.columns]
+    if missing:
+        return pd.DataFrame()
+    out = out[required].copy()
+    out["TIMESTAMP"] = pd.to_datetime(out["TIMESTAMP"], errors="coerce")
+    for col in ["OPEN", "HIGH", "LOW", "CLOSE", "TOTTRDQTY"]:
+        out[col] = pd.to_numeric(out[col], errors="coerce")
+    out = out.dropna(subset=["TIMESTAMP", "OPEN", "HIGH", "LOW", "CLOSE"])
+    return out.sort_values("TIMESTAMP")
+
+
+def _fetch_on_demand_price_history(symbol: str, days: int = 400) -> pd.DataFrame:
+    """Fetch missing EOD price history on demand using yfinance NSE ticker."""
+    try:
+        import yfinance as yf
+    except Exception:
+        return pd.DataFrame()
+    period = "2y" if days <= 500 else "5y"
+    try:
+        fetched = _quiet_yf_download(
+            yf,
+            f"{symbol}.NS",
+            period=period,
+            interval="1d",
+            auto_adjust=False,
+            progress=False,
+            threads=False,
+        )
+    except Exception:
+        return pd.DataFrame()
+    if isinstance(fetched.columns, pd.MultiIndex):
+        fetched.columns = [str(col[0]) for col in fetched.columns]
+    return _normalise_price_history_frame(symbol, fetched.tail(max(days, 260)))
+
+
+def _load_on_demand_price_history(symbol: str, days: int = 400) -> pd.DataFrame:
+    """Read previously fetched on-demand EOD bars from PostgreSQL."""
+    try:
+        import psycopg2
+    except Exception:
+        return pd.DataFrame()
+    dsn = os.environ.get("AGENT_ADDA_PG_DSN") or os.environ.get("PG_DSN") or "dbname=nse_market user=nse_admin host=/tmp"
+    cutoff = (date.today() - timedelta(days=days)).isoformat()
+    conn = None
+    try:
+        conn = psycopg2.connect(dsn)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", UserWarning)
+            df = pd.read_sql_query(
+                """
+                SELECT symbol AS "SYMBOL",
+                       trade_date AS "TIMESTAMP",
+                       open AS "OPEN",
+                       high AS "HIGH",
+                       low AS "LOW",
+                       close AS "CLOSE",
+                       volume AS "TOTTRDQTY"
+                FROM on_demand.eod_price_history
+                WHERE symbol = %s AND trade_date >= %s
+                ORDER BY trade_date
+                """,
+                conn,
+                params=(symbol, cutoff),
+            )
+    except Exception:
+        return pd.DataFrame()
+    finally:
+        if conn:
+            conn.close()
+    return _normalise_price_history_frame(symbol, df)
+
+
+def persist_on_demand_eod_history(symbol: str, df: pd.DataFrame) -> dict:
+    """Best-effort load of on-demand EOD bars into PostgreSQL."""
+    bars = _normalise_price_history_frame(symbol, df)
+    if bars.empty:
+        return {"ok": False, "rows_inserted": 0, "reason": "no_valid_bars"}
+    try:
+        import psycopg2
+        from psycopg2.extras import Json, execute_values
+    except Exception as exc:
+        return {"ok": False, "rows_inserted": 0, "reason": f"postgres_unavailable: {exc}"}
+
+    dsn = os.environ.get("AGENT_ADDA_PG_DSN") or os.environ.get("PG_DSN") or "dbname=nse_market user=nse_admin host=/tmp"
+    rows = [
+        (
+            str(row["SYMBOL"]).upper(),
+            row["TIMESTAMP"].date(),
+            float(row["OPEN"]),
+            float(row["HIGH"]),
+            float(row["LOW"]),
+            float(row["CLOSE"]),
+            int(row["TOTTRDQTY"]) if pd.notna(row["TOTTRDQTY"]) else None,
+            "yfinance",
+            Json({"source": "on-demand chat fetch"}),
+        )
+        for _, row in bars.iterrows()
+    ]
+    sql = """
+        CREATE SCHEMA IF NOT EXISTS on_demand;
+        CREATE TABLE IF NOT EXISTS on_demand.eod_price_history (
+            symbol      TEXT NOT NULL,
+            trade_date  DATE NOT NULL,
+            open        NUMERIC(18,6),
+            high        NUMERIC(18,6),
+            low         NUMERIC(18,6),
+            close       NUMERIC(18,6),
+            volume      BIGINT,
+            source      TEXT NOT NULL,
+            raw_json    JSONB NOT NULL DEFAULT '{}'::jsonb,
+            loaded_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+            PRIMARY KEY (symbol, trade_date, source)
+        );
+        CREATE INDEX IF NOT EXISTS idx_on_demand_eod_symbol_date
+            ON on_demand.eod_price_history (symbol, trade_date DESC);
+    """
+    insert_sql = """
+        INSERT INTO on_demand.eod_price_history
+            (symbol, trade_date, open, high, low, close, volume, source, raw_json)
+        VALUES %s
+        ON CONFLICT (symbol, trade_date, source) DO UPDATE SET
+            open = EXCLUDED.open,
+            high = EXCLUDED.high,
+            low = EXCLUDED.low,
+            close = EXCLUDED.close,
+            volume = EXCLUDED.volume,
+            raw_json = EXCLUDED.raw_json,
+            loaded_at = now()
+    """
+    conn = None
+    try:
+        conn = psycopg2.connect(dsn)
+        with conn.cursor() as cur:
+            cur.execute(sql)
+            execute_values(cur, insert_sql, rows, page_size=500)
+        conn.commit()
+        return {"ok": True, "rows_inserted": len(rows), "schema": "on_demand", "table": "eod_price_history"}
+    except Exception as exc:
+        if conn:
+            conn.rollback()
+        return {"ok": False, "rows_inserted": 0, "reason": str(exc)}
+    finally:
+        if conn:
+            conn.close()
 
 
 def _compute_rsi(closes: pd.Series, period: int = 14) -> float:
@@ -230,6 +464,30 @@ def _all_symbols_map() -> dict[str, str]:
     """Return {normalized_name: symbol, symbol: symbol} for fuzzy resolution."""
     # Start with F&O index aliases — always available
     mapping: dict[str, str] = dict(_FO_INDEX_ALIASES)
+
+    try:
+        rows = _pg_fetchall(
+            """
+            SELECT symbol, company_name FROM ref.instruments
+            UNION
+            SELECT symbol, company_name FROM scores.mv_latest_snapshot
+            """
+        )
+        for sym, name in rows:
+            if not sym:
+                continue
+            sym_u = str(sym).upper()
+            mapping[sym_u] = sym_u
+            if name:
+                name_u = str(name).upper()
+                mapping[name_u] = sym_u
+                tokens = re.sub(r"[^A-Z0-9 ]", "", name_u).split()
+                for t in tokens:
+                    if len(t) >= 4:
+                        mapping.setdefault(t, sym_u)
+        return mapping
+    except Exception:
+        pass
 
     if not DB_PATH.exists():
         return mapping
@@ -354,36 +612,268 @@ def resolve_symbol(query: str) -> dict:
             "error": f"No NSE symbol found for '{query}'"}
 
 
-def get_symbol_snapshot(symbol: str) -> dict:
-    """Get latest EOD snapshot for a symbol: price, stage, RS, RSI, signals, sector."""
-    sym = _canonical_symbol(symbol)
-    snap: dict[str, Any] = {"symbol": sym, "data_source": "stage_snapshots DB"}
+_STAGE_SNAPSHOT_COLS = [
+    "company_name", "stage", "stage_score", "investment_score", "price",
+    "rsi", "relative_strength", "change_1d_pct", "change_1w_pct", "change_1m_pct",
+    "market_cap_cat", "sector", "trading_signal", "trend_signal", "supertrend_state",
+    "supertrend_value", "technical_score", "fundamental_score", "narrative", "stance",
+    "can_slim_score", "minervini_score", "enhanced_fund_score", "earnings_quality",
+    "sales_growth", "financial_strength", "institutional_backing",
+]
+
+
+def _stage_snapshot_missing_fields(snap: dict[str, Any]) -> list[str]:
+    missing: list[str] = []
+    for field in ("stage", "stage_score", "price", "rsi", "relative_strength", "technical_score", "trading_signal"):
+        if snap.get(field) is None:
+            missing.append(field)
+    if snap.get("fundamental_score") is None and snap.get("enhanced_fund_score") is None:
+        missing.append("fundamental_score")
+    for field in ("can_slim_score", "minervini_score"):
+        if snap.get(field) is None:
+            missing.append(field)
+    return missing
+
+
+def _finalize_stage_snapshot(sym: str, snap: dict[str, Any], snapshot_date: str) -> dict[str, Any]:
+    snap["symbol"] = sym
+    snap["snapshot_date"] = snapshot_date
+    rs = snap.get("relative_strength")
+    if rs is not None:
+        snap["rs_pct"] = normalize_relative_strength_pct(rs)
+    snap["missing_evidence"] = _stage_snapshot_missing_fields(snap)
+    snap["evidence_coverage"] = "complete" if not snap["missing_evidence"] else "partial"
+    return snap
+
+
+def _read_stage_snapshot_row(sym: str, snapshot_date: str) -> dict[str, Any] | None:
+    try:
+        rows = _pg_fetchall(
+            """
+            SELECT company_name, stage, stage_score, investment_score, price,
+                   rsi, relative_strength, change_1d_pct, change_1w_pct, change_1m_pct,
+                   market_cap_cat, sector, trading_signal, trend_signal, supertrend_state,
+                   supertrend_value, technical_score, fundamental_score, narrative, stance,
+                   can_slim_score, minervini_score, enhanced_fund_score, earnings_quality,
+                   sales_growth, financial_strength, institutional_backing
+            FROM scores.stage_snapshots
+            WHERE symbol = %s AND snapshot_date = %s
+            """,
+            (sym, snapshot_date),
+        )
+        if rows:
+            snap = {"data_source": "PostgreSQL scores.stage_snapshots"}
+            snap.update(dict(zip(_STAGE_SNAPSHOT_COLS, rows[0])))
+            return _finalize_stage_snapshot(sym, snap, snapshot_date)
+    except Exception:
+        pass
+
+    if not DB_PATH.exists():
+        return None
+    conn = _db_conn()
+    row = conn.execute(
+        "SELECT company_name, stage, stage_score, investment_score, price, "
+        "rsi, relative_strength, change_1d_pct, change_1w_pct, change_1m_pct, "
+        "market_cap_cat, sector, trading_signal, trend_signal, supertrend_state, "
+        "supertrend_value, technical_score, fundamental_score, narrative, stance, "
+        "can_slim_score, minervini_score, enhanced_fund_score, earnings_quality, "
+        "sales_growth, financial_strength, institutional_backing "
+        "FROM stage_snapshots "
+        "WHERE symbol=? AND snapshot_date=?",
+        (sym, snapshot_date),
+    ).fetchone()
+    conn.close()
+    if not row:
+        return None
+    snap = {"data_source": "stage_snapshots DB"}
+    snap.update(dict(zip(_STAGE_SNAPSHOT_COLS, row)))
+    return _finalize_stage_snapshot(sym, snap, snapshot_date)
+
+
+def _pct_change_from_history(sym: str, days: int) -> float | None:
+    hist = _load_price_history(sym, max(days + 30, 80))
+    if hist.empty:
+        hist = _load_on_demand_price_history(sym, max(days + 30, 80))
+    if hist.empty:
+        return None
+    hist = _normalise_price_history_frame(sym, hist).sort_values("TIMESTAMP")
+    if len(hist) < 2:
+        return None
+    latest = float(hist["CLOSE"].iloc[-1])
+    prior = float(hist["CLOSE"].iloc[max(0, len(hist) - days - 1)])
+    return round((latest / prior - 1) * 100, 2) if prior else None
+
+
+def _derive_stage_from_technicals(tech: dict[str, Any]) -> tuple[str, float]:
+    price = tech.get("price")
+    sma50 = tech.get("sma50")
+    sma200 = tech.get("sma200")
+    pct_from_52h = tech.get("pct_from_52h")
+    score = float(tech.get("technical_score") or 0) / 100
+    if all(isinstance(v, (int, float)) for v in (price, sma50, sma200)):
+        if price > sma50 > sma200 and (pct_from_52h is None or pct_from_52h > -25):
+            return "STAGE_2", round(min(0.99, max(0.5, score)), 4)
+        if price < sma50 < sma200:
+            return "STAGE_4", round(min(0.99, max(0.1, 1 - score)), 4)
+        if price > sma200 and price < sma50:
+            return "STAGE_3", round(min(0.99, max(0.2, score * 0.75)), 4)
+        return "STAGE_1", round(min(0.99, max(0.2, score * 0.70)), 4)
+    return "UNKNOWN", 0.0
+
+
+def _on_demand_trading_signal(stage: str, tech: dict[str, Any]) -> tuple[str, str, str]:
+    rsi = tech.get("rsi")
+    macd = tech.get("macd")
+    adx = tech.get("adx")
+    supertrend = tech.get("supertrend")
+    bullish = macd == "bullish" and tech.get("above_sma50") and tech.get("above_sma200")
+    if stage == "STAGE_2" and bullish and isinstance(rsi, (int, float)) and rsi <= 75:
+        signal = "BUY"
+    elif stage == "STAGE_4":
+        signal = "SELL"
+    else:
+        signal = "HOLD"
+    if bullish and isinstance(adx, (int, float)) and adx >= 25:
+        trend = "STRONG_BULLISH"
+    elif bullish:
+        trend = "BULLISH"
+    else:
+        trend = "MIXED"
+    st_state = "BULLISH" if supertrend == "BUY" else ("BEARISH" if supertrend == "SELL" else None)
+    return signal, trend, st_state
+
+
+def _backfill_on_demand_stage_snapshot(sym: str, snapshot_date: str) -> dict[str, Any] | None:
+    tech = get_technical_setup(sym)
+    if tech.get("error"):
+        return None
+    live = get_nse_intraday_snapshot(sym)
+    stage, stage_score = _derive_stage_from_technicals(tech)
+    signal, trend, st_state = _on_demand_trading_signal(stage, tech)
+    change_1d = tech.get("chg_pct")
+    change_1w = _pct_change_from_history(sym, 5)
+    change_1m = _pct_change_from_history(sym, 21)
+    relative_strength = change_1m
+    price = tech.get("price")
+    company_name = live.get("name") if live and not live.get("error") else sym
+    sector = live.get("sector") if live and not live.get("error") else None
+    market_cap = live.get("market_cap_cr") if live and not live.get("error") else None
+    market_cap_cat = None
+    if isinstance(market_cap, (int, float)):
+        market_cap_cat = "LARGE_CAP" if market_cap >= 50000 else ("MID_CAP" if market_cap >= 5000 else "SMALL_CAP")
+    row = {
+        "snapshot_date": snapshot_date,
+        "symbol": sym,
+        "company_name": company_name,
+        "stage": stage,
+        "stage_score": stage_score,
+        "price": price,
+        "live_price": live.get("last_price") if live and not live.get("error") else None,
+        "technical_score": tech.get("technical_score"),
+        "rsi": tech.get("rsi"),
+        "trading_signal": signal,
+        "trend_signal": trend,
+        "relative_strength": relative_strength,
+        "change_1d_pct": change_1d,
+        "change_1w_pct": change_1w,
+        "change_1m_pct": change_1m,
+        "market_cap_cat": market_cap_cat,
+        "source_csv": "on-demand chat",
+        "sector": sector,
+        "fundamental_score": None,
+        "enhanced_fund_score": None,
+        "earnings_quality": None,
+        "sales_growth": None,
+        "financial_strength": None,
+        "institutional_backing": None,
+        "can_slim_score": None,
+        "minervini_score": None,
+        "investment_score": tech.get("technical_score"),
+        "fund_details": None,
+        "narrative": (
+            f"{sym} was backfilled on demand from EOD price history and NSE live metadata. "
+            "Fundamental/CANSLIM/Minervini fields were not found in the DB and were not inferred."
+        ),
+        "stance": "TECHNICAL_ONLY",
+        "supertrend_state": st_state,
+        "supertrend_value": None,
+        "price_date": tech.get("as_of"),
+    }
+
+    try:
+        from psycopg2.extras import Json
+        pg_row = dict(row)
+        pg_row["fund_details"] = Json(row.get("fund_details") or {})
+        cols = list(pg_row.keys())
+        placeholders = ", ".join(["%s"] * len(cols))
+        updates = ", ".join(f"{c}=EXCLUDED.{c}" for c in cols if c not in ("snapshot_date", "symbol"))
+        conn = _pg_conn()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    f"""
+                    INSERT INTO scores.stage_snapshots ({', '.join(cols)})
+                    VALUES ({placeholders})
+                    ON CONFLICT (snapshot_date, symbol) DO UPDATE SET {updates}
+                    """,
+                    [pg_row[c] for c in cols],
+                )
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception:
+        pass
 
     if DB_PATH.exists():
         conn = _db_conn()
-        row = conn.execute(
-            "SELECT company_name, stage, stage_score, investment_score, price, "
-            "rsi, relative_strength, change_1d_pct, change_1w_pct, change_1m_pct, "
-            "market_cap_cat, sector, trading_signal, trend_signal, supertrend_state, "
-            "supertrend_value, technical_score, fundamental_score, narrative, stance "
-            "FROM stage_snapshots "
-            "WHERE symbol=? AND snapshot_date=(SELECT MAX(snapshot_date) FROM stage_snapshots)",
-            (sym,),
-        ).fetchone()
+        conn.execute(
+            """INSERT OR REPLACE INTO stage_snapshots
+                (snapshot_date, symbol, company_name, stage, stage_score, price, live_price,
+                 technical_score, rsi, trading_signal, trend_signal, relative_strength,
+                 change_1d_pct, change_1w_pct, change_1m_pct, market_cap_cat, source_csv,
+                 sector, fundamental_score, enhanced_fund_score, earnings_quality, sales_growth,
+                 financial_strength, institutional_backing, can_slim_score, minervini_score,
+                 investment_score, fund_details, narrative, stance, supertrend_state, supertrend_value,
+                 price_date)
+               VALUES
+                (:snapshot_date,:symbol,:company_name,:stage,:stage_score,:price,:live_price,
+                 :technical_score,:rsi,:trading_signal,:trend_signal,:relative_strength,
+                 :change_1d_pct,:change_1w_pct,:change_1m_pct,:market_cap_cat,:source_csv,
+                 :sector,:fundamental_score,:enhanced_fund_score,:earnings_quality,:sales_growth,
+                 :financial_strength,:institutional_backing,:can_slim_score,:minervini_score,
+                 :investment_score,:fund_details,:narrative,:stance,:supertrend_state,:supertrend_value,
+                 :price_date)""",
+            row,
+        )
+        conn.commit()
         conn.close()
-        if row:
-            cols = ["company_name","stage","stage_score","investment_score","price",
-                    "rsi","relative_strength","change_1d_pct","change_1w_pct","change_1m_pct",
-                    "market_cap_cat","sector","trading_signal","trend_signal","supertrend_state",
-                    "supertrend_value","technical_score","fundamental_score","narrative","stance"]
-            snap.update(dict(zip(cols, row)))
-            rs = snap.get("relative_strength")
-            if rs is not None:
-                snap["rs_pct"] = round(float(rs) * 100, 1)
-        else:
-            snap["error"] = f"{sym} not found in DB snapshot"
 
-    snap["snapshot_date"] = _latest_snapshot_date()
+    snap = {
+        "data_source": "on-demand stage snapshot",
+        **{key: row.get(key) for key in _STAGE_SNAPSHOT_COLS if key in row},
+        "on_demand_backfill": True,
+    }
+    return _finalize_stage_snapshot(sym, snap, snapshot_date)
+
+
+def get_symbol_snapshot(symbol: str) -> dict:
+    """Get latest EOD snapshot for a symbol: price, stage, RS, RSI, signals, sector."""
+    sym = _canonical_symbol(symbol)
+    snap: dict[str, Any] = {"symbol": sym, "data_source": "PostgreSQL scores.stage_snapshots"}
+
+    snapshot_date = _latest_snapshot_date()
+    found = _read_stage_snapshot_row(sym, snapshot_date)
+    if found:
+        return found
+
+    backfilled = _backfill_on_demand_stage_snapshot(sym, snapshot_date)
+    if backfilled:
+        return backfilled
+
+    snap["error"] = f"{sym} not found in DB snapshot"
+    snap["missing_evidence"] = ["stage_snapshot"]
+    snap["evidence_coverage"] = "missing"
+    snap["snapshot_date"] = snapshot_date
     return snap
 
 
@@ -391,8 +881,38 @@ def get_technical_setup(symbol: str, days: int = 400) -> dict:
     """Compute technical indicators for a symbol from price history CSV."""
     sym = _canonical_symbol(symbol)
     grp = _load_price_history(sym, days)
+    data_source = grp.attrs.get("data_source", "PostgreSQL market.equity_eod") if not grp.empty else "PostgreSQL market.equity_eod"
+    pg_persist: dict[str, Any] | None = None
     if grp.empty:
-        return {"symbol": sym, "error": "No price history available"}
+        cached = _load_on_demand_price_history(sym, days)
+        if not cached.empty:
+            grp = cached
+            data_source = "PostgreSQL on-demand EOD"
+        else:
+            fetched = _fetch_on_demand_price_history(sym, days)
+            if not fetched.empty:
+                pg_persist = persist_on_demand_eod_history(sym, fetched)
+                grp = fetched
+                data_source = "on-demand yfinance EOD"
+
+        if grp.empty:
+            return {
+                "symbol": sym,
+                "error": "No price history available; on-demand fetch returned no usable EOD bars",
+                "missing_evidence": ["price_history"],
+                "data_source": "missing",
+            }
+    else:
+        original_source = grp.attrs.get("data_source", data_source)
+        grp = _normalise_price_history_frame(sym, grp)
+        grp.attrs["data_source"] = original_source
+        if grp.empty:
+            return {
+                "symbol": sym,
+                "error": "No usable price history available after validation",
+                "missing_evidence": ["price_history"],
+                "data_source": "missing",
+            }
 
     closes = grp["CLOSE"]
     latest = grp.iloc[-1]
@@ -416,6 +936,16 @@ def get_technical_setup(symbol: str, days: int = 400) -> dict:
     avg_vol = round(float(grp["TOTTRDQTY"].tail(20).mean())) if "TOTTRDQTY" in grp else None
     last_vol = int(latest["TOTTRDQTY"]) if pd.notna(latest.get("TOTTRDQTY")) else None
     vol_ratio = round(last_vol / avg_vol, 2) if avg_vol and last_vol else None
+    macd_bullish = macd == "bullish"
+    supertrend_bullish = st == "BUY"
+    technical_score = 0
+    technical_score += 10 if sma20 and cur > sma20 else 0
+    technical_score += 15 if sma50 and cur > sma50 else 0
+    technical_score += 20 if sma200 and cur > sma200 else 0
+    technical_score += 20 if isinstance(rsi, (int, float)) and 45 <= rsi <= 75 else 0
+    technical_score += 15 if macd_bullish else 0
+    technical_score += 15 if supertrend_bullish else 0
+    technical_score += 5 if isinstance(adx, (int, float)) and adx >= 25 else 0
 
     return {
         "symbol":        sym,
@@ -440,8 +970,12 @@ def get_technical_setup(symbol: str, days: int = 400) -> dict:
         "vol_last":      last_vol,
         "vol_avg_20d":   avg_vol,
         "vol_ratio":     vol_ratio,
+        "technical_score": technical_score,
+        "score_method":  "derived from EOD MA alignment, RSI, MACD, Supertrend, and ADX",
         "data_bars":     len(grp),
-        "as_of":         str(latest["TIMESTAMP"].date()),
+        "as_of":         str(pd.to_datetime(latest["TIMESTAMP"]).date()),
+        "data_source":   data_source,
+        "postgres_persist": pg_persist,
     }
 
 
@@ -449,11 +983,69 @@ def get_sector_context(sector_or_symbol: str) -> dict:
     """Get sector performance and stock composition context.
     Pass a stock symbol (e.g. 'BHEL') to auto-detect its sector, or a sector name directly."""
     q = _canonical_symbol(sector_or_symbol)
+    snap_date = _latest_snapshot_date()
+
+    def _format_sector_rows(sector: str, rows: list[tuple]) -> dict:
+        cols = ["symbol","company_name","stage","investment_score","relative_strength",
+                "change_1d_pct","change_1w_pct","change_1m_pct","rsi","trading_signal"]
+        stocks = [dict(zip(cols, r)) for r in rows]
+        s2_count  = sum(1 for s in stocks if s["stage"] == "STAGE_2")
+        rs_values = [
+            v for v in (normalize_relative_strength_pct(s.get("relative_strength")) for s in stocks)
+            if v is not None
+        ]
+        avg_rs    = round(sum(rs_values) / len(rs_values), 1) if rs_values else None
+        avg_1m    = round(sum(float(s["change_1m_pct"] or 0) for s in stocks) / len(stocks), 2)
+        buy_sigs  = sum(1 for s in stocks if (s["trading_signal"] or "").startswith("BUY"))
+        return {
+            "sector":         sector,
+            "snapshot_date":  snap_date,
+            "total_stocks":   len(stocks),
+            "stage2_count":   s2_count,
+            "buy_signals":    buy_sigs,
+            "avg_rs_pct":     avg_rs,
+            "avg_1m_pct":     avg_1m,
+            "top5_by_score":  stocks[:5],
+            "weakest_3":      stocks[-3:],
+            "data_source":    "PostgreSQL scores.stage_snapshots",
+        }
+
+    try:
+        sym_rows = _pg_fetchall(
+            "SELECT sector FROM scores.stage_snapshots WHERE symbol=%s AND snapshot_date=%s",
+            (q, snap_date),
+        )
+        sector = sym_rows[0][0] if sym_rows and sym_rows[0][0] else sector_or_symbol
+        rows = _pg_fetchall(
+            """
+            SELECT symbol, company_name, stage, investment_score, relative_strength,
+                   change_1d_pct, change_1w_pct, change_1m_pct, rsi, trading_signal
+            FROM scores.stage_snapshots
+            WHERE UPPER(sector)=UPPER(%s) AND snapshot_date=%s
+            ORDER BY investment_score DESC NULLS LAST
+            """,
+            (sector, snap_date),
+        )
+        if not rows:
+            rows = _pg_fetchall(
+                """
+                SELECT symbol, company_name, stage, investment_score, relative_strength,
+                       change_1d_pct, change_1w_pct, change_1m_pct, rsi, trading_signal
+                FROM scores.stage_snapshots
+                WHERE UPPER(sector) LIKE UPPER(%s) AND snapshot_date=%s
+                ORDER BY investment_score DESC NULLS LAST
+                """,
+                (f"%{sector}%", snap_date),
+            )
+        if rows:
+            return _format_sector_rows(sector, rows)
+    except Exception:
+        pass
+
     if not DB_PATH.exists():
         return {"error": "DB not available"}
 
     conn = _db_conn()
-    snap_date = _latest_snapshot_date()
 
     # If it looks like a symbol, resolve its sector first
     sym_row = conn.execute(
@@ -510,27 +1102,7 @@ def get_sector_context(sector_or_symbol: str) -> dict:
     if not rows:
         return {"sector": sector, "error": f"No stocks found for sector '{sector}'"}
 
-    cols = ["symbol","company_name","stage","investment_score","relative_strength",
-            "change_1d_pct","change_1w_pct","change_1m_pct","rsi","trading_signal"]
-    stocks = [dict(zip(cols, r)) for r in rows]
-
-    # Sector stats
-    s2_count  = sum(1 for s in stocks if s["stage"] == "STAGE_2")
-    avg_rs    = round(sum(float(s["relative_strength"] or 0) for s in stocks) / len(stocks) * 100, 1)
-    avg_1m    = round(sum(float(s["change_1m_pct"] or 0) for s in stocks) / len(stocks), 2)
-    buy_sigs  = sum(1 for s in stocks if (s["trading_signal"] or "").startswith("BUY"))
-
-    return {
-        "sector":         sector,
-        "snapshot_date":  snap_date,
-        "total_stocks":   len(stocks),
-        "stage2_count":   s2_count,
-        "buy_signals":    buy_sigs,
-        "avg_rs_pct":     avg_rs,
-        "avg_1m_pct":     avg_1m,
-        "top5_by_score":  stocks[:5],
-        "weakest_3":      stocks[-3:],
-    }
+    return _format_sector_rows(sector, rows)
 
 
 def run_screener_query(screen_type: str = "stage2", top_n: int = 10) -> dict:
@@ -540,11 +1112,71 @@ def run_screener_query(screen_type: str = "stage2", top_n: int = 10) -> dict:
       Original  : stage2, breakouts, supertrend_buy, strong_buy, new_entrants
       New EOD   : momentum_52w, high_rs, turnaround, stage1_base, tight_range, oversold_bounce
     """
+    snap_date = _latest_snapshot_date()
+    screen_key = screen_type.lower()
+
+    _descriptions = {
+        "stage2":           "Stage 2 uptrend stocks — William O'Neil buy zone",
+        "breakouts":        "Stage 2 stocks breaking out with rising RS + RSI ≥ 55",
+        "supertrend_buy":   "Supertrend BUY state stocks",
+        "strong_buy":       "STRONG_BUY signal stocks",
+        "new_entrants":     "Stage 2 new entrants in the last 14 days",
+        "momentum_52w":     "Near 52W high momentum leaders — RS ≥ 1.0, 1M chg > 2%",
+        "high_rs":          "Top relative strength leaders — RS ≥ 1.15",
+        "turnaround":       "Recovery setups — dip + rising momentum + RS improving",
+        "stage1_base":      "Stage 1 basing stocks — coiled, waiting for breakout",
+        "tight_range":      "Tight weekly range + RS ≥ 1.0 — VCP-like consolidation",
+        "oversold_bounce":  "Stage 2 stocks with RSI < 40 — dip-buy in uptrend",
+    }
+
+    _pg_base_cols = (
+        "symbol, company_name, stage_score, investment_score, price, "
+        "relative_strength, change_1m_pct, rsi, trading_signal, sector"
+    )
+    _pg_base_from = "FROM scores.stage_snapshots WHERE snapshot_date=%s"
+    pg_query_map: dict[str, str] = {
+        "stage2": f"SELECT {_pg_base_cols} {_pg_base_from} AND stage='STAGE_2' ORDER BY investment_score DESC NULLS LAST",
+        "breakouts": f"SELECT {_pg_base_cols} {_pg_base_from} AND stage='STAGE_2' AND COALESCE(change_1m_pct,0)>3.0 AND COALESCE(rsi,0) BETWEEN 55 AND 85 AND supertrend_state='BULLISH' ORDER BY investment_score DESC NULLS LAST, change_1m_pct DESC NULLS LAST",
+        "supertrend_buy": f"SELECT symbol, company_name, stage_score, investment_score, price, relative_strength, change_1d_pct, rsi, trading_signal, sector {_pg_base_from} AND supertrend_state='BULLISH' AND stage IN ('STAGE_1','STAGE_2') ORDER BY investment_score DESC NULLS LAST, rsi DESC NULLS LAST",
+        "strong_buy": f"SELECT {_pg_base_cols} {_pg_base_from} AND trading_signal IN ('STRONG_BUY','BUY','HOLD') AND stage='STAGE_2' AND supertrend_state='BULLISH' ORDER BY investment_score DESC NULLS LAST",
+        "new_entrants": "SELECT s.symbol, s.company_name, s.stage_score, s.investment_score, s.price, s.relative_strength, s.change_1m_pct, s.rsi, s.trading_signal, s.sector FROM scores.stage_snapshots s LEFT JOIN scores.stage_changes c ON s.symbol=c.symbol AND c.stage_now='STAGE_2' AND c.stage_prev!='STAGE_2' WHERE s.snapshot_date=%s AND s.stage='STAGE_2' AND (c.change_date >= (%s::date - interval '14 days') OR c.change_date IS NULL) ORDER BY s.investment_score DESC NULLS LAST",
+        "momentum_52w": f"SELECT {_pg_base_cols} {_pg_base_from} AND stage='STAGE_2' AND COALESCE(change_1m_pct,0)>5.0 AND COALESCE(rsi,0) BETWEEN 50 AND 85 AND supertrend_state='BULLISH' ORDER BY change_1m_pct DESC NULLS LAST, investment_score DESC NULLS LAST",
+        "high_rs": f"SELECT {_pg_base_cols} {_pg_base_from} AND stage IN ('STAGE_2','STAGE_1') AND COALESCE(change_1m_pct,0)>8.0 AND COALESCE(rsi,0)>=55 ORDER BY change_1m_pct DESC NULLS LAST, investment_score DESC NULLS LAST",
+        "turnaround": f"SELECT {_pg_base_cols} {_pg_base_from} AND stage IN ('STAGE_1','STAGE_2') AND COALESCE(change_1m_pct,0)>5.0 AND COALESCE(rsi,0) BETWEEN 40 AND 65 AND COALESCE(investment_score,0)<60 ORDER BY change_1m_pct DESC NULLS LAST, investment_score DESC NULLS LAST",
+        "stage1_base": f"SELECT {_pg_base_cols} {_pg_base_from} AND stage='STAGE_1' AND COALESCE(rsi,0) BETWEEN 40 AND 60 AND ABS(COALESCE(change_1m_pct,0))<5.0 ORDER BY investment_score DESC NULLS LAST, relative_strength DESC NULLS LAST",
+        "tight_range": f"SELECT {_pg_base_cols} {_pg_base_from} AND stage='STAGE_2' AND supertrend_state='BULLISH' AND ABS(COALESCE(change_1w_pct,0))<2.0 AND COALESCE(rsi,0) BETWEEN 45 AND 65 ORDER BY investment_score DESC NULLS LAST, rsi DESC NULLS LAST",
+        "oversold_bounce": f"SELECT {_pg_base_cols} {_pg_base_from} AND stage='STAGE_2' AND COALESCE(rsi,0)<40 AND supertrend_state='BULLISH' ORDER BY rsi ASC NULLS LAST, investment_score DESC NULLS LAST",
+    }
+    if screen_key not in pg_query_map:
+        available = sorted(pg_query_map.keys())
+        return {"error": f"Unknown screener: {screen_type}", "available": available}
+
+    try:
+        params = (snap_date, snap_date, top_n) if screen_key == "new_entrants" else (snap_date, top_n)
+        rows = _pg_fetchall(pg_query_map[screen_key] + " LIMIT %s", params)
+        cols = ["symbol","company_name","stage_score","investment_score","price",
+                "relative_strength","change","rsi","trading_signal","sector"]
+        stocks = []
+        for r in rows:
+            d = dict(zip(cols, r))
+            if d.get("relative_strength") is not None:
+                d["rs_pct"] = normalize_relative_strength_pct(d["relative_strength"])
+            stocks.append(d)
+        return {
+            "screen_type":    screen_key,
+            "description":    _descriptions.get(screen_key, ""),
+            "snapshot_date":  snap_date,
+            "count":          len(stocks),
+            "results":        stocks,
+            "data_source":    "PostgreSQL scores.stage_snapshots",
+        }
+    except Exception:
+        pass
+
     if not DB_PATH.exists():
         return {"error": "DB not available"}
 
     conn = _db_conn()
-    snap_date = _latest_snapshot_date()
 
     _base_cols = (
         "symbol, company_name, stage_score, investment_score, price, "
@@ -651,7 +1283,6 @@ def run_screener_query(screen_type: str = "stage2", top_n: int = 10) -> dict:
     }
 
     _multi_param_keys = {"new_entrants"}
-    screen_key = screen_type.lower()
     if screen_key not in query_map:
         available = sorted(query_map.keys())
         return {"error": f"Unknown screener: {screen_type}", "available": available}
@@ -670,22 +1301,8 @@ def run_screener_query(screen_type: str = "stage2", top_n: int = 10) -> dict:
     for r in rows:
         d = dict(zip(cols, r))
         if d.get("relative_strength") is not None:
-            d["rs_pct"] = round(float(d["relative_strength"]) * 100, 1)
+            d["rs_pct"] = normalize_relative_strength_pct(d["relative_strength"])
         stocks.append(d)
-
-    _descriptions = {
-        "stage2":           "Stage 2 uptrend stocks — William O'Neil buy zone",
-        "breakouts":        "Stage 2 stocks breaking out with rising RS + RSI ≥ 55",
-        "supertrend_buy":   "Supertrend BUY state stocks",
-        "strong_buy":       "STRONG_BUY signal stocks",
-        "new_entrants":     "Stage 2 new entrants in the last 14 days",
-        "momentum_52w":     "Near 52W high momentum leaders — RS ≥ 1.0, 1M chg > 2%",
-        "high_rs":          "Top relative strength leaders — RS ≥ 1.15",
-        "turnaround":       "Recovery setups — dip + rising momentum + RS improving",
-        "stage1_base":      "Stage 1 basing stocks — coiled, waiting for breakout",
-        "tight_range":      "Tight weekly range + RS ≥ 1.0 — VCP-like consolidation",
-        "oversold_bounce":  "Stage 2 stocks with RSI < 40 — dip-buy in uptrend",
-    }
 
     return {
         "screen_type":    screen_key,
@@ -694,6 +1311,270 @@ def run_screener_query(screen_type: str = "stage2", top_n: int = 10) -> dict:
         "count":          len(stocks),
         "results":        stocks,
     }
+
+
+def normalize_relative_strength_pct(value: Any) -> float | None:
+    """Normalize relative strength to percentage points without double scaling."""
+    if value is None:
+        return None
+    try:
+        rs = float(value)
+    except (TypeError, ValueError):
+        return None
+    if rs != rs:
+        return None
+    if abs(rs) <= 2:
+        rs *= 100
+    return round(rs, 2)
+
+
+def _fetch_strength_snapshot_rows(symbols: list[str]) -> dict[str, dict]:
+    if symbols:
+        try:
+            placeholders = ",".join(["%s"] * len(symbols))
+            rows = _pg_fetchall(
+                f"""
+                SELECT symbol, company_name, stage, price, change_1m_pct, rsi,
+                       relative_strength, can_slim_score, enhanced_fund_score,
+                       financial_strength, investment_score, trading_signal, sector
+                FROM scores.stage_snapshots
+                WHERE snapshot_date=(SELECT MAX(snapshot_date) FROM scores.stage_snapshots)
+                  AND UPPER(symbol) IN ({placeholders})
+                """,
+                [s.upper() for s in symbols],
+            )
+            cols = [
+                "symbol", "company_name", "stage", "price", "change_1m_pct", "rsi",
+                "relative_strength", "can_slim_score", "enhanced_fund_score",
+                "financial_strength", "investment_score", "trading_signal", "sector",
+            ]
+            if rows:
+                return {str(r[0]).upper(): dict(zip(cols, r)) for r in rows}
+        except Exception:
+            pass
+
+    if not DB_PATH.exists() or not symbols:
+        return {}
+    conn = _db_conn()
+    snap_date = _latest_snapshot_date()
+    placeholders = ",".join("?" for _ in symbols)
+    rows = conn.execute(
+        f"""
+        SELECT symbol, company_name, stage, price, change_1m_pct, rsi,
+               relative_strength, can_slim_score, enhanced_fund_score,
+               financial_strength, investment_score, trading_signal, sector
+        FROM stage_snapshots
+        WHERE snapshot_date=? AND UPPER(symbol) IN ({placeholders})
+        """,
+        [snap_date, *[s.upper() for s in symbols]],
+    ).fetchall()
+    conn.close()
+    cols = [
+        "symbol", "company_name", "stage", "price", "change_1m_pct", "rsi",
+        "relative_strength", "can_slim_score", "enhanced_fund_score",
+        "financial_strength", "investment_score", "trading_signal", "sector",
+    ]
+    return {str(r[0]).upper(): dict(zip(cols, r)) for r in rows}
+
+
+def validate_strength_watchlist(symbols: list[str], top_n: int = 20) -> dict:
+    """Validate CANSLIM/RS/fundamental/Piotroski strength from auditable sources."""
+    syms = []
+    for raw in symbols or []:
+        sym = re.sub(r"[^A-Za-z0-9&-]", "", str(raw).upper())
+        if sym and sym not in syms:
+            syms.append(sym)
+    syms = syms[: max(1, min(int(top_n or 20), 30))]
+    if not syms:
+        return {"error": "No symbols provided", "results": []}
+
+    snap_date = _latest_snapshot_date()
+    snapshots = _fetch_strength_snapshot_rows(syms)
+    results = []
+
+    for sym in syms:
+        snap = snapshots.get(sym, {})
+        forensic = run_forensic_analysis(sym)
+        missing = []
+
+        rs_pct = normalize_relative_strength_pct(snap.get("relative_strength"))
+        if not snap:
+            missing.append("stage_snapshot")
+        if rs_pct is None:
+            missing.append("relative_strength")
+        for field in ("can_slim_score", "enhanced_fund_score", "financial_strength"):
+            if snap.get(field) is None:
+                missing.append(field)
+        if forensic.get("error"):
+            missing.append("forensic")
+
+        piotroski = forensic.get("piotroski", {}) if not forensic.get("error") else {}
+        beneish = forensic.get("beneish", {}) if not forensic.get("error") else {}
+        altman = forensic.get("altman", {}) if not forensic.get("error") else {}
+        risk = forensic.get("overall_risk") if not forensic.get("error") else "unknown"
+
+        can = snap.get("can_slim_score")
+        fund = snap.get("enhanced_fund_score")
+        piot_score = piotroski.get("score")
+        piot_max = piotroski.get("max_possible") or 9
+
+        strength_score = None
+        if not missing:
+            risk_penalty = {"low": 0, "moderate": -10, "high": -25}.get(str(risk), -15)
+            strength_score = round(
+                0.25 * (float(can) / 25 * 100)
+                + 0.25 * min(max(float(rs_pct), 0), 100)
+                + 0.25 * float(fund)
+                + 0.25 * (float(piot_score) / float(piot_max) * 100)
+                + risk_penalty,
+                1,
+            )
+
+        if missing:
+            verdict = "Missing evidence: " + ", ".join(missing)
+        elif risk == "high":
+            verdict = "Caution: forensic risk overrides apparent strength"
+        elif piot_score is not None and piot_score >= 7:
+            verdict = "Validated strength"
+        else:
+            verdict = "Watchlist strength; confirm with fundamentals and risk controls"
+
+        results.append({
+            "symbol": sym,
+            "company_name": snap.get("company_name"),
+            "snapshot_date": snap_date,
+            "stage": snap.get("stage"),
+            "price": snap.get("price"),
+            "change_1m_pct": snap.get("change_1m_pct"),
+            "rsi": snap.get("rsi"),
+            "trading_signal": snap.get("trading_signal"),
+            "sector": snap.get("sector"),
+            "investment_score": snap.get("investment_score"),
+            "relative_strength": snap.get("relative_strength"),
+            "rs_pct": rs_pct,
+            "can_slim_score": can,
+            "enhanced_fund_score": fund,
+            "financial_strength": snap.get("financial_strength"),
+            "piotroski_score": piot_score,
+            "piotroski_max": piot_max if piot_score is not None else None,
+            "piotroski_strength": piotroski.get("strength"),
+            "beneish_score": beneish.get("score"),
+            "beneish_interpretation": beneish.get("interpretation"),
+            "altman_score": altman.get("score"),
+            "altman_zone": altman.get("zone"),
+            "overall_forensic_risk": risk,
+            "forensic_error": forensic.get("error"),
+            "missing_evidence": missing,
+            "evidence_coverage": "complete" if not missing else "partial",
+            "strength_score": strength_score,
+            "verdict": verdict,
+        })
+
+    results.sort(key=lambda r: (r["strength_score"] is not None, r["strength_score"] or -999), reverse=True)
+    return {
+        "snapshot_date": snap_date,
+        "input_symbols": syms,
+        "count": len(results),
+        "results": results,
+        "validation_rule": "Never infer missing CANSLIM, RS, fundamentals, or forensic data; missing fields are reported in missing_evidence.",
+    }
+
+
+def _normalise_index_query(value: str) -> str:
+    text = str(value or "").upper()
+    text = re.sub(r"[^A-Z0-9]+", " ", text)
+    words = []
+    for word in text.split():
+        if word == "INDEX":
+            continue
+        if word == "MKT":
+            word = "MARKET"
+        elif word == "MKTS":
+            word = "MARKETS"
+        words.append(word)
+    return " ".join(words).strip()
+
+
+def _index_reference_aliases() -> dict[str, str]:
+    """Return normalized display-name aliases from PostgreSQL ref.indices."""
+    global _INDEX_REFERENCE_ALIAS_CACHE
+    if _INDEX_REFERENCE_ALIAS_CACHE is not None:
+        return _INDEX_REFERENCE_ALIAS_CACHE
+
+    aliases = {
+        "NIFTY": "NIFTY 50",
+        "NIFTY50": "NIFTY 50",
+        "BANKNIFTY": "NIFTY BANK",
+        "BANK NIFTY": "NIFTY BANK",
+        "MIDCPNIFTY": "NIFTY MIDCAP SELECT",
+        "MIDC NIFTY": "NIFTY MIDCAP SELECT",
+        "MIDCAP NIFTY": "NIFTY MIDCAP SELECT",
+        "NIFTY CAPITAL MARKET": "NIFTY CAPITAL MKT",
+        "NIFTY CAPITAL MARKETS": "NIFTY CAPITAL MKT",
+        "NIFTY SMALLCAP 50": "NIFTY SMLCAP 50",
+        "NIFTY SMALLCAP 100": "NIFTY SMLCAP 100",
+        "NIFTY SMALLCAP 250": "NIFTY SMLCAP 250",
+        "NIFTY MICROCAP 250": "NIFTY MICROCAP250",
+        "NIFTY CONSUMER DURABLES": "NIFTY CONSR DURBL",
+        "NIFTY FINANCIAL SERVICES": "NIFTY FIN SERVICE",
+        "NIFTY FINANCIAL SERVICES EX BANK": "NIFTY FINSEREXBNK",
+        "NIFTY FINANCIAL SERVICES 25 50": "NIFTY FINSRV25 50",
+        "NIFTY INFRASTRUCTURE": "NIFTY INFRA",
+        "NIFTY MIDSMALL FINANCIAL SERVICES": "NIFTY MS FIN SERV",
+        "NIFTY TRANSPORTATION LOGISTICS": "NIFTY TRANS LOGIS",
+        "NIFTY ALPHA QUALITY LOW VOLATILITY 30": "NIFTY AQL 30",
+        "NIFTY ALPHA QUALITY VALUE LOW VOLATILITY 30": "NIFTY AQLV 30",
+        "NIFTY100 EQUAL WEIGHT": "NIFTY100 EQL WGT",
+        "NIFTY50 EQUAL WEIGHT": "NIFTY50 EQL WGT",
+        "NIFTY500 EQUAL WEIGHT": "NIFTY500 EW",
+    }
+    try:
+        import psycopg2
+
+        conn = psycopg2.connect("dbname=nse_market user=nse_admin host=/tmp")
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT index_symbol, display_name FROM ref.indices")
+                for index_symbol, display_name in cur.fetchall():
+                    if not index_symbol:
+                        continue
+                    target = str(index_symbol)
+                    for name in (index_symbol, display_name, f"{display_name} INDEX" if display_name else None):
+                        if name:
+                            aliases[_normalise_index_query(str(name))] = target
+        finally:
+            conn.close()
+    except Exception:
+        pass
+
+    _INDEX_REFERENCE_ALIAS_CACHE = aliases
+    return aliases
+
+
+def _index_match_score(query_norm: str, candidate_norm: str) -> float:
+    if not query_norm or not candidate_norm:
+        return 0.0
+    q_tokens = set(query_norm.split())
+    c_tokens = set(candidate_norm.split())
+    if query_norm == candidate_norm:
+        return 1.0
+    if q_tokens <= {"NIFTY"}:
+        return 0.0
+    if query_norm in candidate_norm or candidate_norm in query_norm:
+        return 0.92
+    if not q_tokens or not c_tokens:
+        return 0.0
+    overlap = q_tokens & c_tokens
+    # Never match on NIFTY alone; it caused unrelated index substitutions.
+    meaningful_overlap = overlap - {"NIFTY"}
+    alpha_overlap = {t for t in meaningful_overlap if any(ch.isalpha() for ch in t)}
+    if not alpha_overlap:
+        return 0.0
+    if not meaningful_overlap:
+        return 0.0
+    precision = len(overlap) / len(q_tokens)
+    recall = len(overlap) / len(c_tokens)
+    return (2 * precision * recall / (precision + recall)) if (precision + recall) else 0.0
 
 
 def get_index_snapshot(index_name: str = "NIFTY 50") -> dict:
@@ -710,14 +1591,29 @@ def get_index_snapshot(index_name: str = "NIFTY 50") -> dict:
     for c in ["OPEN", "HIGH", "LOW", "CLOSE"]:
         df[c] = pd.to_numeric(df[c], errors="coerce")
 
-    # Fuzzy match index name
+    # Fuzzy match index name, but never fall back to a single generic token like
+    # "NIFTY"; that can silently substitute the wrong index.
     names = df["SYMBOL"].unique()
-    q = index_name.upper().replace("NIFTY", "NIFTY").replace("  ", " ")
-    match = next((n for n in names if q in n.upper() or n.upper() in q), None)
+    q_original = _normalise_index_query(index_name)
+    q = _normalise_index_query(_index_reference_aliases().get(q_original, q_original))
+    candidates = sorted(
+        (
+            (_index_match_score(q, _normalise_index_query(n)), n)
+            for n in names
+        ),
+        reverse=True,
+    )
+    match = candidates[0][1] if candidates and candidates[0][0] >= 0.45 else None
     if not match:
-        match = next((n for n in names if any(w in n.upper() for w in q.split())), None)
-    if not match:
-        return {"error": f"Index '{index_name}' not found", "available": list(names[:20])}
+        similar = [
+            n for score, n in candidates
+            if score > 0
+        ][:10]
+        return {
+            "error": f"Index '{index_name}' not found",
+            "available": list(names[:20]),
+            "similar": similar,
+        }
 
     idx = df[df["SYMBOL"] == match].sort_values("TIMESTAMP")
     if idx.empty:
@@ -751,32 +1647,45 @@ def get_index_snapshot(index_name: str = "NIFTY 50") -> dict:
 
 def get_market_breadth() -> dict:
     """Compute market breadth: A/D ratio, %>200MA, sector overview."""
-    if not DB_PATH.exists():
-        return {"error": "DB not available"}
-
-    conn = _db_conn()
     snap_date = _latest_snapshot_date()
 
-    # A/D from 1d change
-    rows = conn.execute(
-        "SELECT symbol, change_1d_pct, change_1w_pct, relative_strength "
-        "FROM stage_snapshots WHERE snapshot_date=?", (snap_date,)
-    ).fetchall()
-    conn.close()
+    try:
+        rows = _pg_fetchall(
+            "SELECT symbol, change_1d_pct, change_1w_pct, relative_strength "
+            "FROM scores.stage_snapshots WHERE snapshot_date=%s",
+            (snap_date,),
+        )
+        stage_dist = dict(_pg_fetchall(
+            "SELECT stage, COUNT(*) FROM scores.stage_snapshots WHERE snapshot_date=%s GROUP BY stage",
+            (snap_date,),
+        ))
+        data_source = "PostgreSQL scores.stage_snapshots"
+    except Exception:
+        if not DB_PATH.exists():
+            return {"error": "DB not available"}
+        conn = _db_conn()
+        rows = conn.execute(
+            "SELECT symbol, change_1d_pct, change_1w_pct, relative_strength "
+            "FROM stage_snapshots WHERE snapshot_date=?", (snap_date,)
+        ).fetchall()
+        conn.close()
+        conn2 = _db_conn()
+        stage_dist = dict(conn2.execute(
+            "SELECT stage, COUNT(*) FROM stage_snapshots WHERE snapshot_date=? GROUP BY stage",
+            (snap_date,)
+        ).fetchall())
+        conn2.close()
+        data_source = "SQLite stage_snapshots"
 
     advances = sum(1 for r in rows if (r[1] or 0) > 0)
     declines = sum(1 for r in rows if (r[1] or 0) < 0)
     unchanged = len(rows) - advances - declines
     ad_ratio  = round(advances / declines, 2) if declines > 0 else 0.0
-    avg_rs    = round(sum(float(r[3] or 0) * 100 for r in rows) / len(rows), 1) if rows else 0
-
-    # %>200MA from CSV (fast approximation using DB)
-    conn2 = _db_conn()
-    stage_dist = dict(conn2.execute(
-        "SELECT stage, COUNT(*) FROM stage_snapshots WHERE snapshot_date=? GROUP BY stage",
-        (snap_date,)
-    ).fetchall())
-    conn2.close()
+    rs_values = [
+        v for v in (normalize_relative_strength_pct(r[3]) for r in rows)
+        if v is not None
+    ]
+    avg_rs    = round(sum(rs_values) / len(rs_values), 1) if rs_values else 0
 
     return {
         "snapshot_date": snap_date,
@@ -787,6 +1696,7 @@ def get_market_breadth() -> dict:
         "ad_ratio":      ad_ratio,
         "avg_rs_pct":    avg_rs,
         "stage_distribution": stage_dist,
+        "data_source":    data_source,
     }
 
 
@@ -951,8 +1861,76 @@ def _sqlite_table_exists(table_name: str) -> bool:
     return bool(row)
 
 
+def _pg_table_exists(schema: str, table_name: str) -> bool:
+    try:
+        rows = _pg_fetchall(
+            """
+            SELECT 1
+            FROM information_schema.tables
+            WHERE table_schema=%s AND table_name=%s
+            """,
+            (schema, table_name),
+        )
+        return bool(rows)
+    except Exception:
+        return False
+
+
 def get_intraday_source_health(max_age_minutes: int = 30) -> dict:
-    """Report health of SQLite intraday source tables."""
+    """Report health of PostgreSQL intraday source tables, with SQLite fallback."""
+    pg_tables = {
+        "quote_snapshots": "captured_at",
+        "ohlcv_bars": "timestamp",
+        "scan_signals": "snapshot_ts",
+    }
+    try:
+        result: dict[str, Any] = {
+            "data_mode": "intraday",
+            "db_path": PG_DSN,
+            "max_age_minutes": max_age_minutes,
+            "tables": {},
+            "source": "PostgreSQL intraday schema",
+        }
+        now = datetime.now()
+        statuses: list[str] = []
+        for table, ts_col in pg_tables.items():
+            exists = _pg_table_exists("intraday", table)
+            if not exists:
+                result["tables"][f"intraday.{table}"] = {"exists": False, "status": "MISSING"}
+                statuses.append("MISSING")
+                continue
+            rows = _pg_fetchall(
+                f"SELECT COUNT(*), MAX({ts_col})::text FROM intraday.{table}"
+            )
+            row_count, raw_ts = rows[0]
+            latest_ts = None
+            age_minutes = None
+            status = "EMPTY" if row_count == 0 else "PRESENT"
+            parsed = pd.to_datetime(raw_ts, errors="coerce") if raw_ts else None
+            if row_count and parsed is not None and pd.notna(parsed):
+                latest_dt = parsed.to_pydatetime()
+                if latest_dt.tzinfo is not None:
+                    latest_dt = latest_dt.replace(tzinfo=None)
+                latest_ts = latest_dt.strftime("%Y-%m-%d %H:%M:%S")
+                age_minutes = round((now - latest_dt).total_seconds() / 60, 1)
+                status = "FRESH" if age_minutes <= max_age_minutes else "STALE"
+            result["tables"][f"intraday.{table}"] = {
+                "exists": True,
+                "status": status,
+                "rows": row_count,
+                "latest_timestamp": latest_ts,
+                "age_minutes": age_minutes,
+            }
+            statuses.append(status)
+        if result["tables"].get("intraday.ohlcv_bars", {}).get("status") == "FRESH":
+            result["overall_status"] = "FRESH"
+            return result
+        if any(s in {"PRESENT", "STALE", "FRESH"} for s in statuses):
+            result["overall_status"] = result["tables"].get("intraday.ohlcv_bars", {}).get("status", "PRESENT")
+            return result
+    except Exception:
+        pass
+
     table_names = [
         "intraday_quotes",
         "intraday_ohlcv",
@@ -1028,8 +2006,45 @@ def get_intraday_bars(
     timeframe: str = "15m",
     lookback: int = 120,
 ) -> dict:
-    """Read intraday OHLCV bars from SQLite intraday_ohlcv."""
+    """Read intraday OHLCV bars from PostgreSQL, falling back to SQLite."""
     sym = symbol.strip().upper()
+    try:
+        df = _pg_read_df(
+            """
+            SELECT timestamp, open, high, low, close, volume
+            FROM intraday.ohlcv_bars
+            WHERE UPPER(symbol)=%s AND timeframe=%s
+            ORDER BY timestamp DESC
+            LIMIT %s
+            """,
+            (sym, timeframe, lookback),
+        )
+        if not df.empty:
+            df = df.sort_values("timestamp")
+            bars = [
+                {
+                    "timestamp": pd.to_datetime(row["timestamp"]).strftime("%Y-%m-%d %H:%M:%S"),
+                    "open": round(float(row["open"]), 2),
+                    "high": round(float(row["high"]), 2),
+                    "low": round(float(row["low"]), 2),
+                    "close": round(float(row["close"]), 2),
+                    "volume": int(row["volume"]) if pd.notna(row["volume"]) else None,
+                }
+                for _, row in df.iterrows()
+            ]
+            return {
+                "symbol": sym,
+                "timeframe": timeframe,
+                "lookback": lookback,
+                "data_mode": "intraday",
+                "source": "PostgreSQL intraday.ohlcv_bars",
+                "count": len(bars),
+                "latest_timestamp": bars[-1]["timestamp"] if bars else None,
+                "bars": bars,
+            }
+    except Exception:
+        pass
+
     if not DB_PATH.exists():
         return {"symbol": sym, "data_mode": "intraday", "error": "Intraday SQLite database not found"}
     if not _sqlite_table_exists("intraday_ohlcv"):
@@ -1122,7 +2137,7 @@ def get_intraday_levels(symbol: str, timeframe: str = "15m") -> dict:
             "symbol": sym,
             "timeframe": timeframe,
             "data_mode": "intraday",
-            "source": "SQLite intraday_ohlcv",
+            "source": bars_result.get("source", "intraday bars"),
             "error": "Insufficient SQLite intraday bars for level analysis",
         }
 
@@ -1133,7 +2148,7 @@ def get_intraday_levels(symbol: str, timeframe: str = "15m") -> dict:
         "symbol": sym,
         "timeframe": timeframe,
         "data_mode": "intraday",
-        "source": "SQLite intraday_ohlcv",
+        "source": bars_result.get("source", "intraday bars"),
         "latest_timestamp": bars_result.get("latest_timestamp"),
         "latest_close": round(latest_close, 2),
         "pivot": levels.get("pivot"),
@@ -1174,7 +2189,7 @@ def compute_intraday_indicators(symbol: str, timeframe: str = "15m") -> dict:
             "symbol": sym,
             "timeframe": timeframe,
             "data_mode": "intraday",
-            "source": "SQLite intraday_ohlcv",
+            "source": bars_result.get("source", "intraday bars"),
             "error": "Insufficient SQLite intraday bars for indicator calculation",
         }
 
@@ -1203,7 +2218,7 @@ def compute_intraday_indicators(symbol: str, timeframe: str = "15m") -> dict:
         "symbol": sym,
         "timeframe": timeframe,
         "data_mode": "intraday",
-        "source": "SQLite intraday_ohlcv",
+        "source": bars_result.get("source", "intraday bars"),
         "latest_timestamp": bars_result.get("latest_timestamp"),
         "latest_close": round(latest_close, 2),
         "pct_change": roc,
@@ -1382,8 +2397,20 @@ def run_intraday_screener(
     if screen_key not in supported:
         return {"error": f"Unknown intraday screener: {screen_type}", "supported": sorted(supported)}
 
-    # ── SQLite unavailable → live yfinance fallback ─────────────────────────
-    if not DB_PATH.exists() or not _sqlite_table_exists("intraday_ohlcv"):
+    pg_has_intraday = False
+    if _pg_table_exists("intraday", "ohlcv_bars"):
+        try:
+            pg_rows = _pg_fetchall(
+                "SELECT COUNT(*) FROM intraday.ohlcv_bars WHERE timeframe=%s",
+                (timeframe,),
+            )
+            pg_has_intraday = bool(pg_rows and pg_rows[0][0])
+        except Exception:
+            pg_has_intraday = False
+    sqlite_has_intraday = DB_PATH.exists() and _sqlite_table_exists("intraday_ohlcv")
+
+    # ── Intraday store unavailable → live yfinance fallback ─────────────────
+    if not pg_has_intraday and not sqlite_has_intraday:
         strategy_map = {
             # original
             "breakouts":              ["ema", "volume", "macd"],
@@ -1427,18 +2454,33 @@ def run_intraday_screener(
         )
         result["screen_type"]    = screen_key
         result["description"]    = _descriptions.get(screen_key, "")
-        result["data_mode"]      = "live"
-        result["data_source"]    = "yfinance real-time"
+        result["data_mode"]      = "live-yfinance-fallback"
+        result["data_source"]    = "NSE website constituents + yfinance candles"
+        result["source_priority"] = ["PostgreSQL intraday.ohlcv_bars", "SQLite intraday_ohlcv", "NSE website live constituents", "yfinance candles"]
+        result["fallback_note"]  = (
+            "PostgreSQL/SQLite intraday bars not available; fetched NSE website constituents first, "
+            "then used yfinance only for intraday candle history."
+        )
         return result
 
     if symbols is None:
-        conn = _db_conn()
-        rows = conn.execute(
-            "SELECT DISTINCT UPPER(symbol) FROM intraday_ohlcv WHERE timeframe=? ORDER BY UPPER(symbol)",
-            (timeframe,),
-        ).fetchall()
-        conn.close()
-        symbols = [r[0] for r in rows]
+        if pg_has_intraday:
+            try:
+                rows = _pg_fetchall(
+                    "SELECT DISTINCT UPPER(symbol) FROM intraday.ohlcv_bars WHERE timeframe=%s ORDER BY UPPER(symbol)",
+                    (timeframe,),
+                )
+                symbols = [r[0] for r in rows]
+            except Exception:
+                symbols = []
+        if not symbols and sqlite_has_intraday:
+            conn = _db_conn()
+            rows = conn.execute(
+                "SELECT DISTINCT UPPER(symbol) FROM intraday_ohlcv WHERE timeframe=? ORDER BY UPPER(symbol)",
+                (timeframe,),
+            ).fetchall()
+            conn.close()
+            symbols = [r[0] for r in rows]
 
     results: list[dict[str, Any]] = []
     errors: list[dict[str, str]] = []
@@ -1483,7 +2525,7 @@ def run_intraday_screener(
         "screen_type": screen_key,
         "timeframe": timeframe,
         "data_mode": "intraday",
-        "source": "SQLite intraday_ohlcv",
+        "source": "PostgreSQL intraday.ohlcv_bars" if pg_has_intraday else "SQLite intraday_ohlcv",
         "min_score": min_score,
         "scanned": len(symbols),
         "count": len(results[:top_n]),
@@ -1731,6 +2773,326 @@ def fetch_article_content(url: str, max_chars: int = 3000) -> dict:
         return {"url": url, "error": str(e)}
 
 
+def search_market_knowledge(query: str, sources: list[str] | None = None) -> dict:
+    """Source-backed market education from Wikipedia and Investopedia."""
+    import html as _html
+    import urllib.parse
+    from html.parser import HTMLParser
+
+    import requests
+
+    requested = [s.lower() for s in (sources or ["wikipedia", "investopedia"])]
+    clean_query = (query or "").strip()
+    if not clean_query:
+        return {
+            "query": query,
+            "source_count": 0,
+            "sources": [],
+            "answer_markdown": "No market education query was provided.",
+        }
+    search_query = _market_knowledge_search_query(clean_query)
+
+    headers = {
+        "User-Agent": "AgentAdda/1.0 market-education research (Mozilla/5.0)",
+        "Accept": "text/html,application/json",
+    }
+
+    def _compact_text(text: str, max_chars: int = 900) -> str:
+        text = _html.unescape(re.sub(r"\s+", " ", text or "")).strip()
+        return text[:max_chars].rstrip()
+
+    def _decode_ddg_url(raw: str) -> str:
+        if not raw:
+            return ""
+        if raw.startswith("//"):
+            raw = "https:" + raw
+        parsed = urllib.parse.urlparse(raw)
+        params = urllib.parse.parse_qs(parsed.query)
+        if "uddg" in params:
+            return params["uddg"][0]
+        return raw
+
+    class _DDGParser(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.results: list[dict[str, str]] = []
+            self._capture = False
+            self._current: dict[str, str] = {}
+
+        def handle_starttag(self, tag, attrs):
+            attrs_d = dict(attrs)
+            if tag == "a" and "result__a" in attrs_d.get("class", ""):
+                self._capture = True
+                self._current = {"url": attrs_d.get("href", ""), "title": ""}
+
+        def handle_data(self, data):
+            if self._capture and data.strip():
+                self._current["title"] = (self._current.get("title", "") + " " + data.strip()).strip()
+
+        def handle_endtag(self, tag):
+            if tag == "a" and self._capture:
+                if self._current.get("title") and self._current.get("url"):
+                    self.results.append(dict(self._current))
+                self._current = {}
+                self._capture = False
+
+    def _readable_html_text(html_text: str, max_chars: int = 1400) -> str:
+        try:
+            from bs4 import BeautifulSoup
+
+            soup = BeautifulSoup(html_text, "lxml")
+            for tag in soup(["script", "style", "nav", "footer", "header", "aside", "iframe", "form", "noscript"]):
+                tag.decompose()
+            body = (
+                soup.select_one("article")
+                or soup.select_one("main")
+                or soup.select_one('[class*="article"]')
+                or soup.select_one('[class*="content"]')
+                or soup.body
+            )
+            return _compact_text(body.get_text(" ", strip=True) if body else "", max_chars=max_chars)
+        except Exception:
+            return _compact_text(re.sub(r"<[^>]+>", " ", html_text), max_chars=max_chars)
+
+    source_records: list[dict[str, str]] = []
+    errors: list[str] = []
+
+    if "wikipedia" in requested:
+        try:
+            exact_titles = _market_knowledge_wikipedia_titles(clean_query)
+            if exact_titles:
+                for exact_title in exact_titles:
+                    summary_resp = requests.get(
+                        f"https://en.wikipedia.org/api/rest_v1/page/summary/{urllib.parse.quote(exact_title)}",
+                        headers=headers,
+                        timeout=8,
+                    )
+                    summary_resp.raise_for_status()
+                    summary = summary_resp.json()
+                    url = (
+                        summary.get("content_urls", {})
+                        .get("desktop", {})
+                        .get("page", f"https://en.wikipedia.org/wiki/{urllib.parse.quote(exact_title.replace(' ', '_'))}")
+                    )
+                    extract = _compact_text(summary.get("extract") or "")
+                    if extract:
+                        source_records.append({
+                            "source": "Wikipedia",
+                            "title": summary.get("title") or exact_title,
+                            "url": url,
+                            "snippet": extract,
+                        })
+            else:
+                search_resp = requests.get(
+                    "https://en.wikipedia.org/w/api.php",
+                    params={
+                        "action": "query",
+                        "list": "search",
+                        "srsearch": search_query,
+                        "format": "json",
+                        "srlimit": 1,
+                    },
+                    headers=headers,
+                    timeout=8,
+                )
+                search_resp.raise_for_status()
+                hits = search_resp.json().get("query", {}).get("search", [])
+                if hits:
+                    title = hits[0].get("title", "")
+                    summary_resp = requests.get(
+                        f"https://en.wikipedia.org/api/rest_v1/page/summary/{urllib.parse.quote(title)}",
+                        headers=headers,
+                        timeout=8,
+                    )
+                    summary_resp.raise_for_status()
+                    summary = summary_resp.json()
+                    url = (
+                        summary.get("content_urls", {})
+                        .get("desktop", {})
+                        .get("page", f"https://en.wikipedia.org/wiki/{urllib.parse.quote(title.replace(' ', '_'))}")
+                    )
+                    extract = _compact_text(summary.get("extract") or hits[0].get("snippet", ""))
+                    if extract:
+                        source_records.append({
+                            "source": "Wikipedia",
+                            "title": summary.get("title") or title,
+                            "url": url,
+                            "snippet": extract,
+                        })
+        except Exception as exc:
+            errors.append(f"Wikipedia: {exc}")
+
+    if "investopedia" in requested:
+        try:
+            found_investopedia = False
+            ddg_url = "https://html.duckduckgo.com/html/?q=" + urllib.parse.quote(
+                f"site:investopedia.com {search_query} finance investing"
+            )
+            ddg_resp = requests.get(ddg_url, headers=headers, timeout=8)
+            ddg_resp.raise_for_status()
+            parser = _DDGParser()
+            parser.feed(ddg_resp.text)
+            for result in parser.results:
+                article_url = _decode_ddg_url(result.get("url", ""))
+                if "investopedia.com" not in article_url:
+                    continue
+                article_resp = requests.get(article_url, headers=headers, timeout=8, allow_redirects=True)
+                article_resp.raise_for_status()
+                snippet = _readable_html_text(article_resp.text)
+                if snippet:
+                    source_records.append({
+                        "source": "Investopedia",
+                        "title": _compact_text(result.get("title", "Investopedia article"), max_chars=180),
+                        "url": article_url,
+                        "snippet": snippet,
+                    })
+                    found_investopedia = True
+                break
+            if not found_investopedia:
+                direct_url = _market_knowledge_investopedia_url(clean_query)
+                if direct_url:
+                    article_resp = requests.get(direct_url, headers=headers, timeout=8, allow_redirects=True)
+                    if article_resp.status_code == 200:
+                        snippet = _readable_html_text(article_resp.text)
+                    else:
+                        snippet = (
+                            f"Investopedia source URL found, but automated text extraction returned "
+                            f"HTTP {article_resp.status_code}; no unsourced detail was inferred from it."
+                        )
+                    if snippet:
+                        source_records.append({
+                            "source": "Investopedia",
+                            "title": "Investopedia concept article",
+                            "url": direct_url,
+                            "snippet": snippet,
+                        })
+        except Exception as exc:
+            errors.append(f"Investopedia: {exc}")
+
+    concept_note = _market_knowledge_concept_note(clean_query)
+    if not source_records:
+        return {
+            "query": clean_query,
+            "sources_requested": requested,
+            "source_count": 0,
+            "sources": [],
+            "errors": errors,
+            "answer_markdown": (
+                f"No reliable Investopedia or Wikipedia source was found for {clean_query}. "
+                "I will not infer the answer without source evidence."
+            ),
+        }
+
+    answer_lines = [
+        f"Source-backed market education: {clean_query}",
+        "",
+        "What the sources say:",
+    ]
+    for src in source_records:
+        answer_lines.append(f"- {src['source']}: {src['snippet']}")
+    if concept_note:
+        answer_lines.extend(["", "Concept guide:", concept_note])
+    answer_lines.extend(["", "Sources:"])
+    for src in source_records:
+        answer_lines.append(f"- {src['source']} - {src['title']}: {src['url']}")
+    answer_lines.append("")
+    answer_lines.append("Use this as market education, not a buy/sell recommendation.")
+
+    return {
+        "query": clean_query,
+        "sources_requested": requested,
+        "source_count": len(source_records),
+        "sources": source_records,
+        "errors": errors,
+        "answer_markdown": "\n".join(answer_lines),
+    }
+
+
+def _market_knowledge_concept_note(query: str) -> str:
+    """Small deterministic guide for common finance education concepts."""
+    q = query.lower()
+    if any(term in q for term in ["p/e", "pe ratio", "p e ratio", "price earnings", "price-to-earnings"]) or re.search(r"\bpe\b", q):
+        return (
+            "P/E = market price per share divided by earnings per share. "
+            "Use it against peers, growth rate, balance-sheet quality, and cycle position; "
+            "a low P/E is not automatically cheap and a high P/E is not automatically expensive."
+        )
+    if "roce" in q and "roe" in q:
+        return (
+            "ROE focuses on profit generated on shareholders' equity. "
+            "ROCE focuses on profit generated on total capital employed, so it is often better "
+            "for comparing capital-intensive companies with different debt levels."
+        )
+    if "roce" in q:
+        return (
+            "ROCE usually compares operating profit with capital employed. "
+            "It helps assess whether the business earns attractive returns on the debt plus equity "
+            "capital used in operations."
+        )
+    if "roe" in q:
+        return (
+            "ROE compares profit with shareholders' equity. "
+            "Check leverage and one-off profits before treating a high ROE as high business quality."
+        )
+    if "minervini" in q or "vcp" in q or "volatility contraction" in q:
+        return (
+            "For Minervini-style analysis, separate the concept from a trade call: trend template, "
+            "relative strength, earnings/sales growth, constructive base behavior, tight volatility "
+            "contraction, and disciplined risk control all need evidence before acting."
+        )
+    return ""
+
+
+def _market_knowledge_search_query(query: str) -> str:
+    """Normalize ambiguous finance abbreviations before source search."""
+    q = query.lower()
+    if re.search(r"\bpe\b", q) or "p/e" in q:
+        return "price earnings ratio finance investing"
+    if "roce" in q and "roe" in q:
+        return "return on capital employed return on equity comparison finance"
+    if "roce" in q:
+        return "return on capital employed finance"
+    if "roe" in q:
+        return "return on equity finance"
+    if "minervini" in q:
+        return "Mark Minervini trading strategy volatility contraction pattern"
+    return query
+
+
+def _market_knowledge_wikipedia_titles(query: str) -> list[str]:
+    """Return exact Wikipedia titles for ambiguous finance abbreviations."""
+    q = query.lower()
+    if re.search(r"\bpe\b", q) or "p/e" in q or "price earnings" in q:
+        return ["Price\u2013earnings ratio"]
+    if "roce" in q and "roe" in q:
+        return ["Return on capital employed", "Return on equity"]
+    if "roce" in q and "roe" not in q:
+        return ["Return on capital employed"]
+    if "roe" in q and "roce" not in q:
+        return ["Return on equity"]
+    return []
+
+
+def _market_knowledge_investopedia_url(query: str) -> str:
+    """Return direct Investopedia URLs for stable, common concept pages."""
+    q = query.lower()
+    if re.search(r"\bpe\b", q) or "p/e" in q or "price earnings" in q:
+        return "https://www.investopedia.com/terms/p/price-earningsratio.asp"
+    if "roce" in q:
+        return "https://www.investopedia.com/terms/r/roce.asp"
+    if "roe" in q:
+        return "https://www.investopedia.com/terms/r/returnonequity.asp"
+    if "ebitda" in q:
+        return "https://www.investopedia.com/terms/e/ebitda.asp"
+    if "rsi" in q:
+        return "https://www.investopedia.com/terms/r/rsi.asp"
+    if "macd" in q:
+        return "https://www.investopedia.com/terms/m/macd.asp"
+    if "cagr" in q:
+        return "https://www.investopedia.com/terms/c/cagr.asp"
+    return ""
+
+
 def fetch_pdf_text(url: str, max_pages: int = 15) -> dict:
     """Download a PDF from any URL and extract its text content using PyMuPDF.
 
@@ -1811,10 +3173,24 @@ def get_portfolio_exposure(sector: str = None) -> dict:
         )
         symbols = df[sym_col].str.upper().tolist()
 
-        # Sector mapping from DB
+        # Sector mapping from PostgreSQL stage snapshot, with SQLite fallback.
         sector_counts: dict[str, int] = {}
         sym_sector: dict[str, str] = {}
-        if DB_PATH.exists():
+        try:
+            placeholders = ",".join(["%s"] * len(symbols))
+            rows = _pg_fetchall(
+                f"""
+                SELECT symbol, sector
+                FROM scores.stage_snapshots
+                WHERE UPPER(symbol) IN ({placeholders})
+                  AND snapshot_date=(SELECT MAX(snapshot_date) FROM scores.stage_snapshots)
+                """,
+                symbols,
+            )
+            sym_sector = {r[0]: (r[1] or "Unknown") for r in rows}
+        except Exception:
+            pass
+        if not sym_sector and DB_PATH.exists():
             conn = _db_conn()
             placeholders = ",".join("?" * len(symbols))
             rows = conn.execute(
@@ -1864,33 +3240,50 @@ def find_portfolio_overlap(screener: str = "stage2") -> dict:
     """
     if not HOLDINGS_CSV.exists():
         return {"error": f"Holdings file not found: {HOLDINGS_CSV}"}
-    if not DB_PATH.exists():
-        return {"error": "Stage snapshots DB not found"}
     try:
         df = pd.read_csv(HOLDINGS_CSV)
         df.columns = df.columns.str.lower()
         sym_col = "symbol" if "symbol" in df.columns else df.columns[0]
         portfolio_symbols = set(df[sym_col].str.upper().tolist())
 
-        conn = _db_conn()
-        if screener == "stage2":
-            rows = conn.execute(
-                "SELECT symbol, stage, investment_score, trading_signal FROM stage_snapshots "
-                "WHERE stage='STAGE_2' "
-                "AND snapshot_date=(SELECT MAX(snapshot_date) FROM stage_snapshots)"
-            ).fetchall()
-        elif screener == "supertrend_buy":
-            rows = conn.execute(
-                "SELECT symbol, stage, investment_score, trading_signal FROM stage_snapshots "
-                "WHERE supertrend_state='BUY' "
-                "AND snapshot_date=(SELECT MAX(snapshot_date) FROM stage_snapshots)"
-            ).fetchall()
-        else:
-            rows = conn.execute(
-                "SELECT symbol, stage, investment_score, trading_signal FROM stage_snapshots "
-                "WHERE snapshot_date=(SELECT MAX(snapshot_date) FROM stage_snapshots)"
-            ).fetchall()
-        conn.close()
+        try:
+            if screener == "stage2":
+                rows = _pg_fetchall(
+                    "SELECT symbol, stage, investment_score, trading_signal FROM scores.stage_snapshots "
+                    "WHERE stage='STAGE_2' AND snapshot_date=(SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+                )
+            elif screener == "supertrend_buy":
+                rows = _pg_fetchall(
+                    "SELECT symbol, stage, investment_score, trading_signal FROM scores.stage_snapshots "
+                    "WHERE supertrend_state IN ('BUY','BULLISH') AND snapshot_date=(SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+                )
+            else:
+                rows = _pg_fetchall(
+                    "SELECT symbol, stage, investment_score, trading_signal FROM scores.stage_snapshots "
+                    "WHERE snapshot_date=(SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
+                )
+        except Exception:
+            if not DB_PATH.exists():
+                return {"error": "Stage snapshots DB not found"}
+            conn = _db_conn()
+            if screener == "stage2":
+                rows = conn.execute(
+                    "SELECT symbol, stage, investment_score, trading_signal FROM stage_snapshots "
+                    "WHERE stage='STAGE_2' "
+                    "AND snapshot_date=(SELECT MAX(snapshot_date) FROM stage_snapshots)"
+                ).fetchall()
+            elif screener == "supertrend_buy":
+                rows = conn.execute(
+                    "SELECT symbol, stage, investment_score, trading_signal FROM stage_snapshots "
+                    "WHERE supertrend_state='BUY' "
+                    "AND snapshot_date=(SELECT MAX(snapshot_date) FROM stage_snapshots)"
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT symbol, stage, investment_score, trading_signal FROM stage_snapshots "
+                    "WHERE snapshot_date=(SELECT MAX(snapshot_date) FROM stage_snapshots)"
+                ).fetchall()
+            conn.close()
 
         screener_map = {r[0]: r for r in rows}
         overlap = [
@@ -2146,30 +3539,83 @@ def nse_search(query: str, top_n: int = 5) -> dict:
 
 
 def get_live_market_overview() -> dict:
-    """Fetch live Nifty 50, Nifty Bank, and Nifty IT index values plus advances/declines."""
+    """Fetch live NSE index values (broad-market + sectoral) plus advances/declines.
+
+    Returns every NIFTY-prefixed broad-market and sectoral index that the NSE
+    /allIndices endpoint exposes, grouped by category. This powers the agent's
+    "Latest Sector and Indices View" so the user sees the full picture, not
+    just the headline 5.
+    """
     import requests
+    # PG-indices: full whitelist so we never silently drop a sector.
+    # Anything matching these prefixes is included; we sort by category for the UI.
+    BROAD_MARKET = {
+        "NIFTY 50", "NIFTY NEXT 50", "NIFTY 100", "NIFTY 200", "NIFTY 500",
+        "NIFTY MIDCAP 50", "NIFTY MIDCAP 100", "NIFTY MIDCAP 150",
+        "NIFTY SMALLCAP 50", "NIFTY SMALLCAP 100", "NIFTY SMALLCAP 250",
+        "NIFTY MIDSMALLCAP 400", "NIFTY LARGEMIDCAP 250", "NIFTY TOTAL MARKET",
+        "NIFTY MICROCAP 250", "INDIA VIX",
+    }
+    SECTORAL = {
+        "NIFTY BANK", "NIFTY AUTO", "NIFTY FIN SERVICE", "NIFTY FINANCIAL SERVICES",
+        "NIFTY FMCG", "NIFTY IT", "NIFTY MEDIA", "NIFTY METAL", "NIFTY PHARMA",
+        "NIFTY PSU BANK", "NIFTY PVT BANK", "NIFTY REALTY", "NIFTY HEALTHCARE INDEX",
+        "NIFTY CONSUMER DURABLES", "NIFTY OIL & GAS", "NIFTY ENERGY",
+        "NIFTY INFRA", "NIFTY COMMODITIES", "NIFTY ENERGY", "NIFTY SERVICES SECTOR",
+        "NIFTY MNC", "NIFTY CPSE", "NIFTY PSE", "NIFTY INDIA DEFENCE",
+        "NIFTY INDIA MANUFACTURING", "NIFTY INDIA CONSUMPTION", "NIFTY INDIA TOURISM",
+        "NIFTY INDIA RAILWAYS PSU", "NIFTY CORE HOUSING", "NIFTY HOUSING",
+        "NIFTY MOBILITY", "NIFTY EV & NEW AGE AUTOMOTIVE", "NIFTY TRANSPORTATION & LOGISTICS",
+        "NIFTY MIDSMALL HEALTHCARE", "NIFTY MIDSMALL FINANCIAL SERVICES",
+        "NIFTY MIDSMALL IT & TELECOM", "NIFTY DIVIDEND OPPORTUNITIES 50",
+        "NIFTY GROWTH SECTORS 15", "NIFTY HIGH BETA 50", "NIFTY LOW VOLATILITY 50",
+        "NIFTY ALPHA 50", "NIFTY QUALITY 30", "NIFTY VALUE 20",
+    }
     try:
         s   = _get_live_session()
         url = "https://www.nseindia.com/api/allIndices"
         r   = s.get(url, timeout=10)
         r.raise_for_status()
-        data    = r.json().get("data", [])
-        indices = {}
+        data = r.json().get("data", [])
+        broad: dict = {}
+        sector: dict = {}
+        other: dict = {}
         for item in data:
-            nm = item.get("index", "")
-            if nm in ("NIFTY 50", "NIFTY BANK", "NIFTY IT", "NIFTY MIDCAP 100",
-                      "NIFTY SMALLCAP 100"):
-                last  = item.get("last",          item.get("lastPrice", 0))
-                prev  = item.get("previousClose", 0)
-                chg   = round(last - prev, 2) if last and prev else 0
-                pchg  = round(chg / prev * 100, 2) if prev else 0
-                indices[nm] = {
-                    "last":       last,
-                    "change":     chg,
-                    "pct_change": pchg,
-                    "day_high":   item.get("dayHigh"),
-                    "day_low":    item.get("dayLow"),
-                }
+            nm = (item.get("index") or "").strip().upper()
+            if not nm:
+                continue
+            last  = item.get("last",          item.get("lastPrice", 0))
+            prev  = item.get("previousClose", 0)
+            chg   = item.get("variation")
+            if chg is None:
+                chg = round(last - prev, 2) if last and prev else 0
+            pchg  = item.get("percentChange")
+            if pchg is None:
+                pchg = round(chg / prev * 100, 2) if prev else 0
+            entry = {
+                "last":       last,
+                "change":     chg,
+                "pct_change": pchg,
+                "day_high":   item.get("dayHigh", item.get("high")),
+                "day_low":    item.get("dayLow", item.get("low")),
+            }
+            if nm in BROAD_MARKET:
+                broad[nm] = entry
+            elif nm in SECTORAL or nm.startswith("NIFTY "):
+                # Catch-all: any NIFTY * index we didn't explicitly enumerate
+                # still goes into the sectoral bucket so nothing is dropped.
+                sector[nm] = entry
+            else:
+                other[nm] = entry
+
+        # PG-indices: keep `indices` flat for backward compat with existing callers.
+        indices = {**broad, **sector}
+
+        # Top movers among sectoral indices for quick "winners/losers" framing.
+        sector_sorted = sorted(sector.items(), key=lambda kv: kv[1]["pct_change"], reverse=True)
+        top_sectors = [{"name": k, **v} for k, v in sector_sorted[:5]]
+        bot_sectors = [{"name": k, **v} for k, v in sector_sorted[-5:][::-1]]
+
         adv_dec = {}
         try:
             url2 = "https://www.nseindia.com/api/equity-stockIndices?index=NIFTY%20500"
@@ -2182,13 +3628,253 @@ def get_live_market_overview() -> dict:
         except Exception:
             pass
         return {
-            "indices":    indices,
-            "adv_dec":    adv_dec,
-            "as_of":      datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "source":     "NSE live API",
+            "indices":           indices,        # flat dict (back-compat)
+            "broad_market":      broad,
+            "sectoral":          sector,
+            "other_indices":     other,
+            "top_sectors":       top_sectors,
+            "bottom_sectors":    bot_sectors,
+            "adv_dec":           adv_dec,
+            "as_of":             datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "source":            "NSE live API",
         }
     except Exception as e:
         return {"error": str(e)}
+
+
+def get_intraday_market_recap(minutes: int = 15) -> dict:
+    """Summarize what changed in the broad market over the last N minutes."""
+    minutes = max(1, min(int(minutes or 15), 120))
+    overview = get_live_market_overview()
+    if overview.get("error"):
+        return {"error": f"Live market overview unavailable: {overview['error']}", "minutes": minutes}
+
+    preferred = [
+        "NIFTY 50",
+        "NIFTY BANK",
+        "NIFTY MIDCAP SELECT",
+        "NIFTY MIDCAP 50",
+        "NIFTY MIDCAP 100",
+    ]
+    indices = overview.get("indices") or {}
+    current_rows: list[dict[str, Any]] = []
+    for name in preferred:
+        row = indices.get(name)
+        if not row:
+            continue
+        current_rows.append({
+            "symbol": name,
+            "source": overview.get("source", "NSE live API"),
+            "as_of": overview.get("as_of"),
+            "name": name,
+            "last_price": row.get("last"),
+            "change": row.get("change"),
+            "pct_change": row.get("pct_change"),
+            "day_high": row.get("day_high"),
+            "day_low": row.get("day_low"),
+        })
+
+    # Persist the current live tape so later "last N minutes" requests have an anchor.
+    for row in current_rows:
+        try:
+            persist_intraday_snapshot(row)
+        except Exception:
+            pass
+
+    prior_map: dict[str, dict] = {}
+    try:
+        import psycopg2
+        from psycopg2.extras import RealDictCursor
+
+        conn = psycopg2.connect("dbname=nse_market user=nse_admin host=/tmp")
+        try:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                max_age_minutes = minutes + 10
+                cur.execute(
+                    """
+                    WITH ranked AS (
+                        SELECT
+                            symbol,
+                            as_of,
+                            captured_at,
+                            last_price,
+                            pct_change,
+                            row_number() OVER (
+                                PARTITION BY symbol
+                                ORDER BY captured_at DESC
+                            ) AS rn
+                        FROM intraday.quote_snapshots
+                        WHERE symbol = ANY(%s)
+                          AND captured_at <= now() - (%s::text || ' minutes')::interval
+                          AND captured_at >= now() - (%s::text || ' minutes')::interval
+                    )
+                    SELECT symbol, as_of, captured_at, last_price, pct_change
+                    FROM ranked
+                    WHERE rn = 1
+                    """,
+                    ([row["symbol"] for row in current_rows], str(minutes), str(max_age_minutes)),
+                )
+                prior_map = {str(row["symbol"]): dict(row) for row in cur.fetchall()}
+        finally:
+            conn.close()
+    except Exception:
+        prior_map = {}
+
+    rows = []
+    for row in current_rows:
+        prior = prior_map.get(row["symbol"])
+        last = row.get("last_price")
+        prior_last = prior.get("last_price") if prior else None
+        try:
+            point_change = float(last) - float(prior_last) if last is not None and prior_last is not None else None
+            interval_pct = (point_change / float(prior_last) * 100) if prior_last else None
+        except (TypeError, ValueError, ZeroDivisionError):
+            point_change = None
+            interval_pct = None
+        rows.append({
+            "symbol": row["symbol"],
+            "current": last,
+            "current_pct_change": row.get("pct_change"),
+            "prior": prior_last,
+            "point_change": round(point_change, 2) if point_change is not None else None,
+            "interval_pct_change": round(interval_pct, 3) if interval_pct is not None else None,
+            "prior_as_of": str(prior.get("as_of")) if prior else None,
+            "prior_captured_at": str(prior.get("captured_at")) if prior else None,
+        })
+
+    adv_dec = overview.get("adv_dec") or {}
+    changes = [r["interval_pct_change"] for r in rows if r.get("interval_pct_change") is not None]
+    avg_change = round(sum(changes) / len(changes), 3) if changes else None
+    if avg_change is None:
+        tone = "snapshot_only"
+        narrative = "No earlier stored tape was available for a clean interval comparison; showing current live market state."
+    elif avg_change > 0.05:
+        tone = "improved"
+        narrative = f"Market improved over the last {minutes} minutes, led by positive index drift."
+    elif avg_change < -0.05:
+        tone = "weakened"
+        narrative = f"Market weakened over the last {minutes} minutes, with headline indices drifting lower."
+    else:
+        tone = "flat"
+        narrative = f"Market was largely range-bound over the last {minutes} minutes."
+
+    return {
+        "minutes": minutes,
+        "as_of": overview.get("as_of"),
+        "source": overview.get("source", "NSE live API"),
+        "tone": tone,
+        "narrative": narrative,
+        "adv_dec": adv_dec,
+        "rows": rows,
+        "note": "Interval deltas use the nearest stored intraday.quote_snapshots row at or before the requested lookback.",
+    }
+
+
+_NSE_LIVE_INDEX_ALIASES: dict[str, str] = {
+    "NIFTY": "NIFTY 50",
+    "NIFTY50": "NIFTY 50",
+    "NIFTY 50": "NIFTY 50",
+    "BANKNIFTY": "NIFTY BANK",
+    "BANK NIFTY": "NIFTY BANK",
+    "NIFTY BANK": "NIFTY BANK",
+    "FINNIFTY": "NIFTY FIN SERVICE",
+    "NIFTY FIN": "NIFTY FIN SERVICE",
+    "NIFTY FINANCIAL": "NIFTY FIN SERVICE",
+    "NIFTY IT": "NIFTY IT",
+    "NIFTY NEXT 50": "NIFTY NEXT 50",
+    "NIFTYNXT50": "NIFTY NEXT 50",
+    "MIDCPNIFTY": "NIFTY MIDCAP SELECT",
+    "MIDC NIFTY": "NIFTY MIDCAP SELECT",
+    "MIDCAP NIFTY": "NIFTY MIDCAP SELECT",
+    "NIFTY MIDCAP SELECT": "NIFTY MIDCAP SELECT",
+    "NIFTY MID SELECT": "NIFTY MIDCAP SELECT",
+    "INDIA VIX": "INDIA VIX",
+    "VIX": "INDIA VIX",
+    "SENSEX": "SENSEX",
+}
+
+
+def _canonical_nse_live_index(symbol: str) -> str | None:
+    raw = symbol.strip().upper().replace("_", " ")
+    raw = re.sub(r"\s+", " ", raw)
+    return _NSE_LIVE_INDEX_ALIASES.get(raw)
+
+
+def _with_intraday_pg_persistence(snapshot: dict) -> dict:
+    """Attach best-effort PostgreSQL persistence metadata to a live snapshot."""
+    if not snapshot or snapshot.get("error"):
+        return snapshot
+    out = dict(snapshot)
+    try:
+        persisted = persist_intraday_snapshot(out)
+        out["postgres_persist"] = {
+            "ok": bool(persisted.get("ok")),
+            "schema": persisted.get("schema", "intraday"),
+            "table": persisted.get("table", "quote_snapshots"),
+            "rows_inserted": persisted.get("rows_inserted", 0),
+        }
+    except Exception as exc:
+        out["postgres_persist"] = {
+            "ok": False,
+            "schema": "intraday",
+            "table": "quote_snapshots",
+            "error": str(exc),
+        }
+    return out
+
+
+def get_nse_intraday_snapshot(symbol: str) -> dict:
+    """Fetch the NSE website live snapshot before any yfinance intraday fallback.
+
+    NSE's public website APIs provide current quote/index snapshots, not a complete
+    intraday OHLCV candle history. Agent Adda therefore uses this as the mandatory
+    first live source, then uses yfinance only when candle history is needed.
+    """
+    sym = symbol.strip().upper()
+    index_name = _canonical_nse_live_index(sym)
+    source_priority = ["NSE website live quote", "yfinance candles fallback"]
+
+    if index_name:
+        overview = get_live_market_overview()
+        if overview.get("error"):
+            return {
+                "symbol": index_name,
+                "source_priority": source_priority,
+                "error": f"NSE index snapshot unavailable: {overview['error']}",
+            }
+        index_row = (overview.get("indices") or {}).get(index_name)
+        if not index_row:
+            return {
+                "symbol": index_name,
+                "source": overview.get("source", "NSE live API"),
+                "source_priority": source_priority,
+                "error": f"NSE index snapshot not found for {index_name}",
+            }
+        return _with_intraday_pg_persistence({
+            "symbol": index_name,
+            "name": index_name,
+            "last_price": index_row.get("last"),
+            "change": index_row.get("change"),
+            "pct_change": index_row.get("pct_change"),
+            "day_high": index_row.get("day_high"),
+            "day_low": index_row.get("day_low"),
+            "as_of": overview.get("as_of"),
+            "source": overview.get("source", "NSE live API"),
+            "source_priority": source_priority,
+            "note": "NSE website snapshot. Use yfinance only if intraday candle history is needed.",
+        })
+
+    quote = get_live_quote(sym)
+    if quote.get("error"):
+        return {
+            "symbol": sym,
+            "source_priority": source_priority,
+            "error": f"NSE live quote unavailable: {quote['error']}",
+        }
+    quote = dict(quote)
+    quote["source_priority"] = source_priority
+    quote["note"] = "NSE website snapshot. Use yfinance only if intraday candle history is needed."
+    return _with_intraday_pg_persistence(quote)
 
 
 def get_top_gainers_losers(
@@ -2681,20 +4367,29 @@ def _get_index_symbols(index: str = "NIFTY 50", top_n: int = 50) -> list[str]:
     """Get symbols for an index from the DB snapshot."""
     syms: list[str] = []
     try:
-        if DB_PATH.exists():
-            conn = _db_conn()
-            idx_lower = index.lower()
-            rows = conn.execute(
-                "SELECT DISTINCT symbol FROM stage_snapshots "
-                "WHERE LOWER(sector) != '' "
-                "AND snapshot_date = (SELECT MAX(snapshot_date) FROM stage_snapshots) "
-                "ORDER BY investment_score DESC NULLS LAST LIMIT ?",
-                (top_n,),
-            ).fetchall()
-            conn.close()
-            syms = [r[0] for r in rows]
+        rows = _pg_fetchall(
+            "SELECT DISTINCT symbol FROM scores.stage_snapshots "
+            "WHERE COALESCE(sector,'') != '' "
+            "AND snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) "
+            "ORDER BY symbol LIMIT %s",
+            (top_n,),
+        )
+        syms = [r[0] for r in rows]
     except Exception:
-        pass
+        try:
+            if DB_PATH.exists():
+                conn = _db_conn()
+                rows = conn.execute(
+                    "SELECT DISTINCT symbol FROM stage_snapshots "
+                    "WHERE LOWER(sector) != '' "
+                    "AND snapshot_date = (SELECT MAX(snapshot_date) FROM stage_snapshots) "
+                    "ORDER BY investment_score DESC NULLS LAST LIMIT ?",
+                    (top_n,),
+                ).fetchall()
+                conn.close()
+                syms = [r[0] for r in rows]
+        except Exception:
+            pass
     # Fallback to a small hardcoded Nifty 50 subset
     if not syms:
         syms = [
@@ -3323,18 +5018,18 @@ def generate_portfolio_narratives(
 
 def generate_voice_briefing(
     text: str | None = None,
-    voice: str = "alloy",
+    voice: str = "cedar",
     save_path: str | None = None,
 ) -> dict:
     """
-    P3-2 Daily Voice Briefing — convert market summary to audio using OpenAI TTS.
+    P3-2 Daily Voice Briefing — convert market summary to audio using OpenAI GPT TTS.
 
     If no text is provided, auto-generates a 60-second market briefing using
     the current day's live market overview, top movers, and portfolio status.
 
     Args:
         text:      Custom text to convert to speech. If None, generates auto-briefing.
-        voice:     OpenAI TTS voice — 'alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer'.
+        voice:     OpenAI GPT TTS voice. Defaults to 'cedar' for a grounded assistant tone.
         save_path: Where to save the MP3 file. Defaults to data/voice_briefing.mp3.
 
     Returns:
@@ -3346,13 +5041,10 @@ def generate_voice_briefing(
           "note":       str,
         }
     """
-    import openai, os
+    import os
     from pathlib import Path as _Path
 
-    api_key = os.environ.get("OPENAI_API_KEY", "")
-    if not api_key:
-        return {"error": "OPENAI_API_KEY not set — cannot generate voice briefing."}
-
+    api_key = os.environ.get("OPENAI_API_KEY") or os.environ.get("SHUNYAAI_OPENAI_API_KEY", "")
     # Auto-generate briefing text if not provided
     if not text:
         try:
@@ -3383,16 +5075,39 @@ def generate_voice_briefing(
     out_path = _Path(save_path) if save_path else ROOT / "data" / "voice_briefing.mp3"
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
-    try:
-        client = openai.OpenAI(api_key=api_key)
-        response = client.audio.speech.create(
-            model="tts-1",
-            voice=voice,
-            input=text,
-        )
-        response.stream_to_file(str(out_path))
-    except Exception as e:
-        return {"error": f"TTS generation failed: {e}", "text_used": text}
+    model = os.environ.get("OPENAI_TTS_MODEL", "gpt-4o-mini-tts")
+    provider = "openai_gpt_tts"
+    if api_key:
+        try:
+            from openai import OpenAI
+
+            client = OpenAI(api_key=api_key)
+            with client.audio.speech.with_streaming_response.create(
+                model=model,
+                voice=voice,
+                input=text,
+                instructions=(
+                    "Speak like a calm senior Indian-market operator. "
+                    "Be concise, risk-first, evidence-aware, and avoid hype. "
+                    "This is an AI-generated research briefing, not investment advice."
+                ),
+            ) as response:
+                response.stream_to_file(str(out_path))
+        except Exception as e:
+            return {"error": f"TTS generation failed: {e}", "text_used": text, "model": model}
+    else:
+        import subprocess
+
+        provider = "macos_say"
+        out_path = out_path.with_suffix(".aiff")
+        try:
+            subprocess.run(["say", "-o", str(out_path), text], check=True, capture_output=True)
+        except Exception as e:
+            return {
+                "error": f"OPENAI_API_KEY not set and macOS say fallback failed: {e}",
+                "text_used": text,
+                "model": model,
+            }
 
     word_count = len(text.split())
     duration_secs = word_count / 2.5  # approx 150 wpm
@@ -3403,6 +5118,8 @@ def generate_voice_briefing(
         "text_used":     text,
         "duration_est":  duration_str,
         "voice":         voice,
+        "model":         model,
+        "provider":      provider,
         "note": f"Voice briefing saved to {out_path.name}. Play with: open '{out_path}'",
     }
 
@@ -3644,6 +5361,31 @@ TOOL_REGISTRY: dict[str, Any] = {
         "Fetch live NSE index levels (Nifty 50, Bank Nifty, IT, Midcap, Smallcap) plus advances/declines. Use for 'how is the market', 'market today', 'live market' queries.",
         {"type": "object", "properties": {}, "required": []},
     ),
+    "get_intraday_market_recap": (
+        get_intraday_market_recap,
+        (
+            "Summarize what changed in the live market over the last N minutes. "
+            "Compares current NSE live index tape with stored intraday snapshots when available; "
+            "otherwise returns the current live tape with a snapshot-only note. "
+            "Use for: 'what happened in the last 15 minutes', 'last 30 min market recap', "
+            "'what changed just now'."
+        ),
+        {
+            "type": "object",
+            "properties": {"minutes": {"type": "integer", "default": 15}},
+            "required": [],
+        },
+    ),
+    "get_nse_intraday_snapshot": (
+        get_nse_intraday_snapshot,
+        (
+            "Fetch the NSE website live quote/index snapshot before any yfinance intraday fallback. "
+            "For stocks this calls NSE quote-equity; for indices such as NIFTY50/BANKNIFTY it calls "
+            "NSE allIndices. NSE website APIs provide live snapshot fields, not full candle history, "
+            "so use yfinance only after this when OHLCV candles are needed."
+        ),
+        {"type": "object", "properties": {"symbol": {"type": "string"}}, "required": ["symbol"]},
+    ),
     "get_top_gainers_losers": (
         get_top_gainers_losers,
         (
@@ -3869,6 +5611,27 @@ TOOL_REGISTRY: dict[str, Any] = {
             "required": ["screen_type"],
         },
     ),
+    "validate_strength_watchlist": (
+        validate_strength_watchlist,
+        (
+            "Data-direct validator for ranking a list of NSE stocks by CANSLIM score, "
+            "relative strength, enhanced fundamental score, Piotroski F-score, Beneish, "
+            "and Altman. Never assumes missing evidence: missing CANSLIM, RS, fundamental, "
+            "or forensic data is returned in missing_evidence and evidence_coverage."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbols": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "NSE symbols to validate and rank",
+                },
+                "top_n": {"type": "integer", "default": 20},
+            },
+            "required": ["symbols"],
+        },
+    ),
     "get_index_snapshot": (
         get_index_snapshot,
         "Get the latest OHLCV and 10-day trend for a Nifty index",
@@ -4023,6 +5786,28 @@ TOOL_REGISTRY: dict[str, Any] = {
                 "max_results": {"type": "integer", "default": 5},
             },
             "required": ["symbol"],
+        },
+    ),
+    "search_market_knowledge": (
+        search_market_knowledge,
+        (
+            "Answer financial-market education questions using source-backed search on "
+            "Wikipedia and Investopedia. Use for definitions, explainers, and concept "
+            "comparisons such as 'what is PE', 'explain Minervini strategy', "
+            "'ROCE vs ROE', 'what is EBITDA', 'how does RSI work'. Never answer these "
+            "from memory first; return source URLs and say when reliable sources are not found."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "The market concept question to answer"},
+                "sources": {
+                    "type": "array",
+                    "items": {"type": "string", "enum": ["wikipedia", "investopedia"]},
+                    "default": ["wikipedia", "investopedia"],
+                },
+            },
+            "required": ["query"],
         },
     ),
     "scrape_screener_in": (
@@ -4318,6 +6103,75 @@ TOOL_REGISTRY: dict[str, Any] = {
 # F&O / Options Tool Wrappers
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _postgres_options_chain_summary(symbol: str, expiry_index: int = 0) -> dict:
+    """Build the rich /options response from PostgreSQL EOD option-chain data."""
+    try:
+        from terminal.fno_data import get_eod_option_chain
+        # Pick expiry by index from PostgreSQL-backed EOD data.
+        all_chain = get_eod_option_chain(symbol)
+        if all_chain.empty:
+            return {"error": f"No PostgreSQL EOD options data for {symbol}", "source": "postgres-eod"}
+        expiries = sorted(all_chain["expiry_date"].dropna().astype(str).unique().tolist())
+        expiry = expiries[min(expiry_index, len(expiries) - 1)] if expiries else None
+        df = get_eod_option_chain(symbol, expiry_date=expiry)
+        if df.empty:
+            return {"error": f"No PostgreSQL EOD options data for {symbol}", "source": "postgres-eod"}
+
+        calls: list[dict] = []
+        puts: list[dict] = []
+        for _, row in df.iterrows():
+            item = {
+                "strike": float(row.get("strike") or 0),
+                "oi": int(row.get("oi") or 0),
+                "chg_oi": int(row.get("oi_change") or 0),
+                "volume": int(row.get("volume") or 0),
+                "iv": None,
+                "ltp": float(row.get("last_price") or row.get("close") or 0),
+                "bid": None,
+                "ask": None,
+            }
+            if row.get("option_type") == "CE":
+                calls.append(item)
+            elif row.get("option_type") == "PE":
+                puts.append(item)
+
+        calls.sort(key=lambda x: x["strike"])
+        puts.sort(key=lambda x: x["strike"])
+        total_call_oi = sum(c["oi"] for c in calls)
+        total_put_oi = sum(p["oi"] for p in puts)
+        pcr = round(total_put_oi / total_call_oi, 3) if total_call_oi else 0
+        strikes = sorted(set(c["strike"] for c in calls) | set(p["strike"] for p in puts))
+        call_map = {c["strike"]: c["oi"] for c in calls}
+        put_map = {p["strike"]: p["oi"] for p in puts}
+        max_pain_strike = 0
+        min_pain = float("inf")
+        for s in strikes:
+            loss = sum(call_map.get(k, 0) * max(0, k - s) for k in strikes)
+            loss += sum(put_map.get(k, 0) * max(0, s - k) for k in strikes)
+            if loss < min_pain:
+                min_pain = loss
+                max_pain_strike = s
+        underlying_vals = df["underlying"].dropna().tolist() if "underlying" in df.columns else []
+        underlying = float(underlying_vals[0]) if underlying_vals else 0
+        atm = min(strikes, key=lambda s: abs(s - underlying)) if strikes and underlying else 0
+        return {
+            "symbol": symbol.upper(),
+            "expiry": expiry,
+            "expiry_dates": expiries[:4],
+            "underlying": underlying,
+            "atm": atm,
+            "pcr": pcr,
+            "max_pain": max_pain_strike,
+            "calls": calls,
+            "puts": puts,
+            "total_call_oi": total_call_oi,
+            "total_put_oi": total_put_oi,
+            "source": "postgres-eod",
+        }
+    except Exception as exc:
+        return {"error": f"PostgreSQL options fallback failed: {exc}", "source": "postgres-eod"}
+
+
 def get_options_chain(symbol: str = "NIFTY", expiry_index: int = 0) -> dict:
     """Fetch NSE options chain for a symbol with PCR, max pain, and IV data."""
     symbol = symbol.upper()
@@ -4349,12 +6203,12 @@ def get_options_chain(symbol: str = "NIFTY", expiry_index: int = 0) -> dict:
             data = resp.json()
 
         if not data or "records" not in data:
-            return {"error": f"No options data for {symbol}"}
+            return _postgres_options_chain_summary(symbol, expiry_index)
 
         records = data["records"]
         expiry_dates = records.get("expiryDates", [])
         if not expiry_dates:
-            return {"error": "No expiry dates found"}
+            return _postgres_options_chain_summary(symbol, expiry_index)
 
         expiry = expiry_dates[min(expiry_index, len(expiry_dates) - 1)]
         underlying = records.get("underlyingValue", 0)
@@ -4424,8 +6278,8 @@ def get_options_chain(symbol: str = "NIFTY", expiry_index: int = 0) -> dict:
             "total_call_oi": total_call_oi,
             "total_put_oi": total_put_oi,
         }
-    except Exception as e:
-        return {"error": str(e)}
+    except Exception:
+        return _postgres_options_chain_summary(symbol, expiry_index)
 
 
 def get_option_chain(symbol: str, expiry: str | None = None,
@@ -4546,6 +6400,120 @@ def scan_options_buys(direction: str = "bullish",
     return scan_options_buying_opportunities(direction, min_oi, max_iv, top_n)
 
 
+def get_fno_analytics(symbol: str | None = None, top_n: int = 20) -> dict:
+    """Return PostgreSQL-backed F&O analytics: PCR, max pain, buildup, signal."""
+    try:
+        import psycopg2
+        conn = psycopg2.connect("dbname=nse_market user=nse_admin host=/tmp")
+        try:
+            params: list[Any] = []
+            where = ""
+            if symbol:
+                where = "WHERE symbol = %s"
+                params.append(symbol.upper())
+            else:
+                params.append(int(top_n))
+            sql = f"""
+                SELECT
+                    trade_date::text AS trade_date,
+                    symbol,
+                    options_expiry::text AS options_expiry,
+                    futures_expiry::text AS futures_expiry,
+                    underlying_price,
+                    futures_close,
+                    futures_price_change_pct,
+                    futures_oi_change_pct,
+                    pcr_oi,
+                    pcr_volume,
+                    max_call_oi_strike,
+                    max_put_oi_strike,
+                    max_pain,
+                    distance_from_max_pain_pct,
+                    buildup,
+                    fno_signal
+                FROM derivatives.mv_fno_symbol_analytics
+                {where}
+                ORDER BY
+                    CASE fno_signal
+                        WHEN 'BULL' THEN 1
+                        WHEN 'BEAR' THEN 2
+                        WHEN 'MILD_BULL' THEN 3
+                        WHEN 'MILD_BEAR' THEN 4
+                        ELSE 5
+                    END,
+                    abs(distance_from_max_pain_pct) DESC NULLS LAST,
+                    symbol
+                """ + ("" if symbol else "LIMIT %s")
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", UserWarning)
+                df = pd.read_sql_query(sql, conn, params=tuple(params))
+        finally:
+            conn.close()
+    except Exception as exc:
+        return {"error": f"PostgreSQL F&O analytics unavailable: {exc}", "symbol": symbol}
+
+    if df.empty:
+        return {"status": "no_data", "symbol": symbol, "rows": []}
+    return {
+        "status": "ok",
+        "source": "postgres.derivatives.mv_fno_symbol_analytics",
+        "symbol": symbol.upper() if symbol else None,
+        "count": int(len(df)),
+        "rows": df.where(pd.notna(df), None).to_dict("records"),
+    }
+
+
+def run_option_payoff_scenario(
+    symbol: str,
+    option_type: str = "CE",
+    strike: float | None = None,
+    expiry_date: str | None = None,
+    entry_premium: float | None = None,
+    lots: int = 1,
+    move_start: float = -5.0,
+    move_end: float = 5.0,
+    move_step: float = 2.5,
+) -> dict:
+    """Run PostgreSQL option payoff what-if scenarios."""
+    try:
+        import psycopg2
+        conn = psycopg2.connect("dbname=nse_market user=nse_admin host=/tmp")
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", UserWarning)
+                df = pd.read_sql_query(
+                    """
+                    SELECT *
+                    FROM derivatives.option_payoff(%s, %s, %s, %s, %s, %s, %s, %s, %s, false, NULL)
+                    """,
+                    conn,
+                    params=(
+                        symbol.upper(),
+                        option_type.upper(),
+                        strike,
+                        expiry_date,
+                        entry_premium,
+                        lots,
+                        move_start,
+                        move_end,
+                        move_step,
+                    ),
+                )
+        finally:
+            conn.close()
+    except Exception as exc:
+        return {"error": f"Option payoff scenario failed: {exc}", "symbol": symbol}
+
+    return {
+        "status": "ok",
+        "source": "postgres.derivatives.option_payoff",
+        "symbol": symbol.upper(),
+        "option_type": option_type.upper(),
+        "count": int(len(df)),
+        "rows": df.where(pd.notna(df), None).to_dict("records"),
+    }
+
+
 # Register F&O tools
 TOOL_REGISTRY.update({
     "get_option_chain": (
@@ -4659,6 +6627,48 @@ TOOL_REGISTRY.update({
             "Use at the start of any F&O session to confirm data availability."
         ),
         {"type": "object", "properties": {}, "required": []},
+    ),
+    "get_fno_analytics": (
+        get_fno_analytics,
+        (
+            "PostgreSQL-backed F&O analytics for one symbol or top symbols. "
+            "Returns PCR, max pain, max call/put OI strikes, futures OI/price change, "
+            "buildup classification, and composite F&O signal. "
+            "Use for: 'F&O analytics', 'FNO signal', 'long buildup', 'short buildup', "
+            "'max pain distance', 'top F&O bearish/bullish names'."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string"},
+                "top_n": {"type": "integer", "default": 20},
+            },
+            "required": [],
+        },
+    ),
+    "run_option_payoff_scenario": (
+        run_option_payoff_scenario,
+        (
+            "Run an option what-if payoff scenario from PostgreSQL F&O data. "
+            "Returns P&L across underlying move percentages for a CE/PE strike. "
+            "Use for: 'what if NIFTY moves 5%', 'option payoff', 'scenario analysis', "
+            "'breakeven for call/put'."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string"},
+                "option_type": {"type": "string", "enum": ["CE", "PE"], "default": "CE"},
+                "strike": {"type": "number"},
+                "expiry_date": {"type": "string"},
+                "entry_premium": {"type": "number"},
+                "lots": {"type": "integer", "default": 1},
+                "move_start": {"type": "number", "default": -5.0},
+                "move_end": {"type": "number", "default": 5.0},
+                "move_step": {"type": "number", "default": 2.5},
+            },
+            "required": ["symbol"],
+        },
     ),
 })
 
@@ -5238,6 +7248,240 @@ TOOL_REGISTRY.update({
                               "description": "Maximum pages to extract (default 15)"},
             },
             "required": ["url"],
+        },
+    ),
+})
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# /analyze — Local document reader (PDF, DOCX, TXT) + web page scraper
+# PG: First-class document analysis capability for Agent Adda
+# ─────────────────────────────────────────────────────────────────────────────
+
+def analyze_document(source: str, max_pages: int = 30) -> dict:
+    """Read and extract text from a local file (PDF, DOCX, TXT, CSV) or a web URL.
+
+    Detects the source type automatically:
+      - URL (http/https) → scrape web page or download PDF
+      - .pdf             → extract text with PyMuPDF page by page
+      - .docx            → extract text with python-docx paragraph by paragraph
+      - .txt / .csv / .md → read as plain text
+
+    Returns structured dict with text content, metadata, and page/section info.
+    """
+    import os
+    source = source.strip()
+
+    # ── URL path ──────────────────────────────────────────────────────────
+    if source.lower().startswith(("http://", "https://")):
+        # Check if it's a PDF URL
+        if source.lower().endswith(".pdf") or "/pdf/" in source.lower():
+            return fetch_pdf_text(source, max_pages=max_pages)
+        # Otherwise scrape as web page
+        result = fetch_article_content(source, max_chars=15000)
+        result["source_type"] = "web_page"
+        return result
+
+    # ── Local file path ───────────────────────────────────────────────────
+    path = os.path.expanduser(source)
+    if not os.path.isabs(path):
+        # Try relative to common locations
+        for base in [os.getcwd(), os.path.expanduser("~/Documents"),
+                     os.path.expanduser("~/Downloads")]:
+            candidate = os.path.join(base, path)
+            if os.path.isfile(candidate):
+                path = candidate
+                break
+
+    if not os.path.isfile(path):
+        return {"error": f"File not found: {source}", "source": source}
+
+    ext = os.path.splitext(path)[1].lower()
+    file_size = os.path.getsize(path)
+    file_name = os.path.basename(path)
+
+    # ── PDF ───────────────────────────────────────────────────────────────
+    if ext == ".pdf":
+        try:
+            import fitz  # PyMuPDF
+            doc = fitz.open(path)
+            total_pages = len(doc)
+            pages_to_read = min(total_pages, max_pages)
+            pages_text = []
+            full_text_parts = []
+            for i in range(pages_to_read):
+                page = doc[i]
+                text = page.get_text("text").strip()
+                if text:
+                    pages_text.append({"page": i + 1, "text": text})
+                    full_text_parts.append(f"--- Page {i + 1} ---\n{text}")
+            doc.close()
+            full_text = "\n\n".join(full_text_parts)
+            return {
+                "source": path, "source_type": "pdf", "file_name": file_name,
+                "file_size_kb": round(file_size / 1024, 1),
+                "total_pages": total_pages, "pages_read": pages_to_read,
+                "truncated": total_pages > max_pages,
+                "text": full_text, "pages": pages_text,
+            }
+        except ImportError:
+            return {"error": "PyMuPDF (fitz) not installed. Run: pip install pymupdf",
+                    "source": path}
+        except Exception as e:
+            return {"error": f"PDF read error: {e}", "source": path}
+
+    # ── DOCX ──────────────────────────────────────────────────────────────
+    if ext == ".docx":
+        try:
+            from docx import Document as DocxDocument
+            doc = DocxDocument(path)
+
+            # Extract paragraphs
+            paragraphs = []
+            for para in doc.paragraphs:
+                text = para.text.strip()
+                if text:
+                    style = para.style.name if para.style else "Normal"
+                    paragraphs.append({"style": style, "text": text})
+
+            # Extract tables
+            tables_text = []
+            for t_idx, table in enumerate(doc.tables):
+                rows = []
+                for row in table.rows:
+                    cells = [cell.text.strip() for cell in row.cells]
+                    rows.append(" | ".join(cells))
+                if rows:
+                    tables_text.append(f"--- Table {t_idx + 1} ---\n" + "\n".join(rows))
+
+            # Build full text
+            full_parts = [p["text"] for p in paragraphs]
+            if tables_text:
+                full_parts.append("\n\n=== TABLES ===\n" + "\n\n".join(tables_text))
+            full_text = "\n\n".join(full_parts)
+
+            return {
+                "source": path, "source_type": "docx", "file_name": file_name,
+                "file_size_kb": round(file_size / 1024, 1),
+                "paragraph_count": len(paragraphs),
+                "table_count": len(doc.tables),
+                "text": full_text,
+                "sections": paragraphs[:100],  # Cap section detail
+            }
+        except ImportError:
+            return {"error": "python-docx not installed. Run: pip install python-docx",
+                    "source": path}
+        except Exception as e:
+            return {"error": f"DOCX read error: {e}", "source": path}
+
+    # ── Plain text (TXT, CSV, MD, etc.) ───────────────────────────────────
+    if ext in (".txt", ".csv", ".md", ".log", ".json", ".yaml", ".yml"):
+        try:
+            max_bytes = 50_000  # ~50KB cap for plain text
+            with open(path, "r", encoding="utf-8", errors="replace") as f:
+                text = f.read(max_bytes)
+            truncated = file_size > max_bytes
+            return {
+                "source": path, "source_type": ext.lstrip("."), "file_name": file_name,
+                "file_size_kb": round(file_size / 1024, 1),
+                "truncated": truncated,
+                "text": text,
+            }
+        except Exception as e:
+            return {"error": f"Read error: {e}", "source": path}
+
+    return {"error": f"Unsupported file type: {ext}. Supported: .pdf, .docx, .txt, .csv, .md",
+            "source": path}
+
+
+TOOL_REGISTRY.update({
+    "analyze_document": (
+        analyze_document,
+        ("Read and extract text from a local file (PDF, DOCX, TXT, CSV) or a web URL. "
+         "Use this for document analysis — annual reports, research papers, filings, "
+         "concall transcripts, presentations. Returns full text content with metadata. "
+         "For PDFs: page-by-page extraction. For DOCX: paragraphs + tables. "
+         "For URLs: smart web scraping or PDF download."),
+        {
+            "type": "object",
+            "properties": {
+                "source": {
+                    "type": "string",
+                    "description": "File path (local PDF/DOCX/TXT) or URL (http/https web page or PDF link)",
+                },
+                "max_pages": {
+                    "type": "integer",
+                    "description": "Max pages to read for PDFs (default 30)",
+                    "default": 30,
+                },
+            },
+            "required": ["source"],
+        },
+    ),
+})
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# /report — First-class report generation (PDF, HTML, Markdown)
+# PG: Enables any LLM output to be written as a formatted report file.
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _generate_report_tool(content: str, report_type: str = "research",
+                          symbol: str = "", title: str = "",
+                          output_format: str = "html", filename: str = "") -> dict:
+    """Generate a styled report file from analysis content."""
+    from terminal.reports import generate_report
+    return generate_report(
+        content=content,
+        report_type=report_type,
+        symbol=symbol,
+        title=title or None,
+        output_format=output_format,
+        filename=filename or None,
+    )
+
+
+TOOL_REGISTRY.update({
+    "generate_report": (
+        _generate_report_tool,
+        ("Generate a formatted report file (HTML, PDF, or Markdown) from analysis content. "
+         "Use this after completing any analysis to save results as a professional report. "
+         "Supports report types: technical, fundamental, forensic, research, intraday, "
+         "canslim, ric, sector. The report is saved to reports/generated/ directory."),
+        {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string",
+                    "description": "The full analysis content in Markdown format to include in the report",
+                },
+                "report_type": {
+                    "type": "string",
+                    "enum": ["technical", "fundamental", "forensic", "research",
+                             "intraday", "canslim", "ric", "sector"],
+                    "description": "Type of report — determines styling and badge",
+                    "default": "research",
+                },
+                "symbol": {
+                    "type": "string",
+                    "description": "Stock symbol or sector name for the report title",
+                },
+                "title": {
+                    "type": "string",
+                    "description": "Custom report title (optional — auto-generated from type+symbol if omitted)",
+                },
+                "output_format": {
+                    "type": "string",
+                    "enum": ["html", "pdf", "md"],
+                    "description": "Output file format: html (styled), pdf (via weasyprint), or md (plain markdown)",
+                    "default": "html",
+                },
+                "filename": {
+                    "type": "string",
+                    "description": "Custom filename without extension (optional — auto-generated if omitted)",
+                },
+            },
+            "required": ["content"],
         },
     ),
 })

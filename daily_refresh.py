@@ -7,9 +7,10 @@ Runs the full pipeline after NSE market close (3:30 PM IST / 10:00 UTC).
 Pipeline stages:
   1. Fetch auxiliary data: FII/DII flows, F&O signals, corporate events,
      insider alerts, macro proxies
-  2. Run comprehensive NSE universe analysis → generates comprehensive_nse_enhanced_*.csv
-  3. Update sector rotation tracker: live prices + daily EOD snapshot
-  4. Generate HTML report
+  2. Load latest EOD bhavcopy into PostgreSQL market.equity_eod
+  3. Run comprehensive NSE universe analysis → writes PostgreSQL scores.daily_scores
+  4. Update sector rotation tracker from PostgreSQL scores + EOD history
+  5. Generate HTML/PDF reports
 
 Usage:
   python daily_refresh.py               # full pipeline
@@ -27,6 +28,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
+PYTHON = sys.executable
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers
@@ -76,7 +78,7 @@ def _section(title: str) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def step_fetch_eod_data(dry_run: bool) -> bool:
-    """Fetch EOD bhavcopy from NSE archives → writes directly to local data/."""
+    """Fetch EOD bhavcopy from NSE archives into local ingress files."""
     _section("STEP 0 — Fetch EOD Bhavcopy (NSE Archives)")
 
     # Pass PROJECT_ROOT so R script resolves paths relative to repo root
@@ -93,17 +95,27 @@ def step_fetch_eod_data(dry_run: bool) -> bool:
     return ok
 
 
+def step_postgres_eod_load(dry_run: bool) -> bool:
+    """Load latest local EOD bhavcopy into PostgreSQL before analysis."""
+    _section("STEP 0B — PostgreSQL EOD Load")
+    return _run(
+        "Load latest bhavcopy → market.equity_eod",
+        [PYTHON, "postgres/loader.py", "--eod-only"],
+        dry_run=dry_run,
+    )
+
+
 def step_fetch_auxiliary(dry_run: bool) -> dict[str, bool]:
     """Fetch FII/DII, F&O, corporate events, insider alerts, macro proxies."""
     _section("STEP 1 — Fetch Auxiliary Market Data")
     results = {}
 
     scripts = [
-        ("FII/DII Flows",        ["python3", "fetch_fii_dii_flows.py"]),
-        ("F&O OI + PCR",         ["python3", "fetch_fno_data.py"]),
-        ("Corporate Events",     ["python3", "fetch_corporate_events.py"]),
-        ("Insider Alerts",       ["python3", "fetch_insider_alerts.py"]),
-        ("Macro Proxies",        ["python3", "fetch_macro_proxies.py"]),
+        ("FII/DII Flows",        [PYTHON, "fetch_fii_dii_flows.py"]),
+        ("F&O OI + PCR",         [PYTHON, "fetch_fno_data.py"]),
+        ("Corporate Events",     [PYTHON, "fetch_corporate_events.py"]),
+        ("Insider Alerts",       [PYTHON, "fetch_insider_alerts.py"]),
+        ("Macro Proxies",        [PYTHON, "fetch_macro_proxies.py"]),
     ]
     for label, cmd in scripts:
         ok = _run(label, cmd, dry_run=dry_run)
@@ -114,12 +126,11 @@ def step_fetch_auxiliary(dry_run: bool) -> dict[str, bool]:
 
 
 def step_comprehensive_analysis(dry_run: bool) -> bool:
-    """Run the full NSE universe analysis to generate comprehensive CSV."""
+    """Run the full NSE universe analysis and write scores.daily_scores directly."""
     _section("STEP 2 — Comprehensive NSE Universe Analysis")
-    # fixed_nse_universe_analysis.py generates comprehensive_nse_enhanced_*.csv
     return _run(
         "NSE Universe Analysis",
-        ["python3", "fixed_nse_universe_analysis.py"],
+        [PYTHON, "fixed_nse_universe_analysis.py"],
         dry_run=dry_run,
     )
 
@@ -132,14 +143,14 @@ def step_tracker_snapshot(dry_run: bool, live_only: bool = False) -> bool:
         # Fast path: only refresh live prices (no screener re-run)
         return _run(
             "Update live prices (NSE India + YF fallback)",
-            ["python3", "sector_rotation_tracker.py", "--update-live"],
+            [PYTHON, "sector_rotation_tracker.py", "--update-live"],
             dry_run=dry_run,
         )
     else:
-        # Full snapshot: re-run screener + fetch live prices
+        # Full snapshot: re-run screener from PostgreSQL scores + fetch live prices
         ok = _run(
             "EOD snapshot (screener + live prices)",
-            ["python3", "sector_rotation_tracker.py", "--snapshot"],
+            [PYTHON, "sector_rotation_tracker.py", "--snapshot"],
             dry_run=dry_run,
         )
         return ok
@@ -150,17 +161,37 @@ def step_generate_report(dry_run: bool) -> bool:
     _section("STEP 4 — Generate HTML Report")
     return _run(
         "Stage 2 Tracker HTML Report",
-        ["python3", "sector_rotation_tracker.py", "--report", "--html"],
+        [PYTHON, "sector_rotation_tracker.py", "--report", "--html"],
         dry_run=dry_run,
     )
 
 
 def step_sector_rotation_report(dry_run: bool) -> bool:
-    """Regenerate full sector rotation report."""
-    _section("STEP 5 — Sector Rotation Report (optional)")
+    """Regenerate full sector rotation report — populates signal_log.csv."""
+    _section("STEP 5 — Sector Rotation Report")
     return _run(
-        "Sector Rotation Full Report",
-        ["python3", "sector_rotation_report.py"],
+        "Sector Rotation Report",
+        [PYTHON, "sector_rotation_report.py"],
+        dry_run=dry_run,
+    )
+
+
+def step_voice_briefing(dry_run: bool) -> bool:
+    """Generate today's voice briefing script from fresh signal_log.csv data."""
+    _section("STEP 6 — Voice Briefing (script only, no audio)")
+    return _run(
+        "Voice Briefing",
+        [PYTHON, "generate_voice_briefing.py", "--no-tts"],
+        dry_run=dry_run,
+    )
+
+
+def step_postgres_load(dry_run: bool) -> bool:
+    """Load today's EOD data into PostgreSQL and run all 40 screeners."""
+    _section("STEP 7 — PostgreSQL Load + Screener Run")
+    return _run(
+        "PostgreSQL loader + screeners",
+        [PYTHON, "postgres/loader.py"],
         dry_run=dry_run,
     )
 
@@ -204,8 +235,6 @@ def main() -> int:
                         help="Skip heavy comprehensive analysis (use existing CSV)")
     parser.add_argument("--skip-aux",        action="store_true",
                         help="Skip auxiliary data fetch (FII/DII, F&O, events)")
-    parser.add_argument("--full-report",     action="store_true",
-                        help="Also regenerate full sector rotation report")
     parser.add_argument("--comprehensive",   action="store_true",
                         help="Also run R-based comprehensive index + sector HTML reports")
     parser.add_argument("--dry-run",         action="store_true",
@@ -237,6 +266,9 @@ def main() -> int:
     if not args.skip_analysis:
         if not step_fetch_eod_data(args.dry_run):
             print("\n  ⚠️  EOD data fetch failed — will use latest cached data")
+        if not step_postgres_eod_load(args.dry_run):
+            failed.append("PostgreSQL EOD load")
+            print("\n  ⚠️  PostgreSQL EOD load failed — analysis may use stale EOD history")
 
     # 1. Auxiliary data
     if not args.skip_aux:
@@ -260,12 +292,20 @@ def main() -> int:
     if not step_generate_report(args.dry_run):
         failed.append("HTML report")
 
-    # 5. Optional full sector rotation report
-    if args.full_report:
-        if not step_sector_rotation_report(args.dry_run):
-            failed.append("Sector rotation report")
+    # 5. Sector rotation report (now always runs — populates signal_log.csv for voice briefing)
+    if not step_sector_rotation_report(args.dry_run):
+        failed.append("Sector rotation report")
 
-    # 6. Optional comprehensive R reports (All Indexes + All Sectors HTML)
+    # 6. Voice briefing — generates script from fresh signal_log.csv (fast, no LLM)
+    if not step_voice_briefing(args.dry_run):
+        failed.append("Voice briefing")
+
+    # 7. PostgreSQL load + run all 40 screeners
+    if not step_postgres_load(args.dry_run):
+        print("  ⚠️  PostgreSQL load failed — screeners not updated")
+        failed.append("PostgreSQL screeners")
+
+    # 8. Optional comprehensive R reports (All Indexes + All Sectors HTML)
     if args.comprehensive:
         if not step_comprehensive_r_reports(args.dry_run):
             failed.append("Comprehensive R reports")
