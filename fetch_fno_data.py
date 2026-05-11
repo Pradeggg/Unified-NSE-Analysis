@@ -37,6 +37,7 @@ import os
 import subprocess
 import sys
 import time
+import warnings
 import zipfile
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -49,6 +50,7 @@ ROOT = Path(__file__).resolve().parent
 CACHE_DIR = ROOT / "data" / "_fno_cache"
 SIGNALS_CSV = ROOT / "data" / "fno_signals.csv"
 CACHE_TTL_HOURS = 24
+PG_DSN = "dbname=nse_market user=nse_admin host=/tmp"
 
 # ── NSE access config ──
 _NSE_HEADERS = {
@@ -59,6 +61,42 @@ _NSE_HEADERS = {
     "Referer": "https://www.nseindia.com/market-data/derivatives-market-watch",
 }
 _SLEEP_BETWEEN_CALLS = 2  # seconds — NSE rate-limit courtesy
+
+
+def _load_fno_signals_from_postgres() -> pd.DataFrame:
+    """Load latest precomputed F&O analytics from PostgreSQL.
+
+    PostgreSQL is the analytical source of truth. The legacy CSV remains a
+    cache/fallback for environments where the local database is unavailable.
+    """
+    try:
+        import psycopg2
+        conn = psycopg2.connect(PG_DSN)
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", UserWarning)
+                return pd.read_sql_query(
+                    """
+                    SELECT
+                        symbol AS "SYMBOL",
+                        pcr_oi AS "FNO_PCR",
+                        futures_oi_change_pct AS "FNO_OI_CHANGE_5D",
+                        futures_price_change_pct AS "FNO_PRICE_CHANGE",
+                        buildup AS "FNO_BUILDUP",
+                        max_pain AS "FNO_MAX_PAIN",
+                        fno_signal AS "FNO_SIGNAL",
+                        max_call_oi_strike AS "FNO_MAX_CALL_OI_STRIKE",
+                        max_put_oi_strike AS "FNO_MAX_PUT_OI_STRIKE",
+                        distance_from_max_pain_pct AS "FNO_MAX_PAIN_DISTANCE_PCT"
+                    FROM derivatives.mv_fno_symbol_analytics
+                    ORDER BY symbol
+                    """,
+                    conn,
+                )
+        finally:
+            conn.close()
+    except Exception:
+        return pd.DataFrame()
 
 # ── FNO bhavcopy column names (new format) ──
 # The NSE FO bhavcopy CSV columns may vary slightly; we normalise on load.
@@ -498,6 +536,11 @@ def generate_fno_signals(reference_date: datetime | None = None) -> pd.DataFrame
       SYMBOL, FNO_PCR, FNO_OI_CHANGE_5D, FNO_PRICE_CHANGE, FNO_BUILDUP,
       FNO_MAX_PAIN, FNO_SIGNAL
     """
+    pg_df = _load_fno_signals_from_postgres()
+    if not pg_df.empty:
+        print(f"  FNO signals: loaded {len(pg_df)} precomputed rows from PostgreSQL.")
+        return pg_df
+
     ref = reference_date or datetime.now()
     print(f"\n{'='*60}")
     print(f"F&O Signal Generation — {ref.strftime('%Y-%m-%d')}")
@@ -554,10 +597,15 @@ def _cache_is_fresh() -> bool:
 
 
 def load_fno_signals() -> pd.DataFrame:
-    """Load FNO signals — from cache if fresh, otherwise regenerate.
+    """Load FNO signals from PostgreSQL, falling back to cache/regeneration.
 
     This is the primary entry point for sector_rotation_report.py.
     """
+    pg_df = _load_fno_signals_from_postgres()
+    if not pg_df.empty:
+        print(f"  FNO signals: loaded {len(pg_df)} rows from PostgreSQL.")
+        return pg_df
+
     if _cache_is_fresh():
         try:
             df = pd.read_csv(SIGNALS_CSV)

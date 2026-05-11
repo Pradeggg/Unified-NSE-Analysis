@@ -15,6 +15,12 @@ from pathlib import Path
 import json
 import warnings
 warnings.filterwarnings('ignore')
+try:
+    import psycopg2
+    from psycopg2.extras import execute_values
+    PSYCOPG2_AVAILABLE = True
+except ImportError:
+    PSYCOPG2_AVAILABLE = False
 
 # Try to import technical analysis libraries
 try:
@@ -45,6 +51,7 @@ NSE_DATA_DIR.mkdir(exist_ok=True, parents=True)
 
 # Database path
 DB_PATH = ROOT / "nse_analysis.db"
+PG_DSN = "dbname=nse_market user=nse_admin host=/tmp"
 
 print("Starting ENHANCED NSE Universe Analysis (Python)...")
 
@@ -129,8 +136,60 @@ def initialize_database(db_path):
 # Data Loading Functions
 # =============================================================================
 
+def _load_postgres_stock_history():
+    """Load full EOD stock history from PostgreSQL when the CSV is only a daily bhavcopy."""
+    try:
+        import psycopg2
+    except ImportError:
+        return None
+
+    try:
+        conn = psycopg2.connect(PG_DSN)
+        try:
+            query = """
+                SELECT symbol AS "SYMBOL",
+                       trade_date AS "TIMESTAMP",
+                       open AS "OPEN",
+                       high AS "HIGH",
+                       low AS "LOW",
+                       close AS "CLOSE",
+                       volume AS "TOTTRDQTY",
+                       COALESCE(turnover_cr, 0) * 10000000 AS "TOTTRDVAL"
+                FROM market.equity_eod
+                WHERE close IS NOT NULL
+                  AND close > 0
+                  AND trade_date IS NOT NULL
+                ORDER BY trade_date, symbol
+            """
+            df = pd.read_sql_query(query, conn)
+        finally:
+            conn.close()
+    except Exception as e:
+        print(f"PostgreSQL EOD history unavailable; using CSV only ({e})")
+        return None
+
+    if df.empty:
+        return None
+
+    df["TIMESTAMP"] = pd.to_datetime(df["TIMESTAMP"]).dt.date
+    for col in ["CLOSE", "OPEN", "HIGH", "LOW", "TOTTRDQTY", "TOTTRDVAL"]:
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+    df = df[
+        df["SYMBOL"].notna()
+        & df["TIMESTAMP"].notna()
+        & df["CLOSE"].notna()
+        & (df["CLOSE"] > 0)
+        & (df["TOTTRDVAL"] > 0)
+    ].copy()
+    df = df.sort_values(["SYMBOL", "TIMESTAMP", "TOTTRDVAL"], ascending=[True, True, False])
+    df = df.drop_duplicates(subset=["SYMBOL", "TIMESTAMP"], keep="first")
+    df = df.sort_values(["TIMESTAMP", "SYMBOL"])
+    print(f"Loaded {len(df)} PostgreSQL EOD history records")
+    return df
+
+
 def load_stock_data():
-    """Load NSE stock data from CSV"""
+    """Load NSE stock data, preferring PostgreSQL history when the local CSV has only one day."""
     print("Loading NSE stock data with enhanced error handling...")
     
     stock_file = DATA_DIR / 'nse_sec_full_data.csv'
@@ -170,6 +229,11 @@ def load_stock_data():
         df = df.sort_values(['TIMESTAMP', 'SYMBOL'])
         
         print(f"After deduplication: {len(df)} clean records")
+        max_history = int(df.groupby("SYMBOL")["TIMESTAMP"].nunique().max()) if not df.empty else 0
+        if max_history < 50:
+            pg_df = _load_postgres_stock_history()
+            if pg_df is not None and not pg_df.empty:
+                return pg_df
         return df
         
     except Exception as e:
@@ -201,8 +265,19 @@ def load_fundamental_data():
     """Load fundamental scores database"""
     print("Loading fundamental scores database...")
     
-    fund_file = DATA_DIR / 'fundamental_scores_database.csv'
-    if not fund_file.exists():
+    fund_file = next(
+        (
+            path for path in [
+                DATA_DIR / 'fundamental_scores_database.csv',
+                ROOT / 'organized' / 'data' / 'fundamental_scores_database.csv',
+                ROOT / 'archive' / 'repo-cleanup-20260511' / 'organized' / 'data' / 'fundamental_scores_database.csv',
+                ROOT / 'archive' / 'fundamental_scores_database.csv',
+            ]
+            if path.exists()
+        ),
+        None,
+    )
+    if fund_file is None:
         print("Fundamental scores file not found, continuing without fundamental data")
         return None
     
@@ -692,9 +767,10 @@ def analyze_stocks(stock_data, index_data, fundamental_data, company_names, late
         
         except Exception as e:
             error_count += 1
-            # Skip problematic stocks silently
+            if error_count <= 5:
+                print(f"Warning: failed to analyze {symbol}: {e}")
     
-        print(f"Processing completed. Successfully processed: {processed_count} stocks. Errors: {error_count}")
+    print(f"Processing completed. Successfully processed: {processed_count} stocks. Errors: {error_count}")
     
     return pd.DataFrame(results)
 
@@ -1052,6 +1128,104 @@ def save_market_breadth_to_database(results, latest_date, db_path):
     
     conn.close()
 
+
+def _pg_safe_float(v):
+    try:
+        if v is None or pd.isna(v):
+            return None
+        return float(v)
+    except (TypeError, ValueError):
+        return None
+
+
+def _pg_safe_text(v):
+    if v is None or (isinstance(v, float) and pd.isna(v)):
+        return None
+    text = str(v).strip()
+    return text or None
+
+
+def save_daily_scores_to_postgres(results, latest_date):
+    """Persist comprehensive analysis directly to PostgreSQL scores.daily_scores."""
+    if not PSYCOPG2_AVAILABLE:
+        print("psycopg2 unavailable; skipping PostgreSQL daily_scores write")
+        return 0
+    if results is None or results.empty:
+        return 0
+
+    rows = []
+    score_date = latest_date.isoformat() if hasattr(latest_date, "isoformat") else str(latest_date)
+    for _, row in results.iterrows():
+        sym = _pg_safe_text(row.get("SYMBOL"))
+        if not sym:
+            continue
+        rows.append((
+            score_date,
+            sym,
+            _pg_safe_text(row.get("COMPANY_NAME")) or sym,
+            _pg_safe_text(row.get("SECTOR")),
+            _pg_safe_text(row.get("MARKET_CAP_CATEGORY")),
+            _pg_safe_float(row.get("CURRENT_PRICE")),
+            _pg_safe_float(row.get("CHANGE_1D")),
+            _pg_safe_float(row.get("CHANGE_1W")),
+            _pg_safe_float(row.get("CHANGE_1M")),
+            _pg_safe_float(row.get("TRADING_VALUE")),
+            _pg_safe_float(row.get("TECHNICAL_SCORE")),
+            _pg_safe_float(row.get("RSI")),
+            _pg_safe_float(row.get("RELATIVE_STRENGTH")),
+            _pg_safe_text(row.get("TREND_SIGNAL")),
+            _pg_safe_text(row.get("TRADING_SIGNAL")),
+            _pg_safe_float(row.get("CAN_SLIM_SCORE")),
+            _pg_safe_float(row.get("MINERVINI_SCORE")),
+            _pg_safe_float(row.get("FUNDAMENTAL_SCORE")),
+            _pg_safe_float(row.get("ENHANCED_FUND_SCORE")),
+            _pg_safe_float(row.get("EARNINGS_QUALITY")),
+            _pg_safe_float(row.get("SALES_GROWTH")),
+            _pg_safe_float(row.get("FINANCIAL_STRENGTH")),
+            _pg_safe_float(row.get("INSTITUTIONAL_BACKING")),
+        ))
+
+    sql = """
+        INSERT INTO scores.daily_scores (
+            score_date, symbol, company_name, sector, market_cap_cat,
+            current_price, change_1d_pct, change_1w_pct, change_1m_pct, trading_value,
+            technical_score, rsi, relative_strength, trend_signal, trading_signal,
+            can_slim_score, minervini_score, fundamental_score, enhanced_fund_score,
+            earnings_quality, sales_growth, financial_strength, institutional_backing
+        ) VALUES %s
+        ON CONFLICT (score_date, symbol) DO UPDATE SET
+            company_name = EXCLUDED.company_name,
+            sector = EXCLUDED.sector,
+            market_cap_cat = EXCLUDED.market_cap_cat,
+            current_price = EXCLUDED.current_price,
+            change_1d_pct = EXCLUDED.change_1d_pct,
+            change_1w_pct = EXCLUDED.change_1w_pct,
+            change_1m_pct = EXCLUDED.change_1m_pct,
+            trading_value = EXCLUDED.trading_value,
+            technical_score = EXCLUDED.technical_score,
+            rsi = EXCLUDED.rsi,
+            relative_strength = EXCLUDED.relative_strength,
+            trend_signal = EXCLUDED.trend_signal,
+            trading_signal = EXCLUDED.trading_signal,
+            can_slim_score = EXCLUDED.can_slim_score,
+            minervini_score = EXCLUDED.minervini_score,
+            fundamental_score = EXCLUDED.fundamental_score,
+            enhanced_fund_score = EXCLUDED.enhanced_fund_score,
+            earnings_quality = EXCLUDED.earnings_quality,
+            sales_growth = EXCLUDED.sales_growth,
+            financial_strength = EXCLUDED.financial_strength,
+            institutional_backing = EXCLUDED.institutional_backing
+    """
+    conn = psycopg2.connect(PG_DSN)
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute("DELETE FROM scores.daily_scores WHERE score_date = %s", (score_date,))
+            execute_values(cur, sql, rows, page_size=500)
+    finally:
+        conn.close()
+    print(f"PostgreSQL scores.daily_scores: upserted {len(rows)} rows for {score_date}")
+    return len(rows)
+
 # =============================================================================
 # Report Generation Functions
 # =============================================================================
@@ -1123,6 +1297,12 @@ def generate_markdown_report(results, index_results, latest_date, timestamp):
 
 if __name__ == "__main__":
     try:
+        import argparse
+        parser = argparse.ArgumentParser(description="Run enhanced NSE universe analysis")
+        parser.add_argument("--export-csv", action="store_true", help="Also export comprehensive_nse_enhanced_*.csv")
+        parser.add_argument("--skip-postgres", action="store_true", help="Skip direct PostgreSQL scores.daily_scores write")
+        args = parser.parse_args()
+
         # Initialize database
         initialize_database(DB_PATH)
         print("Database initialized successfully")
@@ -1153,13 +1333,15 @@ if __name__ == "__main__":
         save_stocks_to_database(results, latest_date, DB_PATH)
         save_indices_to_database(index_results, latest_date, DB_PATH)
         save_market_breadth_to_database(results, latest_date, DB_PATH)
+        if not args.skip_postgres:
+            save_daily_scores_to_postgres(results, latest_date)
         
-        # Save results to CSV
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         date_str = latest_date.strftime("%d%m%Y")
-        output_file = REPORTS_DIR / f"comprehensive_nse_enhanced_{date_str}_{timestamp}.csv"
-        results.to_csv(output_file, index=False)
-        print(f"\nResults saved to: {output_file}")
+        if args.export_csv:
+            output_file = REPORTS_DIR / f"comprehensive_nse_enhanced_{date_str}_{timestamp}.csv"
+            results.to_csv(output_file, index=False)
+            print(f"\nCSV export saved to: {output_file}")
         
         # Generate markdown report
         print("\nGenerating comprehensive markdown report...")
@@ -1202,4 +1384,3 @@ if __name__ == "__main__":
         import traceback
         traceback.print_exc()
         sys.exit(1)
-

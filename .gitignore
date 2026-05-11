@@ -41,9 +41,21 @@ __pycache__/
 reports/_apex_*
 reports/_test_*
 reports/temp/
+reports/generated/
+reports/generated_csv/
+reports/voice_briefings/
+reports/**/latest_tmp/
 data/_sector_rotation_*.csv
 data/_missing_fund_symbols.txt
 data/filings/
+data/_nse_cookies.txt
+data/_fno_cache/
+data/_fii_dii_cache/
+data/_insider_cache/
+data/_macro_cache/
+data/voice_sessions/
+data/charts/
+tmp/
 working-sector/output/sector_rotation_missing_fundamentals.txt
 nse_analysis.db
 
@@ -51,3 +63,8 @@ nse_analysis.db
 # These files are too large for GitHub without Git LFS
 data/nse_sec_full_data.csv
 organized/core_scripts/organized/backtesting_results/real_backtesting_signals_20250901_030457.csv
+
+# Root exchange download artifacts
+PR*.zip
+*29102025.csv
+*29102025.txt

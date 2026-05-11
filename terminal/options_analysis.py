@@ -1433,27 +1433,35 @@ def scan_options_buying_opportunities(direction: str = "bullish",
     min_oi: minimum ATM strike OI for liquidity filter
     max_iv: IV ceiling for buying filter
     """
-    import sqlite3
-    from terminal.fno_data import FNO_DB, get_available_dates
-
-    if not FNO_DB.exists():
-        return {"error": "F&O DB not found. Run refresh_fno_eod_data() first."}
-
+    from terminal.fno_data import get_available_dates, _pg_read_sql
     dates = get_available_dates()
     if not dates:
         return {"error": "No F&O EOD data available."}
 
     trade_date = dates[0]
-    conn = sqlite3.connect(FNO_DB)
 
     # Get all symbols with adequate options liquidity
-    rows = conn.execute("""
-        SELECT symbol, option_type, strike, last_price, oi, underlying, expiry_date
-        FROM fno_eod
-        WHERE trade_date=? AND option_type IS NOT NULL AND oi >= ?
+    rows_df = _pg_read_sql(
+        """
+        SELECT
+            symbol,
+            option_type,
+            strike,
+            last_price,
+            open_interest AS oi,
+            underlying_price AS underlying,
+            expiry_date::text AS expiry_date
+        FROM derivatives.fno_eod
+        WHERE trade_date = %s
+          AND option_type IN ('CE', 'PE')
+          AND open_interest >= %s
         ORDER BY symbol, expiry_date, strike
-    """, (trade_date, min_oi // 10)).fetchall()
-    conn.close()
+        """,
+        (trade_date, min_oi // 10),
+    )
+    if rows_df.empty:
+        return {"error": f"No options data for {trade_date} with OI >= {min_oi//10}"}
+    rows = list(rows_df.itertuples(index=False, name=None))
 
     if not rows:
         return {"error": f"No options data for {trade_date} with OI >= {min_oi//10}"}

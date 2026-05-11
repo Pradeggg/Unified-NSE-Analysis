@@ -32,11 +32,13 @@ import html
 import itertools
 import os
 import re
+import shutil
 import sys
 import threading
 import time
 from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import colorama
 import pandas as pd
@@ -58,6 +60,11 @@ from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.styles import Style as PTStyle
 from prompt_toolkit.patch_stdout import patch_stdout as _pt_patch_stdout
+from terminal.renderer import (
+    render_trace_tables, set_console as _renderer_set_console,
+    pre_render_plan, apply_render_plan, get_bold_symbols,
+)
+from terminal.market_calendar import format_session_clock, market_session_status
 
 colorama.init(autoreset=True)
 
@@ -69,6 +76,7 @@ except ImportError:
 
 # ── Rich console — force_terminal so ANSI codes always work ──────────────────
 console = Console(highlight=False, force_terminal=True)
+_renderer_set_console(console)  # share the same console with the renderer module
 
 # ── Direct console — writes to sys.__stdout__ bypassing prompt_toolkit's
 #    patched sys.stdout. Use for monitor/alert output rendered during the
@@ -138,6 +146,7 @@ def _parse_alert_with_llm(raw: str) -> dict | None:
 # ── Global chat state ─────────────────────────────────────────────────────────
 _mode             = "auto"   # "auto" | "intraday" | "historical"
 _followups: list[str] = []   # current follow-up suggestions (up to 3)
+_market_toolbar_cache: dict = {"ts": 0.0, "data": None}
 
 # ── Background monitor (lazy import to avoid startup cost) ────────────────────
 from terminal.monitor import get_monitor, STRATEGIES as MONITOR_STRATEGIES
@@ -391,6 +400,7 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/ric peer-battle",        "4-step: fundamentals→technicals→news→verdict  [SYM,SYM,…]"),
     ("/ric risk-radar",         "4-step: macro→FII→breadth extremes→vulnerable stocks"),
     ("/ric morning-intel",      "5-step: global→yesterday→breadth→FII→watchlist"),
+    ("/ric company-xray",       "9-step company intelligence workflow [SYMBOL]"),
     ("/scan",             "Scan NIFTY 50 for intraday signals"),
     ("/scan NIFTY BANK",  "Scan Bank Nifty for intraday signals"),
     ("/scan NIFTY IT",    "Scan Nifty IT for intraday signals"),
@@ -486,10 +496,47 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/search RELIANCE news",             "Sector news from 6 portals"),
     ("/search RELIANCE social",           "Retail investor buzz: Reddit, Valuepickr, Traderji"),
     ("/search TATACONSUM deep",           "Full 11-vertical deep search"),
+    # ── Market education commands ───────────────────────────────────────────
+    ("/learn PE ratio",                   "Source-backed concept explainer from Investopedia + Wikipedia"),
+    ("/define ROCE",                      "Define a market or accounting concept with source URLs"),
+    ("/compare ROCE ROE",                 "Compare market concepts using Investopedia + Wikipedia evidence"),
+    ("/learn Minervini trading strategy", "Explain a trading framework with source-backed context"),
+    # ── Company intelligence index commands ────────────────────────────────
+    ("/company-index",                    "Index company website + official investor documents"),
+    ("/company-index DMART",              "Index DMart investor site using crawler + adapter auto-detect"),
+    ("/company-index DMART --include-documents", "Download discovered official investor documents"),
+    ("/company-index DMART --max-pages 10 --document-limit 5", "Bounded company website/document index run"),
+    ("/company-xray",                    "Company + Sector X-Ray report from indexed evidence"),
+    ("/company-xray DMART",              "Run Company X-Ray for DMart"),
+    ("/company-xray DMART --strict",     "Run Company X-Ray with strict evidence coverage"),
+    # ── Analyze / document commands ─────────────────────────────────────────
+    ("/analyze",                          "Analyze a PDF, DOCX, web page, or stock — auto-detects input type"),
+    ("/analyze report.pdf",               "Read and summarize a local PDF document"),
+    ("/analyze https://example.com",      "Scrape and analyze a web page"),
+    ("/analyze annual_report.docx",       "Extract and summarize a Word document"),
+    ("/analyze RELIANCE",                 "Deep 360° stock analysis — technical, fundamental, forensic, news, sentiment"),
+    ("/analyze ~/Downloads/concall.pdf",  "Read and analyze a concall transcript PDF"),
+    # ── CANSLIM commands ────────────────────────────────────────────────────
+    ("/canslim",                          "CANSLIM analysis — William O'Neil's 7-point stock quality framework"),
+    ("/canslim RELIANCE",                 "Full CANSLIM evaluation for RELIANCE"),
+    ("/canslim TCS",                      "CANSLIM growth + institutional quality check for TCS"),
+    ("/strength MANINDS THERMAX",         "Validate CANSLIM + RS + fundamentals + Piotroski without assumptions"),
     # ── Forensic commands ───────────────────────────────────────────────────
     ("/forensic",                         "D5 Forensic analysis — Beneish M-score, Piotroski F-score, Altman Z'-score"),
     ("/forensic RELIANCE",                "Forensic accounting analysis for RELIANCE"),
     ("/forensic TCS INFY WIPRO",          "Forensic screening across multiple stocks"),
+    # ── Voice briefing (P3-2) ───────────────────────────────────────────────
+    ("/voice-mode on",                    "Speak every normal Agent Adda answer until disabled"),
+    ("/voice-mode off",                   "Disable automatic spoken responses"),
+    ("/voice-mode status",                "Show whether automatic spoken responses are enabled"),
+    ("/voice",                            "P3-2 60-second daily audio briefing — regime, flows, top picks (MP3/AIFF)"),
+    ("/voice script",                     "Print the voice briefing script (no audio synthesis)"),
+    ("/voice 2026-05-09",                 "Generate briefing for a specific historical signal date"),
+    ("/voice-live",                       "Live voice assistant loop: listen, transcribe, answer, speak, repeat"),
+    ("/voice-live --turns 3 --seconds 8", "Run a bounded live voice assistant session"),
+    ("/ask-voice",                        "Record a spoken question, transcribe it, run Agent Adda, speak the response"),
+    ("/ask-voice --audio-file question.wav", "Use an existing audio file as the spoken question"),
+    ("/ask-voice --no-play",              "Generate response audio but do not auto-play it"),
     # ── Event calendar commands ─────────────────────────────────────────────
     ("/events",                           "E4 Upcoming corporate events — dividends, splits, results, AGMs"),
     ("/events NIFTY 50",                  "Event calendar for NIFTY 50 stocks (next 14 days)"),
@@ -508,8 +555,24 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/scenario RELIANCE",                "P2-2 What-if price scenarios for RELIANCE"),
     ("/narrative",                        "P2-4 Portfolio narratives — bull/bear thesis per stock"),
     ("/narrative TCS INFY",               "Investment narratives for specific stocks"),
-    ("/voice",                            "P3-2 Generate daily voice briefing (MP3, needs OpenAI key)"),
     ("/concall TCS",                      "D4 Concall NLP — sentiment, themes, risk flags"),
+    # ── Report generation commands ─────────────────────────────────────────
+    ("/report",                           "Generate a formatted report — PDF, HTML, or Markdown"),
+    ("/report sector-rotation",           "⚡ Instant sector rotation dashboard from DB (no LLM)"),
+    ("/report sector-rotation pdf",       "⚡ Sector rotation report as PDF"),
+    ("/report stage2",                    "⚡ Stage 2 universe tracker — top 30 leaders + new entrants (instant)"),
+    ("/report stage2 md",                 "⚡ Stage 2 tracker as Markdown"),
+    ("/report technical RELIANCE",        "Technical analysis report for RELIANCE"),
+    ("/report fundamental TCS pdf",       "Fundamental report for TCS in PDF format"),
+    ("/report forensic INFY md",          "Forensic accounting report in Markdown"),
+    ("/report research HDFCBANK",         "Comprehensive 360° research report"),
+    ("/report intraday SBIN",             "Intraday analysis report"),
+    ("/report canslim TATAMOTORS",        "CANSLIM quality report"),
+    ("/report ric ADANIENT pdf",          "RIC investigation report in PDF"),
+    ("/report sector IT",                 "Sector analysis report for IT sector"),
+    ("/report RELIANCE",                  "Quick research report (default type: research, format: html)"),
+    ("/backtest list",    "List EOD Strategy Lab strategies"),
+    ("/strategy-lab validate", "Validate EOD backtesting data readiness"),
     ("/pnl",              "💼 Live portfolio P&L — unrealised gains/losses from holdings.csv"),
     ("/live",             "Switch to LIVE mode (real-time NSE API)"),
     ("/eod",              "Switch to EOD mode (historical CSV/DB)"),
@@ -552,9 +615,151 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/refresh analysis", "Analysis + snapshot (skips aux data fetch)"),
     ("/refresh status",   "Check if refresh is running"),
     ("/refresh stop",     "Stop a running refresh"),
+    # ── Command discovery ──────────────────────────────────────────────────
+    ("/commands",         "Browse all slash commands by category"),
+    ("/commands alert",   "Filter commands by keyword, e.g. /commands pdf"),
 ]
 
-# Well-known NSE symbols & index names for stock query completion
+# ─────────────────────────────────────────────────────────────────────────────
+# /commands — searchable command browser
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Maps the first token of a slash command to a category label and icon
+_CMD_CATEGORIES: dict[str, tuple[str, str]] = {
+    "/prompts":  ("Research Prompts",    "📋"),
+    "/ric":      ("RIC Investigations",  "🔬"),
+    "/scan":     ("Intraday Scanner",    "⚡"),
+    "/screen":   ("EOD Screeners",       "🔍"),
+    "/monitor":  ("Background Monitors", "👁️"),
+    "/alert":    ("Watchlist Alerts",    "🔔"),
+    "/options":  ("F&O / Options",       "📊"),
+    "/chain":    ("F&O / Options",       "📊"),
+    "/oi":       ("F&O / Options",       "📊"),
+    "/fno":      ("F&O / Options",       "📊"),
+    "/strategy": ("F&O / Options",       "📊"),
+    "/chart":    ("Charts",              "📈"),
+    "/search":   ("Deep Search",         "🌐"),
+    "/learn":    ("Market Knowledge",    "📚"),
+    "/define":   ("Market Knowledge",    "📚"),
+    "/compare":  ("Market Knowledge",    "📚"),
+    "/company-index": ("Company Intelligence", "🏢"),
+    "/company-xray": ("Company Intelligence", "🏢"),
+    "/analyze":  ("Document Analysis",   "📄"),
+    "/canslim":  ("CANSLIM Analysis",    "📐"),
+    "/strength": ("CANSLIM Analysis",    "📐"),
+    "/report":   ("Report Generation",   "📝"),
+    "/backtest": ("Strategy Lab",         "🧪"),
+    "/strategy-lab": ("Strategy Lab",     "🧪"),
+    "/forensic": ("Forensic",            "🧪"),
+    "/voice-mode": ("Voice Briefing",    "🎙️"),
+    "/events":   ("Events Calendar",     "📅"),
+    "/us":       ("Macro & Global",      "🌍"),
+    "/global":   ("Macro & Global",      "🌍"),
+    "/heat":     ("Macro & Global",      "🌍"),
+    "/cycle":    ("Macro & Global",      "🌍"),
+    "/scenario": ("Analysis Tools",      "🎯"),
+    "/narrative":("Analysis Tools",      "🎯"),
+    "/concall":  ("Analysis Tools",      "🎯"),
+    "/pnl":      ("Portfolio",           "💼"),
+    "/export":   ("Session",             "💾"),
+    "/live":     ("Session",             "💾"),
+    "/eod":      ("Session",             "💾"),
+    "/auto":     ("Session",             "💾"),
+    "/context":  ("Session",             "💾"),
+    "/new":      ("Session",             "💾"),
+    "/reset":    ("Session",             "💾"),
+    "/clear":    ("Session",             "💾"),
+    "/help":     ("Help",                "❓"),
+    "/theme":    ("Settings & Data",     "⚙️"),
+    "/scale":    ("Settings & Data",     "⚙️"),
+    "/refresh":  ("Settings & Data",     "⚙️"),
+    "/commands": ("Help",                "❓"),
+}
+
+
+def _print_commands(filter_kw: str = "") -> None:
+    """Print a compact, searchable command browser.
+
+    No filter  → one row per top-level command (no sub-variants), grouped by category.
+    filter_kw  → show all entries whose command or description contains the keyword.
+    """
+    from rich.table import Table as _Table
+
+    kw = filter_kw.strip().lower()
+
+    if kw:
+        # ── Filtered view: all matching entries ────────────────────────────
+        matches = [
+            (cmd, desc) for cmd, desc in _SLASH_COMMANDS
+            if kw in cmd.lower() or kw in desc.lower()
+        ]
+        if not matches:
+            console.print(f"[dim]  No commands matching '[bold]{kw}[/bold]'[/dim]")
+            return
+
+        tbl = _Table(
+            title=f"Commands matching '{kw}'",
+            show_header=True,
+            header_style="bold cyan",
+            box=box.SIMPLE_HEAD,
+            pad_edge=False,
+        )
+        tbl.add_column("Command",     style="bold green",  no_wrap=True)
+        tbl.add_column("Description", style="dim")
+        for cmd, desc in matches:
+            tbl.add_row(cmd.rstrip(), desc)
+        console.print(tbl)
+        console.print(f"[dim]  {len(matches)} match(es) · /commands <keyword> to filter further[/dim]\n")
+
+    else:
+        # ── Category view: one representative per root command ─────────────
+        # Collect one entry per unique root token (first word of command)
+        seen_roots: set[str] = set()
+        # Group: {category_label → [(cmd, desc), ...]}
+        groups: dict[str, list[tuple[str, str]]] = {}
+
+        for cmd, desc in _SLASH_COMMANDS:
+            root = cmd.split()[0].rstrip()      # e.g. "/chart"
+            if root in seen_roots:
+                continue
+            seen_roots.add(root)
+            cat_label, _ = _CMD_CATEGORIES.get(root, ("Other", "•"))
+            groups.setdefault(cat_label, []).append((root, desc))
+
+        # Ordered category list preserving first-seen order
+        cat_order: list[str] = []
+        for cmd, _ in _SLASH_COMMANDS:
+            root = cmd.split()[0].rstrip()
+            cat_label, _ = _CMD_CATEGORIES.get(root, ("Other", "•"))
+            if cat_label not in cat_order:
+                cat_order.append(cat_label)
+
+        console.print()
+        console.rule("[bold cyan]  Slash Commands[/bold cyan]  [dim](/commands <keyword> to filter)[/dim]")
+        console.print()
+
+        for cat in cat_order:
+            entries = groups.get(cat, [])
+            if not entries:
+                continue
+            _, icon = _CMD_CATEGORIES.get(entries[0][0], ("Other", "•"))
+            tbl = _Table(
+                title=f"{icon}  {cat}",
+                show_header=False,
+                box=box.SIMPLE,
+                pad_edge=False,
+                show_edge=False,
+                title_style="bold yellow",
+                min_width=60,
+            )
+            tbl.add_column("Command",     style="bold green",  no_wrap=True, min_width=18)
+            tbl.add_column("Description", style="dim")
+            for cmd, desc in entries:
+                tbl.add_row(cmd, desc)
+            console.print(tbl)
+
+        total = len(seen_roots)
+        console.print(f"[dim]  {total} commands · type /commands <keyword> to filter · /help for full usage[/dim]\n")
 _KNOWN_SYMBOLS: list[str] = [
     "RELIANCE", "TCS", "INFY", "HDFCBANK", "ICICIBANK", "SBIN", "AXISBANK",
     "KOTAKBANK", "INDUSINDBK", "BAJFINANCE", "BAJAJFINSV", "HINDUNILVR",
@@ -774,6 +979,23 @@ RIC_LIBRARY: dict[str, dict] = {
             {"label": "Today's Watchlist",  "prompt": "Give me 5 stocks to watch today — based on technical setups, news catalysts, FII flow, and intraday signal quality. For each: why watch it and key levels."},
         ],
     },
+    "company-xray": {
+        "name":    "🏢 Company + Sector X-Ray",
+        "desc":    "9-step company-first intelligence workflow: identity → indexed evidence → business model → sector → competitors → policy impact → deliberation → report",
+        "arg":     "symbol",
+        "example": "/ric company-xray DMART",
+        "steps": [
+            {"label": "Resolve Identity", "prompt": "Resolve {symbol} to its company identity, aliases, sector, industry, and official website. Keep the answer evidence-first."},
+            {"label": "Build Evidence", "prompt": "/company-index {symbol} --include-documents --document-limit 5 --max-pages 10 --seed-sitemap --respect-robots"},
+            {"label": "Business Model", "prompt": "Using indexed official evidence for {symbol}, explain business model, revenue drivers, customer base, and operating model. Flag evidence gaps explicitly."},
+            {"label": "Sector Expansion", "prompt": "Build sector context for {symbol}: sector structure, demand drivers, value chain, and where the company sits."},
+            {"label": "Competitive Map", "prompt": "Map competitors and peers for {symbol}; compare competitive advantage, risks, and market-share evidence."},
+            {"label": "Financial and Market Behavior", "prompt": "Connect {symbol}'s fundamentals, technical behavior, ownership, and recent filings into a concise evidence-backed view."},
+            {"label": "RBI/Budget Impact", "prompt": "Assess RBI monetary policy and Union Budget sensitivity for {symbol}, separating direct evidence from inference."},
+            {"label": "Deliberation", "prompt": "Build bull, bear, and base cases for {symbol}; include disconfirming evidence and open research questions."},
+            {"label": "Final Report", "prompt": "/company-xray {symbol} --refresh"},
+        ],
+    },
 }
 
 
@@ -823,8 +1045,31 @@ def _looks_like_index_arg(arg: str) -> bool:
     )
 
 
-def _run_ric(agent, key: str, arg: str, show_trace: bool) -> None:
-    """Execute a named RIC step by step, each result feeding context."""
+def _auto_export_report(content: str, report_type: str, symbol: str, fmt: str) -> None:
+    """Save agent response content as a styled report file and open it."""
+    try:
+        from terminal.reports import generate_report
+        res = generate_report(content, report_type=report_type, symbol=symbol, output_format=fmt)
+        fpath  = res.get("path", "")
+        actual = res.get("format", fmt).upper()
+        note   = res.get("note", "")
+        console.print(f"\n  [bold green]📄 Report saved ({actual}):[/bold green] [cyan]{fpath}[/cyan]")
+        if note:
+            console.print(f"  [dim]{note}[/dim]")
+        try:
+            import subprocess as _sp
+            _sp.run(["open", fpath], check=False)
+        except Exception:
+            pass
+    except Exception as _e:
+        console.print(f"  [bold red]  ❌ Report export error: {_e}[/bold red]")
+
+
+def _run_ric(agent, key: str, arg: str, show_trace: bool, output_format: str = "") -> None:
+    """Execute a named RIC step by step, each result feeding context.
+
+    output_format: if 'html'/'pdf'/'md', combine all step answers and save as report.
+    """
     if key == "sector-xray" and _looks_like_index_arg(arg):
         # User entered an index basket, not a sector. Route to the index workflow.
         console.print(
@@ -846,8 +1091,9 @@ def _run_ric(agent, key: str, arg: str, show_trace: bool) -> None:
         )
         return
 
-    symbol = arg.strip().upper() if arg else ""
+    symbol  = arg.strip().upper() if arg else ""
     n_steps = len(ric["steps"])
+    collected_parts: list[str] = []  # accumulate step answers for report export
 
     console.print()
     console.rule(
@@ -856,6 +1102,8 @@ def _run_ric(agent, key: str, arg: str, show_trace: bool) -> None:
         style="yellow",
     )
     console.print(f"[dim]  {ric['desc']}[/dim]")
+    if output_format:
+        console.print(f"[dim]  → Will save {output_format.upper()} report after all steps complete[/dim]")
     console.print()
 
     for i, step in enumerate(ric["steps"], 1):
@@ -873,6 +1121,9 @@ def _run_ric(agent, key: str, arg: str, show_trace: bool) -> None:
         try:
             result = agent.query(prompt, show_trace=show_trace)
             _print_response(result)
+            # Collect clean answer for report
+            answer, _ = _parse_followups(result.get("answer", ""))
+            collected_parts.append(f"## Step {i}: {label}\n\n{answer}")
         except Exception as e:
             console.print(f"[red]  ✗  Step {i} failed: {e}[/red]")
             console.print()
@@ -883,6 +1134,15 @@ def _run_ric(agent, key: str, arg: str, show_trace: bool) -> None:
         style="yellow",
     )
     console.print()
+
+    # Auto-export report if format was requested
+    if output_format and collected_parts:
+        ric_name = ric["name"].replace("🔍", "").replace("🏭", "").replace("🎯", "")\
+                              .replace("📋", "").replace("📊", "").replace("⚔️", "")\
+                              .replace("⚠️", "").replace("☀️", "").strip()
+        heading = f"# {ric_name} — {symbol or 'Market'}\n\n*{ric['desc']}*\n\n---\n\n"
+        combined = heading + "\n\n---\n\n".join(collected_parts)
+        _auto_export_report(combined, report_type="ric", symbol=symbol, fmt=output_format)
 
 
 def _box_row(mid_text: str, colour: str = "", reset: str = Style.RESET_ALL) -> str:
@@ -898,10 +1158,15 @@ def print_banner() -> None:
     for colour, line in _BANNER:
         print(colour + line)
     print()
+    _print_market_toolbar()
     W = Fore.WHITE + Style.BRIGHT
     print(W + "  ╔" + "═" * _BOX_W + "╗")
     print(_box_row("NSE Market Research Terminal  ·  AI-powered · Real-time",
                    Fore.YELLOW + Style.BRIGHT))
+    print(_box_row(f"As of {_session_clock_label()}",
+                   Fore.WHITE + Style.BRIGHT))
+    print(_box_row(market_session_status().compact_label,
+                   Fore.GREEN + Style.BRIGHT))
     print(_box_row("stocks · sectors · signals · screeners · intraday · RICs",
                    Fore.CYAN))
     print(W + "  ╚" + "═" * _BOX_W + "╝")
@@ -926,8 +1191,299 @@ def print_banner() -> None:
 # Helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
+_IST = ZoneInfo("Asia/Kolkata")
+
+
+def _session_now(now: datetime | None = None) -> datetime:
+    """Return the current Agent Adda session time in IST."""
+    if now is None:
+        return datetime.now(_IST)
+    if now.tzinfo is None:
+        return now
+    return now.astimezone(_IST)
+
+
+def _session_clock_label(now: datetime | None = None) -> str:
+    """Human-readable latest session clock used in all terminal headers."""
+    return format_session_clock(_session_now(now))
+
+
+def _bottom_toolbar_text(now_factory=None) -> str:
+    """Live prompt toolbar text; prompt_toolkit refreshes this while waiting."""
+    factory = now_factory or _session_now
+    now = factory()
+    data = _get_cached_market_toolbar_data()
+    if data:
+        return _bottom_toolbar_ticker(data, now)
+    return (
+        f"  {_session_clock_label(now)}  |  {market_session_status(now).compact_label}"
+        f"  |  mode: {_mode.upper()}  |  Agent Adda"
+    )
+
+
+def _fmt_index_price(value) -> str:
+    try:
+        if value is None or pd.isna(value):
+            return "—"
+        return f"{float(value):,.2f}"
+    except (TypeError, ValueError):
+        return "—"
+
+
+def _fmt_index_pct(value) -> str:
+    try:
+        if value is None or pd.isna(value):
+            return "—"
+        fv = float(value)
+        sign = "+" if fv > 0 else ""
+        return f"{sign}{fv:.2f}%"
+    except (TypeError, ValueError):
+        return "—"
+
+
+def _bottom_toolbar_index_label(name: str) -> str:
+    upper = (name or "").upper()
+    if "BANK" in upper:
+        return "BANK"
+    if "MID" in upper:
+        return "MIDCP"
+    if "NIFTY 50" in upper:
+        return "NIFTY 50"
+    return upper[:10] or "INDEX"
+
+
+def _bottom_toolbar_short_index_label(name: str) -> str:
+    upper = (name or "").upper()
+    if "BANK" in upper:
+        return "BNK"
+    if "MID" in upper:
+        return "MID"
+    if "NIFTY 50" in upper:
+        return "N50"
+    return (upper[:3] or "IDX")
+
+
+def _fmt_index_price_compact(value) -> str:
+    try:
+        if value is None or pd.isna(value):
+            return "—"
+        return f"{float(value):,.0f}"
+    except (TypeError, ValueError):
+        return "—"
+
+
+def _compact_market_status(now: datetime) -> str:
+    label = market_session_status(now).compact_label
+    if "OPEN" in label:
+        return "OPEN"
+    if "CLOSED" in label:
+        return "CLOSED"
+    return label.replace("NSE: ", "")
+
+
+def _get_cached_market_toolbar_data(max_age_seconds: int = 180) -> dict | None:
+    """Return cached live toolbar data without performing network I/O."""
+    data = _market_toolbar_cache.get("data")
+    ts = float(_market_toolbar_cache.get("ts") or 0)
+    if not data or ts <= 0:
+        return None
+    if time.time() - ts > max_age_seconds:
+        return None
+    return data
+
+
+def _bottom_toolbar_ticker(data: dict, now: datetime) -> str:
+    width = max(40, shutil.get_terminal_size((120, 24)).columns)
+    indices = data.get("indices") or []
+    clock_short = _session_now(now).strftime("%H:%M")
+    clock_full = _session_now(now).strftime("%H:%M:%S IST")
+    status_short = _compact_market_status(now)
+
+    short_parts = []
+    for item in indices[:2]:
+        short_parts.append(
+            f"{_bottom_toolbar_short_index_label(item.get('name', ''))} "
+            f"{_fmt_index_price_compact(item.get('last'))} {_fmt_index_pct(item.get('pct_change'))}"
+        )
+    short_parts.extend([status_short, clock_short, _mode.upper()])
+    short_ticker = "  " + " | ".join(short_parts)
+    if width < 110:
+        return short_ticker[:width]
+
+    medium_parts = []
+    for item in indices[:3]:
+        medium_parts.append(
+            f"{_bottom_toolbar_short_index_label(item.get('name', ''))} "
+            f"{_fmt_index_price_compact(item.get('last'))} {_fmt_index_pct(item.get('pct_change'))}"
+        )
+    adv_dec = data.get("adv_dec") or {}
+    adv = adv_dec.get("advances")
+    dec = adv_dec.get("declines")
+    if adv is not None and dec is not None:
+        medium_parts.append(f"{adv}A/{dec}D")
+    medium_parts.extend([status_short, clock_short, _mode.upper()])
+    medium_ticker = "  " + " | ".join(medium_parts)
+    if width < 150:
+        return medium_ticker if len(medium_ticker) <= width else short_ticker[:width]
+
+    parts = []
+    for item in indices[:3]:
+        label = _bottom_toolbar_index_label(item.get("name", ""))
+        parts.append(
+            f"{label} {_fmt_index_price(item.get('last'))} {_fmt_index_pct(item.get('pct_change'))}"
+        )
+    if adv is not None and dec is not None:
+        parts.append(f"Breadth {adv}A/{dec}D")
+    parts.append(market_session_status(now).compact_label)
+    parts.append(clock_full)
+    parts.append(_mode.upper())
+    full_ticker = "  " + "  |  ".join(parts)
+    return full_ticker if len(full_ticker) <= width else medium_ticker[:width]
+
+
+def _index_pct_style(value) -> str:
+    try:
+        fv = float(value or 0)
+    except (TypeError, ValueError):
+        fv = 0
+    return "bold green" if fv > 0 else ("bold red" if fv < 0 else "bold yellow")
+
+
+def _normalise_toolbar_index(name: str, row: dict | None) -> dict:
+    row = row or {}
+    return {
+        "name": name,
+        "last": row.get("last", row.get("close")),
+        "pct_change": row.get("pct_change", row.get("chg_pct")),
+        "day_high": row.get("day_high", row.get("high")),
+        "day_low": row.get("day_low", row.get("low")),
+    }
+
+
+def _toolbar_narrative(indices: list[dict], adv_dec: dict | None = None, source: str = "") -> str:
+    pct_values = [float(i.get("pct_change") or 0) for i in indices if i.get("pct_change") is not None]
+    avg_pct = sum(pct_values) / len(pct_values) if pct_values else 0
+    bullish = sum(1 for v in pct_values if v > 0.05)
+    bearish = sum(1 for v in pct_values if v < -0.05)
+    bank_pct = next((float(i.get("pct_change") or 0) for i in indices if "BANK" in i["name"]), 0)
+    mid_pct = next((float(i.get("pct_change") or 0) for i in indices if "MID" in i["name"]), 0)
+
+    if bullish >= 2 and avg_pct > 0.15:
+        tone = "risk-on"
+    elif bearish >= 2 and avg_pct < -0.15:
+        tone = "risk-off"
+    else:
+        tone = "mixed/range-bound"
+
+    breadth = ""
+    if adv_dec:
+        adv = int(adv_dec.get("advances") or 0)
+        dec = int(adv_dec.get("declines") or 0)
+        if adv or dec:
+            breadth_tone = "positive" if adv > dec else ("negative" if dec > adv else "flat")
+            breadth = f" Breadth {breadth_tone} ({adv}A/{dec}D)."
+
+    leadership = "Banks leading" if bank_pct > max(0.05, mid_pct) else (
+        "Midcaps leading" if mid_pct > max(0.05, bank_pct) else "No clear leadership"
+    )
+    return f"Intraday narrative: {tone}; {leadership}.{breadth} Source: {source or 'market tape'}."
+
+
+def _get_market_toolbar_data(force: bool = False) -> dict | None:
+    now = time.time()
+    if not force and _market_toolbar_cache["data"] and now - _market_toolbar_cache["ts"] < 60:
+        return _market_toolbar_cache["data"]
+
+    data = None
+    try:
+        from terminal.tools import get_live_market_overview
+
+        overview = get_live_market_overview()
+        if not overview.get("error"):
+            all_indices = overview.get("indices") or {}
+            mid_name = next(
+                (
+                    name for name in (
+                        "NIFTY MIDCAP SELECT",
+                        "NIFTY MIDCAP 50",
+                        "NIFTY MIDCAP 100",
+                    )
+                    if name in all_indices
+                ),
+                "NIFTY MIDCAP SELECT",
+            )
+            indices = [
+                _normalise_toolbar_index("NIFTY 50", all_indices.get("NIFTY 50")),
+                _normalise_toolbar_index("NIFTY BANK", all_indices.get("NIFTY BANK")),
+                _normalise_toolbar_index("MIDCPNIFTY", all_indices.get(mid_name)),
+            ]
+            if any(i.get("last") is not None for i in indices):
+                data = {
+                    "indices": indices,
+                    "adv_dec": overview.get("adv_dec") or {},
+                    "as_of": overview.get("as_of"),
+                    "source": overview.get("source", "NSE live API"),
+                }
+    except Exception:
+        data = None
+
+    if data is None:
+        try:
+            from terminal.tools import get_index_snapshot
+
+            indices = [
+                _normalise_toolbar_index("NIFTY 50", get_index_snapshot("NIFTY 50")),
+                _normalise_toolbar_index("NIFTY BANK", get_index_snapshot("NIFTY BANK")),
+                _normalise_toolbar_index("MIDCPNIFTY", get_index_snapshot("NIFTY MIDCAP 50")),
+            ]
+            if any(i.get("last") is not None for i in indices):
+                data = {
+                    "indices": indices,
+                    "adv_dec": {},
+                    "as_of": indices[0].get("as_of"),
+                    "source": "EOD index snapshot",
+                }
+        except Exception:
+            data = None
+
+    _market_toolbar_cache.update({"ts": now, "data": data})
+    return data
+
+
+def _print_market_toolbar() -> None:
+    data = _get_market_toolbar_data()
+    if not data:
+        return
+
+    indices = data.get("indices") or []
+    table = Table(
+        title="📊 Intraday Market Toolbar",
+        box=box.SIMPLE_HEAVY,
+        show_header=True,
+        header_style="bold cyan",
+        expand=True,
+    )
+    table.add_column("Index", style="bold white", no_wrap=True)
+    table.add_column("Last", justify="right")
+    table.add_column("% Chg", justify="right")
+    table.add_column("Day Range", justify="right")
+    for item in indices:
+        pct = item.get("pct_change")
+        table.add_row(
+            item["name"],
+            _fmt_index_price(item.get("last")),
+            f"[{_index_pct_style(pct)}]{_fmt_index_pct(pct)}[/]",
+            f"{_fmt_index_price(item.get('day_low'))} – {_fmt_index_price(item.get('day_high'))}",
+        )
+    narrative = _toolbar_narrative(indices, data.get("adv_dec"), data.get("source"))
+    console.print(table)
+    console.print(Panel(narrative, title="Short Market Narrative", border_style="cyan", expand=True))
+    console.print(f"[dim]  Toolbar as of: {data.get('as_of') or _session_clock_label()}[/dim]")
+    console.print()
+
+
 def _ts() -> str:
-    return datetime.now().strftime("%H:%M:%S")
+    return _session_clock_label()
 
 
 def _parse_followups(text: str) -> tuple[str, list[str]]:
@@ -990,7 +1546,8 @@ def _build_prompt(agent=None) -> ANSI:
     }[_mode]
     fup   = (f"  \x1b[33m(follow-ups: 1·2·3)\x1b[0m" if _followups else "")
     turns = (f"  \x1b[2mt{agent.turn_count}\x1b[0m" if agent and agent.turn_count > 0 else "")
-    return ANSI(f"  {tag}{fup}{turns}\x1b[1;36m ❯ \x1b[0m")
+    clock = f"  \x1b[2m{_session_clock_label()}\x1b[0m"
+    return ANSI(f"  {tag}{clock}{fup}{turns}\x1b[1;36m ❯ \x1b[0m")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1123,6 +1680,137 @@ def _print_user(query: str) -> None:
                  style="dim cyan", align="left")
 
 
+# ── Markdown table interceptor ────────────────────────────────────────────────
+# Rich's Markdown renderer has no concept of per-cell colour.  We parse any
+# markdown table blocks out of the LLM answer, render them as proper Rich Table
+# objects with colour coding for %, signals, stages, etc., then render the
+# surrounding prose via normal Markdown().
+
+import re as _re_mod
+
+_MD_TABLE_RE = _re_mod.compile(
+    r"(?m)(?:^[ \t]*\|.+\|\s*\n){2,}",   # 2+ consecutive pipe-table lines
+)
+
+
+def _cell_style(value: str) -> str | None:
+    """Return a Rich style for a table cell value, or None for plain white."""
+    v = value.strip()
+
+    # Percentage values — +3.11% green, -0.96% red
+    m = _re_mod.match(r"^([+\-])(\d[\d.,]*)\s*%$", v)
+    if m:
+        return "bold bright_green" if m.group(1) == "+" else "bold bright_red"
+
+    # Plain numeric % like "3.11%" (no sign) — neutral
+    if _re_mod.match(r"^\d[\d.,]*\s*%$", v):
+        return "dim"
+
+    # Trading signals
+    upper = v.upper().replace(" ", "_")
+    _SIG = {
+        "STRONG_BUY": "bold bright_green",
+        "BUY":        "green",
+        "ACCUMULATE": "green",
+        "HOLD":       "yellow",
+        "WEAK_HOLD":  "dim yellow",
+        "WEAK_SELL":  "dim red",
+        "SELL":       "red",
+        "STRONG_SELL":"bold bright_red",
+        "AVOID":      "bold red",
+    }
+    if upper in _SIG:
+        return _SIG[upper]
+
+    # Stage labels
+    _STG = {
+        "STAGE_1": "cyan",   "STAGE 1": "cyan",   "1": "cyan",
+        "STAGE_2": "bold green", "STAGE 2": "bold green", "2": "bold green",
+        "STAGE_3": "yellow", "STAGE 3": "yellow", "3": "yellow",
+        "STAGE_4": "red",    "STAGE 4": "red",    "4": "red",
+    }
+    if v.upper() in _STG:
+        return _STG[v.upper()]
+
+    # ₹ price — white
+    if v.startswith("₹"):
+        return "white"
+
+    return None  # default — let Rich decide
+
+
+def _render_md_table_as_rich(md_block: str) -> None:
+    """Parse a raw markdown table string and render it as a Rich Table."""
+    lines = [ln.strip() for ln in md_block.strip().splitlines() if ln.strip()]
+
+    # Pull header, skip separator, collect rows
+    if len(lines) < 2:
+        console.print(Markdown(md_block))
+        return
+
+    def _parse_row(line: str) -> list[str]:
+        """Split a markdown pipe row into clean cell values."""
+        cells = line.strip().strip("|").split("|")
+        return [c.strip() for c in cells]
+
+    headers = _parse_row(lines[0])
+    data_lines = [ln for ln in lines[2:] if not _re_mod.match(r"^[\|\-\s:]+$", ln)]
+
+    tbl = Table(
+        box=box.SIMPLE_HEAD,
+        header_style="bold cyan",
+        show_header=True,
+        expand=False,
+        padding=(0, 1),
+    )
+    for h in headers:
+        tbl.add_column(h)
+
+    for ln in data_lines:
+        cells = _parse_row(ln)
+        # Pad or trim to match header count
+        while len(cells) < len(headers):
+            cells.append("")
+        cells = cells[: len(headers)]
+
+        rich_cells: list[Text | str] = []
+        for cell in cells:
+            st = _cell_style(cell)
+            rich_cells.append(Text(cell, style=st) if st else cell)
+        tbl.add_row(*rich_cells)
+
+    console.print(tbl)
+
+
+def _print_md_with_rich_tables(text: str) -> None:
+    """
+    Split *text* at markdown table blocks, rendering each table via Rich Table
+    (with colour-coded cells) and all surrounding prose via Rich Markdown.
+    """
+    last = 0
+    for m in _MD_TABLE_RE.finditer(text):
+        prose = text[last : m.start()]
+        if prose.strip():
+            console.print(Markdown(_linkify_markdown(prose)))
+        _render_md_table_as_rich(m.group())
+        last = m.end()
+    tail = text[last:]
+    if tail.strip():
+        console.print(Markdown(_linkify_markdown(tail)))
+
+
+def _is_plain_agent_brief(text: str) -> bool:
+    """Detect structured no-LLM Agent Adda briefs that must preserve newlines."""
+    return "━━━" in (text or "") and "\n▶ " in (text or "")
+
+
+def _normalise_plain_agent_brief(text: str) -> str:
+    """Remove Markdown-only wrapper markers before plain-text rendering."""
+    text = re.sub(r"(?m)^_(Mode:\s+.+)_$", r"\1", text or "")
+    text = re.sub(r"\*\*([^*\n]+)\*\*", r"\1", text)
+    return text
+
+
 def _print_response(result: dict) -> None:
     global _followups
     answer  = result.get("answer", "(no answer)")
@@ -1131,7 +1819,12 @@ def _print_response(result: dict) -> None:
     # Strip follow-ups from answer body
     clean, _followups = _parse_followups(answer)
 
-    # ── Agent header (rule with centred title) ────────────────────────────
+    # ── Pre-render LLM plan — fast gpt-4o-mini call to decide layout ─────
+    trace = result.get("trace") or []
+    plan  = pre_render_plan(clean, trace)
+
+    # ── Agent header — colour driven by plan sentiment / alert level ──────
+    header_style = plan.get("_header_style", "green dim")  # overridden by apply below
     console.print()
     console.rule(
         f"[bold green] 🤖  Agent Adda [/bold green][dim] {_ts()}  ·  {backend} [/dim]",
@@ -1139,17 +1832,42 @@ def _print_response(result: dict) -> None:
     )
     console.print()
 
-    # ── Comparison table (rendered before narrative for immediate context) ─
+    # ── Summary strip + get recommended render mode from plan ─────────────
+    render_mode = plan.get("render_mode", "tables_first")
+    apply_render_plan(plan)      # prints summary strip if show_summary_strip=True
+
+    # ── Comparison table (always first — user explicitly asked to compare) ─
     comp = result.get("comparison")
     if comp and comp.get("stock_details"):
         _render_comparison_table(comp)
 
-    # ── Body — Rich Markdown rendered to full terminal width ───────────────
-    has_markup = backend != "Keyword (no LLM)" and any(c in clean for c in ["**", "##", "- ", "* ", "```"])
-    if has_markup:
-        console.print(Markdown(_linkify_markdown(clean)))
-    else:
-        console.print(_text_with_links(clean), style="white")
+    # ── Structured financial tables — order respects render_mode ──────────
+    if render_mode != "narrative_only":
+        render_trace_tables(trace, plan=plan)
+
+    # ── Body — Rich Markdown with colour-coded tables ─────────────────────
+    if render_mode != "tables_only":
+        # Emphasise bold_symbols from plan in the narrative text
+        bold_syms = get_bold_symbols(plan)
+        display = clean
+        if bold_syms:
+            for sym in bold_syms:
+                display = _re_mod.sub(
+                    rf"(?<!\[)\b{_re_mod.escape(sym)}\b(?!\])",
+                    f"**{sym}**",
+                    display,
+                )
+
+        has_markup = backend != "Keyword (no LLM)" and any(
+            c in display for c in ["**", "##", "- ", "* ", "```", "|"]
+        )
+        if _is_plain_agent_brief(display):
+            console.print(_text_with_links(_normalise_plain_agent_brief(display)), style="white")
+        elif has_markup:
+            # Use table-intercepting renderer — colours % / signals / stages
+            _print_md_with_rich_tables(display)
+        else:
+            console.print(_text_with_links(display), style="white")
 
     # ── Direct catalysts / news render (bypasses LLM formatting) ─────────
     cats = result.get("catalysts")
@@ -2104,6 +2822,7 @@ def _print_help() -> None:
             "[bold red]FORENSIC ACCOUNTING 🧪[/bold red]\n"
             "  [red]/forensic RELIANCE[/red]           — Beneish M-score + Piotroski F-score + Altman Z'\n"
             "  [red]/forensic TCS INFY WIPRO[/red]     — Forensic screening across multiple stocks\n"
+            "  [red]/strength MANINDS THERMAX[/red]     — Validate CANSLIM + RS + fundamentals + Piotroski\n"
             "  [dim]Beneish M-score: M > -1.78 = manipulation risk (8-variable probit model)[/dim]\n"
             "  [dim]Piotroski F-score: 0-9 (7+ = strong, 0-3 = weak financial health)[/dim]\n"
             "  [dim]Altman Z'-score: Z' < 1.1 = distress zone (emerging-market version)[/dim]\n\n"
@@ -2119,6 +2838,9 @@ def _print_help() -> None:
             "  [blue]/scenario TCS[/blue]             — What-if price scenarios for TCS\n"
             "  [blue]/narrative[/blue]               — Portfolio investment narratives\n"
             "  [blue]/narrative TCS INFY[/blue]       — Narratives for specific stocks\n"
+            "  [blue]/voice-mode on[/blue]            — Auto-speak every normal Agent Adda answer\n"
+            "  [blue]/voice-mode off[/blue]           — Disable auto-spoken answers\n"
+            "  [blue]/voice-live[/blue]               — Live voice assistant: listen, answer, speak, repeat\n"
             "  [blue]/voice[/blue]                   — Generate daily voice briefing (MP3)\n"
             "  [blue]/concall TCS[/blue]              — Concall NLP: sentiment + themes + guidance\n\n"
             "[bold cyan]GLOBAL MARKET[/bold cyan]\n"
@@ -2213,7 +2935,7 @@ def _run_with_spinner(agent, query: str, show_trace: bool, animated: bool = True
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _greeting() -> str:
-    h = datetime.now().hour
+    h = _session_now().hour
     if h < 12:
         return "Good Morning"
     elif h < 17:
@@ -2223,18 +2945,18 @@ def _greeting() -> str:
 
 def _run_startup_briefing(agent, show_trace: bool) -> None:
     """Investigative morning/session briefing printed before the chat loop starts."""
-    now  = datetime.now()
-    hour = now.hour
+    now  = _session_now()
+    market_status = market_session_status(now)
     date_str = now.strftime("%A, %d %B %Y")
     time_str = now.strftime("%H:%M IST")
 
     # Determine session context
-    if hour < 9:
-        session_ctx = "pre-market"
-    elif hour < 15 or (hour == 15 and now.minute < 31):
+    if market_status.is_open:
         session_ctx = "live market"
+    elif market_status.phase in {"pre_market", "pre_open"}:
+        session_ctx = "pre-market"
     else:
-        session_ctx = "post-market"
+        session_ctx = "market closed"
 
     greeting = _greeting()
 
@@ -2248,10 +2970,12 @@ def _run_startup_briefing(agent, show_trace: bool) -> None:
         f"[bold yellow]  {greeting}![/bold yellow]"
         f"[dim]  Loading your market intelligence… ({session_ctx})[/dim]"
     )
+    console.print(f"[dim]  {market_status.status_label}[/dim]")
     console.print()
 
     briefing_prompt = f"""
 You are starting a new trading session on {date_str} at {time_str} ({session_ctx}).
+{market_status.status_label}
 Give a comprehensive, investigative morning briefing in this EXACT order:
 
 ## {greeting} — Market Intelligence Briefing  ({date_str})
@@ -2295,6 +3019,47 @@ End with 3 sharp follow-up questions the user might want to explore next.
         _print_briefing_response(result)
     except Exception as e:
         console.print(f"[dim red]  ⚠️  Briefing skipped: {e}[/dim red]")
+        console.print()
+
+
+def _run_voice_briefing_panel() -> None:
+    """Auto-generate (if needed) and display today's data-driven voice briefing.
+
+    Reads from signal_log.csv + regime_detector + FII flows — no LLM call needed.
+    Fast (< 1 second). Shown after the LLM startup briefing as a compact data panel.
+    """
+    try:
+        from generate_voice_briefing import generate_briefing
+
+        # Always regenerate — it's instant (reads CSVs, no LLM), idempotent
+        result = generate_briefing(date_str=None, want_tts=False)
+        script = result.get("script", "").strip()
+        word_count = result.get("word_count", 0)
+        date_label = result.get("date", datetime.now().strftime("%Y-%m-%d"))
+
+        if not script:
+            return
+
+        console.print()
+        console.rule(
+            f"[bold cyan] 🎙  Voice Briefing  [/bold cyan]"
+            f"[dim]  {date_label}  ·  {word_count} words [/dim]",
+            style="cyan",
+        )
+        console.print()
+        for para in script.split("\n\n"):
+            para = para.strip()
+            if para:
+                console.print(f"  [white]{para}[/white]")
+                console.print()
+        console.rule(style="dim")
+        console.print(
+            f"  [dim]Tip: [/dim][blue]/voice[/blue][dim] to regenerate with audio  ·  "
+            f"[/dim][blue]/voice script[/blue][dim] to view script[/dim]"
+        )
+        console.print()
+    except Exception as exc:
+        console.print(f"  [dim]  🎙  Voice briefing unavailable: {exc}[/dim]")
         console.print()
 
 
@@ -2353,11 +3118,84 @@ def _print_briefing_response(result: dict) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _single_query(agent, query: str, show_trace: bool) -> None:
+    if query.strip().lower().startswith(("/backtest", "/strategy-lab")):
+        from terminal.backtest import handle_backtest_command
+        _print_user(query)
+        console.print(Markdown(handle_backtest_command(query)))
+        return
+
+    if query.strip().lower().startswith("/strength"):
+        parts = query.strip().split()[1:]
+        symbols = [re.sub(r"[^A-Za-z0-9&-]", "", p).upper() for p in parts]
+        symbols = [s for s in symbols if s]
+        _print_user(query)
+        if not symbols:
+            console.print("[dim]  Usage: /strength MANINDS THERMAX BAJAJCON[/dim]")
+            return
+        from terminal.tools import validate_strength_watchlist
+        _print_strength_validation(validate_strength_watchlist(symbols))
+        return
+
     _print_user(query)
     result = _run_with_spinner(agent, query, show_trace)
     _print_response(result)
     if show_trace:
         _print_trace(result.get("trace", []))
+
+
+def _confirm_voice_query(transcript: str, normalized_query: str) -> dict:
+    console.print(f"[yellow]  Transcript:[/yellow] {transcript}")
+    console.print(f"[yellow]  Query:[/yellow] {normalized_query}")
+    console.print("[dim]  Press Enter/y to continue, type edited query to replace, or n to cancel.[/dim]")
+    reply = input("  Confirm voice query? ").strip()
+    if reply.lower() in ("n", "no", "cancel", "q", "quit"):
+        return {"ok": False, "reason": "cancelled by user"}
+    if reply and reply.lower() not in ("y", "yes"):
+        return {"ok": True, "normalized_query": reply}
+    return {"ok": True, "normalized_query": normalized_query}
+
+
+def _print_strength_validation(result: dict) -> None:
+    """Render the no-assumption strength validator as a deterministic table."""
+    if result.get("error"):
+        console.print(f"[bold red]  ✗ {result['error']}[/bold red]")
+        return
+
+    console.print()
+    console.rule("[bold cyan]Validated Multi-Factor Strength[/bold cyan]", style="dim cyan")
+    console.print(f"[dim]Snapshot: {result.get('snapshot_date') or 'N/A'}[/dim]")
+    console.print(f"[dim]{result.get('validation_rule', 'Missing evidence is not inferred.')}[/dim]")
+
+    tbl = Table(box=box.SIMPLE_HEAD, header_style="bold cyan", expand=True)
+    tbl.add_column("Symbol", style="bold white", no_wrap=True)
+    tbl.add_column("Score", justify="right")
+    tbl.add_column("CANSLIM", justify="right")
+    tbl.add_column("RS%", justify="right")
+    tbl.add_column("Fund", justify="right")
+    tbl.add_column("Piotroski", justify="right")
+    tbl.add_column("Risk")
+    tbl.add_column("Verdict")
+    tbl.add_column("Missing Evidence")
+
+    for row in result.get("results", [])[:20]:
+        score = row.get("strength_score")
+        piot = row.get("piotroski_score")
+        missing = row.get("missing_evidence") or []
+        tbl.add_row(
+            str(row.get("symbol") or "—"),
+            f"{score:.1f}" if isinstance(score, (int, float)) else "—",
+            str(row.get("can_slim_score") if row.get("can_slim_score") is not None else "—"),
+            f"{row.get('rs_pct'):.2f}" if isinstance(row.get("rs_pct"), (int, float)) else "—",
+            str(row.get("enhanced_fund_score") if row.get("enhanced_fund_score") is not None else "—"),
+            f"{piot}/{row.get('piotroski_max')}" if piot is not None else "—",
+            str(row.get("overall_forensic_risk") or "unknown"),
+            str(row.get("verdict") or "—"),
+            ", ".join(missing) if missing else "—",
+        )
+
+    console.print(tbl)
+    console.print("[dim]  ━ Not investment advice. Research and learning only. ━[/dim]")
+    console.print()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -2368,8 +3206,10 @@ def _chat_loop(agent, show_trace: bool) -> None:
     global _mode, _followups
 
     from terminal.theme import get_theme, get_scale
+    from voice_mode import VoiceModeState, handle_voice_mode_command, speak_answer_when_enabled
     _theme = get_theme()
     _scale = get_scale()
+    voice_mode = VoiceModeState()
 
     session = PromptSession(
         history=InMemoryHistory(),
@@ -2379,7 +3219,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
         style=_COMPLETER_STYLE,
     )
 
-    console.print("[bold green]  ✓ Agent Adda ready[/bold green] — type your question and press Enter")
+    console.print(f"[bold green]  ✓ Agent Adda ready[/bold green] [dim]{_session_clock_label()}[/dim] — type your question and press Enter")
     console.print("[dim]  Tip: /live  /eod  /auto  │  /prompts  │  /ric  │  1·2·3 = follow-ups  │  /new  │  /help  │  exit[/dim]")
     console.print()
 
@@ -2392,9 +3232,17 @@ def _chat_loop(agent, show_trace: bool) -> None:
         _start_alert_autodisplay()
         _check_monitor_alerts()
 
+        # Per-iteration report-after flags (set by /analyze and /search)
+        _analyze_report_after = None
+        _search_report_after  = None
+
         try:
             with _pt_patch_stdout(raw=True):
-                raw = session.prompt(_build_prompt(agent))
+                raw = session.prompt(
+                    _build_prompt(agent),
+                    bottom_toolbar=_bottom_toolbar_text,
+                    refresh_interval=1,
+                )
         except KeyboardInterrupt:
             console.print()
             continue
@@ -2431,10 +3279,36 @@ def _chat_loop(agent, show_trace: bool) -> None:
             from terminal.help import print_help as _ph
             _ph(console, text[5:].strip() if text.lower().startswith("/help ") else "")
             continue
+
+        if text.lower() == "/commands" or text.lower().startswith("/commands "):
+            _kw = text[9:].strip() if text.lower().startswith("/commands ") else ""
+            _print_commands(_kw)
+            continue
         if text.lower() in ("/clear", "clear", "cls"):
             _followups = []
             os.system("clear")
             print_banner()
+            continue
+
+        if text.lower().startswith("/strength"):
+            parts = text.split()[1:]
+            symbols = [re.sub(r"[^A-Za-z0-9&-]", "", p).upper() for p in parts]
+            symbols = [s for s in symbols if s]
+            if not symbols:
+                console.print("[dim]  Usage: /strength MANINDS THERMAX BAJAJCON[/dim]")
+                continue
+            from terminal.tools import validate_strength_watchlist
+            _print_user(text)
+            result = validate_strength_watchlist(symbols)
+            _print_strength_validation(result)
+            _separator()
+            continue
+
+        if text.lower().startswith(("/backtest", "/strategy-lab")):
+            from terminal.backtest import handle_backtest_command
+            _print_user(text)
+            console.print(Markdown(handle_backtest_command(text)))
+            _separator()
             continue
 
         # ── /new: reset conversation context ──────────────────────────
@@ -2451,6 +3325,47 @@ def _chat_loop(agent, show_trace: bool) -> None:
         # ── /us and /global readthrough: deterministic US/global layer ─
         if _handle_us_global_command(text):
             _separator()
+            continue
+
+        # ── /monitor-report: export monitor status + recent alerts as a report ──
+        if text.lower().startswith("/monitor-report"):
+            parts    = text.split()
+            _mon_fmt = parts[1].lower() if len(parts) > 1 and parts[1].lower() in ("html", "pdf", "md") else "html"
+            try:
+                from terminal.monitor import get_monitor as _get_mon
+                _mon      = _get_mon()
+                _workers  = _mon.status()
+                _events   = _mon.drain_alerts() if hasattr(_mon, "drain_alerts") else []
+            except Exception as _me:
+                _workers, _events = [], []
+
+            _mon_lines = ["# Monitor Status Report\n"]
+            if _workers:
+                _mon_lines.append("## Active Monitors\n")
+                _mon_lines.append("| Strategy | Symbol | TF | Status | Triggered |\n")
+                _mon_lines.append("|---|---|---|---|---|\n")
+                for _w in _workers:
+                    _mon_lines.append(
+                        f"| {_w.get('strategy','?')} | {_w.get('symbol','?')} | "
+                        f"{_w.get('tf','?')} | {_w.get('status','?')} | "
+                        f"{_w.get('triggered',0)} |\n"
+                    )
+            else:
+                _mon_lines.append("*No active monitors.*\n")
+
+            if _events:
+                _mon_lines.append("\n## Recent Alerts\n")
+                for _ev in _events[-50:]:
+                    _ts  = _ev.get("timestamp", "")[:19]
+                    _sym = _ev.get("symbol", "?")
+                    _sig = _ev.get("signal", "?")
+                    _pr  = _ev.get("price", "")
+                    _mon_lines.append(f"- **{_ts}** `{_sym}` — {_sig}" + (f" @ {_pr}" if _pr else "") + "\n")
+            else:
+                _mon_lines.append("\n*No recent alerts.*\n")
+
+            _mon_md = "".join(_mon_lines)
+            _auto_export_report(_mon_md, "research", "MONITOR", _mon_fmt)
             continue
 
         # ── /monitor: background alert workers ────────────────────────
@@ -2615,9 +3530,15 @@ def _chat_loop(agent, show_trace: bool) -> None:
             if len(parts) == 1:
                 _print_ric_library()
             else:
-                ric_key = parts[1].lower()
-                ric_arg = parts[2] if len(parts) > 2 else ""
-                _run_ric(agent, ric_key, ric_arg, show_trace)
+                ric_key  = parts[1].lower()
+                ric_arg  = parts[2] if len(parts) > 2 else ""
+                # Optional format suffix: /ric sherlock RELIANCE pdf
+                _ric_fmt = ""
+                _arg_toks = ric_arg.split()
+                if _arg_toks and _arg_toks[-1].lower() in ("html", "pdf", "md"):
+                    _ric_fmt = _arg_toks[-1].lower()
+                    ric_arg  = " ".join(_arg_toks[:-1])
+                _run_ric(agent, ric_key, ric_arg, show_trace, output_format=_ric_fmt)
             continue
 
         # ── /context: show session summary ────────────────────────────
@@ -2830,11 +3751,82 @@ def _chat_loop(agent, show_trace: bool) -> None:
                     f"MACD status, and what to watch for next."
                 )
 
-        # ── /search <symbol> [vertical/context] — deep search engine ──────
+        # ── /company-index <symbol> [options] — company website/document index ──────
+        if text.lower().startswith("/company-index"):
+            args_text = text[len("/company-index"):].strip()
+            if not args_text:
+                console.print(
+                    "[dim]  Usage: /company-index SYMBOL [--include-documents] [--max-pages N] "
+                    "[--document-limit N] [--seed-sitemap] [--respect-robots] [--adapter auto|none|dmart][/dim]"
+                )
+                continue
+            try:
+                from company_index_command import run_company_index_from_args
+
+                console.print(f"[dim]  → Company Index: /company-index {args_text}[/dim]")
+                index_result = run_company_index_from_args(args_text)
+                crawl = index_result.get("crawl", {})
+                console.print(
+                    "[green]  ✅ Company index completed[/green]\n"
+                    f"[dim]    Symbol: {index_result.get('symbol')}[/dim]\n"
+                    f"[dim]    Website: {index_result.get('website')}[/dim]\n"
+                    f"[dim]    Pages indexed: {crawl.get('pages_indexed', 0)} / seen {crawl.get('pages_seen', 0)}[/dim]\n"
+                    f"[dim]    HTML documents found: {crawl.get('documents_found', 0)}[/dim]\n"
+                    f"[dim]    Adapter: {index_result.get('adapter') or 'none'}[/dim]\n"
+                    f"[dim]    Adapter documents found: {index_result.get('adapter_documents_found', 0)}[/dim]\n"
+                    f"[dim]    Downloaded: {index_result.get('documents_downloaded', 0)}  "
+                    f"Cached: {index_result.get('documents_cached', 0)}  "
+                    f"Errors: {len(index_result.get('document_errors', []))}[/dim]\n"
+                    f"[dim]    DB: {index_result.get('db_path')}[/dim]\n"
+                    f"[dim]    Next: /company-xray {index_result.get('symbol')}[/dim]"
+                )
+            except Exception as exc:
+                console.print(f"[bold red]  ❌ Company index failed: {exc}[/bold red]")
+            continue
+
+        # ── /company-xray <symbol> [--strict] [--refresh] — Company + Sector X-Ray ──────
+        if text.lower().startswith("/company-xray"):
+            args_text = text[len("/company-xray"):].strip()
+            if not args_text:
+                console.print("[dim]  Usage: /company-xray SYMBOL [--strict] [--refresh][/dim]")
+                continue
+            try:
+                from company_xray_command import run_company_xray_from_args
+
+                console.print(f"[dim]  → Company X-Ray: /company-xray {args_text}[/dim]")
+                xray_result = run_company_xray_from_args(args_text)
+                coverage = xray_result.get("coverage_summary", {})
+                gaps = xray_result.get("known_gaps", [])
+                strict_failures = xray_result.get("strict_failures", [])
+                console.print(
+                    f"[green]  ✅ Company X-Ray {xray_result.get('status')}[/green]\n"
+                    f"[dim]    Symbol: {xray_result.get('symbol')}[/dim]\n"
+                    f"[dim]    Official evidence: {coverage.get('official_evidence', 'n/a')}[/dim]\n"
+                    f"[dim]    Business model: {coverage.get('business_model', 'n/a')}[/dim]\n"
+                    f"[dim]    Sector data: {coverage.get('sector_data', 'n/a')}[/dim]\n"
+                    f"[dim]    Market share: {coverage.get('market_share', 'n/a')}[/dim]\n"
+                    f"[dim]    Markdown: {xray_result.get('report_markdown_path')}[/dim]\n"
+                    f"[dim]    HTML: {xray_result.get('report_html_path')}[/dim]\n"
+                    f"[dim]    Known gaps: {', '.join(gaps) if gaps else 'none'}[/dim]\n"
+                    f"[dim]    Strict gaps: {', '.join(strict_failures) if strict_failures else 'none'}[/dim]\n"
+                    f"[dim]    {xray_result.get('disclaimer')}[/dim]"
+                )
+            except Exception as exc:
+                console.print(f"[bold red]  ❌ Company X-Ray failed: {exc}[/bold red]")
+            continue
+
+        # ── /search <symbol> [vertical/context] [pdf|html|md] — deep search engine ──────
         if text.lower().startswith("/search"):
             parts   = text.split()
             sym     = parts[1].upper() if len(parts) > 1 else "RELIANCE"
-            context = " ".join(parts[2:]) if len(parts) > 2 else ""
+
+            # Parse optional trailing format: /search RELIANCE pdf
+            _search_fmt = ""
+            _remaining_parts = parts[2:]
+            if _remaining_parts and _remaining_parts[-1].lower() in ("html", "pdf", "md"):
+                _search_fmt = _remaining_parts[-1].lower()
+                _remaining_parts = _remaining_parts[:-1]
+            context = " ".join(_remaining_parts) if _remaining_parts else ""
 
             # Map shorthand tokens to readable context for the LLM
             _CTX_MAP = {
@@ -2871,15 +3863,17 @@ def _chat_loop(agent, show_trace: bool) -> None:
             }
             forced_verts = _VERT_MAP.get(ctx_key)
 
+            _eff_search_fmt = _search_fmt or "html"
+            _search_fmt_note = f" → saving {_search_fmt.upper()} report" if _search_fmt else " → saving HTML report"
             if forced_verts:
                 vert_str = ", ".join(forced_verts)
-                console.print(f"[dim]  → Deep Search: [bold]{sym}[/bold] — verticals: {vert_str}[/dim]")
+                console.print(f"[dim]  → Deep Search: [bold]{sym}[/bold] — verticals: {vert_str}{_search_fmt_note}[/dim]")
                 text = (
                     f"Run deep_search for {sym} using verticals {forced_verts} with context '{ctx_desc}'. "
                     f"Present all results clearly — include dates, URLs, and key insights for each vertical."
                 )
             else:
-                console.print(f"[dim]  → Deep Search: [bold]{sym}[/bold] — all verticals[/dim]")
+                console.print(f"[dim]  → Deep Search: [bold]{sym}[/bold] — all verticals{_search_fmt_note}[/dim]")
                 text = (
                     f"Run a comprehensive deep search for {sym}. "
                     f"Use deep_search with all default verticals. "
@@ -2889,6 +3883,260 @@ def _chat_loop(agent, show_trace: bool) -> None:
                     f"shareholding, analyst targets, concalls, sector news. "
                     f"Include dates, real URLs, and actionable insights."
                 )
+            # Mark for post-response export — default to html when no format given
+            _search_report_after = (sym, "research", _eff_search_fmt)
+
+        # ── /report — first-class report generation ──────────────────────
+        # PG: Generates PDF, HTML, or Markdown reports from prebuilt analysis types.
+        #     sector-rotation and stage2 are DATA-DIRECT (no LLM, instant from DB).
+        elif text.lower().startswith("/report"):
+            parts = text.split()
+            # Parse: /report [type] [symbol] [format]
+            # Examples: /report technical RELIANCE pdf
+            #           /report sector-rotation html
+            #           /report stage2
+            _preset_types  = {"sector-rotation", "stage2"}
+            _report_types  = {"technical", "fundamental", "forensic", "research",
+                              "intraday", "canslim", "ric", "sector"} | _preset_types
+
+            if len(parts) == 1:
+                console.print(
+                    "[dim]  Usage: /report <type> [symbol] [format][/dim]\n"
+                    "[dim]  ─── Stock Reports (LLM-generated) ──────────────────────────────[/dim]\n"
+                    "[dim]  Types:  technical | fundamental | forensic | research[/dim]\n"
+                    "[dim]          intraday | canslim | ric | sector[/dim]\n"
+                    "[dim]  ─── Market Reports (Instant — direct from DB) ────────────────[/dim]\n"
+                    "[dim]  Types:  sector-rotation   → Full sector breadth & rotation dashboard[/dim]\n"
+                    "[dim]          stage2            → Stage 2 universe tracker (top 30 + new entrants)[/dim]\n"
+                    "[dim]  ─── Format ──────────────────────────────────────────────────────[/dim]\n"
+                    "[dim]  Format: html (default) | pdf | md[/dim]\n"
+                    "[dim]  ─── Examples ────────────────────────────────────────────────────[/dim]\n"
+                    "[dim]    /report sector-rotation           → HTML (instant)[/dim]\n"
+                    "[dim]    /report sector-rotation pdf       → PDF  (instant)[/dim]\n"
+                    "[dim]    /report stage2                    → HTML (instant)[/dim]\n"
+                    "[dim]    /report stage2 md                 → Markdown[/dim]\n"
+                    "[dim]    /report technical RELIANCE        → LLM analysis → HTML[/dim]\n"
+                    "[dim]    /report fundamental TCS pdf       → LLM analysis → PDF[/dim]\n"
+                    "[dim]    /report forensic INFY md[/dim]\n"
+                    "[dim]    /report research HDFCBANK[/dim]\n"
+                    "[dim]    /report canslim TATAMOTORS html[/dim]\n"
+                    "[dim]    /report ric ADANIENT pdf[/dim]\n"
+                    "[dim]    /report RELIANCE              (shortcut: research + html)[/dim]"
+                )
+                continue
+
+            # Parse arguments
+            rpt_type = "research"
+            rpt_sym  = ""
+            rpt_fmt  = "html"
+
+            if parts[1].lower() in _report_types:
+                rpt_type = parts[1].lower()
+                remaining = parts[2:]
+                # For preset types, remaining is just [format]; for others [symbol] [format]
+                if rpt_type in _preset_types:
+                    if remaining and remaining[0].lower() in ("html", "pdf", "md"):
+                        rpt_fmt = remaining[0].lower()
+                else:
+                    if remaining:
+                        rpt_sym = remaining[0].upper()
+                    if len(remaining) > 1 and remaining[1].lower() in ("html", "pdf", "md"):
+                        rpt_fmt = remaining[1].lower()
+            else:
+                # parts[1] is the symbol (default type = research)
+                rpt_sym = parts[1].upper()
+                if len(parts) > 2 and parts[2].lower() in ("html", "pdf", "md"):
+                    rpt_fmt = parts[2].lower()
+                elif len(parts) > 2 and parts[2].lower() in _report_types:
+                    rpt_type = parts[2].lower()
+                    if len(parts) > 3 and parts[3].lower() in ("html", "pdf", "md"):
+                        rpt_fmt = parts[3].lower()
+
+            # ── Preset reports: data-direct (no LLM) ─────────────────────
+            if rpt_type in _preset_types:
+                console.print(
+                    f"[dim]  → [bold]{rpt_type.upper()}[/bold] Report — "
+                    f"pulling from DB snapshot... (no LLM needed)[/dim]"
+                )
+                try:
+                    from terminal.reports import generate_preset_report as _gen_preset
+                    _r = _gen_preset(rpt_type, rpt_fmt)
+                    if _r.get("success"):
+                        console.print(
+                            f"  [bold green]✅  Report saved![/bold green]  "
+                            f"[cyan]{_r['path']}[/cyan]"
+                        )
+                        console.print(f"  [dim]{_r.get('note','')}[/dim]")
+                        import subprocess
+                        subprocess.Popen(["open", _r["path"]])
+                    else:
+                        console.print(f"  [bold red]❌  {_r.get('note','Failed')}[/bold red]")
+                except Exception as _e:
+                    console.print(f"  [bold red]❌  Preset report error: {_e}[/bold red]")
+                _separator()
+                continue  # done — no LLM call needed
+
+            # ── LLM-assisted stock reports ────────────────────────────────
+            if not rpt_sym:
+                console.print("[bold red]  ❌ Please specify a symbol: /report {type} SYMBOL [format][/bold red]")
+                continue
+
+            console.print(
+                f"[dim]  → Generating [bold]{rpt_type.upper()}[/bold] report for "
+                f"[bold]{rpt_sym}[/bold] as {rpt_fmt.upper()}[/dim]"
+            )
+
+            from terminal.reports import get_report_prompt
+            text = get_report_prompt(rpt_type, rpt_sym, rpt_fmt)
+            # Direct export after LLM responds — bypasses fragile tool-call path
+            _analyze_report_after = (rpt_sym, rpt_type, rpt_fmt)
+
+        # ── /analyze <source> [pdf|html|md] — document analysis or deep stock 360° ──────
+        # PG: First-class document + stock analysis. Auto-detects input type:
+        #     URL → scrape web page / PDF;  .pdf/.docx → read local file;
+        #     stock symbol → full 360° analysis (technical + fundamental + forensic + news + sentiment)
+        #     Optional format suffix: /analyze RELIANCE pdf  → run analysis AND save report
+        elif text.lower().startswith("/analyze"):
+            parts = text.split(maxsplit=1)
+            arg   = parts[1].strip() if len(parts) > 1 else ""
+
+            # Parse optional trailing format: /analyze RELIANCE pdf
+            _analyze_fmt = ""
+            _arg_toks = arg.split()
+            if _arg_toks and _arg_toks[-1].lower() in ("html", "pdf", "md"):
+                _analyze_fmt = _arg_toks[-1].lower()
+                arg = " ".join(_arg_toks[:-1]).strip()
+
+            if not arg:
+                console.print(
+                    "[dim]  Usage: /analyze <file.pdf | file.docx | https://... | SYMBOL> [html|pdf|md][/dim]\n"
+                    "[dim]  Examples:[/dim]\n"
+                    "[dim]    /analyze ~/Downloads/annual_report.pdf[/dim]\n"
+                    "[dim]    /analyze https://www.bseindia.com/results/2026.pdf[/dim]\n"
+                    "[dim]    /analyze concall_transcript.docx[/dim]\n"
+                    "[dim]    /analyze RELIANCE[/dim]\n"
+                    "[dim]    /analyze RELIANCE pdf       ← run AND save as PDF report[/dim]"
+                )
+                continue
+
+            _arg_lower = arg.lower()
+            _is_url  = _arg_lower.startswith(("http://", "https://"))
+            _is_file = any(_arg_lower.endswith(ext) for ext in
+                          (".pdf", ".docx", ".doc", ".txt", ".csv", ".md", ".xlsx"))
+            _has_path = ("/" in arg or "\\" in arg or "~" in arg)
+
+            if _is_url or _is_file or _has_path:
+                # ── Document analysis mode ────────────────────────────────
+                source_label = arg if len(arg) < 60 else arg[:57] + "..."
+                _doc_export_note = f" → saving {_analyze_fmt.upper()} report" if _analyze_fmt else ""
+                console.print(f"[dim]  → Document Analysis: [bold]{source_label}[/bold]{_doc_export_note}[/dim]")
+                _analyze_sym = Path(arg).stem.split(".")[0][:20] if not _is_url else "document"
+                text = (
+                    f"Use the analyze_document tool with source='{arg}'. "
+                    f"Read the full document and provide:\n"
+                    f"1. **Document Summary** — what is this document about? Key topics covered.\n"
+                    f"2. **Key Findings** — the most important data points, numbers, and conclusions.\n"
+                    f"3. **Critical Details** — any financial figures, dates, targets, risks, or action items.\n"
+                    f"4. **Analysis & Opinion** — your expert interpretation of the document's implications.\n"
+                    f"If this is a financial document (annual report, concall transcript, results), "
+                    f"also evaluate: revenue/profit trends, management commentary, guidance changes, "
+                    f"risk factors, and investment implications.\n"
+                    f"Present the analysis in a well-structured format with clear section headers."
+                )
+                # Documents: export only if explicit format given
+                _analyze_report_after = (_analyze_sym, "research", _analyze_fmt) if _analyze_fmt else None
+            else:
+                # ── Stock deep 360° analysis mode ─────────────────────────
+                _analyze_sym = arg.upper().split()[0]
+                _eff_fmt = _analyze_fmt or "html"  # default to html for stock analysis
+                _fmt_note = f" → saving {_analyze_fmt.upper()} report" if _analyze_fmt else " → saving HTML report"
+                console.print(f"[dim]  → 360° Deep Analysis: [bold]{_analyze_sym}[/bold] "
+                               f"(technical + fundamental + forensic + news + sentiment){_fmt_note}[/dim]")
+                text = (
+                    f"Perform a comprehensive 360° analysis of {_analyze_sym}. Execute these tools IN ORDER:\n\n"
+                    f"1. **get_technical_setup** for {_analyze_sym} — trend, RSI, MACD, support/resistance, stage\n"
+                    f"2. **comprehensive_stock_research** for {_analyze_sym} — fundamentals, valuations, peer comparison\n"
+                    f"3. **run_forensic_analysis** for {_analyze_sym} — Beneish M-score, Piotroski F-score, Altman Z'-score\n"
+                    f"4. **search_latest_catalysts** for {_analyze_sym} — latest news, read top 2 articles for sentiment\n"
+                    f"5. **get_sector_context** for {_analyze_sym} — sector rotation status and relative strength\n"
+                    f"6. **deep_search** for {_analyze_sym} verticals=['shareholding','insider_trades','analyst_targets'] — institutional & insider activity\n\n"
+                    f"Then synthesize ALL results into a unified report with these sections:\n"
+                    f"• **Executive Summary** — 3-line bull/bear verdict with conviction level\n"
+                    f"• **Technical Position** — trend, key levels, stage, momentum signals\n"
+                    f"• **Fundamental Quality** — revenue/profit growth, margins, ROE, debt, valuations\n"
+                    f"• **Financial Health** — forensic scores (Beneish, Piotroski, Altman) with flags\n"
+                    f"• **Institutional & Insider Activity** — FII/DII changes, promoter moves, bulk deals\n"
+                    f"• **News & Sentiment** — recent catalysts, management commentary, market sentiment\n"
+                    f"• **Risk Factors** — top 3-5 risks specific to this stock\n"
+                    f"• **Investment Verdict** — BUY/HOLD/AVOID with entry zone, target, stop-loss, timeframe\n\n"
+                    f"Use data from ALL tool calls. Be specific with numbers, dates, and levels."
+                )
+                # Stock analysis: always export HTML (or specified format)
+                _analyze_report_after = (_analyze_sym, "research", _eff_fmt)
+
+        # ── /canslim <symbol> — William O'Neil CANSLIM analysis ──────────
+        # PG: First-class CANSLIM growth quality evaluation framework.
+        #     Uses existing tools to evaluate all 7 CANSLIM criteria.
+        elif text.lower().startswith("/canslim"):
+            parts = text.split()
+            sym   = parts[1].upper() if len(parts) > 1 else ""
+
+            if not sym:
+                console.print(
+                    "[dim]  Usage: /canslim <SYMBOL>[/dim]\n"
+                    "[dim]  William O'Neil's 7-point growth stock quality framework:[/dim]\n"
+                    "[dim]    C = Current quarterly earnings (acceleration)[/dim]\n"
+                    "[dim]    A = Annual earnings growth (25%+ for 3-5 years)[/dim]\n"
+                    "[dim]    N = New product/management/price high (catalyst)[/dim]\n"
+                    "[dim]    S = Supply & demand (shares outstanding, volume)[/dim]\n"
+                    "[dim]    L = Leader or laggard? (relative strength vs market)[/dim]\n"
+                    "[dim]    I = Institutional sponsorship (FII/DII/MF ownership quality)[/dim]\n"
+                    "[dim]    M = Market direction (bull/bear/correction regime)[/dim]"
+                )
+                continue
+
+            console.print(f"[dim]  → CANSLIM Analysis: [bold]{sym}[/bold] (William O'Neil 7-point framework)[/dim]")
+            text = (
+                f"Perform a comprehensive CANSLIM analysis for {sym}. Call these tools:\n\n"
+                f"1. **comprehensive_stock_research** for {sym} — quarterly/annual earnings, revenue trends, margins\n"
+                f"2. **get_technical_setup** for {sym} — relative strength, price action, stage, 52W high proximity\n"
+                f"3. **search_latest_catalysts** for {sym} — new products, management changes, recent catalysts\n"
+                f"4. **deep_search** for {sym} verticals=['shareholding','insider_trades','mutual_fund_holdings'] — institutional ownership\n"
+                f"5. **get_sector_context** for {sym} — market regime and sector rotation status\n\n"
+                f"Then evaluate EACH of the 7 CANSLIM criteria with a PASS ✅ / PARTIAL 🟡 / FAIL ❌ rating:\n\n"
+                f"**C — Current Quarterly Earnings:**\n"
+                f"  - Is latest quarter EPS growth ≥ 25% YoY? Accelerating vs prior quarters?\n"
+                f"  - Revenue growth accompanying earnings growth? (top-line confirmation)\n\n"
+                f"**A — Annual Earnings Growth:**\n"
+                f"  - Is annual EPS growth ≥ 25% for at least 3 consecutive years?\n"
+                f"  - Is ROE ≥ 17%? Stable or improving margins?\n\n"
+                f"**N — New Products/Management/Price Highs:**\n"
+                f"  - Any new product launches, business pivots, or management changes?\n"
+                f"  - Is the stock near or making new 52-week/all-time highs?\n\n"
+                f"**S — Supply & Demand:**\n"
+                f"  - Shares outstanding (prefer < 500 Cr for mid/small caps)?\n"
+                f"  - Volume pattern: is volume expanding on up-days vs down-days?\n"
+                f"  - Float tightness (promoter holding > 50% = positive)\n\n"
+                f"**L — Leader or Laggard:**\n"
+                f"  - Relative Strength ranking vs Nifty 500 (top 20% = leader)\n"
+                f"  - Is the stock outperforming its sector and the market?\n"
+                f"  - Stage analysis: is it in Stage 2 uptrend?\n\n"
+                f"**I — Institutional Sponsorship:**\n"
+                f"  - Are quality FIIs/DIIs/MFs increasing their stakes (last 2-3 quarters)?\n"
+                f"  - Number of institutional holders growing?\n"
+                f"  - Any recent bulk/block deals?\n\n"
+                f"**M — Market Direction:**\n"
+                f"  - Current market regime (BULL/ROTATION/CHOP/BEAR)?\n"
+                f"  - Is this a good time to buy growth stocks? (follow-through day, distribution days)\n"
+                f"  - Nifty 50 trend and breadth status\n\n"
+                f"**Final Output Format:**\n"
+                f"1. Score card: each criterion with ✅/🟡/❌ and one-line evidence\n"
+                f"2. Overall CANSLIM Score: X/7 (count ✅ as 1, 🟡 as 0.5, ❌ as 0)\n"
+                f"3. Verdict: STRONG BUY (≥6) / BUY (5-5.5) / HOLD (4-4.5) / AVOID (<4)\n"
+                f"4. Key strengths and weaknesses\n"
+                f"5. If BUY: suggested entry zone, target (using resistance levels), and stop-loss\n"
+                f"Use REAL data from the tool calls. Do NOT fabricate numbers."
+            )
 
         # ── /forensic <symbol> [symbol2 ...] — forensic accounting ───────
         elif text.lower().startswith("/forensic"):
@@ -2917,6 +4165,183 @@ def _chat_loop(agent, show_trace: bool) -> None:
                     f"Piotroski F-score (financial health), Altman Z'-score (distress risk). "
                     f"Highlight any stocks with high risk and explain the specific flags."
                 )
+
+        # ── /voice-mode — persistent spoken responses for normal answers ──
+        elif text.lower().startswith("/voice-mode"):
+            vm = handle_voice_mode_command(text, voice_mode)
+            if vm.get("status") == "error":
+                console.print(f"[red]  ✗ {vm.get('error')}[/red]")
+            else:
+                label = "enabled" if vm.get("enabled") else "disabled"
+                play = "auto-play on" if vm.get("auto_play") else "auto-play off"
+                console.print(f"[green]  ✓ Voice mode {label}[/green][dim]  ·  voice: {vm.get('voice')}  ·  {play}[/dim]")
+                console.print(f"[dim]  {vm.get('cue', '')}[/dim]")
+            continue
+
+        # ── /voice-live — repeated voice assistant turns ──────────────────
+        elif text.lower().startswith("/voice-live"):
+            try:
+                from voice_command import parse_voice_live_args
+                from voice_live import run_voice_live_session
+
+                args = parse_voice_live_args(text[len("/voice-live"):].strip())
+
+                def _voice_live_event(event: str, payload: dict) -> None:
+                    if event == "session_started":
+                        console.print(
+                            "[green]  ✓ Voice live started[/green]"
+                            f"[dim]  ·  turns: {payload['turns']}  ·  listen: {payload['seconds']}s  ·  voice: {payload['voice']}[/dim]"
+                        )
+                        console.print("[dim]  I am the Market Intelligence Assistant from Agent Adda. Start speaking. Say 'stop' to exit.[/dim]")
+                    elif event == "turn_listening":
+                        console.print(f"[cyan]  🎙  Listening turn {payload['turn']} for {payload['seconds']}s...[/cyan]")
+                    elif event == "turn_transcript":
+                        console.print(f"[green]  ✓ Transcript:[/green] {payload.get('transcript', '')}")
+                        console.print(f"[green]  ✓ Query:[/green] {payload.get('normalized_query', '')}")
+                    elif event == "turn_answer":
+                        _print_response({"answer": payload.get("answer", ""), "backend": "Voice Live"})
+                        if payload.get("spoken_summary"):
+                            console.print(f"[bold]Spoken summary:[/bold] {payload.get('spoken_summary', '')}")
+                        synth = payload.get("synthesis", {})
+                        if synth.get("audio_path"):
+                            console.print(f"[green]  ✓ Response audio:[/green] {synth['audio_path']}")
+                        if payload.get("playback", {}).get("status") == "ok":
+                            console.print("[green]  ✓ Playing response audio now.[/green]")
+                        console.print("[dim]  Ask your next question, or say 'stop'.[/dim]")
+                    elif event == "session_stopped":
+                        console.print("[yellow]  · Voice live stopped.[/yellow]")
+                    elif event == "session_complete":
+                        console.print(f"[green]  ✓ Voice live complete[/green][dim]  ·  turns: {payload.get('turns_completed')}[/dim]")
+                    elif event == "turn_error":
+                        console.print(f"[red]  ✗ Voice live failed:[/red] {payload.get('error')}")
+
+                result = run_voice_live_session(
+                    agent_runner=lambda query: agent.query(query, show_trace=show_trace),
+                    turns=args.turns,
+                    seconds=args.seconds,
+                    want_audio=args.want_audio,
+                    auto_play=args.auto_play,
+                    voice=args.voice,
+                    confirm_callback=_confirm_voice_query if args.confirm else None,
+                    event_callback=_voice_live_event,
+                )
+                if result.get("status") == "error":
+                    console.print(f"[red]  ✗ Voice live ended with error:[/red] {result.get('error')}")
+                continue
+            except SystemExit:
+                console.print("[red]  ✗ Usage:[/red] /voice-live [--turns 5] [--seconds 12] [--confirm] [--no-audio] [--no-play] [--voice cedar]")
+                continue
+            except Exception as exc:
+                console.print(f"[red]  ✗ Voice live failed:[/red] {exc}")
+                continue
+
+        # ── /kb — Knowledge base (RAG) build / ask / stats ────────────────
+        # PG-kb: RAG over financial sources registry (regulators, CRAs, brokers, AMCs).
+        # Pipeline: fetch PDFs/HTML → chunk → LLM Q&A → embed → ChromaDB.
+        # Usage:  /kb stats                                   → collection counts
+        #         /kb ask <question>                          → semantic search
+        #         /kb build --tier 1 --max-pdfs 3             → fetch+index tier-1 sources
+        #         /kb build --source SEBI RBI                 → fetch+index specific sources
+        elif text.lower().startswith("/kb"):
+            try:
+                import shlex
+                from knowledge_base.__main__ import main as kb_main
+                argv = shlex.split(text[len("/kb"):].strip()) or ["stats"]
+                console.print(f"[dim]  → /kb {' '.join(argv)}[/dim]")
+                kb_main(argv)
+                continue
+            except SystemExit:
+                console.print("[red]  ✗ Usage:[/red] /kb [stats|ask <q>|build --tier N --max-pdfs N --source SID...]")
+                continue
+            except Exception as exc:
+                console.print(f"[red]  ✗ /kb failed:[/red] {exc}")
+                continue
+
+        # ── /voice — P3-2 60-second daily audio briefing ─────────────────
+        # PG-voice: Generates a market briefing script + audio (OpenAI TTS or macOS `say`).
+        # Sources: signal_log.csv (today's BUY signals), regime_detector, fetch_fii_dii_flows.
+        # Usage:  /voice              → today's briefing with audio
+        #         /voice script       → script only (no audio)
+        #         /voice 2026-05-09   → historical date
+        elif text.lower().startswith("/voice"):
+            try:
+                from voice_command import parse_voice_briefing_args
+                from generate_voice_briefing import generate_briefing
+                from voice_synth import play_audio
+
+                args = parse_voice_briefing_args(text[len("/voice"):].strip())
+                console.print(f"[dim]  → Generating voice briefing{' (script only)' if not args.want_tts else ''}...[/dim]")
+                result = generate_briefing(date_str=args.date, want_tts=args.want_tts)
+                console.print(f"[green]  ✓ Script:[/green] {result['script_path']}")
+                if result.get("audio_path"):
+                    console.print(f"[green]  ✓ Audio:[/green]  {result['audio_path']}")
+                    if args.auto_play:
+                        playback = play_audio(result["audio_path"])
+                        if playback.get("status") == "ok":
+                            console.print("[green]  ✓ Playing audio now.[/green]")
+                        else:
+                            console.print(f"[yellow]  · Auto-play failed:[/yellow] {playback.get('error')}")
+                elif not args.want_tts:
+                    console.print(f"[yellow]  · Audio skipped (script-only mode).[/yellow]")
+                else:
+                    console.print(f"[yellow]  · Audio skipped (no OPENAI_API_KEY and no macOS `say`).[/yellow]")
+                console.print()
+                console.print(f"[bold]Briefing ({result['date']}, {result['word_count']} words):[/bold]")
+                console.print(result["script"])
+                # Skip LLM round-trip — this is a self-contained pipeline.
+                continue
+            except SystemExit:
+                console.print("[red]  ✗ Usage:[/red] /voice [script|YYYY-MM-DD] [--no-tts] [--no-play]")
+                continue
+            except Exception as exc:
+                console.print(f"[red]  ✗ Voice briefing failed:[/red] {exc}")
+                continue
+
+        # ── /ask-voice — speech → text → Agent Adda → speech ──────────────
+        elif text.lower().startswith("/ask-voice"):
+            try:
+                from voice_command import parse_ask_voice_args
+                from voice_copilot import run_voice_query
+
+                args = parse_ask_voice_args(text[len("/ask-voice"):].strip())
+                console.print(
+                    f"[dim]  → Listening for {args.seconds}s..."
+                    if not args.audio_file
+                    else f"[dim]  → Reading voice question from {args.audio_file}..."
+                )
+                result = run_voice_query(
+                    audio_file=args.audio_file or None,
+                    seconds=args.seconds,
+                    agent_runner=lambda query: agent.query(query, show_trace=show_trace),
+                    want_audio=args.want_audio,
+                    auto_play=args.auto_play,
+                    voice=args.voice,
+                    confirm_callback=_confirm_voice_query if args.confirm else None,
+                )
+                if result.get("status") != "ok":
+                    console.print(f"[red]  ✗ Voice query failed:[/red] {result.get('error', result.get('status'))}")
+                    console.print(f"[dim]  Session: {result.get('session_dir', '')}[/dim]")
+                    continue
+
+                console.print(f"[green]  ✓ Transcript:[/green] {result.get('transcript', '')}")
+                console.print(f"[green]  ✓ Query:[/green] {result.get('normalized_query', '')}")
+                console.print(f"[dim]  Session: {result.get('session_dir', '')}[/dim]")
+                console.print()
+                _print_response({"answer": result.get("answer", ""), "backend": "Voice Copilot"})
+                console.print()
+                console.print(f"[bold]Spoken summary:[/bold] {result.get('spoken_summary', '')}")
+                synth = result.get("synthesis", {})
+                if synth.get("audio_path"):
+                    console.print(f"[green]  ✓ Response audio:[/green] {synth['audio_path']}")
+                    if result.get("playback", {}).get("status") == "ok":
+                        console.print("[green]  ✓ Playing response audio now.[/green]")
+                continue
+            except SystemExit:
+                console.print("[red]  ✗ Usage:[/red] /ask-voice [--seconds 20] [--audio-file path] [--no-audio] [--no-play] [--voice cedar]")
+                continue
+            except Exception as exc:
+                console.print(f"[red]  ✗ Voice query failed:[/red] {exc}")
+                continue
 
         # ── /events [index or symbol] [days] — corporate event calendar ──
         elif text.lower().startswith("/events"):
@@ -3188,28 +4613,6 @@ def _chat_loop(agent, show_trace: bool) -> None:
             except Exception as _e:
                 console.print(f"[bold red]  ❌  Narrative error: {_e}[/bold red]")
                 text = f"Narrative generation error: {_e}"
-
-        # ── /voice [text...] — voice briefing (direct) ────────────────
-        elif text.lower().startswith("/voice"):
-            parts = text.split(maxsplit=1)
-            custom = parts[1].strip() if len(parts) > 1 else ""
-            console.print("[dim]  → Voice Briefing (OpenAI TTS)[/dim]")
-            try:
-                from terminal.tools import generate_voice_briefing
-                args = {"text": custom} if custom else {}
-                vb = generate_voice_briefing(**args)
-                if vb.get("error"):
-                    console.print(f"[bold red]  ❌  {vb['error']}[/bold red]")
-                else:
-                    console.print(f"  [bold green]🎙  Voice briefing generated![/bold green]")
-                    console.print(f"  File: [cyan]{vb['audio_file']}[/cyan]")
-                    console.print(f"  Duration: {vb['duration_est']}  │  Voice: {vb['voice']}")
-                    console.print(f"  [dim]Play with: open \"{vb['audio_file']}\"[/dim]")
-                    console.print()
-            except Exception as _e:
-                console.print(f"[bold red]  ❌  Voice briefing error: {_e}[/bold red]")
-            _separator()
-            continue  # self-contained — no LLM follow-up needed
 
         # ── /pnl — live portfolio P&L dashboard ───────────────────────
         elif text.lower().startswith("/pnl"):
@@ -3544,11 +4947,33 @@ def _chat_loop(agent, show_trace: bool) -> None:
         try:
             result = _run_with_spinner(agent, query, show_trace, animated=False)
             _print_response(result)
+            voice_result = speak_answer_when_enabled(text, result, voice_mode)
+            if voice_result.get("status") == "ok":
+                synth = voice_result.get("synthesis", {})
+                console.print(f"[green]  ✓ Voice mode response:[/green] {synth.get('audio_path', '')}")
+                if voice_result.get("playback", {}).get("status") == "ok":
+                    console.print("[green]  ✓ Playing voice mode response now.[/green]")
+            elif voice_result.get("status") == "error":
+                console.print(f"[yellow]  · Voice mode failed:[/yellow] {voice_result.get('synthesis', {}).get('error', 'unknown error')}")
             if show_trace:
                 _print_trace(result.get("trace", []))
+
+            # ── Auto-export after /analyze, /search ───────────────────────
+            _clean_ans, _ = _parse_followups(result.get("answer", ""))
+            if _clean_ans.strip():
+                if _analyze_report_after:
+                    _auto_export_report(_clean_ans, _analyze_report_after[1],
+                                        _analyze_report_after[0], _analyze_report_after[2])
+                elif _search_report_after:
+                    _auto_export_report(_clean_ans, _search_report_after[1],
+                                        _search_report_after[0], _search_report_after[2])
+            _analyze_report_after = None
+            _search_report_after  = None
         except Exception as e:
             console.print(f"[bold red]  ❌  Error: {e}[/bold red]")
             _separator()
+            _analyze_report_after = None
+            _search_report_after  = None
 
     console.print()
     console.print("[bold cyan]  Agent Adda closed. Goodbye! 🏛[/bold cyan]")
@@ -3596,7 +5021,8 @@ def main() -> None:
     agent = Agent()
     console.print(f"[bold green]  ✓ Agent Adda ready[/bold green]"
                   f"[dim]  │  backend: {agent.backend_name}"
-                  f"  │  mode: {_mode}[/dim]")
+                  f"  │  mode: {_mode}"
+                  f"  │  {_session_clock_label()}[/dim]")
     console.print()
 
     if args.query:
@@ -3606,6 +5032,7 @@ def main() -> None:
     # ── Startup briefing (skip with --no-briefing or -nb) ─────────────────
     if not args.no_briefing:
         _run_startup_briefing(agent, args.trace)
+        _run_voice_briefing_panel()
 
     _chat_loop(agent, args.trace)
 

@@ -13,13 +13,16 @@ import math
 import os
 import threading
 import warnings
-from contextlib import redirect_stderr, redirect_stdout
+from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FutureTimeout
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import numpy as np
 import pandas as pd
+
+from terminal.intraday_storage import persist_intraday_scan_result
+from terminal.market_calendar import market_session_status
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 
@@ -32,15 +35,43 @@ _SCAN_TIMEOUT     = 300
 _YF_DOWNLOAD_LOCK = threading.Lock()
 
 
+# PG: Thread-safe stdout/stderr suppression using OS-level fd redirection.
+#     contextlib.redirect_stdout/redirect_stderr mutate global sys.stdout/stderr
+#     which races with the main thread's console output and causes
+#     "I/O operation on closed file" + "lost sys.stderr" crashes.
+@contextmanager
+def _suppress_fds():
+    """Redirect OS-level stdout (fd 1) and stderr (fd 2) to /dev/null.
+
+    This is thread-safe because it operates on file descriptors, not on
+    the Python sys.stdout/sys.stderr objects.  The GIL + _YF_DOWNLOAD_LOCK
+    ensure only one thread mutates the fds at a time.
+    """
+    devnull_fd = os.open(os.devnull, os.O_WRONLY)
+    saved_stdout_fd = os.dup(1)
+    saved_stderr_fd = os.dup(2)
+    try:
+        os.dup2(devnull_fd, 1)
+        os.dup2(devnull_fd, 2)
+        with os.fdopen(os.dup(devnull_fd), "w") as devnull_out, os.fdopen(os.dup(devnull_fd), "w") as devnull_err:
+            with redirect_stdout(devnull_out), redirect_stderr(devnull_err):
+                yield
+    finally:
+        os.dup2(saved_stdout_fd, 1)
+        os.dup2(saved_stderr_fd, 2)
+        os.close(saved_stdout_fd)
+        os.close(saved_stderr_fd)
+        os.close(devnull_fd)
+
+
 def _quiet_yf_download(yf, *args, **kwargs) -> pd.DataFrame:
     """Run yfinance download with noisy logging and direct output suppressed."""
     import logging
     for name in ("yfinance", "peewee", "urllib3", "requests"):
         logging.getLogger(name).setLevel(logging.CRITICAL)
-    # yfinance/curl_cffi can print directly to stdout/stderr. Redirecting those
-    # streams is process-global, so serialize downloads while the redirect is active.
+    # Serialize downloads so fd redirection is safe across threads.
     with _YF_DOWNLOAD_LOCK:
-        with open(os.devnull, "w") as sink, redirect_stdout(sink), redirect_stderr(sink):
+        with _suppress_fds():
             return yf.download(*args, **kwargs)
 
 
@@ -76,21 +107,22 @@ _INTERVAL_FALLBACK: dict[str, str] = {
 
 def _market_context() -> dict:
     """Return current IST time and whether NSE market is open."""
-    now  = datetime.now()
-    hour = now.hour + now.minute / 60
-    # NSE: Mon–Fri 09:15–15:30 IST
-    is_weekday = now.weekday() < 5
-    is_open    = is_weekday and 9.25 <= hour <= 15.5
-    if not is_weekday:
-        session = "weekend"
-    elif hour < 9.25:
-        session = "pre-market"
-    elif hour > 15.5:
-        session = "post-market"
-    else:
-        session = "live"
-    return {"session": session, "is_open": is_open,
-            "time_ist": now.strftime("%H:%M IST")}
+    status = market_session_status()
+    session_map = {
+        "closed_weekend": "weekend",
+        "closed_holiday": "holiday",
+        "pre_market": "pre-market",
+        "pre_open": "pre-market",
+        "open": "live",
+        "post_close": "post-market",
+    }
+    return {
+        "session": session_map.get(status.phase, status.phase),
+        "is_open": status.is_open,
+        "time_ist": status.now_ist.strftime("%H:%M IST"),
+        "market_status": status.status_label,
+        "next_open": status.next_open_at.strftime("%Y-%m-%d %H:%M IST"),
+    }
 
 # ── Candle fetch ─────────────────────────────────────────────────────────────
 
@@ -1519,4 +1551,13 @@ def run_intraday_screener(
             "top_sell":    all_sell[:3],
         },
     }
+    write_intraday_to_pg(result)
     return result
+
+
+def write_intraday_to_pg(scan_result: dict) -> int:
+    try:
+        result = persist_intraday_scan_result(scan_result)
+    except Exception:
+        return 0
+    return int(result.get("rows_inserted") or 0) if result.get("ok") else 0

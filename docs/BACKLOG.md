@@ -178,7 +178,7 @@ Every external and internal data source the platform uses or will use. Items mar
 | P2-3 Learning Loop | ⏳ BLOCKED | — | Needs P0-1 signal log to accumulate 90+ days of data |
 | P2-4 Portfolio-Aware Narratives | ✅ DONE | Optimus | `_load_portfolio()` from CAS holdings; Portfolio tab (sector concentration, held-in-rotation table); "📁 Held" badge on candidates; LLM prompt enriched with holdings context + portfolio-specific instructions |
 | P3-1 Causal Inference Model | ⏳ BLOCKED | — | Needs 6+ months of P0-1 signal data |
-| P3-2 Voice Briefing | 🔜 READY | — | `generate_voice_briefing.py`. Needs OpenAI TTS key. |
+| P3-2 Voice Briefing | ✅ DONE | Optimus | `generate_voice_briefing.py`; GPT TTS MP3 path should use `gpt-4o-mini-tts` with macOS `say` AIFF fallback; reads signal_log + regime + flows; `/voice` slash command in nse_agent.py |
 | P3-3 Real-Time Mode | 💤 DEFERRED | — | Needs live NSE data subscription |
 | P3-4 Installable Agent Adda CLI | 🔒 IN PROGRESS | Codex | `pyproject.toml`; `agent_adda` package; `agent-adda setup`, `doctor`, `data bootstrap --historical`; local config + SQLite historical bootstrap foundation |
 | P3-5 Intraday Single-Stock Fallback | ✅ DONE | Codex | `/intraday <stock>` now resolves the actual stock symbol, tries SQLite-backed setup first, then explicitly calls `get_intraday_analysis` as Yahoo Finance/EOD fallback when `intraday_ohlcv` is missing/stale; fallback is labeled research-only |
@@ -236,6 +236,1010 @@ Every external and internal data source the platform uses or will use. Items mar
 | G6 Terminal + NLP Integration | ✅ DONE | Codex | `/us`, `/us indices`, `/us sectors`, `/us stage2`, `/us vcp`, `/us stock`, `/global readthrough` direct terminal routes |
 | G7 Sector Report Global Tab | ✅ DONE | Codex | Global / US tab in sector report links latest standalone report and summarizes cache-only regime, ETF rotation, Stage 2, VCP, and India read-through |
 | G8 Intraday US Extension | 💤 DEFERRED | — | Add US intraday scanning after daily US/global layer is stable |
+| **Phase 4 — Branch H: Company + Sector X-Ray Intelligence** | | | |
+| H0 Company + Sector X-Ray Design + Backlog | ✅ DONE | Codex | Company-first, sector-expanded evidence DB and RIC design. See `docs/superpowers/specs/2026-05-10-company-sector-xray-intelligence-design.md` and `docs/superpowers/plans/2026-05-10-company-sector-xray-intelligence-backlog.md` |
+| H1 Company Intelligence SQLite Store | 🔜 READY | — | Create company, alias, source document, search run, evidence chunk, structured fact, sector entity, policy event, impact, and analysis-run tables |
+| H2 Search Audit + Alias-Aware Query Builder | 🔜 READY | — | Store all queries, aliases, result counts, URLs, parse status, and failure reasons; fixes DMART-style no-result ambiguity |
+| H3 Evidence Classification + Knowledge Categories | 🔜 READY | — | Categorize evidence into business model, customer base, market share, competitors, operating model, RBI/Budget sensitivity, risks, and open questions |
+| H4 Official/Internal/External Source Connectors | 🔜 READY | — | Tiered source collection: official evidence first, internal structured datasets second, external context third |
+| H5 RBI + Budget Impact Mapping | 🔜 READY | — | Store policy events and map them to company sensitivities such as borrowing cost, demand, capex, FX, imports, exports, and commodity inputs |
+| H6 Company X-Ray Deliberation Engine | 🔜 READY | — | Build bull/base/bear cases, disconfirming evidence, open questions, and strict/permissive evidence coverage logic |
+| H7 Company X-Ray Markdown/HTML Reports | 🔜 READY | — | Analyst memo with evidence coverage, source table, business model, sector, competitors, market share, policy impact, and disclaimer |
+| H8 `/company-xray` + `/ric company-xray` Integration | ✅ DONE | Codex | Added `/company-xray` backend/terminal route, coverage/report summary, research disclaimer, and 9-step `/ric company-xray` workflow |
+| H9 DMART No-Result Regression Suite | 🔜 READY | — | Test failed broker/concall searches produce auditable gaps instead of generic unsupported prose |
+| H10 Company Website Index Schema + FTS | ✅ DONE | Codex | Added website crawl/index tables and SQLite FTS5 search foundation in `company_intelligence_db.py`; fixture tests pass |
+| H11 Company Website Crawler Foundation | ✅ DONE | Codex | Added same-domain crawl, relative URL normalization, document-link discovery, HTML text chunking, and FTS search in `company_website_indexer.py` |
+| H12 Broadened Search Verticals | ✅ DONE | Codex | Expanded `company_intelligence_search.py` with website/IR, annual report, presentation, transcript, customer, market share, competitor, RBI, and Budget query plans |
+| H13 Real Website Fetcher + Crawl Safety | ✅ DONE | Codex | Added timeout/max-byte protected fetcher, structured network errors, robots.txt checks, sitemap URL discovery, and opt-in crawl seeding/robots enforcement |
+| H14 Linked Document Download + Parsing | ✅ DONE | Codex | Added idempotent linked document download into `source_documents`, optional crawl-time persistence, and PDF parse promotion via the filing parser |
+| H15 `/company-index` Backend Command | ✅ DONE | Codex | Added backend runner, terminal route, command parsing, bounded document download, and DMart SPA/API adapter for official investor files |
+| H16 Website Index to Evidence Promotion | ✅ DONE | Codex | Added indexed website/source-document promotion into `evidence_chunks` and wired `/company-xray` to consume promoted official evidence |
+| H17 Scheduled/Stale Company Index Job | ✅ DONE | Codex | Added backend stale-index job with stale/fresh selection, max-company limit, refresh override, failure recording, and continuation across symbols |
+| **Phase 4 — Branch I: Voice Copilot** | | | |
+| I0 Voice Copilot Design + Implementation Backlog | ✅ DONE | Codex | Push-to-talk first, realtime later. See `docs/superpowers/specs/2026-05-10-agent-adda-voice-copilot-design.md` and `docs/superpowers/plans/2026-05-10-agent-adda-voice-copilot-backlog.md` |
+| I1 Voice Session Store + Manifest | 🔜 READY | — | Create local `data/voice_sessions/YYYY-MM-DD/voice_*` session folders with input audio, transcript, normalized query, full answer, spoken summary, response audio, and manifest |
+| I2 Audio Capture + Audio File Input | 🔜 READY | — | Add microphone capture wrapper plus `--audio-file` validation/copy path; tests must use injected recorders and not require live microphone access |
+| I3 Speech-to-Text Provider Abstraction | 🔜 READY | — | Add OpenAI transcription provider with injectable fake provider, clear no-API-key errors, and deterministic unit tests |
+| I4 Query Normalization + Voice Persona | 🔜 READY | — | Convert spoken market questions into analysis-ready queries and produce concise risk-aware experienced-trader summaries for listening |
+| I5 Agent Execution Orchestrator | 🔜 READY | — | Build `voice_copilot.py` to run capture, STT, Agent Adda query execution, spoken summary generation, TTS, and manifest persistence |
+| I6 GPT Text-to-Speech Provider + Playback Path | 🔜 READY | — | Add `gpt-4o-mini-tts` wrapper with persona `instructions`, `cedar` default voice, macOS `say` fallback, and provider injection for tests; print response audio path and play command |
+| I7 `/ask-voice` Terminal Command | 🔜 READY | — | Add parser and terminal route for `/ask-voice`, `--seconds`, `--audio-file`, `--confirm`, `--no-audio`, and `--voice` |
+| I8 Voice Error Handling + Privacy Audit | 🔜 READY | — | Ensure missing mic, missing API key, STT failure, agent failure, and TTS failure return structured errors and save local audit artifacts |
+| I9 `/voice-live` Terminal Assistant Loop | ✅ DONE | Codex | Added live terminal loop with repeated listen/transcribe/answer/speak turns, transcript printing, `--turns`, `--seconds`, `--no-audio`, `--no-play`, `--voice`, and spoken stop handling |
+| I10 OpenAI Realtime Speech-to-Speech Mode | 🔜 READY | — | Upgrade `/voice-live` from sequential STT→Agent→TTS to low-latency Realtime API speech-to-speech with transcript events, VAD/turn detection, interruption handling, and tool-call routing |
+| I11 Voice Assistant Human Interaction Polish | 🔜 READY | — | Add richer conversational memory, interruption phrases, greeting/closing variants, follow-up intent capture, timeout reprompts, and clearer terminal status transitions |
+| **Phase 4 — Branch J: Startup Data Readiness + No-Assumption Guardrails** | | | |
+| J0 Startup Data Readiness Design + Backlog | ✅ DONE | Codex | Backlog design added here for validating technical/fundamental DB freshness at agent load and preventing assumed data in answers |
+| J1 Data Readiness Service | 🔜 READY | — | Create `terminal/data_readiness.py` to inspect `data/sector_rotation_tracker.db`, latest `stage_snapshots`, technical/fundamental coverage, and stale/missing status |
+| J2 Refresh Planner + Executor | 🔜 READY | — | Add bounded refresh actions that call existing `daily_refresh.py` / tracker paths only when DB, technical, or fundamental coverage is missing or stale |
+| J3 Startup Terminal Integration | 🔜 READY | — | Wire readiness gate into `nse_agent.py` before “Agent Adda ready”; print latest DB date, technical coverage, fundamental coverage, and refresh outcome |
+| J4 Agent Metadata + Answer Guardrails | 🔜 READY | — | Attach data freshness metadata to agent responses and require explicit “not found in DB” when technical/fundamental fields are missing |
+| J5 `/data-status` and `/refresh-data` Commands | 🔜 READY | — | Add deterministic terminal commands for checking readiness and forcing refresh without asking a market question |
+| J6 Data Readiness Regression Tests | 🔜 READY | — | Add tests for fresh DB, stale DB, missing fundamentals, refresh failure, and no-assumption answer behavior |
+| J7 `/load` Command Catalog + Script Mapping | 🔜 READY | — | Add a static catalog of vetted ETL jobs mapped to existing Python/R scripts; avoid runtime `--help` introspection because several scripts execute work on import/argument parse |
+| J8 `/load` Terminal Orchestrator | 🔜 READY | — | Add `/load prompts`, `/load dry-run`, `/load incremental`, `/load full`, `/load status`, and `/load stop` with async execution, log paths, and deterministic terminal output |
+| J9 Source-Specific `/load` Jobs | 🔜 READY | — | Map NSE, FII/DII, F&O, events, insiders, macro, global, index, breadth, reports, screeners, and PostgreSQL views to their existing loaders |
+| J10 Fundamental + Screener Score Loading | 🔜 READY | — | Wire Screener R loaders, canonical symbols files, canonical output paths, comprehensive score rebuild, and score coverage reporting |
+| J11 Company KB Loading Adapter | 🔜 READY | — | Expose stale-only and symbol-specific company website/IR indexing through `/load kb`; add CLI/API adapter where backend modules are not directly executable |
+| J12 Load-Aware Agent Impact Guardrails | 🔜 READY | — | Connect `/load` outcomes to answer freshness, voice confirmations, no-assumption behavior, and agent workstream dependencies |
+| **Phase 4 — Branch K: EOD Strategy Lab + Backtesting Engine** | | | |
+| K0 EOD Strategy Lab Design + Backlog | ✅ DONE | Codex | Backlog design added here for first-class EOD equity strategy testing, portfolio simulation, and terminal backtest commands |
+| K1 Backtesting Data Contract + Readiness Gate | ✅ DONE | Codex | Added `backtesting/data.py` with full-file EOD readiness scan, latest date, symbol count, blockers, warnings, and technical/fundamental mode labels |
+| K2 Strategy Registry | ✅ DONE | Codex | Added `backtesting/strategy_registry.py` with core, compression, and experimental chart-pattern strategy definitions |
+| K3 Vectorized EOD Backtest Engine | 🔒 IN PROGRESS | Codex | Added deterministic Stage 2 next-open engine, no-lookahead tests, trade records, skipped records, computed Stage 2 features from raw NSE OHLCV, and real-symbol runs; remaining strategies/stops/targets pending |
+| K4 Portfolio Simulator + Risk Controls | 🔒 IN PROGRESS | Codex | Added initial cash/allocation position sizing with non-negative cash tests; max positions, sector caps, and drawdown tracking pending |
+| K5 Metrics + Attribution Layer | 🔒 IN PROGRESS | Codex | Added basic metrics in the Stage 2 engine: trade count, total P&L, ending capital, total return, win rate, average winner/loser; advanced CAGR/drawdown/attribution pending |
+| K6 Backtest PostgreSQL Store | 🔒 IN PROGRESS | Codex | Added `backtesting/storage.py`, Postgres schema creation, run/trade/metric/skipped persistence, latest-run report reader, mocked tests, and real local `--persist` + report smoke tests; daily equity persistence pending |
+| K7 Backtest Reports | 🔜 READY | — | Generate Markdown/HTML reports with summary, equity curve, drawdown, trade table, skipped-data audit, and strategy explanation |
+| K8 Terminal Commands | 🔒 IN PROGRESS | Codex | Added `/backtest list`, `/strategy-lab validate`, `/backtest run stage2 --data <csv>`, `/backtest run stage2 --symbol <SYMBOL>`, full-universe guardrail, `--persist`, and `/backtest report latest`; stock/compare/HTML report commands still pending |
+| K9 Existing Script Adapters | 🔜 READY | — | Register existing R/Python backtest scripts as reference/adaptor jobs without making them the primary engine |
+| K10 Regression + Golden Backtests | 🔜 READY | — | Add fixture data, known-trade golden tests, metrics tests, terminal command tests, and no-assumption skipped-data tests |
+| K11 Technical Pattern Feature Library | 🔒 IN PROGRESS | Codex | Added `backtesting/patterns.py` with `PatternSignal`, SMA/ATR/RSI/range/volume features, and initial auditable VCP detector; remaining pattern families pending |
+| K12 VCP / Darvas / Squeeze Strategy Pack | 🔜 READY | — | Add volatility contraction, Darvas box, tight base, Bollinger squeeze, NR7, and inside-bar compression strategies with confidence scoring |
+| K13 Chart Pattern Strategy Pack | 🔜 READY | — | Add head-and-shoulders, inverse head-and-shoulders, cup-and-handle, double top/bottom, triangle, flag, and pennant detectors with strict audit output |
+| K14 Exit Strategy Lab | 🔜 READY | — | Backtest exit-only rules including Supertrend trailing exit, ATR trailing stop, SMA50 break, Stage 2 exit, time stop, and partial profit rules |
+| K15 Pattern Backtest QA + Visual Evidence | 🔜 READY | — | Add golden fixtures, synthetic-pattern tests, false-positive tests, and optional chart snapshots showing detected pattern windows |
+
+---
+
+## 0.1 BRANCH J DETAILED DESIGN — STARTUP DATA READINESS
+
+### Problem Statement
+
+Agent Adda currently answers from `data/sector_rotation_tracker.db` and related cached files, but startup does not explicitly verify that the latest technical and fundamental data is present before the agent is marked ready. This can lead to stale or partial data being used silently, or the LLM filling gaps with assumed values.
+
+### Design Goals
+
+1. **Validate before ready:** On `nse_agent.py` startup, inspect the database and print the latest available technical/fundamental snapshot before normal chat begins.
+2. **Load missing data first:** If the DB is missing, stale, or has insufficient coverage, run the existing refresh pipeline before answering user queries.
+3. **Never assume missing fields:** If refresh cannot populate a field, responses must show `not found in DB` / `missing_evidence` rather than inferring technical, CANSLIM, or fundamental values.
+4. **Bounded startup cost:** Startup refresh must use existing refresh commands with clear progress and failure reporting. If refresh fails, the agent still opens with a warning and stale-data banner.
+5. **Testable without live NSE calls:** Readiness detection and refresh planning must be unit-testable with temporary SQLite DBs and mocked subprocess calls.
+
+### Data Readiness Checks
+
+Primary DB: `data/sector_rotation_tracker.db`
+
+Primary table: `stage_snapshots`
+
+Required columns:
+- technical: `stage`, `stage_score`, `technical_score`, `rsi`, `relative_strength`, `trading_signal`, `supertrend_state`, `price`, `price_date`
+- fundamental: `enhanced_fund_score`, `earnings_quality`, `sales_growth`, `financial_strength`, `institutional_backing`, `can_slim_score`, `investment_score`
+- audit: `snapshot_date`, `symbol`, `company_name`, `source_csv`
+
+Freshness policy:
+- `latest_snapshot_date` must be the latest available trading snapshot in DB.
+- If current local date is a market holiday/weekend and the latest trading snapshot is within 3 calendar days, classify as `fresh_trading_day`.
+- If latest snapshot is older than 3 calendar days, classify as `stale`.
+- If no rows exist, classify as `missing`.
+- Fundamental coverage is separate from technical freshness. A technically fresh DB with low fundamental coverage is `partial_fundamentals`, not `fresh`.
+
+Coverage thresholds:
+- technical coverage: at least 95% of latest snapshot rows must have non-null `technical_score`, `rsi`, `relative_strength`, and `trading_signal`
+- fundamental coverage: at least 30% of latest snapshot rows must have non-null `enhanced_fund_score`, `financial_strength`, and `can_slim_score` initially, because current DB coverage is partial; raise this threshold after full-universe fundamentals are stable
+- exact counts must be printed, for example: `Fundamentals: 356/1018 stocks with enhanced score`
+
+### Refresh Behavior
+
+Readiness service returns a plan, not just a boolean:
+
+| Condition | Action |
+|---|---|
+| DB file missing | run `python daily_refresh.py --skip-aux` |
+| `stage_snapshots` empty | run `python daily_refresh.py --skip-aux` |
+| latest snapshot stale | run `python daily_refresh.py --skip-aux` |
+| technical coverage below threshold | run `python daily_refresh.py --skip-aux` |
+| fundamental coverage below threshold | run `python daily_refresh.py --skip-aux` because `fixed_nse_universe_analysis.py` feeds tracker fundamentals |
+| refresh command fails | continue startup, mark readiness `degraded`, print failure command + exit code |
+
+Startup controls:
+- default: readiness check enabled
+- `--skip-readiness`: skip startup validation for fast local debugging
+- `--readiness-no-refresh`: check and print status, but do not run refresh
+- environment override: `AGENT_ADDA_SKIP_READINESS=1`
+
+### User-Facing Startup Output
+
+At startup, before `✓ Agent Adda ready`, print a compact panel:
+
+```text
+Data Readiness
+Technical DB: 2026-05-08 · 1018 stocks · 100% technical coverage
+Fundamental DB: 2026-05-08 · 356/1018 enhanced fundamentals · partial
+Status: fresh_trading_day / partial_fundamentals
+Action: no refresh needed
+```
+
+If refresh runs:
+
+```text
+Data Readiness
+Status: stale snapshot 2026-05-03
+Action: running python daily_refresh.py --skip-aux
+Result: refreshed to 2026-05-08 · 1018 stocks
+```
+
+If refresh fails:
+
+```text
+Data Readiness
+Status: degraded
+Action failed: python daily_refresh.py --skip-aux exited 1
+Agent will answer with stale-data warnings and missing fields will not be inferred.
+```
+
+### Answer Guardrails
+
+When a response depends on data from `stage_snapshots`, tools must include freshness metadata:
+
+```python
+{
+  "data_readiness": {
+    "status": "fresh_trading_day",
+    "latest_snapshot_date": "2026-05-08",
+    "technical_coverage_pct": 100.0,
+    "fundamental_coverage_pct": 35.0,
+    "warnings": ["partial_fundamentals"]
+  }
+}
+```
+
+Rules for agent responses:
+- If `data_readiness.status` is `stale`, `missing`, or `degraded`, the first paragraph must mention it.
+- If a requested metric is null, print `not found in DB`.
+- If a ranking uses partial fundamentals, label the ranking as `technical-first with partial fundamentals`.
+- CANSLIM, Piotroski, forensic, and fundamental scores must only be shown when returned by tools. They must not be generated by LLM prose.
+
+---
+
+## 0.2 BRANCH J IMPLEMENTATION STEPS
+
+### J1 — Data Readiness Service
+
+**Files to create / modify**
+- Create: `terminal/data_readiness.py`
+- Test: `tests/test_data_readiness.py`
+
+**Implementation**
+- Add `DataReadinessStatus` dataclass with fields:
+  - `db_path`
+  - `latest_snapshot_date`
+  - `latest_price_date`
+  - `total_rows`
+  - `technical_complete_rows`
+  - `fundamental_complete_rows`
+  - `technical_coverage_pct`
+  - `fundamental_coverage_pct`
+  - `status`
+  - `warnings`
+  - `refresh_recommended`
+  - `refresh_reason`
+- Add `inspect_data_readiness(db_path: Path = DB_PATH, today: date | None = None) -> DataReadinessStatus`.
+- Use SQLite queries against only the latest `snapshot_date`.
+- Treat missing DB/table/rows as structured statuses, not exceptions.
+
+**Acceptance criteria**
+- A fresh fixture DB returns `status in ("fresh", "fresh_trading_day", "partial_fundamentals")`.
+- A missing DB returns `status="missing"` and `refresh_recommended=True`.
+- A stale DB returns `status="stale"` and `refresh_recommended=True`.
+- A DB with missing fundamental columns returns `partial_fundamentals` and exact missing coverage counts.
+
+### J2 — Refresh Planner + Executor
+
+**Files to create / modify**
+- Modify: `terminal/data_readiness.py`
+- Test: `tests/test_data_readiness.py`
+
+**Implementation**
+- Add `build_refresh_plan(status: DataReadinessStatus) -> list[list[str]]`.
+- Add `execute_refresh_plan(plan: list[list[str]], timeout_sec: int = 1800) -> dict`.
+- Default command for stale/missing data:
+  - `python daily_refresh.py --skip-aux`
+- Use `sys.executable` instead of hardcoded `python`.
+- Capture return code and elapsed seconds.
+- Do not hide refresh failures; return structured `{"ok": False, "command": ..., "returncode": ...}`.
+
+**Acceptance criteria**
+- Missing DB produces one refresh command.
+- Fresh DB produces empty refresh plan.
+- Mocked successful subprocess returns `ok=True`.
+- Mocked failed subprocess returns `ok=False` without raising.
+
+### J3 — Startup Terminal Integration
+
+**Files to create / modify**
+- Modify: `nse_agent.py`
+- Test: `tests/test_nse_agent_data_readiness.py`
+
+**Implementation**
+- Add CLI flags:
+  - `--skip-readiness`
+  - `--readiness-no-refresh`
+- Before printing `✓ Agent Adda ready`, call `inspect_data_readiness()`.
+- If refresh is recommended and refresh is not disabled, call `execute_refresh_plan()`, then re-inspect readiness.
+- Render a compact Rich panel with latest snapshot date, row count, technical coverage, fundamental coverage, status, and action.
+- Respect `AGENT_ADDA_SKIP_READINESS=1`.
+
+**Acceptance criteria**
+- `python nse_agent.py --no-briefing --skip-readiness -q "/strength MANINDS"` does not run readiness.
+- With mocked stale readiness, startup calls refresh executor before agent ready.
+- With mocked refresh failure, startup prints degraded warning and still initializes.
+
+### J4 — Agent Metadata + No-Assumption Guardrails
+
+**Files to create / modify**
+- Modify: `terminal/tools.py`
+- Modify: `terminal/agent.py`
+- Test: `tests/test_agent_data_guardrails.py`
+
+**Implementation**
+- Add a helper in `terminal/tools.py`: `attach_data_readiness(result: dict) -> dict`.
+- Apply it to tools that read `stage_snapshots`, including:
+  - `get_symbol_snapshot`
+  - `get_technical_setup`
+  - `run_screener_query`
+  - `validate_strength_watchlist`
+  - `compare_stocks`
+- Update `SYSTEM_PROMPT` in `terminal/agent.py`:
+  - If tool result contains stale/degraded readiness, disclose it.
+  - If requested metric is null/missing, say `not found in DB`.
+  - Do not invent fundamental/CANSLIM/Piotroski values.
+- Extend no-LLM synthesis paths to include readiness warnings.
+
+**Acceptance criteria**
+- Screener output includes `data_readiness`.
+- Strength validation still reports `missing_evidence` for missing fundamentals.
+- A mocked missing `enhanced_fund_score` appears as `not found in DB`, not as an invented score.
+
+### J5 — `/data-status` and `/refresh-data` Commands
+
+**Files to create / modify**
+- Modify: `nse_agent.py`
+- Test: `tests/test_nse_agent_data_readiness.py`
+
+**Implementation**
+- Add slash commands:
+  - `/data-status`: print readiness panel only
+  - `/refresh-data`: run refresh plan regardless of stale status, then print post-refresh status
+  - `/refresh-data --no-aux`: run `daily_refresh.py --skip-aux`
+- Add command browser entries and help text.
+- Keep deterministic: these commands do not call the LLM.
+
+**Acceptance criteria**
+- `/data-status` prints latest DB date and coverage.
+- `/refresh-data` calls refresh executor and re-inspects DB.
+- Failed refresh prints command and return code.
+
+### J6 — End-to-End Regression Suite
+
+**Files to create / modify**
+- Create: `tests/test_data_readiness_end_to_end.py`
+
+**Implementation**
+- Use temporary SQLite DBs with minimal `stage_snapshots` schema.
+- Test startup readiness in single-query mode by monkeypatching readiness functions.
+- Test a stale readiness warning appears in a no-LLM answer.
+- Test `/strength` still refuses to infer missing fundamental evidence.
+
+### J7-J12 — `/load` Model, ETL Catalog, and Cross-Agent Impact
+
+**Objective**
+
+Create a first-class terminal loading mode in `nse_agent.py` so users can discover and run vetted ETL jobs without remembering Python/R script names. The `/load` layer should orchestrate existing loaders; it must not duplicate ETL logic or silently invent data when a loader cannot populate a field.
+
+**User-facing command family**
+
+| Command | Purpose | Primary mapping |
+|---|---|---|
+| `/load prompts` | Show available loading prompts/jobs grouped by domain | Static in-code catalog |
+| `/load dry-run` | Validate the daily refresh plan without writing data | `python3 daily_refresh.py --dry-run` |
+| `/load incremental` | Run default incremental market refresh | `python3 daily_refresh.py` |
+| `/load full` | Run comprehensive refresh including full analysis path | `python3 daily_refresh.py --comprehensive` |
+| `/load live` | Refresh live-only prices and derived live state | `python3 daily_refresh.py --live-only` |
+| `/load nse` or `/load bhavcopy` | Load latest NSE OHLCV/bhavcopy universe | `Rscript load_latest_nse_data_comprehensive.R` |
+| `/load aux` | Run all auxiliary market loaders | FII/DII, F&O, events, insiders, macro scripts |
+| `/load fii-dii` | Refresh institutional flow data | `python3 fetch_fii_dii_flows.py --force` |
+| `/load fno` | Refresh futures/options data | `python3 fetch_fno_data.py --force` |
+| `/load events` | Refresh corporate events | `python3 fetch_corporate_events.py --force` |
+| `/load insiders` | Refresh insider/promoter alerts | `python3 fetch_insider_alerts.py --force` |
+| `/load macro` | Refresh macro proxy data | `python3 fetch_macro_proxies.py --refresh` |
+| `/load global` | Refresh US/global market intelligence and reports | `python3 global_market_intelligence.py --force --report` |
+| `/load fundamentals` | Fetch Screener fundamental score dataset | `Rscript working-sector/fetch_screener_fundamentals.R <symbols_file> data/fundamental_scores_database.csv` |
+| `/load fundamental-details` | Fetch detailed Screener fundamentals | `Rscript working-sector/fetch_screener_fundamental_details.R <symbols_file> working-sector/output/fundamental_details.csv` |
+| `/load fundamentals-5yr` | Fetch 5-year Screener fundamentals | `Rscript working-sector/fetch_screener_5yr_fundamentals.R data/nifty500_symbols.txt` |
+| `/load scores` or `/load comprehensive` | Rebuild comprehensive NSE scores/screens | `python3 fixed_nse_universe_analysis.py` |
+| `/load snapshot` | Build current sector rotation snapshot | `python3 sector_rotation_tracker.py --snapshot` |
+| `/load live-prices` | Update live prices for tracker | `python3 sector_rotation_tracker.py --update-live` |
+| `/load reports` | Build HTML/Python reports | `python3 sector_rotation_tracker.py --report --html` and `python3 sector_rotation_report.py` |
+| `/load index` | Build index intelligence report/cache | `python3 index_intelligence.py` |
+| `/load breadth` | Build market breadth data/report | `python3 market_breadth.py` |
+| `/load r-reports` | Build R index and sector reports | `Rscript analyze_all_indexes.R` and `Rscript analyze_all_sectors.R` |
+| `/load screeners` or `/load views` | Refresh PostgreSQL screeners/materialized views | `python3 postgres/loader.py` initially; add flags later for views-only/screeners-only |
+| `/load kb` | Refresh stale company website/IR knowledge base index | Backend company index job with `--stale-only --include-documents --seed-sitemap --respect-robots` semantics |
+| `/load kb DMART` | Refresh one company website/IR knowledge base index | Backend company index command/API with `DMART --refresh --include-documents --seed-sitemap --respect-robots` semantics |
+| `/load status` | Show active job, last run, latest logs, and exit code | Local run registry |
+| `/load stop` | Stop the active background load job | Async process runner |
+
+**Implementation notes**
+
+- Use a static `LoadJob` catalog with repo-root-relative script paths, command arguments, job group, expected outputs, estimated runtime, write scope, and safety level.
+- Do not discover commands by calling `--help` on unknown scripts. Some scripts, including full-universe analysis paths, may start processing when invoked with unexpected arguments.
+- Use `sys.executable` for Python jobs and `Rscript` for R jobs. Validate missing scripts and missing `Rscript` before starting.
+- Composite jobs should expand to a visible sequence before execution. `/load dry-run` must print the planned sequence and expected writes.
+- Long-running jobs should run asynchronously with captured stdout/stderr under `logs/load_jobs/` or a similar project-local folder. `/load status` and `/load stop` should work without LLM calls.
+- `/load fundamentals` must pass `data/fundamental_scores_database.csv` explicitly so the canonical score database remains under `data/`, aligned with the comprehensive NSE analysis code.
+- `/load views` initially maps to `postgres/loader.py`; a follow-up should add `--views-only`, `--screeners-only`, and `--skip-data` flags if the loader currently refreshes more than requested.
+- `/load kb` should call the existing company indexing backend through a stable adapter. If current modules are not direct CLI entrypoints, add a small CLI wrapper instead of relying on incidental module behavior.
+
+**Cross-agent impact analysis**
+
+| Workstream / agent capability | Impact of `/load` model | Required guardrail |
+|---|---|---|
+| Startup data readiness | `/load` becomes the operational mechanism behind manual and automatic refresh actions | Readiness can recommend a load job, but answers must still label stale/degraded data if the job fails |
+| Strength validation / CANSLIM / Piotroski / fundamentals | Scores become reproducible because fundamentals and comprehensive score rebuilds have explicit commands | Never show CANSLIM, Piotroski, forensic, or fundamental values unless the DB/tool returns them |
+| Company + Sector X-Ray / KB | `/load kb` provides the scheduled/stale indexing entrypoint for company websites, IR pages, filings, transcripts, and official docs | Keep crawls bounded by max pages, robots policy, document limit, and explicit refresh/stale-only controls |
+| Voice Copilot | Voice can ask "load fundamentals" or "what is load status" and receive spoken progress summaries | Require confirmation before starting long-running or write-heavy loads from voice mode |
+| US / Global market intelligence | `/load global` makes global data refresh explicit before global reports and cross-market answers | Surface cache timestamp and fail gracefully when yfinance/network calls fail |
+| Financial filing intelligence | Future `/load filings` can reuse the same catalog pattern for annual reports, BSE filings, and document parsing | Avoid duplicate document stores; promote parsed evidence into the existing source/evidence schema |
+| Market education / `/learn` commands | Education answers are mostly web/evidence driven, but examples may reference local metrics | If examples use live/local market values, attach freshness metadata |
+| PostgreSQL materialized views | `/load views` gives a single terminal path to rebuild screeners and materialized views | Check database availability and dependency errors before running destructive or expensive operations |
+| Repo cleanup / reorganization | Centralized catalog reduces future path breakage when scripts move | Store paths in one catalog and test every mapping after refactors |
+
+**Acceptance criteria**
+
+- `/load prompts` lists every command above with group, description, mapped script, expected output, and safety level.
+- `/load dry-run` prints the exact command sequence and does not modify files.
+- `/load status` reports no active job, running job, completed job, failed job, log path, and exit code.
+- `/load stop` terminates only the active load job started by Agent Adda.
+- Missing scripts, missing `Rscript`, missing PostgreSQL, and failed subprocesses produce actionable terminal errors.
+- Unit tests cover catalog mappings, dry-run expansion, async status, stop behavior, and refusal to call unsafe discovery commands.
+
+**Branch J regression acceptance criteria**
+- Run:
+  - `./.venv/bin/python -m unittest tests.test_data_readiness tests.test_nse_agent_data_readiness tests.test_agent_data_guardrails tests.test_strength_validation -v`
+- Expected: all tests pass.
+- Run:
+  - `./.venv/bin/python -m py_compile terminal/data_readiness.py terminal/tools.py terminal/agent.py nse_agent.py`
+- Expected: exit code 0.
+
+---
+
+## 0.3 BRANCH K DETAILED DESIGN — EOD STRATEGY LAB + BACKTESTING ENGINE
+
+### Problem Statement
+
+Agent Adda has strong EOD market data, signal generation, stage snapshots, fundamentals, regime context, and older backtesting scripts, but it does not yet have a first-class, queryable backtesting layer. Users need to test whether Stage 2, CANSLIM, Minervini, Supertrend, and pullback strategies actually worked across market regimes, sectors, and portfolios before trusting them in live monitoring or paper trading.
+
+### V1 Scope
+
+V1 is **EOD Indian equity backtesting only**. Intraday and F&O/options backtesting are explicitly out of scope for Branch K and should be added later after the EOD engine is stable.
+
+Supported V1 strategies:
+- Stage 2 uptrend breakout.
+- CANSLIM quality + momentum filter.
+- Minervini trend template.
+- Supertrend continuation.
+- RSI pullback inside Stage 2.
+- 52-week high breakout.
+
+Supported V1.5 technical strategies:
+- VCP / volatility contraction breakout.
+- Darvas box breakout.
+- Tight base breakout.
+- Bollinger Band squeeze breakout.
+- NR7 / inside-bar compression breakout.
+- Pullback to 20 DMA / 50 DMA inside an uptrend.
+
+Supported V2 technical chart-pattern strategies:
+- Head-and-shoulders breakdown.
+- Inverse head-and-shoulders breakout.
+- Cup-and-handle breakout.
+- Double top breakdown.
+- Double bottom breakout.
+- Ascending / descending / symmetrical triangle breakout or breakdown.
+- Flag / pennant continuation.
+
+Supported exit-rule studies:
+- Supertrend trailing exit.
+- ATR trailing stop.
+- SMA50 breakdown exit.
+- Stage 2 exit.
+- Time stop.
+- Partial profit at R multiples.
+
+Supported V1 commands:
+
+```text
+/backtest list
+/backtest run stage2 --universe nifty500 --from 2022-01-01 --to today
+/backtest run canslim --universe nifty500 --from 2022-01-01 --risk 1 --max-positions 20
+/backtest run minervini --universe nifty500 --from 2022-01-01
+/backtest run vcp --universe nifty500 --from 2022-01-01 --min-confidence 70
+/backtest run darvas --universe nifty500 --from 2022-01-01
+/backtest run supertrend-continuation --universe nifty500 --from 2022-01-01
+/backtest stock DMART --strategy stage2 --from 2022-01-01
+/backtest compare stage2 canslim minervini --universe nifty500 --from 2022-01-01
+/backtest pattern DMART --pattern vcp --from 2022-01-01
+/backtest exits stage2 --exit-rule supertrend-trailing --from 2022-01-01
+/backtest report latest
+/strategy-lab validate
+```
+
+### Architecture
+
+Create a Python-first backtesting package so Agent Adda can run, store, compare, explain, and later speak backtest results.
+
+Proposed files:
+- `backtesting/data.py` — load EOD OHLCV, index data, stage snapshots, fundamentals, regime, and optional flow/macro data.
+- `backtesting/strategy_registry.py` — registry of strategy definitions and rule metadata.
+- `backtesting/patterns.py` — reusable EOD technical-pattern feature detectors.
+- `backtesting/engine.py` — deterministic EOD simulator.
+- `backtesting/portfolio.py` — capital allocation, position sizing, sector caps, rebalance, cash, and portfolio-level drawdown.
+- `backtesting/metrics.py` — return/risk/expectancy/regime attribution metrics.
+- `backtesting/storage.py` — SQLite persistence.
+- `backtesting/report.py` — Markdown/HTML report generation.
+- `backtesting/charts.py` — optional chart snapshots for detected pattern windows.
+- `terminal/backtest.py` — terminal command parser and renderer.
+- `tests/test_backtesting_*.py` — fixture, engine, metrics, storage, report, and terminal tests.
+
+Existing scripts become adapters/reference implementations:
+- `run_comprehensive_backtesting_all_stocks.R`
+- `working-sector/phase4_backtest.py`
+- archived historical backtesting scripts under `archive/`
+
+Do not make the old R scripts the primary engine. They can be exposed through `/backtest legacy` later if needed.
+
+### Data Contract
+
+Required:
+- EOD OHLCV: `data/nse_sec_full_data.csv`
+- Index data: `data/nse_index_data.csv`
+- Stage snapshots: `data/sector_rotation_tracker.db` / `stage_snapshots`
+- Trading calendar inferred from available EOD dates.
+
+Optional but strategy-dependent:
+- Fundamental scores: `data/fundamental_scores_database.csv`, `data/_sector_rotation_fund_cache.csv`, or `stage_snapshots` fundamental columns.
+- Regime: `regime_detector.py` outputs or signal log regime fields.
+- FII/DII: `data/fii_dii_flows.csv`
+- F&O: `data/fno_signals.csv`
+- Macro: `data/macro_proxy_signals.csv`, `data/macro_sector_tailwind.csv`
+- Signal outcomes: `data/signal_log.csv`, `resolve_signals.py`
+
+No-assumption rules:
+- If a strategy requires a missing metric, skip that symbol/date with a structured reason.
+- If optional context is missing, run in the correct labeled mode, for example `technical-only`, `no-fundamental-filter`, or `no-regime-attribution`.
+- CANSLIM, Piotroski, forensic, and fundamental fields must come from loaded data only.
+
+### Strategy Definition Contract
+
+Each strategy should define:
+- `id`, `name`, `description`, `timeframe="EOD"`.
+- Required fields.
+- Universe eligibility rules.
+- Entry condition.
+- Exit condition.
+- Stop rule.
+- Target/trailing rule.
+- Position sizing compatibility.
+- Explainability labels, for example `entered_stage2`, `rs_above_threshold`, `price_above_sma200`.
+
+Initial rule sketches:
+
+| Strategy | Entry | Exit / risk |
+|---|---|---|
+| Stage 2 breakout | Stage 2, RS strong, price above key moving averages, breakout/near high | Exit on Stage 2 exit, Supertrend sell, stop loss, or trailing stop |
+| CANSLIM | Stage 2 + earnings/sales/fundamental quality + RS | Exit on technical failure, fundamental filter deterioration, stop, or target/trail |
+| Minervini | Price above SMA50/150/200, SMA trends aligned, near 52W high, RS strong | Exit on SMA50 break, stop, or trailing rule |
+| Supertrend continuation | Supertrend buy, trend strength, volume confirmation | Exit on Supertrend sell or volatility stop |
+| RSI pullback in Stage 2 | Stage 2, RS strong, RSI pullback then recovery | Exit on failed recovery, stop, target, or trend break |
+| 52-week high breakout | Price breaks or closes near 52-week high with RS/volume confirmation | Exit on failed breakout, ATR stop, or trailing rule |
+| VCP breakout | Higher lows, tightening ranges, contracting volume, breakout above pivot | Exit on failed pivot retest, ATR stop, or trailing rule |
+| Darvas box breakout | Well-defined box high/low after consolidation, breakout above box high | Exit below box low, ATR stop, or trailing rule |
+| Bollinger squeeze breakout | Bandwidth compression followed by close above upper band and volume expansion | Exit on close back inside range, ATR stop, or trailing rule |
+| Head-and-shoulders breakdown | Left shoulder/head/right shoulder pivots, neckline break, volume confirmation | Exit on neckline reclaim, ATR stop, or measured-move target |
+| Inverse head-and-shoulders breakout | Inverse pivot structure, neckline break, improving RS | Exit on neckline failure, ATR stop, or measured-move target |
+| Cup-and-handle breakout | Rounded base, handle pullback, breakout above handle pivot | Exit on failed handle pivot, ATR stop, or trailing rule |
+
+### Technical Pattern Catalog
+
+Pattern detectors must be deterministic and auditable. Every detector returns a `PatternSignal` object, not a bare boolean.
+
+```python
+@dataclass
+class PatternSignal:
+    symbol: str
+    pattern_id: str
+    signal_date: date
+    direction: Literal["bullish", "bearish", "neutral"]
+    confidence: float
+    entry_price: float | None
+    stop_price: float | None
+    target_price: float | None
+    pivot_price: float | None
+    start_date: date | None
+    end_date: date | None
+    evidence: dict[str, Any]
+    rejection_reasons: list[str]
+```
+
+Required detector families:
+
+| Family | Pattern IDs | Required features |
+|---|---|---|
+| Trend/momentum | `stage2`, `minervini`, `52w_high`, `ma_alignment`, `rs_leader` | SMA20/50/150/200, 52-week high/low, relative strength, volume trend |
+| Supertrend | `supertrend_continuation`, `supertrend_reversal`, `supertrend_trailing_exit` | Supertrend state/value, ATR, close relation to band |
+| Volatility contraction | `vcp`, `tight_base`, `darvas`, `bollinger_squeeze`, `nr7`, `inside_bar_compression` | ATR/range contraction, pivot highs/lows, volume contraction, breakout candle |
+| Chart patterns | `head_shoulders`, `inverse_head_shoulders`, `cup_handle`, `double_top`, `double_bottom`, `ascending_triangle`, `descending_triangle`, `sym_triangle`, `flag`, `pennant` | Swing pivots, neckline/trendline, symmetry, depth, duration, breakout confirmation |
+| Pullback / mean reversion | `rsi_pullback_stage2`, `dma20_pullback`, `dma50_pullback`, `bollinger_mean_reversion` | RSI, SMA distance, Stage 2 state, trend filter |
+| Exit studies | `atr_trailing`, `sma50_break`, `stage2_exit`, `time_stop`, `partial_profit_r` | Stop distance, R multiple, holding period, trend state |
+
+Confidence scoring:
+- `0-49`: weak/no trade, report only if explicitly requested.
+- `50-69`: watchlist-quality setup.
+- `70-84`: tradable setup if liquidity/risk filters pass.
+- `85-100`: high-quality setup; still requires backtest validation.
+
+Pattern detectors must include rejection reasons, for example:
+- `insufficient_history`
+- `missing_volume`
+- `range_not_contracting`
+- `pivot_not_confirmed`
+- `breakout_without_volume`
+- `lookahead_required_rejected`
+- `neckline_not_broken`
+- `pattern_too_short`
+- `pattern_too_deep`
+
+### Simulation Rules
+
+V1 simulator should be deterministic:
+- Use next-session open or close-based entry policy, configurable per strategy.
+- Default slippage: configurable basis points.
+- Brokerage/fees: configurable flat or bps model.
+- Position sizing:
+  - fixed allocation,
+  - equal weight,
+  - fixed risk per trade using stop distance.
+- Enforce:
+  - max open positions,
+  - max sector exposure,
+  - minimum liquidity/volume,
+  - no duplicate position in same symbol,
+  - optional cooldown after stop-out.
+- Record every skipped trade candidate with reason.
+
+### Storage Schema
+
+Use SQLite, either in a dedicated `data/backtesting.db` or namespaced tables in the main analytics DB.
+
+Tables:
+- `strategy_definitions`
+- `backtest_runs`
+- `backtest_run_config`
+- `backtest_trades`
+- `backtest_daily_equity`
+- `backtest_drawdowns`
+- `backtest_metrics`
+- `backtest_skipped_candidates`
+- `backtest_data_readiness`
+
+Every run must store:
+- code/config version,
+- strategy id and parameters,
+- data freshness metadata,
+- universe,
+- date range,
+- created timestamp,
+- status and failure reason if failed.
+
+### Reports
+
+Every run should produce:
+- summary metrics,
+- equity curve,
+- drawdown curve,
+- monthly/yearly return table,
+- trade table,
+- best/worst trades,
+- sector attribution,
+- market-regime attribution when available,
+- skipped-data audit,
+- strategy explanation.
+
+Outputs:
+- `reports/backtesting/YYYY/backtest_<strategy>_<timestamp>.md`
+- `reports/backtesting/YYYY/backtest_<strategy>_<timestamp>.html`
+- `reports/backtesting/latest/backtest_latest.html`
+
+### Terminal Experience
+
+Terminal output must be concise and deterministic:
+
+```text
+Backtest: stage2 · NIFTY500 · 2022-01-01 to 2026-05-08
+Data: EOD fresh to 2026-05-08 · fundamentals partial · regime available
+Result: CAGR 18.4% · Max DD -13.2% · Win rate 47% · Expectancy 1.34R · Trades 286
+Report: reports/backtesting/latest/backtest_latest.html
+```
+
+For missing data:
+
+```text
+Backtest ran in technical-only mode.
+Fundamental fields missing for 412/1018 symbols; CANSLIM filters were not applied to those rows.
+Skipped candidates: 1286. See skipped-data audit in report.
+```
+
+### Cross-Agent Impact Analysis
+
+| Workstream / agent capability | Impact of Strategy Lab | Required guardrail |
+|---|---|---|
+| `/load` orchestration | Backtests depend on `/load nse`, `/load fundamentals`, `/load scores`, and `/load views` being current | Backtest startup should call/read readiness, not silently use stale data |
+| Startup readiness | Adds another consumer of technical/fundamental freshness metadata | Report data freshness in every run |
+| Voice Copilot | Users can ask "Backtest Stage 2 on Nifty 500" and hear summary metrics | Require confirmation before long-running all-universe runs |
+| Strategy monitors | Live monitors can be backed by historically tested strategies | Do not promote a monitor strategy unless a recent backtest exists or user overrides |
+| Portfolio analyzer | Portfolio holdings can be tested against strategy rules and historical exits | Separate portfolio backtest from actual realized P&L |
+| Company X-Ray / fundamentals | Fundamental filters become reusable in strategy rules | If company fundamentals are missing, skip or label technical-only |
+| Learning loop | Backtest and resolved signal outcomes provide evidence for strategy ranking | Avoid overfitting; use walk-forward and out-of-sample validation before ranking strategies |
+
+### Implementation Steps
+
+#### K1 — Backtesting Data Contract + Readiness Gate
+
+**Files to create / modify**
+- Create: `backtesting/data.py`
+- Create: `tests/test_backtesting_data.py`
+
+**Implementation**
+- Load EOD OHLCV, stage snapshots, index data, and optional fundamentals/regime/flow files.
+- Add `BacktestDataReadiness` with latest dates, coverage counts, stale flags, and warnings.
+- Reuse Branch J readiness concepts where possible.
+
+**Acceptance criteria**
+- Missing EOD data returns a structured blocking error.
+- Missing fundamentals returns a warning and strategy-dependent skip behavior.
+- Fixture data loads deterministically.
+
+#### K2 — Strategy Registry
+
+**Files to create / modify**
+- Create: `backtesting/strategy_registry.py`
+- Test: `tests/test_backtesting_strategy_registry.py`
+
+**Implementation**
+- Define `StrategyDefinition`.
+- Register Stage 2, CANSLIM, Minervini, Supertrend continuation, and RSI pullback.
+- Expose `list_strategies()` and `get_strategy(strategy_id)`.
+
+**Acceptance criteria**
+- `/backtest list` can render all registered strategies.
+- Unknown strategy returns a clear error and available choices.
+
+#### K3 — Vectorized EOD Backtest Engine
+
+**Files to create / modify**
+- Create: `backtesting/engine.py`
+- Test: `tests/test_backtesting_engine.py`
+
+**Implementation**
+- Simulate daily entries/exits with deterministic ordering.
+- Support next-open/next-close entry policy, stop loss, target, trailing stop, and max holding period.
+- Store trade reasons and skipped-candidate reasons.
+
+**Acceptance criteria**
+- Golden fixture produces expected entries, exits, and P&L.
+- No lookahead: signals from day T can only enter using day T+1 policy.
+- Missing required fields skip trades instead of fabricating values.
+
+#### K4 — Portfolio Simulator + Risk Controls
+
+**Files to create / modify**
+- Create: `backtesting/portfolio.py`
+- Test: `tests/test_backtesting_portfolio.py`
+
+**Implementation**
+- Add capital, fixed allocation, equal weight, fixed-risk sizing, max positions, sector caps, and cash tracking.
+- Track daily equity and drawdown.
+
+**Acceptance criteria**
+- Position count and sector caps are enforced.
+- Cash never goes negative unless explicitly configured.
+- Drawdown series matches fixture expectations.
+
+#### K5 — Metrics + Attribution Layer
+
+**Files to create / modify**
+- Create: `backtesting/metrics.py`
+- Test: `tests/test_backtesting_metrics.py`
+
+**Implementation**
+- Compute total return, CAGR, max drawdown, win rate, avg winner/loser, expectancy, Sharpe-like ratio, trade count, holding period, turnover, best/worst trades, sector attribution, and regime attribution.
+
+**Acceptance criteria**
+- Metrics match hand-calculated fixture results.
+- Empty-trade runs return structured zero/NA metrics, not crashes.
+
+#### K6 — Backtest SQLite Store
+
+**Files to create / modify**
+- Create: `backtesting/storage.py`
+- Test: `tests/test_backtesting_storage.py`
+
+**Implementation**
+- Create SQLite schema and idempotent migrations.
+- Persist run config, readiness metadata, trades, equity, drawdowns, skipped candidates, and metrics.
+
+**Acceptance criteria**
+- A run can be saved and loaded by run id.
+- Latest run lookup works.
+- Schema migration is idempotent.
+
+#### K7 — Backtest Reports
+
+**Files to create / modify**
+- Create: `backtesting/report.py`
+- Test: `tests/test_backtesting_report.py`
+
+**Implementation**
+- Generate Markdown and HTML reports.
+- Include summary, curves, trades, attribution, skipped-data audit, and strategy explanation.
+
+**Acceptance criteria**
+- Report is created under `reports/backtesting/`.
+- Latest alias is updated.
+- Missing optional sections render as warnings, not broken HTML.
+
+#### K8 — Terminal Commands
+
+**Files to create / modify**
+- Modify: `nse_agent.py`
+- Create: `terminal/backtest.py`
+- Test: `tests/test_nse_agent_backtest.py`
+
+**Implementation**
+- Add deterministic command routing for:
+  - `/backtest list`
+  - `/backtest run`
+  - `/backtest stock`
+  - `/backtest compare`
+  - `/backtest report latest`
+  - `/strategy-lab validate`
+- Keep backtest commands non-LLM by default.
+
+**Acceptance criteria**
+- Single-query terminal mode can run list/validate against fixtures.
+- Invalid args produce helpful usage.
+- Long-running runs display log/report path.
+
+#### K9 — Existing Script Adapters
+
+**Files to create / modify**
+- Create: `backtesting/legacy_adapters.py`
+- Test: `tests/test_backtesting_legacy_adapters.py`
+
+**Implementation**
+- Register existing scripts as reference jobs:
+  - `run_comprehensive_backtesting_all_stocks.R`
+  - `working-sector/phase4_backtest.py`
+- Make adapters explicit and optional.
+
+**Acceptance criteria**
+- Adapter registry lists existing scripts and missing-script status.
+- No adapter executes during import or test discovery.
+
+#### K10 — Regression + Golden Backtests
+
+**Files to create / modify**
+- Create fixture CSVs under `tests/fixtures/backtesting/`
+- Create: `tests/test_backtesting_end_to_end.py`
+
+**Implementation**
+- Add small known OHLCV universe with deterministic expected trades.
+- Test Stage 2 and RSI pullback end-to-end.
+- Test no-assumption behavior for missing fundamentals.
+
+**Acceptance criteria**
+- Run:
+  - `./.venv/bin/python -m unittest tests.test_backtesting_data tests.test_backtesting_strategy_registry tests.test_backtesting_engine tests.test_backtesting_portfolio tests.test_backtesting_metrics tests.test_backtesting_storage tests.test_backtesting_report tests.test_nse_agent_backtest tests.test_backtesting_end_to_end -v`
+- Expected: all tests pass.
+
+#### K11 — Technical Pattern Feature Library
+
+**Files to create / modify**
+- Create: `backtesting/patterns.py`
+- Create: `tests/test_backtesting_patterns.py`
+
+**Implementation**
+- Add common indicator helpers:
+  - SMA20/50/150/200
+  - EMA optional later
+  - ATR14
+  - RSI14
+  - rolling 52-week high/low
+  - rolling average volume
+  - relative volume
+  - Bollinger bandwidth
+  - rolling range compression
+  - swing high / swing low pivot detection
+- Add `PatternSignal` dataclass and detector interface:
+  - `detect_<pattern_id>(df: pd.DataFrame, *, as_of: date | None = None, config: PatternConfig | None = None) -> list[PatternSignal]`
+- All detectors must use only current and historical bars. No centered rolling windows that require future candles in backtest mode.
+- Include `rejection_reasons` for every candidate that nearly qualifies.
+
+**Acceptance criteria**
+- Synthetic OHLCV fixture returns expected SMA/ATR/RSI/pivot values.
+- Pivot detection does not use lookahead in backtest mode.
+- Missing columns return structured errors or rejection reasons, not stack traces.
+- Pattern detector output is JSON-serializable for storage/reporting.
+
+#### K12 — VCP / Darvas / Squeeze Strategy Pack
+
+**Files to create / modify**
+- Modify: `backtesting/patterns.py`
+- Modify: `backtesting/strategy_registry.py`
+- Test: `tests/test_backtesting_vcp_darvas_squeeze.py`
+
+**Implementation**
+- Add strategy IDs:
+  - `vcp`
+  - `darvas`
+  - `tight_base`
+  - `bollinger_squeeze`
+  - `nr7_breakout`
+  - `inside_bar_compression`
+- VCP detector:
+  - detect at least two contraction legs,
+  - require lower volatility/range in later legs,
+  - prefer volume contraction,
+  - require pivot breakout for entry.
+- Darvas detector:
+  - identify box high/low after a consolidation period,
+  - entry above box high,
+  - stop below box low or ATR stop.
+- Bollinger squeeze detector:
+  - bandwidth below rolling percentile threshold,
+  - breakout close above upper band for bullish setup or below lower band for bearish setup.
+- NR7 / inside-bar detector:
+  - detect narrowest range in seven sessions,
+  - optional inside-bar stack,
+  - entry on next breakout beyond compression range.
+
+**Acceptance criteria**
+- Synthetic VCP fixture produces one bullish signal with confidence >= 70.
+- Synthetic failed VCP fixture returns rejection reason `range_not_contracting`.
+- Darvas fixture identifies box high, box low, entry, and stop.
+- Bollinger squeeze fixture does not fire before compression threshold is met.
+- Engine can run `/backtest run vcp` against fixture data and produce deterministic trades.
+
+#### K13 — Chart Pattern Strategy Pack
+
+**Files to create / modify**
+- Modify: `backtesting/patterns.py`
+- Modify: `backtesting/strategy_registry.py`
+- Test: `tests/test_backtesting_chart_patterns.py`
+
+**Implementation**
+- Add strategy IDs:
+  - `head_shoulders`
+  - `inverse_head_shoulders`
+  - `cup_handle`
+  - `double_top`
+  - `double_bottom`
+  - `ascending_triangle`
+  - `descending_triangle`
+  - `sym_triangle`
+  - `flag`
+  - `pennant`
+- Head-and-shoulders detector:
+  - identify left shoulder, head, right shoulder using swing pivots,
+  - validate head exceeds shoulders,
+  - compute neckline,
+  - confirm breakdown below neckline,
+  - reject if neckline break is not present.
+- Inverse head-and-shoulders detector:
+  - mirror the structure,
+  - confirm breakout above neckline.
+- Cup-and-handle detector:
+  - require rounded base duration,
+  - reject overly deep cups,
+  - detect handle pullback near prior high,
+  - confirm breakout above handle pivot.
+- Triangle detectors:
+  - fit/approximate support/resistance lines from pivots,
+  - require converging or flat boundary structure,
+  - confirm breakout direction.
+- Flag/pennant:
+  - require prior impulse move,
+  - short consolidation,
+  - breakout in impulse direction.
+
+**Acceptance criteria**
+- Each pattern has at least one positive synthetic fixture and one false-positive fixture.
+- Head-and-shoulders does not fire without neckline break.
+- Cup-and-handle rejects V-shaped rebounds and overly deep cups.
+- Triangle detector labels direction and confidence.
+- All chart-pattern strategies appear in `/backtest list` with status `experimental` until enough real-market validation exists.
+
+#### K14 — Exit Strategy Lab
+
+**Files to create / modify**
+- Create: `backtesting/exits.py`
+- Modify: `backtesting/engine.py`
+- Test: `tests/test_backtesting_exits.py`
+
+**Implementation**
+- Add exit-rule IDs:
+  - `supertrend_trailing`
+  - `atr_trailing`
+  - `sma50_break`
+  - `stage2_exit`
+  - `time_stop`
+  - `partial_profit_r`
+  - `target_then_trail`
+- Allow `/backtest exits <entry_strategy> --exit-rule <rule>` to reuse the same entries and compare exit behavior.
+- Persist exit rule in `backtest_run_config`.
+- Report exit attribution:
+  - stopped out,
+  - target hit,
+  - trend exit,
+  - time exit,
+  - partial profit.
+
+**Acceptance criteria**
+- Same entry fixture can be run with two exit rules and produces different deterministic trade outcomes.
+- Partial profit rule records multiple trade legs or a structured leg summary.
+- Exit comparison report ranks exit rules by CAGR, max drawdown, expectancy, and average holding period.
+
+#### K15 — Pattern Backtest QA + Visual Evidence
+
+**Files to create / modify**
+- Create: `backtesting/charts.py`
+- Create fixtures under `tests/fixtures/backtesting/patterns/`
+- Test: `tests/test_backtesting_pattern_visuals.py`
+
+**Implementation**
+- Add synthetic fixtures for:
+  - clean VCP,
+  - failed VCP,
+  - Darvas box,
+  - Bollinger squeeze,
+  - head-and-shoulders,
+  - inverse head-and-shoulders,
+  - cup-and-handle,
+  - triangle,
+  - false-positive random walk.
+- Add optional chart snapshot generation for a detected pattern window:
+  - price candles or OHLC line,
+  - pivot/pattern points,
+  - entry, stop, target,
+  - confidence and rejection reasons.
+- Visuals are optional in CI. Unit tests should validate returned file paths and metadata with a non-interactive backend.
+
+**Acceptance criteria**
+- All synthetic fixtures produce expected detector outcomes.
+- Random-walk false-positive fixture produces no high-confidence signal.
+- Chart snapshot generation works with `matplotlib` non-interactive backend when dependency is available.
+- If chart dependency is missing, reports still render without visual evidence and include an actionable warning.
 
 ---
 
@@ -1021,10 +2025,18 @@ Top investment candidates: {', '.join(top_3_candidates)}.
 Watch: {watch_stock} approaching resistance at {resistance:.0f} rupees.
 """
 
-# TTS via OpenAI:
-import openai
-response = openai.audio.speech.create(model="tts-1", voice="nova", input=script)
-response.stream_to_file(f"reports/briefing_{today}.mp3")
+# GPT TTS via OpenAI:
+from pathlib import Path
+from openai import OpenAI
+
+client = OpenAI()
+with client.audio.speech.with_streaming_response.create(
+    model="gpt-4o-mini-tts",
+    voice="cedar",
+    input=script,
+    instructions="Speak like a calm senior Indian-market operator. Be concise, risk-first, and avoid hype.",
+) as response:
+    response.stream_to_file(Path(f"reports/briefing_{today}.mp3"))
 ```
 
 ---
@@ -2646,6 +3658,33 @@ SPRINT 1 (DONE — 2026-05-02): Foundations
   ✅ P1-3  FII/DII Flow Signals
 
 SPRINT 2 (READY): Signal Enrichment
+  J1    Data Readiness Service           [S] — terminal/data_readiness.py
+  J2    Refresh Planner + Executor       [S] — bounded daily_refresh.py invocation
+  J3    Startup Terminal Integration     [M] — nse_agent.py readiness panel
+  J4    Agent Metadata + Guardrails       [M] — no assumed DB fields in answers
+  J5    /data-status + /refresh-data      [S] — deterministic terminal commands
+  J6    Data Readiness Regression Tests   [S] — stale/missing/partial coverage fixtures
+  J7    /load Command Catalog             [M] — verified Python/R script mappings
+  J8    /load Terminal Orchestrator        [M] — async runner, logs, status, stop
+  J9    Source-Specific /load Jobs         [M] — NSE, aux, global, views, reports
+  J10   Fundamental + Score Loading        [M] — Screener R loaders + score rebuild
+  J11   Company KB Loading Adapter         [M] — stale and symbol-specific indexing
+  J12   Load-Aware Agent Guardrails        [S] — voice/readiness/no-assumption impact
+  K1    Backtesting Data Contract          [M] — EOD readiness + required fields
+  K2    Strategy Registry                  [M] — Stage2, CANSLIM, Minervini, Supertrend, RSI pullback
+  K3    Vectorized EOD Backtest Engine     [L] — deterministic entries/exits/P&L
+  K4    Portfolio Simulator                [M] — capital, sizing, caps, drawdown
+  K5    Metrics + Attribution              [M] — CAGR, DD, expectancy, sector/regime
+  K6    Backtest SQLite Store              [M] — runs, trades, equity, metrics
+  K7    Backtest Reports                   [M] — Markdown/HTML/latest
+  K8    Terminal Backtest Commands         [M] — /backtest and /strategy-lab
+  K9    Existing Script Adapters           [S] — optional R/Python legacy adapters
+  K10   Golden Backtest Regression Suite   [M] — fixtures + no-lookahead tests
+  K11   Technical Pattern Feature Library  [M] — pivots, compression, Supertrend, RSI
+  K12   VCP/Darvas/Squeeze Strategy Pack   [M] — confidence-scored compression setups
+  K13   Chart Pattern Strategy Pack        [L] — H&S, inverse H&S, cup/handle, triangles
+  K14   Exit Strategy Lab                  [M] — compare Supertrend/ATR/SMA/stage exits
+  K15   Pattern QA + Visual Evidence       [M] — synthetic fixtures + chart snapshots
   P1-4  Promoter/Insider Alerts           [M] — fetch_insider_alerts.py
   P1-5  Enhanced HTML Dashboard           [M] — sortable cols, heatmap
   P2-4  Portfolio-Aware Narratives        [L] — personalized entry/trim guidance
@@ -2693,7 +3732,7 @@ SPRINT 7: Synthesis + Flow Intelligence
 
 SPRINT 8: Learning + Futuristic
   P2-3  Learning Loop                    [L] — 90 days signal data accumulated by now
-  P3-2  Voice Briefing                   [M] — OpenAI TTS
+  P3-2  Voice Briefing                   [M] — GPT TTS via gpt-4o-mini-tts
   P3-1  Causal Inference Model           [XL] — 6+ months signal data required
   P3-3  Real-Time Mode                   [XL]
 ```

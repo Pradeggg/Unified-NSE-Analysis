@@ -10,7 +10,18 @@ class TerminalIntradayFallbackTests(unittest.TestCase):
         self.assertEqual(routed["intent"], "intraday_setup")
         self.assertEqual(routed["plan"][0], ("resolve_symbol", {"query": "Polycab"}))
         self.assertIn(("explain_intraday_setup", {"symbol": "Polycab"}), routed["plan"])
+        self.assertLess(
+            routed["plan"].index(("get_nse_intraday_snapshot", {"symbol": "Polycab"})),
+            routed["plan"].index(("get_intraday_analysis", {"symbol": "Polycab"})),
+        )
         self.assertIn(("get_intraday_analysis", {"symbol": "Polycab"}), routed["plan"])
+
+    def test_intraday_index_query_does_not_parse_of_as_symbol(self):
+        routed = _keyword_intent("intraday technical analysis of NIFTY50", data_mode="intraday")
+
+        self.assertEqual(routed["intent"], "intraday_setup")
+        self.assertNotIn(("resolve_symbol", {"query": "of"}), routed["plan"])
+        self.assertIn(("get_nse_intraday_snapshot", {"symbol": "NIFTY50"}), routed["plan"])
 
     def test_no_llm_response_uses_legacy_intraday_fallback_when_sqlite_missing(self):
         response = _synthesize_no_llm(
@@ -23,6 +34,20 @@ class TerminalIntradayFallbackTests(unittest.TestCase):
                         "symbol": "POLYCAB",
                         "data_mode": "intraday",
                         "error": "intraday_ohlcv table not found",
+                    },
+                },
+                {
+                    "tool": "get_nse_intraday_snapshot",
+                    "args": {"symbol": "POLYCAB"},
+                    "result": {
+                        "symbol": "POLYCAB",
+                        "source": "NSE live API (real-time)",
+                        "last_price": 5531.0,
+                        "day_high": 5560.0,
+                        "day_low": 5488.0,
+                        "vwap": 5520.0,
+                        "pct_change": 0.4,
+                        "as_of": "11-May-2026 09:35:00",
                     },
                 },
                 {
@@ -56,6 +81,8 @@ class TerminalIntradayFallbackTests(unittest.TestCase):
 
         self.assertIn("INTRADAY FALLBACK ANALYSIS", response)
         self.assertIn("SQLite intraday source unavailable", response)
+        self.assertIn("NSE LIVE SNAPSHOT", response)
+        self.assertIn("POLYCAB", response)
         self.assertIn("Yahoo Finance", response)
         self.assertIn("POLYCAB", response)
         self.assertIn("Research-only", response)

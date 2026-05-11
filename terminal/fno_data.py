@@ -4,7 +4,7 @@ terminal/fno_data.py
 F&O Data Layer for Agent Adda.
 
 Provides:
-  • EOD F&O Bhavcopy download + SQLite persistence
+  • EOD F&O Bhavcopy download + PostgreSQL/SQLite persistence
   • Live NSE option-chain scraper (requires browser-like session)
   • Live futures chain fetcher
   • Utility helpers: lot sizes, expiry calendar, rollover dates
@@ -17,6 +17,7 @@ import json
 import logging
 import sqlite3
 import time
+import warnings
 import zipfile
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -36,6 +37,7 @@ FNO_DIR = DATA / "fno"
 FNO_DIR.mkdir(parents=True, exist_ok=True)
 
 FNO_DB  = FNO_DIR / "fno_eod.db"
+PG_DSN  = "dbname=nse_market user=nse_admin host=/tmp"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # NSE HTTP Session (cookie-based auth)
@@ -85,6 +87,24 @@ def _get_nse_session(force_refresh: bool = False) -> requests.Session:
 # ─────────────────────────────────────────────────────────────────────────────
 def _db_conn() -> sqlite3.Connection:
     return sqlite3.connect(FNO_DB)
+
+
+def _pg_conn():
+    import psycopg2
+    return psycopg2.connect(PG_DSN)
+
+
+def _pg_read_sql(sql: str, params: tuple[Any, ...] = ()) -> pd.DataFrame:
+    try:
+        conn = _pg_conn()
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", UserWarning)
+                return pd.read_sql_query(sql, conn, params=params)
+        finally:
+            conn.close()
+    except Exception:
+        return pd.DataFrame()
 
 
 def _ensure_schema(conn: sqlite3.Connection) -> None:
@@ -243,20 +263,94 @@ def store_fno_bhavcopy(df: pd.DataFrame) -> int:
     return inserted
 
 
+def _store_fno_bhavcopy_pg(df: pd.DataFrame) -> int:
+    """Persist normalised bhavcopy DataFrame to partitioned PostgreSQL."""
+    if df.empty:
+        return 0
+    try:
+        from psycopg2.extras import execute_values
+        conn = _pg_conn()
+    except Exception:
+        return 0
+
+    rows = []
+    for _, r in df.iterrows():
+        trade_date = r.get("trade_date")
+        symbol = str(r.get("symbol") or "").strip().upper()
+        expiry_date = r.get("expiry_date")
+        instrument = str(r.get("instrument") or "").strip()
+        option_type_raw = str(r.get("option_type") or "").strip()
+        option_type = "FUT" if option_type_raw.lower() in ("", "nan", "none", "na", "null") else option_type_raw
+        if not trade_date or not symbol or not expiry_date or not instrument:
+            continue
+        turnover = pd.to_numeric(pd.Series([r.get("turnover_cr")]), errors="coerce").iloc[0]
+        rows.append({
+            "trade_date": trade_date,
+            "symbol": symbol,
+            "expiry_date": expiry_date,
+            "instrument": instrument,
+            "option_type": option_type,
+            "strike": float(r.get("strike") or 0),
+            "open": r.get("open"),
+            "high": r.get("high"),
+            "low": r.get("low"),
+            "close": r.get("close"),
+            "last_price": r.get("last_price"),
+            "prev_close": r.get("prev_close"),
+            "underlying_price": r.get("underlying"),
+            "settle_price": r.get("settle_price"),
+            "open_interest": int(r.get("oi") or 0),
+            "oi_change": int(r.get("oi_change") or 0),
+            "volume": int(r.get("volume") or 0),
+            "turnover_cr": round(float(turnover) / 1e7, 4) if pd.notna(turnover) else None,
+            "total_trades": None,
+            "lot_size": None,
+        })
+    if not rows:
+        conn.close()
+        return 0
+
+    cols = list(rows[0].keys())
+    values = [[row.get(col) for col in cols] for row in rows]
+    sql = (
+        f"INSERT INTO derivatives.fno_eod ({', '.join(cols)}) VALUES %s "
+        "ON CONFLICT ON CONSTRAINT fno_eod_pkey DO UPDATE SET "
+        "open = EXCLUDED.open, high = EXCLUDED.high, low = EXCLUDED.low, "
+        "close = EXCLUDED.close, last_price = EXCLUDED.last_price, "
+        "prev_close = EXCLUDED.prev_close, underlying_price = EXCLUDED.underlying_price, "
+        "settle_price = EXCLUDED.settle_price, open_interest = EXCLUDED.open_interest, "
+        "oi_change = EXCLUDED.oi_change, volume = EXCLUDED.volume, turnover_cr = EXCLUDED.turnover_cr"
+    )
+    try:
+        with conn, conn.cursor() as cur:
+            for trade_date in sorted({row["trade_date"] for row in rows}):
+                cur.execute("SELECT derivatives.ensure_fno_monthly_partition(%s)", (trade_date,))
+            execute_values(cur, sql, values, page_size=500)
+            cur.execute("SELECT derivatives.refresh_fno_analytics()")
+    except Exception:
+        return 0
+    finally:
+        conn.close()
+    return len(rows)
+
+
 def load_and_store_latest() -> dict:
-    """Download latest bhavcopy and store in DB. Returns summary."""
+    """Download latest bhavcopy and store in PostgreSQL + SQLite cache."""
     df = download_fno_bhavcopy()
     if df is None:
         return {"status": "error", "message": "Could not download F&O bhavcopy"}
 
     n = store_fno_bhavcopy(df)
+    pg_n = _store_fno_bhavcopy_pg(df)
     td = df["trade_date"].iloc[0] if not df.empty else "unknown"
     return {
         "status": "ok",
         "trade_date": td,
-        "rows_stored": n,
-        "options": int((df["option_type"].notna()).sum()),
-        "futures": int((df["option_type"].isna()).sum()),
+        "rows_stored": pg_n or n,
+        "postgres_rows_stored": pg_n,
+        "sqlite_rows_stored": n,
+        "options": int((df["option_type"].fillna("").astype(str).str.upper().isin(["CE", "PE"])).sum()),
+        "futures": int((~df["option_type"].fillna("").astype(str).str.upper().isin(["CE", "PE"])).sum()),
     }
 
 
@@ -264,6 +358,13 @@ def load_and_store_latest() -> dict:
 # EOD DB Queries
 # ─────────────────────────────────────────────────────────────────────────────
 def get_available_dates() -> list[str]:
+    pg_df = _pg_read_sql(
+        "SELECT DISTINCT trade_date::text AS trade_date "
+        "FROM derivatives.fno_eod ORDER BY trade_date DESC LIMIT 30"
+    )
+    if not pg_df.empty:
+        return pg_df["trade_date"].astype(str).tolist()
+
     if not FNO_DB.exists():
         return []
     conn = _db_conn()
@@ -277,9 +378,61 @@ def get_available_dates() -> list[str]:
 def get_eod_option_chain(symbol: str, trade_date: str | None = None,
                           expiry_date: str | None = None) -> pd.DataFrame:
     """
-    Fetch EOD option chain from SQLite for a symbol.
+    Fetch EOD option chain from PostgreSQL for a symbol.
     Returns CE + PE rows for the given expiry (nearest if not specified).
+    Falls back to legacy SQLite if PostgreSQL is unavailable.
     """
+    sym = symbol.upper()
+    pg_params: list[Any] = [sym]
+    pg_where = ["symbol = %s", "option_type IN ('CE','PE')"]
+    if trade_date:
+        pg_where.append("trade_date = %s")
+        pg_params.append(trade_date)
+    else:
+        pg_where.append("trade_date = (SELECT max(trade_date) FROM derivatives.fno_eod)")
+    if expiry_date:
+        pg_where.append("expiry_date = %s")
+        pg_params.append(expiry_date)
+    else:
+        pg_where.append(
+            "expiry_date = ("
+            "SELECT min(expiry_date) FROM derivatives.fno_eod "
+            "WHERE symbol = %s AND option_type IN ('CE','PE') "
+            "AND trade_date = COALESCE(%s::date, (SELECT max(trade_date) FROM derivatives.fno_eod)) "
+            "AND expiry_date >= trade_date)"
+        )
+        pg_params.extend([sym, trade_date])
+    pg_df = _pg_read_sql(
+        """
+        SELECT
+            trade_date::text AS trade_date,
+            symbol,
+            expiry_date::text AS expiry_date,
+            instrument,
+            option_type,
+            strike,
+            open,
+            high,
+            low,
+            close,
+            last_price,
+            prev_close,
+            settle_price,
+            underlying_price AS underlying,
+            open_interest AS oi,
+            oi_change,
+            volume,
+            turnover_cr,
+            lot_size
+        FROM derivatives.fno_eod
+        WHERE """ + " AND ".join(pg_where) + """
+        ORDER BY strike, option_type
+        """,
+        tuple(pg_params),
+    )
+    if not pg_df.empty:
+        return pg_df
+
     if not FNO_DB.exists():
         return pd.DataFrame()
 
@@ -315,6 +468,45 @@ def get_eod_option_chain(symbol: str, trade_date: str | None = None,
 
 def get_eod_futures(symbol: str, trade_date: str | None = None) -> pd.DataFrame:
     """Fetch EOD futures rows for a symbol (all expiries)."""
+    sym = symbol.upper()
+    pg_params: list[Any] = [sym]
+    pg_where = ["symbol = %s", "instrument IN ('STF','IDF','FUTSTK','FUTIDX')", "option_type = 'FUT'"]
+    if trade_date:
+        pg_where.append("trade_date = %s")
+        pg_params.append(trade_date)
+    else:
+        pg_where.append("trade_date = (SELECT max(trade_date) FROM derivatives.fno_eod)")
+    pg_df = _pg_read_sql(
+        """
+        SELECT
+            trade_date::text AS trade_date,
+            symbol,
+            expiry_date::text AS expiry_date,
+            instrument,
+            option_type,
+            strike,
+            open,
+            high,
+            low,
+            close,
+            last_price,
+            prev_close,
+            settle_price,
+            underlying_price AS underlying,
+            open_interest AS oi,
+            oi_change,
+            volume,
+            turnover_cr,
+            lot_size
+        FROM derivatives.fno_eod
+        WHERE """ + " AND ".join(pg_where) + """
+        ORDER BY expiry_date
+        """,
+        tuple(pg_params),
+    )
+    if not pg_df.empty:
+        return pg_df
+
     if not FNO_DB.exists():
         return pd.DataFrame()
 
@@ -337,6 +529,27 @@ def get_eod_futures(symbol: str, trade_date: str | None = None) -> pd.DataFrame:
 def get_oi_history(symbol: str, expiry_date: str, option_type: str = "CE",
                    strike: float | None = None, days: int = 10) -> pd.DataFrame:
     """OI history for a specific strike/option to track buildup/unwinding."""
+    sym = symbol.upper()
+    opt_type = option_type.upper()
+    pg_params: list[Any] = [sym, expiry_date, opt_type]
+    pg_where = "symbol = %s AND expiry_date = %s AND option_type = %s"
+    if strike is not None:
+        pg_where += " AND strike = %s"
+        pg_params.append(strike)
+    pg_df = _pg_read_sql(
+        f"""
+        SELECT trade_date::text AS trade_date, strike, open_interest AS oi,
+               oi_change, volume, last_price, underlying_price AS underlying
+        FROM derivatives.fno_eod
+        WHERE {pg_where}
+        ORDER BY trade_date DESC
+        LIMIT {days * 30}
+        """,
+        tuple(pg_params),
+    )
+    if not pg_df.empty:
+        return pg_df
+
     if not FNO_DB.exists():
         return pd.DataFrame()
 

@@ -25,6 +25,7 @@ from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent.parent / ".env")
 
 from .tools import call_tool, get_symbol_snapshot, openai_tool_schemas, resolve_symbol
+from .market_calendar import market_context_for_agent, market_session_status
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Constants
@@ -38,6 +39,15 @@ OLLAMA_MODEL   = os.getenv("OLLAMA_MODEL", "granite4:latest")
 SYSTEM_PROMPT = """\
 You are Agent Adda, an expert NSE market research analyst and assistant.
 
+━━━ MARKET CLOCK + DATA FRESHNESS RULES ━━━
+• Always respect the NSE market clock supplied in the system context.
+• NSE equity regular session is 09:15-15:30 IST; pre-open awareness starts 09:00 IST.
+• If the market is pre-open, post-close, weekend, or holiday, explicitly say the market is closed.
+• Do not describe fallback/EOD data as "current intraday" or "live" data.
+• If SQLite/live intraday data is unavailable, say so clearly and avoid directional claims from missing data.
+• Only quote RSI, MACD, VWAP, support/resistance, target, or invalidation levels when they came from a tool result.
+• When using EOD fallback levels during a closed/pre-market session, label them as previous-session or EOD context.
+
 ━━━ CAPABILITIES ━━━
 You have access to these data tools (call them as needed):
 
@@ -49,7 +59,11 @@ You have access to these data tools (call them as needed):
                                         (parallel fetch) — use for watchlist/multi-stock checks
 • nse_search(query)                   → Search NSE by company name → symbol + live price
                                         (resolves "Larsen and Toubro" → LT with current price)
-• get_live_market_overview()          → Live index levels (Nifty 50/Bank/IT/Mid/Small) + A/D
+• get_live_market_overview()          → Live broad-market + ALL sectoral indices grouped
+                                        (broad_market, sectoral, top_sectors, bottom_sectors)
+                                        + Adv/Decl. When user asks for "indices", "sectors",
+                                        or "market overview", enumerate every entry returned
+                                        in `broad_market` and `sectoral` — do not truncate.
 • get_top_gainers_losers(index,       → Live top gainers & losers from any NSE index
     top_n, direction)                   direction: 'gainers'|'losers'|'both'
 • get_most_active_stocks(by,          → Most active stocks by 'volume' or 'value'
@@ -92,8 +106,10 @@ You have access to these data tools (call them as needed):
                                         rsi_divergence (RSI extreme + Bollinger reversion),
                                         bb_squeeze (Bollinger Band squeeze breakout),
                                         vwap_reclaim (short-EMA VWAP proxy reclaim or loss)
-• get_intraday_analysis(symbol,       → Legacy yfinance analysis of one stock when SQLite tables are absent
-    interval, strategies)               or explicitly requested; keep output research-only.
+• get_nse_intraday_snapshot(symbol)   → NSE website live quote/index snapshot. Always use this
+                                        before yfinance fallback when SQLite intraday bars are absent.
+• get_intraday_analysis(symbol,       → Legacy yfinance candle analysis of one stock only after
+    interval, strategies)               SQLite and NSE website snapshot have been attempted; keep output research-only.
                                         Returns EOD daily levels + session context when intraday unavailable.
 • scan_intraday_market(index,         → yfinance scan of ALL stocks in an NSE index.
     interval, strategies,
@@ -116,6 +132,9 @@ You have access to these data tools (call them as needed):
     max_iv?, min_oi?, top_n?)         Ranks by low IV + OI liquidity + ideal DTE.
 • get_oi_analysis(symbol, expiry?)  → Focused OI: PCR, max pain, CE/PE concentration (support/resistance)
 • get_futures_analysis(symbol)      → Futures basis, cost-of-carry, rollover OI analysis
+• get_fno_analytics(symbol?, top_n?) → PostgreSQL F&O analytics: PCR, max pain distance, OI buildup,
+                                       futures positioning, BULL/BEAR/MILD/NEUTRAL signal.
+• run_option_payoff_scenario(...)   → PostgreSQL what-if option payoff table across underlying moves.
 • get_options_strategy(symbol,      → Build specific strategy: legs, entry cost, risk/reward,
     strategy, expiry?)                breakevens, payoff curve. Strategies: long_call, long_put,
                                       bull_call_spread, bear_put_spread, long_straddle, long_strangle,
@@ -140,8 +159,32 @@ You have access to these data tools (call them as needed):
 • search_latest_catalysts(symbol)     → DuckDuckGo general web search for recent news.
                                         Auto-fetches article text for top 3 results.
                                         Read the 'article_text' field to provide analysis.
+• search_market_knowledge(query,      → Source-backed financial-market education using
+    sources?)                           Investopedia and Wikipedia. Use for definitions,
+                                        explainers, and concept comparisons such as
+                                        "what is PE", "ROCE vs ROE", "Minervini strategy".
+                                        Never answer these from memory first; cite source URLs
+                                        or say reliable sources were not found.
 • fetch_article_content(url)          → Fetch full article text from any URL. Use when
                                         you want deeper detail from search results.
+• fetch_pdf_text(url, max_pages?)     → Download and extract text from a PDF at any URL.
+                                        Use for BSE results PDFs, annual reports, concall
+                                        transcript PDFs, NSE circulars, SEBI filings.
+                                        Call this whenever you have a direct .pdf URL and
+                                        the user wants to read or analyse the document.
+• analyze_document(source, max_pages?) → Universal document analyser. Accepts a URL (web page
+                                        or PDF), a local file path (.pdf, .docx, .txt, .csv, .md),
+                                        or tilde paths like ~/Downloads/report.pdf.
+                                        Auto-detects type: web pages are scraped, PDFs are read
+                                        page-by-page via PyMuPDF, DOCX via python-docx.
+                                        Returns structured {source_type, title, pages/sections,
+                                        full_text, metadata}. Use for /analyze commands.
+• generate_report(content, report_type?, → Generate a formatted report file (HTML, PDF, or Markdown).
+  symbol?, title?, output_format?,        report_type: technical|fundamental|forensic|research|
+  filename?)                              intraday|canslim|ric|sector. output_format: html|pdf|md.
+                                          Use AFTER completing any analysis to save results as a
+                                          professional report. Saves to reports/generated/ directory.
+                                          Always call this when the user requests a /report command.
 
 [Deep Search Engine — 11 distinct parallel verticals]
 • search_nse_announcements(symbol)    → NSE live API: corporate announcements, filings, disclosures
@@ -209,9 +252,9 @@ You have access to these data tools (call them as needed):
   mention the resolved symbol and source trail before explaining the gap.
 • "option chain / options data / OI for NIFTY/BANKNIFTY/<stock> / option chain analysis" → call get_option_chain(symbol)
 • "options chain" / "OI" / "PCR" / "max pain" / "option chain" → get_options_chain (rich side-by-side viewer)
-• "PCR / put call ratio / put-call ratio" → call get_oi_analysis(symbol) — focus on pcr and signal
-• "max pain / options max pain / expiry pin / where will it expire" → call get_oi_analysis(symbol) — focus on max_pain
-• "OI buildup / open interest buildup / call writing / put writing / where is OI concentration" → call get_oi_analysis(symbol)
+• "PCR / put call ratio / put-call ratio" → call get_fno_analytics(symbol) first, then get_oi_analysis(symbol) if strike detail is needed
+• "max pain / options max pain / expiry pin / where will it expire" → call get_fno_analytics(symbol) first; use get_oi_analysis(symbol) for strike concentration
+• "OI buildup / open interest buildup / long buildup / short buildup / call writing / put writing / where is OI concentration" → call get_fno_analytics(symbol) first, then get_oi_analysis(symbol)
 • "support from options / resistance from options / OI support resistance / key strikes" → call get_oi_analysis(symbol)
 • "greeks / delta / theta / vega / gamma / IV / implied volatility" → call get_option_chain(symbol) — atm_greeks section
 • "IV skew / volatility skew / put IV vs call IV" → call get_option_chain(symbol) — iv_skew section
@@ -228,10 +271,12 @@ You have access to these data tools (call them as needed):
 • "build a strategy / options strategy / set up a <strategy name>" → call get_options_strategy(symbol, strategy)
 • "what strategy should I use / recommend options strategy / best options play" → call get_strategy_recommendations(symbol)
 • "long call / buy call / buy put / long put / straddle / strangle / bull spread / bear spread / iron condor" → call get_options_strategy(symbol, strategy=<mapped_key>)
+• "what if / scenario / payoff / breakeven for option" → call run_option_payoff_scenario(symbol, option_type, strike?, expiry_date?)
+• "top F&O bullish/bearish names / F&O signals / derivatives analytics" → call get_fno_analytics(top_n=<N>)
 • "F&O data / download bhavcopy / update options data / refresh F&O" → call refresh_fno_eod_data()
 • "F&O data status / options DB / available expiries" → call get_fno_data_status()
-• "intraday setup / technical target zones / invalidation / trading setup" → call explain_intraday_setup(symbol); if SQLite tables are missing/stale or symbol bars are absent, call get_intraday_analysis(symbol) and clearly label it as Yahoo Finance/EOD fallback context
-• "intraday levels / support resistance / pivots / VWAP levels" → call get_intraday_levels(symbol); if SQLite levels are unavailable, call get_intraday_analysis(symbol) and clearly label fallback levels
+• "intraday setup / technical target zones / invalidation / trading setup" → call explain_intraday_setup(symbol); if SQLite tables are missing/stale or symbol bars are absent, call get_nse_intraday_snapshot(symbol) first, then get_intraday_analysis(symbol) only for candle history, and clearly label it as Yahoo Finance/EOD fallback context
+• "intraday levels / support resistance / pivots / VWAP levels" → call get_intraday_levels(symbol); if SQLite levels are unavailable, call get_nse_intraday_snapshot(symbol) first, then get_intraday_analysis(symbol) only for candle history, and clearly label fallback levels
 • "intraday data health / live table health / SQLite intraday" → call get_intraday_source_health
 • "breakout stocks / live breakouts / breakouts last N minutes / stocks breaking out now / volume breakouts" → call scan_intraday_market(index="NIFTY 500", interval="15m", strategies=["ema","volume","macd"], direction_filter="buy")
 • "intraday screener / scan / best intraday stocks / momentum plays" → call run_intraday_screener(screen_type="momentum") [auto-falls-back to yfinance if SQLite unavailable]
@@ -268,14 +313,24 @@ You have access to these data tools (call them as needed):
 • "basing stocks / accumulation / stage 1 / consolidating" → run_screener_query(screen_type="stage1_base")
 • "tight range / VCP EOD / volatility contraction EOD / coiling stocks" → run_screener_query(screen_type="tight_range")
 • "oversold bounce / RSI dip / dip buy in uptrend / stage 2 dip" → run_screener_query(screen_type="oversold_bounce")
+• "which of these stocks show strength based on CANSLIM / RS / fundamentals / Piotroski" → call validate_strength_watchlist(symbols=[...]).
+  Never infer missing CANSLIM, RS, fundamental, or forensic evidence; report evidence_coverage and missing_evidence explicitly.
+• "what is / define / explain / how is ... different" for market concepts such as PE, ROE, ROCE, EBITDA,
+  RSI, CANSLIM, Piotroski, Beneish, Altman, Minervini, VCP → call search_market_knowledge(query).
+  Do not answer market education questions from memory first; use Investopedia/Wikipedia source evidence,
+  and clearly state if those sources were not found.
 • "compare / vs / versus / rank / which is better / peer comparison" → call compare_stocks(symbols=[...], aspects=['both'])
 • "technical only comparison" → compare_stocks with aspects=['technical']
 • "fundamental comparison / ratios comparison" → compare_stocks with aspects=['fundamental']
 • "fundamentals / ratios / P/E / ROE / ROCE / valuation / book value" → call scrape_screener_in
 • "peers / peer comparison / sector peers" → call scrape_screener_in (has peer table)
 • "concall / transcript / conference call / management commentary" → call search_concall_transcripts(symbol) AND scrape_screener_in(symbol) for direct PDF links; supplement with multi_source_web_search if no transcripts found
-• "BSE filing / corporate announcement / results date / quarterly results" → call search_nse_announcements(symbol) for live NSE data; also scrape_screener_in for PDF links
-• "annual report / annual financials" → call search_bse_filings(symbol) + scrape_screener_in (has annual-report PDF links)
+• "BSE filing / corporate announcement / results date / quarterly results" → call search_nse_announcements(symbol) for live NSE data; also scrape_screener_in for PDF links; if a PDF URL is returned call fetch_pdf_text(url) to read the actual document
+• "annual report / annual financials" → call search_bse_filings(symbol) + scrape_screener_in (has annual-report PDF links); follow up with fetch_pdf_text(url) to extract the content
+• "read this PDF / summarise this PDF / analyse results PDF" → call fetch_pdf_text(url) directly with the provided URL
+• "analyze document / read local PDF / read docx / analyze file" → call analyze_document(source) with the file path or URL
+• "CANSLIM / CAN SLIM / O'Neil / growth stock quality" → call comprehensive_stock_research + get_technical_setup + search_latest_catalysts and evaluate all 7 CANSLIM criteria (C,A,N,S,L,I,M) with ✅/🟡/❌ scoring
+• "generate report / save report / export analysis / write report" → perform the analysis FIRST, then call generate_report(content=<your_analysis_markdown>, report_type=<type>, symbol=<sym>, output_format=<fmt>). Always save the full analysis content.
 • "moneycontrol / screener.in / yahoo finance / NSE website" → call the specific tool for that site
 • "news / catalysts / events / latest" → call search_sector_news(symbol) + search_latest_catalysts + search_yahoo_finance
 • "deep research / full analysis / comprehensive / everything about" → call comprehensive_stock_research + deep_search(symbol, context="full")
@@ -560,9 +615,128 @@ def _detect_backend() -> _OpenAIBackend | _OllamaBackend | None:
 # Keyword-based intent router (no LLM fallback)
 # ─────────────────────────────────────────────────────────────────────────────
 
+_MARKET_KNOWLEDGE_TERMS = (
+    "p/e", "pe ratio", "price earnings", "price-to-earnings",
+    "roe", "roce", "roa", "eps", "ebitda", "ev/ebitda", "cagr",
+    "book value", "market cap", "dividend yield", "free cash flow",
+    "rsi", "macd", "supertrend", "vwap", "beta", "alpha", "sharpe",
+    "canslim", "can slim", "piotroski", "beneish", "altman",
+    "minervini", "vcp", "volatility contraction", "darvas",
+)
+
+
+def _market_knowledge_query(query: str) -> str:
+    cleaned = re.sub(r"^/(learn|define|compare)\b", "", query.strip(), flags=re.I).strip(" :-")
+    return cleaned or query.strip()
+
+
+def _routing_query_text(query: str) -> str:
+    """Return the user's actual market question, without voice-copilot wrappers."""
+    text = (query or "").strip()
+    match = re.match(
+        r"^(?:answer|analy[sz]e)\s+this\s+spoken\s+market\s+question:\s*(.+?)(?:\.\s*(?:be concise|include evidence)\b.*)?$",
+        text,
+        flags=re.I | re.S,
+    )
+    return match.group(1).strip() if match else text
+
+
+def _extract_intraday_timeframe(q: str) -> str:
+    m = re.search(r"\b(5m|15m|30m|1h)\b", q)
+    if m:
+        return m.group(1)
+    m = re.search(r"\b(5|15|30)\s*(?:min|minute|minutes)\b", q)
+    if m:
+        return f"{m.group(1)}m"
+    return "15m"
+
+
+def _extract_minutes_window(q: str, default: int = 15) -> int:
+    m = re.search(r"\blast\s+(\d{1,3})\s*(?:m|mins?|minites?|minutes?)\b", q)
+    if not m:
+        m = re.search(r"\b(\d{1,3})\s*(?:m|mins?|minites?|minutes?)\b", q)
+    if not m:
+        return default
+    return max(1, min(int(m.group(1)), 120))
+
+
+def _extract_intraday_scan_index(q: str) -> str:
+    if "nifty midcap 100" in q:
+        return "NIFTY MIDCAP 100"
+    if "nifty midcap 50" in q or "midcpnifty" in q or "nifty midcap select" in q:
+        return "NIFTY MIDCAP SELECT"
+    if "nifty smallcap 100" in q:
+        return "NIFTY SMALLCAP 100"
+    if "nifty bank" in q or "bank nifty" in q:
+        return "NIFTY BANK"
+    if "nifty 500" in q:
+        return "NIFTY 500"
+    if "nifty 50" in q or re.search(r"\bnifty\b", q):
+        return "NIFTY 50"
+    return "NIFTY 500"
+
+
+def _extract_intraday_scan_strategies(q: str) -> list[str] | None:
+    strategies: list[str] = []
+    mapping = [
+        ("supertrend", "supertrend"),
+        ("super trend", "supertrend"),
+        ("vcp", "vcp"),
+        ("volatility contraction", "vcp"),
+        ("macd", "macd"),
+        ("rsi", "rsi"),
+        ("bollinger", "bollinger"),
+        ("bb squeeze", "bollinger"),
+        ("ema", "ema"),
+        ("volume", "volume"),
+    ]
+    for phrase, strategy in mapping:
+        if phrase in q and strategy not in strategies:
+            strategies.append(strategy)
+    return strategies or None
+
+
+def _looks_like_intraday_query(q: str) -> bool:
+    words = set(re.split(r"\W+", q.lower()))
+    if words & _INTRADAY_KEYWORDS:
+        return True
+    if re.search(r"\b(?:5m|15m|30m|1h|5\s*min|15\s*min|30\s*min)\b", q.lower()):
+        return True
+    return "scan" in q.lower() and any(
+        term in q.lower()
+        for term in ("setup", "setups", "invalidation", "target zone", "supertrend", "vcp", "breakout")
+    )
+
+
+def _is_market_knowledge_query(query: str) -> bool:
+    q = _routing_query_text(query).lower().strip()
+    if (
+        "technical setup for" in q
+        or re.search(r"\b(full|detailed|complete)\s+technical\b.*\bfor\b", q)
+        or ("position vs" in q and re.search(r"\b(ma|sma|ema)\b|20/50/200", q))
+    ):
+        return False
+    if q.startswith(("/learn", "/define")):
+        return True
+    if q.startswith("/compare"):
+        return any(term in q for term in _MARKET_KNOWLEDGE_TERMS)
+
+    education_prefix = q.startswith(("what is ", "what are ", "define ", "explain ", "how is ", "how are "))
+    comparison_phrase = any(phrase in q for phrase in (" different from ", " difference between ", " vs ", " versus "))
+    has_market_term = any(term in q for term in _MARKET_KNOWLEDGE_TERMS) or bool(re.search(r"\bpe\b", q))
+    return has_market_term and (education_prefix or comparison_phrase)
+
+
 def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
     """Detect intent and build a tool plan from keywords alone."""
-    q = query.lower()
+    routing_text = _routing_query_text(query)
+    q = routing_text.lower()
+
+    if _is_market_knowledge_query(query):
+        return {
+            "intent": "market_knowledge",
+            "plan": [("search_market_knowledge", {"query": _market_knowledge_query(query)})],
+        }
 
     # Global market assessment
     if _is_global_query(q):
@@ -571,15 +745,81 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
             "plan": [("get_global_market_assessment", {})],
         }
 
-    words = re.findall(r"[A-Za-z][A-Za-z0-9\-&\.]+", query)
+    # Breadth / market overview. Keep this before stock extraction so
+    # "Market overview" is not interpreted as an OVERVIEW ticker.
+    breadth_words = [
+        "market overview", "overview of market", "breadth", "advance decline",
+        "a/d", "market today", "market outlook", "nifty direction",
+        "overall market", "how is market", "market status",
+    ]
+    recent_market_words = [
+        "what happened", "what changed", "last 15", "last 30", "last 5",
+        "last few minutes", "last minutes", "recent move", "just now",
+    ]
+    if any(w in q for w in recent_market_words) and any(w in q for w in ["minute", "minutes", "min", "market", "nifty", "happened", "changed"]):
+        return {"intent": "intraday_market_recap", "plan": [
+            ("get_intraday_market_recap", {"minutes": _extract_minutes_window(q, 15)}),
+            ("get_market_breadth", {}),
+        ]}
+    if any(w in q for w in breadth_words) or q.strip() in {"overview", "market"}:
+        return {"intent": "market_overview", "plan": [
+            ("get_live_market_overview", {}),
+            ("get_market_breadth", {}),
+        ]}
+
+    words = re.findall(r"[A-Za-z][A-Za-z0-9\-&\.]+", routing_text)
     skip  = {"show","me","the","latest","on","for","what","is","how","tell",
-              "about","give","setup","stock","nse","india","market","today","brief",
-              "intraday","levels","level","support","resistance","screener","scan",
-              "deep","dive","analysis","technical","trade","trading"}
+              "about","give","setup","stock","stocks","nse","india","market","today","brief","full",
+              "overview","intraday","levels","level","support","resistance","screener","scan",
+              "deep","dive","analysis","technical","trade","trading","of",
+              "answer","analyze","analyse","this","spoken","question","your","read","view",
+              "after","before","results","result","concise","evidence","aware","risk","first",
+              "research","only","include","context","watch","next",
+              "happened","changed","change","last","minute","minutes","min","few"}
     candidates = [w for w in words if w.lower() not in skip and len(w) >= 2]
 
-    # SQLite-backed intraday routing. No EOD/yfinance fallback in this path.
+    strength_terms = ("canslim", "can slim", "rs", "relative strength", "fundamental", "piotroski", "petroski")
+    if sum(1 for term in strength_terms if term in q) >= 2 and any(w in q for w in ("strength", "strong", "which", "rank", "out of")):
+        strength_skip = skip | {
+            "out", "of", "which", "show", "shows", "strength", "strong", "based", "basis",
+            "can", "slim", "canslim", "rs", "relative", "fundamental", "fundamentals",
+            "analysis", "piotroski", "petroski", "score", "scores", "fscore", "f-score",
+        }
+        symbols = []
+        for token in words:
+            raw = token.upper().strip()
+            if raw.lower() in strength_skip:
+                continue
+            looks_like_symbol = (
+                token == token.upper()
+                or any(ch.isdigit() for ch in raw)
+                or "&" in raw
+                or "-" in raw
+            )
+            if looks_like_symbol and re.fullmatch(r"[A-Z0-9&-]{2,12}", raw) and raw not in {"CANSLIM", "RS"}:
+                symbols.append(raw)
+        if symbols:
+            return {"intent": "strength_validation", "plan": [("validate_strength_watchlist", {"symbols": symbols})]}
+
+    # Intraday routing: SQLite first, NSE website live snapshot second,
+    # yfinance candle analysis only as fallback for OHLCV history.
     if data_mode == "intraday":
+        if "scan" in q and (
+            "nifty" in q
+            or "bank nifty" in q
+            or "midcap" in q
+            or "smallcap" in q
+        ):
+            return {"intent": "intraday_index_scan", "plan": [("scan_intraday_market", {
+                "index": _extract_intraday_scan_index(q),
+                "interval": _extract_intraday_timeframe(q),
+                "strategies": _extract_intraday_scan_strategies(q),
+                "direction_filter": "buy" if any(w in q for w in (" buy", " long", " bullish")) else (
+                    "sell" if any(w in q for w in (" sell", " short", " bearish")) else "all"
+                ),
+                "min_rr": 1.3,
+                "top_n": 10,
+            })]}
         if any(w in q for w in ["data health", "source health", "live table", "sqlite", "stale", "fresh"]):
             return {"intent": "intraday_health", "plan": [("get_intraday_source_health", {})]}
         if any(w in q for w in ["breakout", "breakouts"]):
@@ -595,6 +835,7 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
             return {"intent": "intraday_levels", "plan": [
                 ("resolve_symbol", {"query": sym_q}),
                 ("get_intraday_levels", {"symbol": sym_q}),
+                ("get_nse_intraday_snapshot", {"symbol": sym_q}),
                 ("get_intraday_analysis", {"symbol": sym_q}),
             ]}
         if candidates:
@@ -602,23 +843,28 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
             return {"intent": "intraday_setup", "plan": [
                 ("resolve_symbol", {"query": sym_q}),
                 ("explain_intraday_setup", {"symbol": sym_q}),
+                ("get_nse_intraday_snapshot", {"symbol": sym_q}),
                 ("get_intraday_analysis", {"symbol": sym_q}),
             ]}
+
+    technical_stock_terms = (
+        "technical setup", "indicators", "rsi", "adx", "macd", "supertrend",
+        "moving average", "sma", "weinstein stage", "rs rank", "relative strength"
+    )
+    if candidates and any(term in q for term in technical_stock_terms) and (" for " in f" {q} " or "setup" in q):
+        sym_q = candidates[0]
+        return {"intent": "stock_brief", "plan": [
+            ("resolve_symbol",       {"query": sym_q}),
+            ("get_symbol_snapshot",  {"symbol": sym_q.upper()}),
+            ("get_technical_setup",  {"symbol": sym_q.upper()}),
+            ("get_sector_context",   {"sector_or_symbol": sym_q.upper()}),
+        ]}
 
     # Index query
     index_words = ["nifty", "sensex", "bank nifty", "nifty it", "nifty 50"]
     if any(w in q for w in index_words):
         idx = "NIFTY BANK" if "bank" in q else ("NIFTY IT" if " it" in q else "NIFTY 50")
         return {"intent": "index_status", "plan": [("get_index_snapshot", {"index_name": idx})]}
-
-    # Breadth / market overview
-    breadth_words = ["breadth", "advance decline", "a/d", "market today", "market outlook",
-                     "nifty direction", "overall market", "how is market", "market status"]
-    if any(w in q for w in breadth_words):
-        return {"intent": "market_overview", "plan": [
-            ("get_market_breadth", {}),
-            ("get_index_snapshot", {"index_name": "NIFTY 50"}),
-        ]}
 
     # Screener queries
     if any(w in q for w in ["strong buy", "top buy", "buy signals", "best stocks"]):
@@ -712,15 +958,21 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict]) -> str:
     tech = _get("get_technical_setup")
     sec  = _get("get_sector_context")
     idx  = _get("get_index_snapshot")
+    live = _get("get_live_market_overview")
     brd  = _get("get_market_breadth")
     scr  = _get("run_screener_query")
+    strength = _get("validate_strength_watchlist")
+    knowledge = _get("search_market_knowledge")
     cat  = _get("search_latest_catalysts")
     res  = _get("resolve_symbol")
     glob = _get("get_global_market_assessment")
+    market_recap = _get("get_intraday_market_recap")
     intra_setup = _get("explain_intraday_setup")
     intra_screen = _get("run_intraday_screener")
+    intra_index_scan = _get("scan_intraday_market")
     intra_levels = _get("get_intraday_levels")
     intra_ind = _get("compute_intraday_indicators")
+    nse_intraday = _get("get_nse_intraday_snapshot")
     intra_legacy = _get("get_intraday_analysis")
 
     sym = (snap or {}).get("symbol") or (tech or {}).get("symbol") or ""
@@ -730,6 +982,66 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict]) -> str:
         lines.append(f"━━━ {cname} ({sym}) — Market Brief ━━━")
         snap_date = (snap or {}).get("snapshot_date", "N/A")
         lines.append(f"Data: EOD snapshot {snap_date}\n")
+
+    if market_recap and not market_recap.get("error"):
+        minutes = market_recap.get("minutes", 15)
+        lines.append(f"━━━ Last {minutes} Minutes — Market Recap ━━━")
+        lines.append(f"  {market_recap.get('narrative', 'Live market recap unavailable.')}")
+        rows = market_recap.get("rows") or []
+        if rows:
+            lines.append("\n▶ INDEX TAPE")
+            for row in rows:
+                current = row.get("current")
+                day_pct = row.get("current_pct_change")
+                interval_pct = row.get("interval_pct_change")
+                points = row.get("point_change")
+                if current is None:
+                    continue
+                interval_text = (
+                    f" | {points:+.2f} pts ({interval_pct:+.2f}%) vs stored {minutes}m tape"
+                    if isinstance(points, (int, float)) and isinstance(interval_pct, (int, float))
+                    else " | no earlier stored tape"
+                )
+                day_text = f" ({day_pct:+.2f}% day)" if isinstance(day_pct, (int, float)) else ""
+                lines.append(f"  {row.get('symbol')}: {float(current):,.2f}{day_text}{interval_text}")
+        adv_dec = market_recap.get("adv_dec") or {}
+        if adv_dec:
+            lines.append(
+                f"\n▶ LIVE BREADTH\n  {adv_dec.get('advances', '—')} advances / "
+                f"{adv_dec.get('declines', '—')} declines"
+            )
+        lines.append(f"\nSource: {market_recap.get('source', 'NSE live API')} | As of: {market_recap.get('as_of', '—')}")
+
+    if strength and not strength.get("error"):
+        lines.append("━━━ Validated Multi-Factor Strength ━━━")
+        lines.append(f"Data: EOD snapshot {strength.get('snapshot_date') or 'N/A'}")
+        lines.append(strength.get("validation_rule", "Missing evidence is not inferred."))
+        for row in strength.get("results", [])[:10]:
+            score = row.get("strength_score")
+            score_txt = f"{score:.1f}" if isinstance(score, (int, float)) else "N/A"
+            piot = row.get("piotroski_score")
+            piot_txt = f"{piot}/{row.get('piotroski_max')}" if piot is not None else "N/A"
+            missing = row.get("missing_evidence") or []
+            lines.append(
+                f"- {row.get('symbol')}: score {score_txt}; "
+                f"CANSLIM {row.get('can_slim_score') or 'N/A'}; "
+                f"RS {row.get('rs_pct') if row.get('rs_pct') is not None else 'N/A'}; "
+                f"Fund {row.get('enhanced_fund_score') or 'N/A'}; "
+                f"Piotroski {piot_txt}; "
+                f"Risk {row.get('overall_forensic_risk') or 'unknown'}; "
+                f"{row.get('verdict')}"
+            )
+            if missing:
+                lines.append(f"  Missing evidence: {', '.join(missing)}")
+        lines.append("\n━━━ Not investment advice. For research and learning only. ━━━")
+        return "\n".join([ln for ln in lines if ln is not None])
+
+    if knowledge:
+        answer = knowledge.get("answer_markdown")
+        if answer:
+            return str(answer)
+        if knowledge.get("error"):
+            return f"No reliable Investopedia or Wikipedia source was found: {knowledge['error']}"
 
     # 1. Snapshot
     if snap and not snap.get("error"):
@@ -747,10 +1059,14 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict]) -> str:
         lines.append(f"  MCap:   {snap.get('market_cap_cat','—')}")
         if snap.get("narrative"):
             lines.append(f"  Note:   {snap['narrative'][:120]}")
+        if snap.get("missing_evidence"):
+            lines.append(f"  Missing evidence: {', '.join(snap.get('missing_evidence') or [])}")
 
     # 2. Technical Setup
     if tech and not tech.get("error"):
         lines.append("\n▶ TECHNICAL SETUP")
+        if tech.get("technical_score") is not None:
+            lines.append(f"  Derived score: {tech.get('technical_score')} ({tech.get('score_method', 'derived')})")
         lines.append(f"  RSI:        {tech.get('rsi','—')}")
         lines.append(f"  ADX:        {tech.get('adx','—')}  (>25 = trending)")
         lines.append(f"  MACD:       {tech.get('macd','—')}")
@@ -779,7 +1095,28 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict]) -> str:
         if top5:
             lines.append("  Top peers:      " + ", ".join(s["symbol"] for s in top5[:5]))
 
-    # 4. Index / breadth
+    # 4. Live market overview / Index / breadth
+    if live and not live.get("error"):
+        lines.append("\n▶ LIVE MARKET")
+        indices = live.get("indices") or {}
+        for index_name in ("NIFTY 50", "NIFTY BANK", "NIFTY MIDCAP SELECT", "NIFTY MIDCAP 50", "NIFTY MIDCAP 100"):
+            row = indices.get(index_name)
+            if not row:
+                continue
+            last = row.get("last", row.get("close"))
+            pct = row.get("pct_change", row.get("chg_pct"))
+            if isinstance(last, (int, float)):
+                pct_txt = f"  ({pct:+.2f}%)" if isinstance(pct, (int, float)) else ""
+                lines.append(f"  {index_name}: {last:,.2f}{pct_txt}")
+        adv_dec = live.get("adv_dec") or {}
+        if adv_dec:
+            lines.append(
+                f"  Live breadth: {adv_dec.get('advances', '—')} advances / "
+                f"{adv_dec.get('declines', '—')} declines"
+            )
+        if live.get("as_of") or live.get("source"):
+            lines.append(f"  Source: {live.get('source', 'NSE live API')} | As of: {live.get('as_of', '—')}")
+
     if idx and not idx.get("error"):
         lines.append("\n▶ INDEX")
         lines.append(f"  {idx.get('index')}: {idx.get('close'):,.2f}  ({idx.get('chg_pct'):+.2f}%)")
@@ -787,13 +1124,25 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict]) -> str:
         lines.append(f"  10d trend: {t.get('chg_pct',0):+.2f}%  ({t.get('up_days',0)}/{len(t.get('closes',[]))-1} up-days)")
 
     if brd and not brd.get("error"):
-        lines.append("\n▶ MARKET BREADTH")
+        if live and not live.get("error"):
+            lines.append("\n▶ DB UNIVERSE CONTEXT")
+        else:
+            lines.append("\n▶ MARKET BREADTH")
         lines.append(f"  Advances: {brd.get('advances')}  Declines: {brd.get('declines')}  "
                      f"A/D ratio: {brd.get('ad_ratio')}")
         lines.append(f"  Universe avg RS: {brd.get('avg_rs_pct',0):+.1f}%")
         sd = brd.get("stage_distribution", {})
         if sd:
-            lines.append("  Stage dist: " + " | ".join(f"{k}: {v}" for k, v in sd.items()))
+            stage_parts = [
+                ("Stage 1", sd.get("STAGE_1", sd.get("stage_1", 0))),
+                ("Stage 2", sd.get("STAGE_2", sd.get("stage_2", 0))),
+                ("Stage 3", sd.get("STAGE_3", sd.get("stage_3", 0))),
+                ("Stage 4", sd.get("STAGE_4", sd.get("stage_4", 0))),
+            ]
+            unknown = sd.get("UNKNOWN", sd.get("unknown"))
+            if unknown:
+                stage_parts.append(("Unknown", unknown))
+            lines.append("  Stage dist: " + " | ".join(f"{label}: {int(value or 0)}" for label, value in stage_parts))
 
     # 4b. Global market assessment
     if glob and not glob.get("error"):
@@ -886,6 +1235,19 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict]) -> str:
         lines.append(f"  MACD hist:   {ind.get('macd_hist', '—')}")
         lines.append(f"  Supertrend:  {ind.get('supertrend_dir', '—')}")
 
+    if nse_intraday and not nse_intraday.get("error"):
+        lines.append("\n▶ NSE LIVE SNAPSHOT")
+        lines.append(f"  Symbol:      {nse_intraday.get('symbol', '—')}")
+        lines.append(f"  Source:      {nse_intraday.get('source', 'NSE website')}")
+        lines.append(f"  As of:       {nse_intraday.get('as_of', '—')}")
+        lines.append(f"  Last price:  ₹{nse_intraday.get('last_price', '—')}")
+        if nse_intraday.get("pct_change") is not None:
+            lines.append(f"  Change:      {nse_intraday.get('pct_change')}%")
+        lines.append(f"  Day range:   {nse_intraday.get('day_low', '—')} – {nse_intraday.get('day_high', '—')}")
+        if nse_intraday.get("vwap") is not None:
+            lines.append(f"  VWAP:        ₹{nse_intraday.get('vwap')}")
+        lines.append("  Framing:     NSE website live snapshot; not a full intraday candle series.")
+
     if (
         intra_legacy
         and not intra_legacy.get("error")
@@ -961,6 +1323,35 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict]) -> str:
                 f"S {row.get('support','—')} R {row.get('resistance','—')}"
             )
         lines.append("  Framing: Research-only setup labels; not buy/sell recommendations.")
+
+    if intra_index_scan and not intra_index_scan.get("error"):
+        buy = intra_index_scan.get("top_buy") or intra_index_scan.get("buy_signals") or []
+        sell = intra_index_scan.get("top_sell") or intra_index_scan.get("sell_signals") or []
+        lines.append("\n▶ INTRADAY INDEX SCAN")
+        lines.append(f"  Index:       {intra_index_scan.get('index', '—')}")
+        lines.append(f"  Timeframe:   {intra_index_scan.get('interval') or intra_index_scan.get('timeframe') or '—'}")
+        if intra_index_scan.get("data_source"):
+            lines.append(f"  Source:      {intra_index_scan.get('data_source')}")
+        lines.append(f"  Signals:     {len(buy)} long research setups | {len(sell)} short research setups")
+        for label, rows in (("Long", buy), ("Short", sell)):
+            if not rows:
+                continue
+            lines.append(f"  {label} setups:")
+            for sig in rows[:10]:
+                bits = [str(sig.get("symbol", "—"))]
+                if sig.get("strategy"):
+                    bits.append(str(sig.get("strategy")))
+                if sig.get("entry") is not None:
+                    bits.append(f"entry {sig.get('entry')}")
+                if sig.get("target") is not None:
+                    bits.append(f"target {sig.get('target')}")
+                invalidation = sig.get("stoploss", sig.get("invalidation_level"))
+                if invalidation is not None:
+                    bits.append(f"invalidation {invalidation}")
+                if sig.get("rr") is not None:
+                    bits.append(f"R:R {sig.get('rr')}")
+                lines.append("    - " + " | ".join(bits))
+        lines.append("  Framing: Research-only intraday scan; not buy/sell recommendations.")
 
     # 6. Catalysts
     if cat and cat.get("results"):
@@ -1084,12 +1475,12 @@ class Agent:
             mode        = "intraday"
             clean_input = user_input[len("/intraday "):].strip()
         else:
-            words = set(re.split(r"\W+", user_input.lower()))
             if _is_global_query(user_input.lower()):
                 mode = "global"
-            elif words & _INTRADAY_KEYWORDS:
+            elif _looks_like_intraday_query(user_input):
                 mode = "intraday"
 
+        market_context = market_context_for_agent()
         mode_context = (
             f"Data mode: {mode}. "
             + (
@@ -1100,25 +1491,55 @@ class Agent:
                "Use get_intraday_source_health first for calculations, then SQLite-backed "
                "get_intraday_bars, compute_intraday_indicators, get_intraday_levels, "
                "explain_intraday_setup, and run_intraday_screener. If SQLite intraday "
-               "tables are missing or stale for a single-stock deep dive, call "
-               "get_intraday_analysis as an explicit Yahoo Finance/EOD fallback, label "
-               "it clearly, and do not present fallback levels as SQLite/live-table data."
+               "tables are missing or stale for a single-stock/index deep dive, call "
+               "get_nse_intraday_snapshot first from the NSE website, then call "
+               "get_intraday_analysis only when OHLCV candle history is required. Label "
+               "yfinance/EOD fallback clearly, and do not present fallback levels as "
+               "SQLite/NSE live-table data."
                     if mode == "intraday"
                     else "Use EOD CSV and DB snapshot tools for historical/technical analysis."
                 )
             )
+            + f"\n\n{market_context}"
         )
         mode_sources = {
             "global": "cached global indices + correlations",
             "intraday": "SQLite intraday/live tables",
             "historical": "EOD CSV + DB snapshot",
         }
+        market_status = market_session_status()
         mode_suffix = (
             f"\n\n_Mode: {mode.title()} | Sources: "
-            f"{mode_sources.get(mode, 'EOD CSV + DB snapshot')}_"
+            f"{mode_sources.get(mode, 'EOD CSV + DB snapshot')} | "
+            f"Market: {market_status.compact_label} | "
+            f"Clock: {market_status.clock_label}_"
         )
 
         trace: list[dict] = []
+        intent_plan = _keyword_intent(clean_input, data_mode=mode)
+        if intent_plan.get("intent") == "market_overview":
+            mode_suffix = (
+                f"\n\n_Mode: {mode.title()} | Sources: NSE live API + DB breadth | "
+                f"Market: {market_status.compact_label} | "
+                f"Clock: {market_status.clock_label}_"
+            )
+        if intent_plan.get("intent") == "intraday_market_recap":
+            mode_suffix = (
+                f"\n\n_Mode: Intraday | Sources: NSE live API + intraday snapshots + DB breadth | "
+                f"Market: {market_status.compact_label} | "
+                f"Clock: {market_status.clock_label}_"
+            )
+        if intent_plan.get("intent") in {
+            "strength_validation", "market_knowledge", "stock_brief",
+            "market_overview", "intraday_index_scan", "intraday_screener",
+            "intraday_market_recap",
+        }:
+            trace.append({"step": "intent", "result": intent_plan})
+            tool_results = _execute_plan(intent_plan["plan"])
+            trace.extend(tool_results)
+            answer = _synthesize_no_llm(intent_plan["intent"], tool_results) + mode_suffix
+            return {"answer": answer, "trace": trace, "backend": self.backend_name,
+                    "intent": intent_plan["intent"]}
 
         # ── LLM path ──────────────────────────────────────────────────────────
         if self.backend is not None:
@@ -1129,7 +1550,6 @@ class Agent:
             return result
 
         # ── Keyword fallback path ──────────────────────────────────────────────
-        intent_plan = _keyword_intent(clean_input, data_mode=mode)
         trace.append({"step": "intent", "result": intent_plan})
 
         tool_results = _execute_plan(intent_plan["plan"])

@@ -16,6 +16,7 @@ pandas-ta>=0.3.14b
 
 # Database
 # sqlite3 is included in Python standard library
+psycopg2-binary>=2.9.9  # PostgreSQL loader used by daily_refresh.py step 7
 
 # Date/time handling
 # datetime is included in Python standard library
