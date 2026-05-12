@@ -586,6 +586,27 @@ def resolve_symbol(query: str) -> dict:
     """
     import requests as _req
     q = query.strip().upper()
+    # Guard: refuse to resolve well-known analytics/screener tokens that the
+    # LLM sometimes mistakes for tickers (e.g. "high RS stocks" → "RS").
+    # Tells the model exactly which screener to call instead.
+    _CONCEPT_TOKENS = {
+        "RS", "RSI", "PE", "PB", "EPS", "ROE", "ROCE", "EBITDA", "CAGR",
+        "ATH", "ATL", "IV", "OI", "PCR", "VCP", "ORB", "BB", "MACD",
+        "VWAP", "FII", "DII", "MF", "AMC", "CANSLIM", "CAN-SLIM",
+        "MOMENTUM", "BREAKOUT", "BREAKOUTS", "LEADERS", "BASING",
+        "TURNAROUND", "GAINERS", "LOSERS", "MOVERS",
+    }
+    if q in _CONCEPT_TOKENS:
+        return {
+            "symbol": None,
+            "confidence": "none",
+            "query": query,
+            "error": (
+                f"'{query}' is a market concept / screener keyword, not an NSE ticker. "
+                "Call run_screener_query (e.g. screen_type='high_rs', 'momentum_52w', "
+                "'stage2', 'turnaround') or search_market_knowledge instead."
+            ),
+        }
     local = _resolve_local_symbol(q)
     if local.get("symbol"):
         return local
@@ -1138,16 +1159,17 @@ def run_screener_query(screen_type: str = "stage2", top_n: int = 10) -> dict:
     }
 
     _pg_base_cols = (
-        "symbol, company_name, stage_score, investment_score, price, "
-        "relative_strength, change_1m_pct, rsi, trading_signal, sector"
+        "symbol, company_name, stage, stage_score, investment_score, technical_score, price, "
+        "COALESCE(relative_strength, change_1m_pct) AS relative_strength, "
+        "change_1m_pct, rsi, trading_signal, sector"
     )
     _pg_base_from = "FROM scores.stage_snapshots WHERE snapshot_date=%s"
     pg_query_map: dict[str, str] = {
         "stage2": f"SELECT {_pg_base_cols} {_pg_base_from} AND stage='STAGE_2' ORDER BY investment_score DESC NULLS LAST",
         "breakouts": f"SELECT {_pg_base_cols} {_pg_base_from} AND stage='STAGE_2' AND COALESCE(change_1m_pct,0)>3.0 AND COALESCE(rsi,0) BETWEEN 55 AND 85 AND supertrend_state='BULLISH' ORDER BY investment_score DESC NULLS LAST, change_1m_pct DESC NULLS LAST",
-        "supertrend_buy": f"SELECT symbol, company_name, stage_score, investment_score, price, relative_strength, change_1d_pct, rsi, trading_signal, sector {_pg_base_from} AND supertrend_state='BULLISH' AND stage IN ('STAGE_1','STAGE_2') ORDER BY investment_score DESC NULLS LAST, rsi DESC NULLS LAST",
-        "strong_buy": f"SELECT {_pg_base_cols} {_pg_base_from} AND trading_signal IN ('STRONG_BUY','BUY','HOLD') AND stage='STAGE_2' AND supertrend_state='BULLISH' ORDER BY investment_score DESC NULLS LAST",
-        "new_entrants": "SELECT s.symbol, s.company_name, s.stage_score, s.investment_score, s.price, s.relative_strength, s.change_1m_pct, s.rsi, s.trading_signal, s.sector FROM scores.stage_snapshots s LEFT JOIN scores.stage_changes c ON s.symbol=c.symbol AND c.stage_now='STAGE_2' AND c.stage_prev!='STAGE_2' WHERE s.snapshot_date=%s AND s.stage='STAGE_2' AND (c.change_date >= (%s::date - interval '14 days') OR c.change_date IS NULL) ORDER BY s.investment_score DESC NULLS LAST",
+        "supertrend_buy": f"SELECT symbol, company_name, stage, stage_score, investment_score, technical_score, price, COALESCE(relative_strength, change_1d_pct) AS relative_strength, change_1d_pct, rsi, trading_signal, sector {_pg_base_from} AND supertrend_state='BULLISH' AND stage IN ('STAGE_1','STAGE_2') ORDER BY investment_score DESC NULLS LAST, rsi DESC NULLS LAST",
+        "strong_buy": f"SELECT {_pg_base_cols} {_pg_base_from} AND trading_signal='STRONG_BUY' AND stage='STAGE_2' AND supertrend_state='BULLISH' ORDER BY investment_score DESC NULLS LAST",
+        "new_entrants": "SELECT s.symbol, s.company_name, s.stage, s.stage_score, s.investment_score, s.technical_score, s.price, COALESCE(s.relative_strength, s.change_1m_pct) AS relative_strength, s.change_1m_pct, s.rsi, s.trading_signal, s.sector FROM scores.stage_snapshots s LEFT JOIN scores.stage_changes c ON s.symbol=c.symbol AND c.stage_now='STAGE_2' AND c.stage_prev!='STAGE_2' WHERE s.snapshot_date=%s AND s.stage='STAGE_2' AND (c.change_date >= (%s::date - interval '14 days') OR c.change_date IS NULL) ORDER BY s.investment_score DESC NULLS LAST",
         "momentum_52w": f"SELECT {_pg_base_cols} {_pg_base_from} AND stage='STAGE_2' AND COALESCE(change_1m_pct,0)>5.0 AND COALESCE(rsi,0) BETWEEN 50 AND 85 AND supertrend_state='BULLISH' ORDER BY change_1m_pct DESC NULLS LAST, investment_score DESC NULLS LAST",
         "high_rs": f"SELECT {_pg_base_cols} {_pg_base_from} AND stage IN ('STAGE_2','STAGE_1') AND COALESCE(change_1m_pct,0)>8.0 AND COALESCE(rsi,0)>=55 ORDER BY change_1m_pct DESC NULLS LAST, investment_score DESC NULLS LAST",
         "turnaround": f"SELECT {_pg_base_cols} {_pg_base_from} AND stage IN ('STAGE_1','STAGE_2') AND COALESCE(change_1m_pct,0)>5.0 AND COALESCE(rsi,0) BETWEEN 40 AND 65 AND COALESCE(investment_score,0)<60 ORDER BY change_1m_pct DESC NULLS LAST, investment_score DESC NULLS LAST",
@@ -1162,7 +1184,7 @@ def run_screener_query(screen_type: str = "stage2", top_n: int = 10) -> dict:
     try:
         params = (snap_date, snap_date, top_n) if screen_key == "new_entrants" else (snap_date, top_n)
         rows = _pg_fetchall(pg_query_map[screen_key] + " LIMIT %s", params)
-        cols = ["symbol","company_name","stage_score","investment_score","price",
+        cols = ["symbol","company_name","stage","stage_score","investment_score","technical_score","price",
                 "relative_strength","change","rsi","trading_signal","sector"]
         stocks = []
         for r in rows:
@@ -1187,8 +1209,9 @@ def run_screener_query(screen_type: str = "stage2", top_n: int = 10) -> dict:
     conn = _db_conn()
 
     _base_cols = (
-        "symbol, company_name, stage_score, investment_score, price, "
-        "relative_strength, change_1m_pct, rsi, trading_signal, sector"
+        "symbol, company_name, stage, stage_score, investment_score, technical_score, price, "
+        "COALESCE(relative_strength, change_1m_pct) AS relative_strength, "
+        "change_1m_pct, rsi, trading_signal, sector"
     )
     _base_from = "FROM stage_snapshots WHERE snapshot_date=?"
 
@@ -1206,20 +1229,21 @@ def run_screener_query(screen_type: str = "stage2", top_n: int = 10) -> dict:
             "ORDER BY investment_score DESC, change_1m_pct DESC"
         ),
         "supertrend_buy": (
-            "SELECT symbol, company_name, stage_score, investment_score, price, "
-            "relative_strength, change_1d_pct, rsi, trading_signal, sector "
+            "SELECT symbol, company_name, stage, stage_score, investment_score, technical_score, price, "
+            "COALESCE(relative_strength, change_1d_pct) AS relative_strength, change_1d_pct, rsi, trading_signal, sector "
             f"{_base_from} AND supertrend_state='BULLISH' "
             "AND stage IN ('STAGE_1','STAGE_2') "
             "ORDER BY investment_score DESC, rsi DESC"
         ),
         "strong_buy": (
-            f"SELECT {_base_cols} {_base_from} AND trading_signal IN ('STRONG_BUY','BUY','HOLD') "
+            f"SELECT {_base_cols} {_base_from} AND trading_signal='STRONG_BUY' "
             "AND stage='STAGE_2' AND supertrend_state='BULLISH' "
             "ORDER BY investment_score DESC"
         ),
         "new_entrants": (
-            "SELECT s.symbol, s.company_name, s.stage_score, s.investment_score, "
-            "s.price, s.relative_strength, s.change_1m_pct, s.rsi, s.trading_signal, s.sector "
+            "SELECT s.symbol, s.company_name, s.stage, s.stage_score, s.investment_score, "
+            "s.technical_score, s.price, COALESCE(s.relative_strength, s.change_1m_pct) AS relative_strength, "
+            "s.change_1m_pct, s.rsi, s.trading_signal, s.sector "
             "FROM stage_snapshots s "
             "LEFT JOIN stage_changes c ON s.symbol=c.symbol AND c.stage_now='STAGE_2' "
             "AND c.stage_prev != 'STAGE_2' "
@@ -1296,7 +1320,7 @@ def run_screener_query(screen_type: str = "stage2", top_n: int = 10) -> dict:
         return {"error": f"Unknown screener: {screen_type}", "available": available}
 
     sql = query_map[screen_key]
-    cols = ["symbol","company_name","stage_score","investment_score","price",
+    cols = ["symbol","company_name","stage","stage_score","investment_score","technical_score","price",
             "relative_strength","change","rsi","trading_signal","sector"]
 
     if screen_key in _multi_param_keys:

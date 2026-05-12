@@ -455,15 +455,15 @@ def render_screener_results(data: dict | list, title: str = "Screener Results") 
         stage  = str(r.get("stage") or r.get("stage_analysis") or "—")
         signal = str(r.get("trading_signal") or r.get("signal") or "—")
         score  = r.get("investment_score") or r.get("technical_score") or r.get("score")
-        rs     = r.get("relative_strength") or r.get("rs")
+        rs     = r.get("rs_pct") if r.get("rs_pct") is not None else (r.get("relative_strength") if r.get("relative_strength") is not None else r.get("rs"))
         rsi    = r.get("rsi")
         sector = (r.get("sector") or "")[:16]
 
         stage_t  = Text(stage,  style=_stage_style(stage))
         signal_t = Text(signal, style=_signal_style(signal))
         score_t  = Text(f"{score:.0f}" if score is not None else "—", style=_score_style(score))
-        rs_t     = Text(f"{rs:.2f}" if rs is not None else "—",
-                        style="green" if (rs or 0) > 1 else "red" if (rs or 0) < 0.8 else "yellow")
+        rs_t     = Text(f"{rs:+.1f}%" if rs is not None else "—",
+                        style="green" if (rs or 0) > 0 else "red" if (rs or 0) < 0 else "yellow")
         rsi_t    = Text(f"{rsi:.0f}" if rsi is not None else "—",
                         style="green" if 50 < (rsi or 0) < 70 else "red" if (rsi or 0) < 30 else "yellow")
 
