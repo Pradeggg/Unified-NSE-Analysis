@@ -517,6 +517,7 @@ def _lookup_key(value: str) -> str:
 def _resolve_local_symbol(query: str) -> dict:
     """Resolve a symbol/name from local DB aliases without network access."""
     q = str(query or "").strip().upper()
+    strict_exact_ticker = bool(re.fullmatch(r"[A-Z0-9&-]{2,12}", str(query or "").strip()))
     q_key = _lookup_key(q)
     if not q_key:
         return {"symbol": None, "confidence": "none", "query": query}
@@ -539,7 +540,7 @@ def _resolve_local_symbol(query: str) -> dict:
     for key_norm, (key, sym) in normalized.items():
         if q_key in key_norm or key_norm in q_key:
             contains_hits.append((abs(len(key_norm) - len(q_key)), key, sym))
-    if contains_hits:
+    if contains_hits and not strict_exact_ticker:
         contains_hits.sort(key=lambda x: x[0])
         best = contains_hits[0][2]
         return {
@@ -588,6 +589,13 @@ def resolve_symbol(query: str) -> dict:
     local = _resolve_local_symbol(q)
     if local.get("symbol"):
         return local
+    if re.fullmatch(r"[A-Z0-9&-]{2,12}", query.strip()):
+        return {
+            "symbol": None,
+            "confidence": "none",
+            "query": query,
+            "error": f"No exact NSE symbol found for '{query}'",
+        }
 
     # Fall back to NSE live search API
     try:
@@ -3054,6 +3062,8 @@ def _market_knowledge_search_query(query: str) -> str:
         return "return on capital employed finance"
     if "roe" in q:
         return "return on equity finance"
+    if "rsi" in q:
+        return "relative strength index technical analysis"
     if "minervini" in q:
         return "Mark Minervini trading strategy volatility contraction pattern"
     return query
@@ -3070,6 +3080,8 @@ def _market_knowledge_wikipedia_titles(query: str) -> list[str]:
         return ["Return on capital employed"]
     if "roe" in q and "roce" not in q:
         return ["Return on equity"]
+    if "rsi" in q:
+        return ["Relative strength index"]
     return []
 
 
@@ -3689,32 +3701,53 @@ def get_intraday_market_recap(minutes: int = 15) -> dict:
         conn = psycopg2.connect("dbname=nse_market user=nse_admin host=/tmp")
         try:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                max_age_minutes = minutes + 10
+                # PG-recap-fix: previously this query required snapshots inside a
+                # narrow [minutes, minutes+10] slice, which was almost always empty
+                # because intraday.quote_snapshots is populated sporadically (only
+                # when /briefing or recap is invoked). The new logic takes the
+                # most recent snapshot at or before now() - minutes; if none exists
+                # we fall back to the second-most-recent snapshot per symbol so the
+                # user still sees a "since last refresh" delta instead of an empty
+                # narrative.
+                symbols = [row["symbol"] for row in current_rows]
                 cur.execute(
                     """
-                    WITH ranked AS (
-                        SELECT
-                            symbol,
-                            as_of,
-                            captured_at,
-                            last_price,
-                            pct_change,
-                            row_number() OVER (
-                                PARTITION BY symbol
-                                ORDER BY captured_at DESC
-                            ) AS rn
-                        FROM intraday.quote_snapshots
-                        WHERE symbol = ANY(%s)
-                          AND captured_at <= now() - (%s::text || ' minutes')::interval
-                          AND captured_at >= now() - (%s::text || ' minutes')::interval
+                    WITH bound AS (
+                        SELECT  symbol, MAX(captured_at) AS captured_at
+                        FROM    intraday.quote_snapshots
+                        WHERE   symbol = ANY(%s)
+                          AND   captured_at <= now() - (%s::text || ' minutes')::interval
+                        GROUP   BY symbol
                     )
-                    SELECT symbol, as_of, captured_at, last_price, pct_change
-                    FROM ranked
-                    WHERE rn = 1
+                    SELECT  q.symbol, q.as_of, q.captured_at, q.last_price, q.pct_change
+                    FROM    intraday.quote_snapshots q
+                    JOIN    bound b
+                           ON b.symbol = q.symbol AND b.captured_at = q.captured_at
                     """,
-                    ([row["symbol"] for row in current_rows], str(minutes), str(max_age_minutes)),
+                    (symbols, str(minutes)),
                 )
                 prior_map = {str(row["symbol"]): dict(row) for row in cur.fetchall()}
+
+                # Fallback: any symbol still missing → use the snapshot just
+                # before the most recent one (i.e. the previous tape).
+                missing = [s for s in symbols if s not in prior_map]
+                if missing:
+                    cur.execute(
+                        """
+                        WITH ranked AS (
+                            SELECT symbol, as_of, captured_at, last_price, pct_change,
+                                   row_number() OVER (PARTITION BY symbol
+                                                      ORDER BY captured_at DESC) AS rn
+                            FROM   intraday.quote_snapshots
+                            WHERE  symbol = ANY(%s)
+                        )
+                        SELECT symbol, as_of, captured_at, last_price, pct_change
+                        FROM   ranked WHERE rn = 2
+                        """,
+                        (missing,),
+                    )
+                    for row in cur.fetchall():
+                        prior_map[str(row["symbol"])] = dict(row)
         finally:
             conn.close()
     except Exception:
@@ -6116,6 +6149,7 @@ def _postgres_options_chain_summary(symbol: str, expiry_index: int = 0) -> dict:
         df = get_eod_option_chain(symbol, expiry_date=expiry)
         if df.empty:
             return {"error": f"No PostgreSQL EOD options data for {symbol}", "source": "postgres-eod"}
+        trade_dates = df["trade_date"].dropna().astype(str).unique().tolist() if "trade_date" in df.columns else []
 
         calls: list[dict] = []
         puts: list[dict] = []
@@ -6167,6 +6201,7 @@ def _postgres_options_chain_summary(symbol: str, expiry_index: int = 0) -> dict:
             "total_call_oi": total_call_oi,
             "total_put_oi": total_put_oi,
             "source": "postgres-eod",
+            "as_of": trade_dates[0] if trade_dates else None,
         }
     except Exception as exc:
         return {"error": f"PostgreSQL options fallback failed: {exc}", "source": "postgres-eod"}

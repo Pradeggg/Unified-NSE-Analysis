@@ -91,7 +91,7 @@ You have access to these data tools (call them as needed):
                                         technical (stage, RSI, RS, scores, signals) AND
                                         fundamental (P/E, P/B, ROE, ROCE, div yield) metrics
 
-[Intraday screener tools — primary path uses SQLite intraday/live tables; legacy yfinance tools remain available]
+[Intraday screener tools — quote/index recap tape lives in PostgreSQL intraday.quote_snapshots (refreshed every 60s by the background capture daemon); SQLite intraday_ohlcv supplies bar/candle history; legacy yfinance tools remain available]
 • get_intraday_source_health()        → SQLite intraday table health and freshness
 • get_intraday_bars(symbol, timeframe)→ Raw SQLite intraday OHLCV bars
 • get_intraday_levels(symbol,         → Support, resistance, pivots, EMA levels from
@@ -506,10 +506,13 @@ Keep 3 razor-sharp tool-aware follow-up questions anchored to what was reported 
 # ─────────────────────────────────────────────────────────────────────────────
 
 class _OpenAIBackend:
-    def __init__(self):
+    def __init__(self, model: str | None = None, api_key: str | None = None):
         from openai import OpenAI
-        self.client = OpenAI(api_key=OPENAI_API_KEY)
-        self.model  = OPENAI_MODEL
+        key = api_key if api_key is not None else os.getenv("OPENAI_API_KEY", OPENAI_API_KEY)
+        if not key:
+            raise RuntimeError("OPENAI_API_KEY not set")
+        self.client = OpenAI(api_key=key)
+        self.model  = model or os.getenv("OPENAI_MODEL", OPENAI_MODEL)
 
     def chat(self, messages: list[dict], tools: list[dict] | None = None) -> dict:
         kwargs: dict[str, Any] = {"model": self.model, "messages": messages}
@@ -553,11 +556,11 @@ class _OpenAIBackend:
 class _OllamaBackend:
     """Ollama REST backend — uses /api/chat with tool support if model supports it."""
 
-    def __init__(self):
+    def __init__(self, model: str | None = None, host: str | None = None):
         import requests
         self.requests = requests
-        self.host     = OLLAMA_HOST.rstrip("/")
-        self.model    = OLLAMA_MODEL
+        self.host     = (host or os.getenv("OLLAMA_HOST", OLLAMA_HOST)).rstrip("/")
+        self.model    = model or os.getenv("OLLAMA_MODEL", OLLAMA_MODEL)
         # Check connection
         self.requests.get(f"{self.host}/api/tags", timeout=3)
 
@@ -599,8 +602,16 @@ class _OllamaBackend:
         }
 
 
+def _backend_name(backend: _OpenAIBackend | _OllamaBackend | None) -> str:
+    if isinstance(backend, _OpenAIBackend):
+        return f"OpenAI ({backend.model})"
+    if isinstance(backend, _OllamaBackend):
+        return f"Ollama ({backend.model})"
+    return "Keyword (no LLM)"
+
+
 def _detect_backend() -> _OpenAIBackend | _OllamaBackend | None:
-    if OPENAI_API_KEY:
+    if os.getenv("OPENAI_API_KEY", OPENAI_API_KEY):
         try:
             return _OpenAIBackend()
         except Exception:
@@ -639,6 +650,15 @@ def _routing_query_text(query: str) -> str:
         flags=re.I | re.S,
     )
     return match.group(1).strip() if match else text
+
+
+def _is_greeting_query(q: str) -> bool:
+    cleaned = re.sub(r"[^\w\s]", " ", q or "").strip().lower()
+    cleaned = re.sub(r"\s+", " ", cleaned)
+    return cleaned in {
+        "hello", "hi", "hey", "hey there", "hi there", "hello there",
+        "good morning", "good afternoon", "good evening",
+    }
 
 
 def _extract_intraday_timeframe(q: str) -> str:
@@ -721,16 +741,248 @@ def _is_market_knowledge_query(query: str) -> bool:
     if q.startswith("/compare"):
         return any(term in q for term in _MARKET_KNOWLEDGE_TERMS)
 
-    education_prefix = q.startswith(("what is ", "what are ", "define ", "explain ", "how is ", "how are "))
+    education_prefix = q.startswith((
+        "what is ", "what are ", "define ", "explain ", "how is ", "how are ",
+        "teach me ", "help me understand ",
+    ))
     comparison_phrase = any(phrase in q for phrase in (" different from ", " difference between ", " vs ", " versus "))
     has_market_term = any(term in q for term in _MARKET_KNOWLEDGE_TERMS) or bool(re.search(r"\bpe\b", q))
     return has_market_term and (education_prefix or comparison_phrase)
+
+
+def _primary_symbol_query(candidates: list[str], symbol_candidates: list[str]) -> str:
+    """Choose the most explicit stock entity from a routed user query.
+
+    Uppercase NSE-like ticker tokens are stronger evidence than prose labels
+    such as "Earnings", "Teach", or "End-to-end". This keeps deterministic
+    routes from handing common task words to resolve_symbol().
+    """
+    if symbol_candidates:
+        return symbol_candidates[0]
+    return candidates[0] if candidates else ""
+
+
+def _planner_task(
+    task_id: str,
+    question: str,
+    *,
+    tool: str | None = None,
+    args: dict | None = None,
+    derived_from: str | None = None,
+    fallback: str = "",
+    recovery_plan: str = "",
+) -> dict:
+    return {
+        "id": task_id,
+        "question": question,
+        "tool": tool,
+        "args": args or {},
+        "derived_from": derived_from,
+        "fallback": fallback,
+        "recovery_plan": recovery_plan,
+    }
+
+
+def _planner_execution_plan(tasks: list[dict]) -> list[tuple[str, dict]]:
+    plan: list[tuple[str, dict]] = []
+    seen: set[tuple[str, str]] = set()
+    for task in tasks:
+        tool = task.get("tool")
+        if not tool:
+            continue
+        args = dict(task.get("args") or {})
+        key = (tool, json.dumps(args, sort_keys=True))
+        if key in seen:
+            continue
+        seen.add(key)
+        plan.append((tool, args))
+    return plan
+
+
+def _build_market_situation_assessment_plan(query: str, data_mode: str = "historical") -> dict | None:
+    q = _routing_query_text(query).lower()
+    market_terms = ("market", "nifty", "indices", "index", "breadth", "advance", "decline")
+    status_terms = ("current", "status", "today", "now", "live", "how is")
+    mover_terms = ("top gainer", "top gainers", "gainers", "losers", "movers", "top stocks", "top indices")
+    flow_terms = ("fii", "dii", "institutional", "flows", "foreign investors")
+    news_terms = ("news", "catalyst", "event", "headline")
+
+    wants_market = any(term in q for term in market_terms)
+    wants_status = any(term in q for term in status_terms)
+    wants_movers = any(term in q for term in mover_terms)
+    wants_breadth = "breadth" in q or "advance" in q or "decline" in q
+    wants_flows = any(term in q for term in flow_terms)
+    wants_news = any(term in q for term in news_terms)
+
+    if not wants_market or not (wants_status or wants_breadth or wants_movers or wants_flows):
+        return None
+
+    tasks = [
+        _planner_task(
+            "current-index-status",
+            "Fetch current Indian index levels and live session breadth.",
+            tool="get_live_market_overview",
+            fallback="NSE live API equity-stockIndices endpoints; if unavailable, label data stale and use latest EOD index snapshot.",
+            recovery_plan="If the tool is missing, implement a wrapper over nseindia.com index APIs and normalize last, pct_change, advances, declines, and as_of.",
+        ),
+        _planner_task(
+            "db-universe-breadth",
+            "Fetch database-backed market breadth and stage distribution.",
+            tool="get_market_breadth",
+            fallback="Query PostgreSQL scores.stage_snapshots or scores.mv_latest_daily for advances, declines, stage distribution, and average RS.",
+            recovery_plan="If no tool exists, add a PostgreSQL query helper that aggregates latest score_date/snapshot_date from scores.*.",
+        ),
+    ]
+
+    if wants_movers:
+        tasks.append(
+            _planner_task(
+                "top-stock-movers",
+                "Fetch top gaining and losing stocks from the broad NSE universe.",
+                tool="get_top_gainers_losers",
+                args={"index": "NIFTY 500", "top_n": 5, "direction": "both"},
+                fallback="Use NSE equity-stockIndices for NIFTY 500; if live source fails, derive movers from market.equity_eod latest daily percent change.",
+                recovery_plan="If no tool exists, implement an NSE variations/equity-stockIndices client with PostgreSQL EOD fallback.",
+            )
+        )
+        tasks.append(
+            _planner_task(
+                "top-index-movers",
+                "Derive top gaining and losing indices from the live market overview result.",
+                derived_from="get_live_market_overview",
+                fallback="If overview lacks full index list, query NSE allIndices or cached global/index snapshots.",
+                recovery_plan="If derivation is insufficient, add get_top_index_movers to fetch and rank all NSE index rows directly.",
+            )
+        )
+
+    if wants_flows:
+        tasks.append(
+            _planner_task(
+                "institutional-flows",
+                "Fetch latest FII/DII institutional activity.",
+                tool="get_fii_dii_activity",
+                fallback="Use cached fetch_fii_dii_flows output or PostgreSQL market.fii_dii_flows if live NSE endpoint is unavailable.",
+                recovery_plan="If no tool exists, add a PostgreSQL-first flow reader with NSE refresh fallback.",
+            )
+        )
+
+    if wants_news:
+        tasks.append(
+            _planner_task(
+                "latest-market-catalysts",
+                "Search current market catalysts and news affecting Indian indices.",
+                tool="search_latest_catalysts",
+                args={"symbol": "NIFTY India market news today"},
+                fallback="Search NSE, Moneycontrol, Economic Times, and cached report notes.",
+                recovery_plan="If no search tool exists, implement a source-specific news search adapter and store results with URLs.",
+            )
+        )
+
+    return {
+        "kind": "market_situation_assessment",
+        "tasks": tasks,
+        "execution_order": [task["id"] for task in tasks],
+        "mode": data_mode,
+    }
+
+
+def _extract_fno_symbol(query: str) -> str:
+    """Extract an index/stock symbol for F&O tools without treating F&O terms as symbols."""
+    text = query or ""
+    q = text.lower()
+    if "banknifty" in q or "bank nifty" in q or "nifty bank" in q:
+        return "BANKNIFTY"
+    if "finnifty" in q or "fin nifty" in q:
+        return "FINNIFTY"
+    if "midcpnifty" in q or "midcap nifty" in q:
+        return "MIDCPNIFTY"
+    if "nifty" in q:
+        return "NIFTY"
+
+    skip = {
+        "F", "O", "FO", "FNO", "AND", "FOR", "THE", "WITH", "GIVE", "COMPREHENSIVE",
+        "OVERVIEW", "OPTION", "OPTIONS", "CHAIN", "PCR", "MAX", "PAIN", "TOP", "OI",
+        "STRIKES", "FUTURES", "BASIS", "COST", "CARRY", "ROLL", "ROLLOVER", "RECOMMEND",
+        "BEST", "STRATEGY", "CURRENT", "DATA", "OPEN", "INTEREST",
+    }
+    for token in re.findall(r"\b[A-Z][A-Z0-9&-]{1,12}\b", text):
+        clean = token.upper()
+        if clean not in skip:
+            return clean
+    return "NIFTY"
 
 
 def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
     """Detect intent and build a tool plan from keywords alone."""
     routing_text = _routing_query_text(query)
     q = routing_text.lower()
+
+    if _is_greeting_query(q):
+        return {"intent": "greeting", "plan": []}
+
+    if _is_morning_briefing_query(q):
+        return {
+            "intent": "startup_morning_briefing",
+            "plan": [
+                ("get_global_market_assessment", {}),
+                ("get_index_snapshot", {"index_name": "NIFTY 50"}),
+                ("get_index_snapshot", {"index_name": "NIFTY BANK"}),
+                ("get_live_market_overview", {}),
+                ("get_market_breadth", {}),
+                ("get_top_gainers_losers", {"index": "NIFTY 50", "top_n": 3, "direction": "both"}),
+                ("get_fii_dii_activity", {}),
+                ("search_latest_catalysts", {"symbol": "NIFTY India market global cues GIFT Nifty crude USDINR"}),
+            ],
+        }
+
+    if data_mode == "intraday" and "intraday" in q and re.search(r"\bnifty\s*50\b|\bnifty50\b|\bnifty\b", q):
+        symbol = "BANKNIFTY" if ("bank nifty" in q or "nifty bank" in q or "banknifty" in q) else "NIFTY50"
+        return {"intent": "intraday_setup", "plan": [
+            ("resolve_symbol", {"query": symbol}),
+            ("explain_intraday_setup", {"symbol": symbol}),
+            ("get_nse_intraday_snapshot", {"symbol": symbol}),
+            ("get_intraday_analysis", {"symbol": symbol}),
+        ]}
+
+    if "sector" in q and re.search(r"\bit\b|information technology", q):
+        return {"intent": "sector_scan", "plan": [("get_sector_context", {"sector_or_symbol": "IT"})]}
+
+    if "dashboard" in q and any(term in q for term in ("market", "nifty", "india", "current", "narrative")):
+        return {
+            "intent": "market_dashboard",
+            "plan": [
+                ("get_live_market_overview", {}),
+                ("get_market_breadth", {}),
+                ("get_top_gainers_losers", {"index": "NIFTY 500", "top_n": 5, "direction": "both"}),
+                ("get_fii_dii_activity", {}),
+                ("get_global_market_assessment", {}),
+                ("search_latest_catalysts", {"symbol": "NIFTY India market today"}),
+            ],
+        }
+
+    assessment_plan = _build_market_situation_assessment_plan(query, data_mode=data_mode)
+    if assessment_plan:
+        return {
+            "intent": "market_situation_assessment",
+            "plan": _planner_execution_plan(assessment_plan["tasks"]),
+            "assessment_plan": assessment_plan,
+        }
+
+    fno_terms = (
+        "f&o", "fno", "option chain", "options chain", "option data", "options data",
+        "pcr", "put call", "put-call", "max pain", "open interest", " oi ",
+        "top oi", "futures basis", "cost of carry", "rollover", "futures premium",
+        "futures discount",
+    )
+    if any(term in f" {q} " for term in fno_terms):
+        symbol = _extract_fno_symbol(routing_text)
+        plan = [
+            ("get_options_chain", {"symbol": symbol, "expiry_index": 0}),
+            ("get_futures_analysis", {"symbol": symbol}),
+        ]
+        if any(term in q for term in ("strategy", "recommend", "best options", "options play")):
+            plan.append(("get_strategy_recommendations", {"symbol": symbol}))
+        return {"intent": "fno_overview", "plan": plan}
 
     if _is_market_knowledge_query(query):
         return {
@@ -752,6 +1004,10 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
         "a/d", "market today", "market outlook", "nifty direction",
         "overall market", "how is market", "market status",
     ]
+    mover_words = [
+        "top gainer", "top gainers", "gainers", "losers", "movers",
+        "top stocks", "top indices", "indices", "index movers",
+    ]
     recent_market_words = [
         "what happened", "what changed", "last 15", "last 30", "last 5",
         "last few minutes", "last minutes", "recent move", "just now",
@@ -762,21 +1018,64 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
             ("get_market_breadth", {}),
         ]}
     if any(w in q for w in breadth_words) or q.strip() in {"overview", "market"}:
-        return {"intent": "market_overview", "plan": [
+        plan = [
             ("get_live_market_overview", {}),
             ("get_market_breadth", {}),
-        ]}
+        ]
+        if any(w in q for w in mover_words):
+            plan.append(("get_top_gainers_losers", {"index": "NIFTY 500", "top_n": 5, "direction": "both"}))
+        return {"intent": "market_overview", "plan": plan}
 
     words = re.findall(r"[A-Za-z][A-Za-z0-9\-&\.]+", routing_text)
     skip  = {"show","me","the","latest","on","for","what","is","how","tell",
-              "about","give","setup","stock","stocks","nse","india","market","today","brief","full",
+              "about","give","setup","stock","stocks","sector","nse","india","market","today","brief","full",
               "overview","intraday","levels","level","support","resistance","screener","scan",
               "deep","dive","analysis","technical","trade","trading","of",
               "answer","analyze","analyse","this","spoken","question","your","read","view",
               "after","before","results","result","concise","evidence","aware","risk","first",
-              "research","only","include","context","watch","next",
-              "happened","changed","change","last","minute","minutes","min","few"}
+              "research","only","include","context","watch","next","hello","hi","hey",
+              "happened","changed","change","last","minute","minutes","min","few",
+              "compare","vs","versus","from","perspective","into","including","combine",
+              "fundamental","fundamentals","forensic","red","flags","flag",
+              "own","portfolio","holding","holdings","monitor","should"}
     candidates = [w for w in words if w.lower() not in skip and len(w) >= 2]
+
+    symbol_candidates = [
+        w.upper()
+        for w in candidates
+        if re.fullmatch(r"[A-Z0-9&-]{2,12}", w.upper())
+        and (
+            w == w.upper()
+            or any(ch.isdigit() for ch in w)
+            or ("&" in w and w == w.upper())
+            or ("-" in w and w == w.upper())
+        )
+    ]
+
+    is_single_stock_technical_setup = (
+        "technical setup for" in q
+        or re.search(r"\b(full|detailed|complete)\s+technical\b.*\bfor\b", q)
+    )
+    if (
+        not is_single_stock_technical_setup
+        and any(term in q for term in ("compare", " vs ", " versus "))
+        and len(symbol_candidates) >= 2
+    ):
+        aspects = ["both"]
+        if "technical" in q and not any(term in q for term in ("fundamental", "ratio", "valuation")):
+            aspects = ["technical"]
+        elif any(term in q for term in ("fundamental", "ratio", "valuation")) and "technical" not in q:
+            aspects = ["fundamental"]
+        return {
+            "intent": "stock_comparison",
+            "plan": [("compare_stocks", {"symbols": symbol_candidates[:5], "aspects": aspects})],
+        }
+
+    if any(term in q for term in ("i own", "my portfolio", "portfolio", "holdings", "holding")) and symbol_candidates:
+        return {
+            "intent": "portfolio_review",
+            "plan": [("generate_portfolio_narratives", {"symbols": symbol_candidates[:10], "top_n": min(len(symbol_candidates), 10)})],
+        }
 
     strength_terms = ("canslim", "can slim", "rs", "relative strength", "fundamental", "piotroski", "petroski")
     if sum(1 for term in strength_terms if term in q) >= 2 and any(w in q for w in ("strength", "strong", "which", "rank", "out of")):
@@ -831,7 +1130,7 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
         if any(w in q for w in ["momentum", "movers", "leaders", "scan", "screener"]):
             return {"intent": "intraday_screener", "plan": [("run_intraday_screener", {"screen_type": "momentum"})]}
         if any(w in q for w in ["level", "levels", "support", "resistance", "pivot"]):
-            sym_q = candidates[0] if candidates else ""
+            sym_q = _primary_symbol_query(candidates, symbol_candidates)
             return {"intent": "intraday_levels", "plan": [
                 ("resolve_symbol", {"query": sym_q}),
                 ("get_intraday_levels", {"symbol": sym_q}),
@@ -839,7 +1138,7 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
                 ("get_intraday_analysis", {"symbol": sym_q}),
             ]}
         if candidates:
-            sym_q = candidates[0]
+            sym_q = _primary_symbol_query(candidates, symbol_candidates)
             return {"intent": "intraday_setup", "plan": [
                 ("resolve_symbol", {"query": sym_q}),
                 ("explain_intraday_setup", {"symbol": sym_q}),
@@ -852,7 +1151,7 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
         "moving average", "sma", "weinstein stage", "rs rank", "relative strength"
     )
     if candidates and any(term in q for term in technical_stock_terms) and (" for " in f" {q} " or "setup" in q):
-        sym_q = candidates[0]
+        sym_q = _primary_symbol_query(candidates, symbol_candidates)
         return {"intent": "stock_brief", "plan": [
             ("resolve_symbol",       {"query": sym_q}),
             ("get_symbol_snapshot",  {"symbol": sym_q.upper()}),
@@ -882,9 +1181,26 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
     if any(w in q for w in ["data health", "data fresh", "stale", "last update", "when was"]):
         return {"intent": "data_health", "plan": [("get_data_health", {})]}
 
+    if any(
+        phrase in q
+        for phrase in [
+            "upcoming events", "event calendar", "events this week", "corporate action",
+            "corporate actions", "upcoming results", "results this week", "board meeting",
+            "dividend", "agm", "ex-date", "ex date",
+        ]
+    ) or ("events" in q and any(term in q for term in ("results", "corporate", "actions", "week", "watch"))):
+        return {
+            "intent": "event_calendar",
+            "plan": [("get_event_calendar_summary", {"index": "NIFTY 50", "days_ahead": 14})],
+        }
+
     # Reports
     if any(w in q for w in ["report", "html", "generated", "latest report"]):
         return {"intent": "report_lookup", "plan": [("find_latest_report", {})]}
+
+    if "sector context" in q and candidates:
+        sym_q = _primary_symbol_query(candidates, symbol_candidates)
+        return {"intent": "sector_scan", "plan": [("get_sector_context", {"sector_or_symbol": sym_q.upper()})]}
 
     # Sector queries
     sector_words = ["sector", "pharma", "it sector", "auto sector", "bank sector",
@@ -896,7 +1212,7 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
 
     # Stock-specific query — extract likely symbol
     if candidates:
-        sym_q = candidates[0]
+        sym_q = _primary_symbol_query(candidates, symbol_candidates)
         plan = [
             ("resolve_symbol",       {"query": sym_q}),
             ("get_symbol_snapshot",  {"symbol": sym_q.upper()}),
@@ -944,7 +1260,7 @@ def _execute_plan(plan: list[tuple[str, dict]]) -> list[dict]:
 # Response synthesis (no-LLM path)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _synthesize_no_llm(intent: str, tool_results: list[dict]) -> str:
+def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: dict | None = None) -> str:
     """Build a structured text response from tool results without an LLM."""
     lines: list[str] = []
 
@@ -966,7 +1282,14 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict]) -> str:
     cat  = _get("search_latest_catalysts")
     res  = _get("resolve_symbol")
     glob = _get("get_global_market_assessment")
+    movers = _get("get_top_gainers_losers")
+    comparison = _get("compare_stocks")
+    portfolio_narratives = _get("generate_portfolio_narratives")
+    event_calendar = _get("get_event_calendar_summary")
     market_recap = _get("get_intraday_market_recap")
+    fno_chain = _get("get_options_chain") or _get("get_option_chain")
+    fno_futures = _get("get_futures_analysis")
+    fno_strategy = _get("get_strategy_recommendations")
     intra_setup = _get("explain_intraday_setup")
     intra_screen = _get("run_intraday_screener")
     intra_index_scan = _get("scan_intraday_market")
@@ -977,6 +1300,433 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict]) -> str:
 
     sym = (snap or {}).get("symbol") or (tech or {}).get("symbol") or ""
     cname = (snap or {}).get("company_name") or sym
+
+    def _render_assessment_plan(plan: dict | None) -> None:
+        if not plan:
+            return
+        tool_status: dict[str, str] = {}
+        for tr in tool_results:
+            result = tr.get("result") if isinstance(tr.get("result"), dict) else {}
+            tool_status[tr["tool"]] = f"ERROR: {result.get('error')}" if result.get("error") else "ok"
+
+        lines.append("▶ SITUATION ASSESSMENT PLAN")
+        for i, task in enumerate(plan.get("tasks") or [], start=1):
+            tool = task.get("tool")
+            derived_from = task.get("derived_from")
+            if tool:
+                status = tool_status.get(tool, "not executed")
+                source = f"tool={tool}"
+            elif derived_from:
+                status = "derived" if tool_status.get(derived_from) == "ok" else f"blocked by {derived_from}"
+                source = f"derived_from={derived_from}"
+            else:
+                status = "missing tool"
+                source = "tool=missing"
+            lines.append(f"  {i}. {task.get('question')} [{source}; status={status}]")
+            if status != "ok" and status != "derived" and task.get("fallback"):
+                lines.append(f"     fallback: {task.get('fallback')}")
+            if (not tool or status.startswith("ERROR") or status == "not executed") and task.get("recovery_plan"):
+                lines.append(f"     recovery/code plan: {task.get('recovery_plan')}")
+        lines.append("")
+
+    if intent == "greeting":
+        lines.append("Hello — Agent Adda is ready.")
+        lines.append("Try `/live` for current market status, `/global` for global cues, `/heat` for breadth/sector heat, or ask about a specific NSE symbol.")
+        lines.append("\n━━━ Not investment advice. For research and learning only. ━━━")
+        return "\n".join(lines)
+
+    if intent == "market_dashboard":
+        def _fmt_pct(value) -> str:
+            return f"{value:+.2f}%" if isinstance(value, (int, float)) else "n/a"
+
+        def _fmt_num(value) -> str:
+            return f"{value:,.2f}" if isinstance(value, (int, float)) else "n/a"
+
+        indices = (live or {}).get("indices") or {}
+        n50 = indices.get("NIFTY 50") or {}
+        bank = indices.get("NIFTY BANK") or {}
+        vix = indices.get("INDIA VIX") or {}
+        mid = (
+            indices.get("NIFTY MIDCAP SELECT")
+            or indices.get("NIFTY MIDCAP 50")
+            or indices.get("NIFTY MIDCAP 100")
+            or {}
+        )
+        small = indices.get("NIFTY SMALLCAP 100") or indices.get("NIFTY SMALLCAP 250") or {}
+        live_adv_dec = (live or {}).get("adv_dec") or {}
+
+        index_rows = []
+        for name, row in indices.items():
+            if name.upper() == "INDIA VIX":
+                continue
+            pct = row.get("pct_change", row.get("chg_pct"))
+            last = row.get("last", row.get("close"))
+            if isinstance(pct, (int, float)):
+                index_rows.append((name, pct, last))
+        leaders = sorted(index_rows, key=lambda x: x[1], reverse=True)[:5]
+        laggards = sorted(index_rows, key=lambda x: x[1])[:5]
+
+        n50_pct = n50.get("pct_change", n50.get("chg_pct"))
+        adv = live_adv_dec.get("advances")
+        dec = live_adv_dec.get("declines")
+        breadth_bias = "mixed"
+        if isinstance(adv, (int, float)) and isinstance(dec, (int, float)):
+            breadth_bias = "positive" if adv > dec else ("negative" if dec > adv else "flat")
+        price_bias = "bullish" if isinstance(n50_pct, (int, float)) and n50_pct > 0.25 else (
+            "bearish" if isinstance(n50_pct, (int, float)) and n50_pct < -0.25 else "range-bound"
+        )
+        global_regime = (glob or {}).get("risk_regime", "mixed")
+        narrative_bias = (
+            "constructive but selective"
+            if price_bias == "bullish" and breadth_bias != "negative"
+            else "defensive / risk-off"
+            if price_bias == "bearish" and breadth_bias == "negative"
+            else "mixed and breadth-sensitive"
+        )
+
+        lines.append("## Current Market Dashboard")
+        if live and not live.get("error"):
+            lines.append(f"Source: {live.get('source', 'NSE live API')} | As of: {live.get('as_of', '—')}")
+        lines.append("")
+
+        lines.append("### 1. Market Tape")
+        for label, row in (
+            ("NIFTY 50", n50),
+            ("NIFTY BANK", bank),
+            ("MIDCAP", mid),
+            ("SMALLCAP", small),
+            ("INDIA VIX", vix),
+        ):
+            last = row.get("last", row.get("close"))
+            pct = row.get("pct_change", row.get("chg_pct"))
+            if isinstance(last, (int, float)):
+                lines.append(f"- {label}: {_fmt_num(last)} ({_fmt_pct(pct)})")
+        if live_adv_dec:
+            lines.append(f"- Live breadth: {live_adv_dec.get('advances', '—')} advances / {live_adv_dec.get('declines', '—')} declines ({breadth_bias}).")
+
+        if leaders or laggards:
+            lines.append("\n### 2. Index Leadership")
+            if leaders:
+                lines.append("- Leaders: " + " | ".join(f"{name} {_fmt_pct(pct)}" for name, pct, _ in leaders))
+            if laggards:
+                lines.append("- Laggards: " + " | ".join(f"{name} {_fmt_pct(pct)}" for name, pct, _ in laggards))
+
+        if brd and not brd.get("error"):
+            lines.append("\n### 3. Breadth & Internal Health")
+            lines.append(
+                f"- DB universe: {brd.get('advances', '—')} advances / {brd.get('declines', '—')} declines; "
+                f"A/D ratio {brd.get('ad_ratio', '—')}."
+            )
+            if brd.get("avg_rs_pct") is not None:
+                lines.append(f"- Average RS: {brd.get('avg_rs_pct'):+.1f}%.")
+            sd = brd.get("stage_distribution") or {}
+            if sd:
+                stage_bits = []
+                for key, label in (("STAGE_1", "Stage 1"), ("STAGE_2", "Stage 2"), ("STAGE_3", "Stage 3"), ("STAGE_4", "Stage 4")):
+                    value = sd.get(key, sd.get(key.lower()))
+                    if value is not None:
+                        stage_bits.append(f"{label}: {int(value or 0)}")
+                if stage_bits:
+                    lines.append("- Stage mix: " + " | ".join(stage_bits))
+
+        if movers and not movers.get("error"):
+            gainers = movers.get("gainers") or []
+            losers = movers.get("losers") or []
+            lines.append("\n### 4. Stock Movers")
+            if gainers:
+                lines.append("- Top gainers: " + " | ".join(f"{r.get('symbol', '—')} {_fmt_pct(r.get('pct_change'))}" for r in gainers[:5]))
+            if losers:
+                lines.append("- Top losers: " + " | ".join(f"{r.get('symbol', '—')} {_fmt_pct(r.get('pct_change'))}" for r in losers[:5]))
+
+        fii = _get("get_fii_dii_activity") or {}
+        if fii and not fii.get("error"):
+            lines.append("\n### 5. Flows")
+            flow_parts = []
+            for row in (fii.get("data") or [])[:4]:
+                net = row.get("net_crore")
+                net_txt = f"{net:+,.0f} Cr" if isinstance(net, (int, float)) else "n/a"
+                flow_parts.append(f"{row.get('category', 'Flow')} {net_txt} ({row.get('sentiment', '—')})")
+            if flow_parts:
+                lines.append("- " + " | ".join(flow_parts))
+
+        if glob and not glob.get("error"):
+            lines.append("\n### 6. Global Read-through")
+            lines.append(f"- Global risk regime: {global_regime}; as of {glob.get('as_of', '—')}.")
+            readthrough = glob.get("india_readthrough") or []
+            for item in readthrough[:4]:
+                lines.append(f"- {item}")
+            watch = glob.get("watch_items") or []
+            if watch:
+                lines.append("- Watch: " + " | ".join(watch[:3]))
+
+        if cat and cat.get("results"):
+            lines.append("\n### 7. Catalyst Tape")
+            for r in cat.get("results", [])[:3]:
+                title = (r.get("title") or "")[:110]
+                url = r.get("url") or ""
+                lines.append(f"- {title}" + (f" — {url}" if url else ""))
+
+        lines.append("\n### 8. Narrative")
+        lines.append(
+            f"- Dashboard bias: {narrative_bias}. NIFTY tape is {price_bias}, breadth is {breadth_bias}, "
+            f"and global regime is {global_regime}. Treat this as a situational map, not a trade signal."
+        )
+        if leaders:
+            lines.append(f"- Leadership clue: strongest index bucket is {leaders[0][0]} ({_fmt_pct(leaders[0][1])}).")
+        if laggards:
+            lines.append(f"- Risk clue: weakest index bucket is {laggards[0][0]} ({_fmt_pct(laggards[0][1])}).")
+        lines.append("- Operating plan: confirm with breadth expansion, sector leadership, and invalidation levels before acting.")
+
+        lines.append("\n▶ SOURCE TRAIL")
+        for tr in tool_results:
+            result = tr.get("result") if isinstance(tr.get("result"), dict) else {}
+            status = f"ERROR: {result.get('error')}" if result.get("error") else "ok"
+            lines.append(f"  {tr['tool']}: {status}")
+        lines.append("\n━━━ Not investment advice. For research and learning only. ━━━")
+        return "\n".join(l for l in lines if str(l).strip() != "")
+
+    if intent == "market_situation_assessment":
+        _render_assessment_plan(assessment_plan)
+
+    if intent == "startup_morning_briefing":
+        def _fmt_pct(value) -> str:
+            return f"{value:+.2f}%" if isinstance(value, (int, float)) else "n/a"
+
+        def _fmt_index_from_live(name: str) -> str:
+            row = (live or {}).get("indices", {}).get(name) or {}
+            last = row.get("last", row.get("close"))
+            pct = row.get("pct_change", row.get("chg_pct"))
+            if isinstance(last, (int, float)):
+                return f"{name}: {last:,.2f} ({_fmt_pct(pct)})"
+            return f"{name}: live level unavailable"
+
+        index_snaps = [
+            tr["result"] for tr in tool_results
+            if tr["tool"] == "get_index_snapshot" and isinstance(tr.get("result"), dict)
+        ]
+        movers = _get("get_top_gainers_losers") or {}
+        fii = _get("get_fii_dii_activity") or {}
+
+        lines.append("## Good Morning — Market Intelligence Briefing")
+
+        lines.append("\n### 🌍 Global Overnight Context")
+        if glob and not glob.get("error"):
+            lines.append(f"- Risk regime: {glob.get('risk_regime', '—')} as of {glob.get('as_of', '—')}.")
+            regions = glob.get("regions") or {}
+            if regions:
+                lines.append(
+                    "- Regional bias: "
+                    + " | ".join(
+                        f"{name} {data.get('bias', '—')} ({_fmt_pct(data.get('avg_pct_change'))})"
+                        for name, data in regions.items()
+                    )
+                )
+            moves = glob.get("moves") or {}
+            key_assets = ["S&P 500", "Nasdaq", "Dow Jones", "Hang Seng", "Nikkei 225", "Shanghai Composite", "Crude Oil", "DXY", "USDINR"]
+            key_moves = [
+                f"{asset} {_fmt_pct(moves[asset].get('pct_change'))}"
+                for asset in key_assets
+                if asset in moves
+            ]
+            if key_moves:
+                lines.append("- Key global moves: " + " | ".join(key_moves))
+            for item in (glob.get("india_readthrough") or [])[:4]:
+                lines.append(f"- India read-through: {item}")
+        else:
+            lines.append("- Global cached assessment unavailable; no unsupported inference added.")
+
+        lines.append("\n### 📅 Previous Trading Day Recap (NSE)")
+        if index_snaps:
+            for row in index_snaps:
+                if row.get("error"):
+                    continue
+                close = row.get("close")
+                chg = row.get("chg_pct")
+                if isinstance(close, (int, float)):
+                    lines.append(f"- {row.get('index', 'Index')}: closed at {close:,.2f} ({_fmt_pct(chg)}).")
+        if brd and not brd.get("error"):
+            lines.append(
+                f"- EOD universe breadth: {brd.get('advances', '—')} advances / "
+                f"{brd.get('declines', '—')} declines; A/D ratio {brd.get('ad_ratio', '—')}."
+            )
+
+        lines.append("\n### 📊 Current Market Status")
+        if live and not live.get("error"):
+            lines.append(f"- {_fmt_index_from_live('NIFTY 50')}")
+            lines.append(f"- {_fmt_index_from_live('NIFTY BANK')}")
+            adv_dec = live.get("adv_dec") or {}
+            if adv_dec:
+                lines.append(f"- Live breadth: {adv_dec.get('advances', '—')} advances / {adv_dec.get('declines', '—')} declines.")
+            lines.append(f"- Source: {live.get('source', 'NSE live API')} | As of: {live.get('as_of', '—')}.")
+        else:
+            lines.append("- Live NSE overview unavailable; using cached/EOD context only.")
+        if fii and not fii.get("error"):
+            flow_parts = []
+            for row in fii.get("data", [])[:4]:
+                net = row.get("net_crore")
+                net_txt = f"{net:+,.2f} Cr" if isinstance(net, (int, float)) else "n/a"
+                flow_parts.append(f"{row.get('category', 'Flow')} {net_txt} ({row.get('sentiment', '—')})")
+            if flow_parts:
+                lines.append("- FII/DII: " + " | ".join(flow_parts))
+
+        if movers and not movers.get("error"):
+            gainers = movers.get("gainers") or []
+            losers = movers.get("losers") or []
+            if gainers:
+                lines.append("- Top NIFTY 50 gainers: " + ", ".join(f"{r.get('symbol')} {_fmt_pct(r.get('pct_change'))}" for r in gainers[:3]))
+            if losers:
+                lines.append("- Top NIFTY 50 losers: " + ", ".join(f"{r.get('symbol')} {_fmt_pct(r.get('pct_change'))}" for r in losers[:3]))
+
+        lines.append("\n### 🎯 Today's Watchlist & Themes")
+        watch_items = (glob or {}).get("watch_items") or []
+        if watch_items:
+            for item in watch_items[:4]:
+                lines.append(f"- {item}")
+        elif movers and not movers.get("error") and (movers.get("gainers") or movers.get("losers")):
+            symbols = [r.get("symbol") for r in (movers.get("gainers") or [])[:2] + (movers.get("losers") or [])[:2] if r.get("symbol")]
+            lines.append("- Monitor live movers for continuation/fade research: " + ", ".join(symbols))
+        else:
+            lines.append("- Monitor index breadth, FII/DII flows, USD/INR, crude, and high-volume NIFTY 50 movers.")
+
+        if cat and cat.get("results"):
+            lines.append("\n### 📰 Latest Source Trail")
+            for r in cat["results"][:3]:
+                title = (r.get("title") or "")[:110]
+                url = r.get("url") or ""
+                lines.append(f"- {title} — {url}" if url else f"- {title}")
+
+        lines.append("\n### 🔬 Analyst's Take")
+        regime = (glob or {}).get("risk_regime", "mixed")
+        live_breadth = (live or {}).get("adv_dec") or {}
+        breadth_text = (
+            f"live breadth at {live_breadth.get('advances', '—')} advances vs {live_breadth.get('declines', '—')} declines"
+            if live_breadth else "live breadth unavailable"
+        )
+        lines.append(
+            f"- Bias is {regime}: combine the global cue with {breadth_text}, institutional flow, "
+            "and NIFTY/BANKNIFTY levels before forming any intraday view. Keep position sizing and invalidation discipline explicit."
+        )
+
+        lines.append("\n### Follow-up questions")
+        lines.append("1. `/global` — refresh the full global risk regime and India read-through.")
+        lines.append("2. `/heat` — inspect live sector and breadth heatmap for leadership confirmation.")
+        lines.append("3. `/scan NIFTY 50 vwap` — find intraday research setups with clear invalidation.")
+
+        lines.append("\n▶ SOURCE TRAIL")
+        for tr in tool_results:
+            err = tr["result"].get("error", "") if isinstance(tr.get("result"), dict) else ""
+            status = f"ERROR: {err}" if err else "ok"
+            lines.append(f"  {tr['tool']}: {status}")
+        lines.append("\n━━━ Not investment advice. For research and learning only. ━━━")
+        return "\n".join(l for l in lines if str(l).strip() != "")
+
+    if intent == "fno_overview":
+        def _fmt_num(value, decimals: int = 2) -> str:
+            if isinstance(value, (int, float)):
+                return f"{value:,.{decimals}f}"
+            return "—"
+
+        def _fmt_int(value) -> str:
+            if isinstance(value, (int, float)):
+                return f"{int(value):,}"
+            return "—"
+
+        def _fmt_oi_rows(rows: list[dict], side: str) -> str:
+            if not rows:
+                return "—"
+            oi_key = "oi" if "oi" in rows[0] else ("ce_oi" if side == "CE" else "pe_oi")
+            chg_key = "chg_oi" if "chg_oi" in rows[0] else ("ce_oi_chg" if side == "CE" else "pe_oi_chg")
+            top = sorted(rows, key=lambda row: row.get(oi_key) or 0, reverse=True)[:5]
+            parts = []
+            for row in top:
+                strike = row.get("strike", "—")
+                oi = _fmt_int(row.get(oi_key))
+                chg = row.get(chg_key)
+                chg_txt = f", chg {int(chg):+,}" if isinstance(chg, (int, float)) else ""
+                parts.append(f"{strike}: OI {oi}{chg_txt}")
+            return " | ".join(parts)
+
+        symbol = (
+            (fno_chain or {}).get("symbol")
+            or (fno_futures or {}).get("symbol")
+            or (fno_strategy or {}).get("symbol")
+            or "NIFTY"
+        )
+        lines.append(f"━━━ {symbol} — F&O Overview ━━━")
+
+        if fno_chain and not fno_chain.get("error"):
+            pcr = fno_chain.get("pcr")
+            if isinstance(pcr, dict):
+                pcr_text = f"OI {pcr.get('oi', '—')} | Volume {pcr.get('volume', '—')} | {pcr.get('signal', '—')}"
+            else:
+                pcr_text = str(pcr if pcr is not None else "—")
+            lines.append("\n▶ OPTION CHAIN")
+            lines.append(
+                f"  Expiry: {fno_chain.get('expiry', '—')} | "
+                f"Spot/underlying: {_fmt_num(fno_chain.get('underlying'))} | "
+                f"ATM: {fno_chain.get('atm', '—')} | Source: {fno_chain.get('source', 'NSE live/API fallback')} | "
+                f"As of: {fno_chain.get('as_of', '—')}"
+            )
+            lines.append(f"  PCR: {pcr_text} | Max pain: {fno_chain.get('max_pain', '—')}")
+            if fno_chain.get("total_call_oi") is not None or fno_chain.get("total_put_oi") is not None:
+                lines.append(
+                    f"  Total OI: Calls {_fmt_int(fno_chain.get('total_call_oi'))} | "
+                    f"Puts {_fmt_int(fno_chain.get('total_put_oi'))}"
+                )
+            calls = fno_chain.get("calls") or fno_chain.get("top_ce_oi_strikes") or []
+            puts = fno_chain.get("puts") or fno_chain.get("top_pe_oi_strikes") or []
+            lines.append(f"  Top CE OI / resistance zones: {_fmt_oi_rows(calls, 'CE')}")
+            lines.append(f"  Top PE OI / support zones: {_fmt_oi_rows(puts, 'PE')}")
+            if fno_chain.get("max_pain_vs_spot") is not None:
+                lines.append(f"  Max pain vs spot: {_fmt_num(fno_chain.get('max_pain_vs_spot'))}")
+        elif fno_chain:
+            lines.append(f"\n▶ OPTION CHAIN\n  ERROR: {fno_chain.get('error')}")
+
+        if fno_futures and not fno_futures.get("error"):
+            lines.append("\n▶ FUTURES BASIS & CARRY")
+            lines.append(
+                f"  Spot: {_fmt_num(fno_futures.get('spot'))} | "
+                f"Lot size: {fno_futures.get('lot_size', '—')} | "
+                f"Source: {fno_futures.get('source', '—')} | As of: {fno_futures.get('as_of', '—')}"
+            )
+            for fut in (fno_futures.get("futures") or [])[:3]:
+                lines.append(
+                    f"  - Expiry {fut.get('expiry', '—')}: future {_fmt_num(fut.get('last_price') or fut.get('settle_price'))} | "
+                    f"basis {_fmt_num(fut.get('basis'))} ({_fmt_num(fut.get('basis_pct'), 3)}%) | "
+                    f"CoC {_fmt_num(fut.get('cost_of_carry_annualised_pct'))}% | "
+                    f"OI {_fmt_int(fut.get('oi'))} | OI chg {_fmt_int(fut.get('oi_change'))}"
+                )
+            rollover = fno_futures.get("rollover") or {}
+            if rollover:
+                lines.append(
+                    f"  Rollover: {rollover.get('rollover_pct', '—')}% | "
+                    f"{rollover.get('interpretation', '—')}"
+                )
+        elif fno_futures:
+            lines.append(f"\n▶ FUTURES BASIS & CARRY\n  ERROR: {fno_futures.get('error')}")
+
+        if fno_strategy and not fno_strategy.get("error"):
+            lines.append("\n▶ STRATEGY CONTEXT")
+            lines.append(
+                f"  IV regime: {fno_strategy.get('iv_regime', '—')} | "
+                f"DTE: {fno_strategy.get('dte', '—')} | "
+                f"PCR OI: {fno_strategy.get('pcr_oi', '—')} | "
+                f"Max pain: {fno_strategy.get('max_pain', '—')}"
+            )
+            for rec in (fno_strategy.get("recommendations") or [])[:3]:
+                name = rec.get("strategy") or rec.get("name") or rec.get("title") or "strategy"
+                reason = rec.get("rationale") or rec.get("reason") or rec.get("why") or ""
+                lines.append(f"  - {name}: {reason}".rstrip())
+        elif fno_strategy:
+            lines.append(f"\n▶ STRATEGY CONTEXT\n  ERROR: {fno_strategy.get('error')}")
+
+        lines.append("\n▶ SOURCE TRAIL")
+        for tr in tool_results:
+            result = tr.get("result") if isinstance(tr.get("result"), dict) else {}
+            status = f"ERROR: {result.get('error')}" if result.get("error") else "ok"
+            lines.append(f"  {tr['tool']}: {status}")
+        lines.append("\n━━━ Not investment advice. For research and learning only. ━━━")
+        return "\n".join(l for l in lines if str(l).strip() != "")
 
     if sym:
         lines.append(f"━━━ {cname} ({sym}) — Market Brief ━━━")
@@ -1035,6 +1785,59 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict]) -> str:
                 lines.append(f"  Missing evidence: {', '.join(missing)}")
         lines.append("\n━━━ Not investment advice. For research and learning only. ━━━")
         return "\n".join([ln for ln in lines if ln is not None])
+
+    if comparison and not comparison.get("error"):
+        lines.append("▶ STOCK COMPARISON")
+        lines.append(f"  Symbols: {', '.join(comparison.get('symbols') or [])}")
+        lines.append(f"  Aspects: {', '.join(comparison.get('aspects') or [])}")
+        for row in (comparison.get("stock_details") or [])[:6]:
+            bits = [
+                str(row.get("symbol", "—")),
+                f"stage {row.get('stage', '—')}",
+                f"tech {row.get('technical_score', '—')}",
+                f"RS {row.get('rs_pct', '—')}",
+                f"signal {row.get('trading_signal', '—')}",
+                f"sector {row.get('sector', '—')}",
+            ]
+            if row.get("pe") is not None:
+                bits.append(f"P/E {row.get('pe')}")
+            if row.get("roe") is not None:
+                bits.append(f"ROE {row.get('roe')}")
+            lines.append("  - " + " | ".join(bits))
+
+    if portfolio_narratives and not portfolio_narratives.get("error"):
+        lines.append("▶ PORTFOLIO REVIEW")
+        for row in (portfolio_narratives.get("narratives") or [])[:10]:
+            if row.get("error"):
+                lines.append(f"  - {row.get('symbol')}: ERROR {row.get('error')}")
+                continue
+            lines.append(
+                f"  - {row.get('symbol')}: stage {row.get('stage', '—')} | "
+                f"RSI {row.get('rsi', '—')} | action {row.get('action_hint', '—')}"
+            )
+            if row.get("thesis"):
+                lines.append(f"    thesis: {row.get('thesis')}")
+            if row.get("bear_case"):
+                lines.append(f"    risk: {row.get('bear_case')}")
+
+    if event_calendar and not event_calendar.get("error"):
+        lines.append("▶ EVENT CALENDAR")
+        lines.append(
+            f"  Index: {event_calendar.get('index', '—')} | "
+            f"Window: {event_calendar.get('days_ahead', '—')} days | "
+            f"Total events: {event_calendar.get('total_events', '—')}"
+        )
+        counts = event_calendar.get("event_counts") or {}
+        if counts:
+            lines.append("  Event mix: " + " | ".join(f"{k}: {v}" for k, v in counts.items()))
+        events = event_calendar.get("events") or []
+        if events:
+            lines.append("  Upcoming:")
+            for ev in events[:10]:
+                lines.append(
+                    f"    - {ev.get('symbol', '—')} | {ev.get('type', '—')} | "
+                    f"{ev.get('ex_date', '—')} | {ev.get('detail', '—')}"
+                )
 
     if knowledge:
         answer = knowledge.get("answer_markdown")
@@ -1117,6 +1920,23 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict]) -> str:
         if live.get("as_of") or live.get("source"):
             lines.append(f"  Source: {live.get('source', 'NSE live API')} | As of: {live.get('as_of', '—')}")
 
+        index_rows = []
+        for name, row in indices.items():
+            pct = row.get("pct_change", row.get("chg_pct"))
+            last = row.get("last", row.get("close"))
+            if isinstance(pct, (int, float)):
+                index_rows.append((name, pct, last))
+        if index_rows and intent in {"market_overview", "market_situation_assessment"}:
+            leaders = sorted(index_rows, key=lambda x: x[1], reverse=True)[:5]
+            laggards = sorted(index_rows, key=lambda x: x[1])[:5]
+            lines.append("\n▶ INDEX MOVERS")
+            lines.append("  Top indices: " + " | ".join(
+                f"{name} {pct:+.2f}%" for name, pct, _ in leaders
+            ))
+            lines.append("  Weak indices: " + " | ".join(
+                f"{name} {pct:+.2f}%" for name, pct, _ in laggards
+            ))
+
     if idx and not idx.get("error"):
         lines.append("\n▶ INDEX")
         lines.append(f"  {idx.get('index')}: {idx.get('close'):,.2f}  ({idx.get('chg_pct'):+.2f}%)")
@@ -1143,6 +1963,23 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict]) -> str:
             if unknown:
                 stage_parts.append(("Unknown", unknown))
             lines.append("  Stage dist: " + " | ".join(f"{label}: {int(value or 0)}" for label, value in stage_parts))
+
+    if movers and not movers.get("error"):
+        lines.append("\n▶ TOP STOCK MOVERS")
+        gainers = movers.get("gainers") or []
+        losers = movers.get("losers") or []
+        if gainers:
+            lines.append("  Top gainers: " + " | ".join(
+                f"{row.get('symbol', '—')} {row.get('pct_change', 0):+.2f}%"
+                if isinstance(row.get("pct_change"), (int, float)) else f"{row.get('symbol', '—')} n/a"
+                for row in gainers[:5]
+            ))
+        if losers:
+            lines.append("  Top losers: " + " | ".join(
+                f"{row.get('symbol', '—')} {row.get('pct_change', 0):+.2f}%"
+                if isinstance(row.get("pct_change"), (int, float)) else f"{row.get('symbol', '—')} n/a"
+                for row in losers[:5]
+            ))
 
     # 4b. Global market assessment
     if glob and not glob.get("error"):
@@ -1369,17 +2206,27 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict]) -> str:
 
     # 7. Risks / Watch
     risks: list[str] = []
-    if tech:
+    if tech and not tech.get("error"):
         if tech.get("rsi", 50) > 75:  risks.append("RSI overbought (>75)")
         if not tech.get("above_sma50"): risks.append("Price below SMA50")
         if tech.get("adx", 0) < 20:  risks.append("ADX < 20 — weak trend")
-    if snap:
+    if snap and not snap.get("error"):
         if snap.get("stage") not in ("STAGE_2", None) and snap.get("stage"):
             risks.append(f"Not in Stage 2 ({snap.get('stage')})")
     if risks:
         lines.append("\n▶ RISKS / WATCH")
         for r in risks:
             lines.append(f"  ⚠ {r}")
+
+    missing_tools = [
+        tr["tool"]
+        for tr in tool_results
+        if isinstance(tr.get("result"), dict) and tr["result"].get("error")
+    ]
+    if missing_tools:
+        lines.append("\n▶ MISSING EVIDENCE")
+        lines.append("  Missing evidence: " + ", ".join(dict.fromkeys(missing_tools)))
+        lines.append("  No unsupported technical, fundamental, catalyst, or sector conclusion was inferred from missing data.")
 
     # Source trail
     lines.append("\n▶ SOURCE TRAIL")
@@ -1407,6 +2254,16 @@ _GLOBAL_QUERY_PHRASES: tuple[str, ...] = (
 )
 
 
+def _is_morning_briefing_query(q: str) -> bool:
+    q = (q or "").lower()
+    return (
+        "morning briefing" in q
+        or "startup briefing" in q
+        or "market intelligence briefing" in q
+        or ("starting a new trading session" in q and "global overnight context" in q)
+    )
+
+
 def _is_global_query(q: str) -> bool:
     return any(phrase in q for phrase in _GLOBAL_QUERY_PHRASES)
 
@@ -1423,14 +2280,61 @@ class Agent:
     def __init__(self):
         self.backend      = _detect_backend()
         self.tool_schemas = openai_tool_schemas()
-        self.backend_name = (
-            "OpenAI" if isinstance(self.backend, _OpenAIBackend) else
-            "Ollama" if isinstance(self.backend, _OllamaBackend) else
-            "Keyword (no LLM)"
-        )
+        self.backend_name = _backend_name(self.backend)
         # Rolling conversation history: list of {"role": ..., "content": ...}
         # Only user + assistant turns (no system, no tool messages).
         self._history: list[dict] = []
+        self._last_symbols: list[str] = []
+
+    def model_status(self) -> dict:
+        """Return the active main chat backend status. Voice STT/TTS models are separate."""
+        provider = (
+            "openai" if isinstance(self.backend, _OpenAIBackend) else
+            "ollama" if isinstance(self.backend, _OllamaBackend) else
+            "keyword"
+        )
+        model = getattr(self.backend, "model", None)
+        return {"provider": provider, "model": model, "backend": self.backend_name}
+
+    def set_model_backend(self, provider: str, model: str | None = None) -> dict:
+        """Switch the main chat backend at runtime.
+
+        This only affects the main Agent Adda reasoning backend. Voice
+        transcription and TTS keep using their own OPENAI_TRANSCRIBE_MODEL and
+        OPENAI_TTS_MODEL settings.
+        """
+        clean_provider = (provider or "").strip().lower()
+        if clean_provider in {"gpt-4o", "gpt4o", "got-40", "got-4o", "openai"}:
+            clean_model = model or ("gpt-4o" if clean_provider != "openai" else None)
+            try:
+                self.backend = _OpenAIBackend(model=clean_model)
+            except Exception as exc:
+                return {
+                    "status": "error",
+                    "error": f"OpenAI backend unavailable: {exc}",
+                    "provider": "openai",
+                    "model": clean_model or os.getenv("OPENAI_MODEL", OPENAI_MODEL),
+                }
+        elif clean_provider in {"ollama", "local"}:
+            try:
+                self.backend = _OllamaBackend(model=model)
+            except Exception as exc:
+                return {
+                    "status": "error",
+                    "error": f"Ollama backend unavailable: {exc}",
+                    "provider": "ollama",
+                    "model": model or os.getenv("OLLAMA_MODEL", OLLAMA_MODEL),
+                }
+        elif clean_provider in {"keyword", "none", "off"}:
+            self.backend = None
+        else:
+            return {
+                "status": "error",
+                "error": "Usage: /model status | /model gpt-4o | /model ollama [model-name] | /model keyword",
+            }
+
+        self.backend_name = _backend_name(self.backend)
+        return {"status": "ok", **self.model_status()}
 
     @property
     def turn_count(self) -> int:
@@ -1440,6 +2344,41 @@ class Agent:
     def reset_history(self) -> None:
         """Clear conversation history — start a fresh session."""
         self._history = []
+        self._last_symbols = []
+
+    def _contextualize_pronouns(self, user_input: str) -> str:
+        """Replace stock pronouns with the last resolved symbol for routing."""
+        if not self._last_symbols:
+            return user_input
+        if not re.search(r"\b(it|that stock|this stock)\b", user_input or "", flags=re.I):
+            return user_input
+        symbol = self._last_symbols[0]
+        text = re.sub(r"\bthat stock\b", symbol, user_input, flags=re.I)
+        text = re.sub(r"\bthis stock\b", symbol, text, flags=re.I)
+        text = re.sub(r"\bit\b", symbol, text, flags=re.I)
+        return text
+
+    def _remember_interaction(self, user_input: str, answer: str, tool_results: list[dict]) -> None:
+        """Persist compact chat state plus the latest resolved symbols."""
+        symbols: list[str] = []
+        for tr in tool_results:
+            args = tr.get("args") if isinstance(tr.get("args"), dict) else {}
+            result = tr.get("result") if isinstance(tr.get("result"), dict) else {}
+            if tr.get("tool") == "compare_stocks" and isinstance(args.get("symbols"), list):
+                symbols.extend(str(s).upper() for s in args["symbols"] if s)
+            if result.get("symbol"):
+                symbols.append(str(result["symbol"]).upper())
+            if args.get("symbol"):
+                symbols.append(str(args["symbol"]).upper())
+        clean_symbols = [
+            s for s in dict.fromkeys(symbols)
+            if re.fullmatch(r"[A-Z0-9&-]{2,12}", s)
+        ]
+        if clean_symbols:
+            self._last_symbols = clean_symbols[:5]
+
+        self._history.append({"role": "user", "content": user_input})
+        self._history.append({"role": "assistant", "content": answer})
 
     def _trim_history(self) -> list[dict]:
         """Return a trimmed copy of history that fits within the char budget."""
@@ -1456,6 +2395,146 @@ class Agent:
             # Drop the oldest user+assistant pair (2 messages)
             history = history[2:]
         return history
+
+    # PG-self-check: post-processor that detects degraded responses (failed
+    # tools, unhandled slash commands, suspiciously thin answers) and
+    # prepends a clear acknowledgement + actionable suggestions instead of
+    # silently returning a weak result.
+    def _quality_check(
+        self,
+        original_query: str,
+        intent: str,
+        tool_results: list[dict],
+        answer: str,
+        mode_suffix: str = "",
+    ) -> str:
+        """Return possibly-augmented answer with a heads-up block prepended
+        when the response looks degraded. Conservative — never modifies a
+        clearly-good answer."""
+        try:
+            q = (original_query or "").strip()
+            if not q:
+                return answer
+
+            # Strip mode suffix + disclaimer to measure substantive content.
+            body = answer or ""
+            if mode_suffix and body.endswith(mode_suffix):
+                body = body[: -len(mode_suffix)]
+            for marker in (
+                "━━━ Not investment advice. For research and learning only. ━━━",
+                "Not investment advice. For research and learning only.",
+            ):
+                body = body.replace(marker, "")
+            body = body.strip()
+
+            # ── Heuristic A: tool error rate ──────────────────────────────
+            errs = sum(
+                1 for tr in (tool_results or [])
+                if isinstance(tr.get("result"), dict) and tr["result"].get("error")
+            )
+            n_tools = sum(1 for tr in (tool_results or []) if tr.get("tool"))
+            tool_error_ratio = (errs / n_tools) if n_tools else 0.0
+
+            # ── Heuristic B: unhandled slash command ──────────────────────
+            # User typed something starting with `/` but only one token, AND
+            # the planner routed it to stock_brief (i.e. the symbol resolver
+            # treated the slash command as a ticker — same class of bug as
+            # the original /recap → AVONMORE issue).
+            words = q.split()
+            unhandled_slash = (
+                q.startswith("/")
+                and len(words) == 1
+                and intent in {"stock_brief", "intraday_setup"}
+            )
+
+            # ── Heuristic C: suspiciously thin body ───────────────────────
+            thin_body = len(body) < 180
+
+            # ── Heuristic D: every tool returned empty payload ────────────
+            empty_payload = (
+                n_tools >= 1
+                and all(
+                    (not isinstance(tr.get("result"), dict))
+                    or (not tr["result"]) or tr["result"].get("error")
+                    for tr in (tool_results or [])
+                )
+            )
+
+            triggers: list[str] = []
+            if unhandled_slash:
+                triggers.append(f"`{q}` is not a registered slash command")
+            if tool_error_ratio >= 0.5 and n_tools >= 2:
+                triggers.append(
+                    f"{errs} of {n_tools} tools failed "
+                    f"({int(tool_error_ratio * 100)}% error rate)"
+                )
+            if thin_body and intent != "greeting":
+                triggers.append("the response came back unusually thin")
+            if empty_payload and not unhandled_slash:
+                triggers.append("no usable data was returned by any tool")
+
+            if not triggers:
+                return answer
+
+            # Build a context-aware suggestion list.
+            qlow = q.lower()
+            suggestions: list[str] = []
+            if unhandled_slash:
+                suggestions.append(
+                    "Type `/help` to browse all slash commands, or `/commands "
+                    "<keyword>` to search them."
+                )
+            if any(w in qlow for w in ("market", "nifty", "breadth", "today", "now")):
+                suggestions.append("`/live` — live NSE indices + breadth.")
+                suggestions.append("`/recap` — what moved in the last 15 minutes.")
+                suggestions.append("`/heat` — sector seasonal heatmap.")
+            if any(w in qlow for w in ("sector", "rotation")):
+                suggestions.append("`/heat` — sector seasonal tail/headwinds.")
+                suggestions.append("`/cycle` — economic-cycle phase + preferred sectors.")
+            if any(w in qlow for w in ("global", "us", "fed", "dxy", "crude")):
+                suggestions.append("`/global` — global risk regime + India read-through.")
+            if any(w in qlow for w in ("option", "strike", "oi", "fno", "f&o")):
+                suggestions.append("`/oi <SYMBOL>` — open-interest heatmap.")
+                suggestions.append("`/chain <SYMBOL>` — option chain.")
+            if any(w in qlow for w in ("scan", "screen", "vcp", "breakout", "momentum")):
+                suggestions.append("`/scan <INDEX> <type>` — intraday screener.")
+                suggestions.append("`/screen <name>` — EOD screeners.")
+            if any(w in qlow for w in ("portfolio", "pnl", "holdings")):
+                suggestions.append("`/pnl` — portfolio P&L review.")
+            if not suggestions:
+                # Universal fallback list.
+                suggestions = [
+                    "`/live` — live market snapshot.",
+                    "`/global` — global cues + India read-through.",
+                    "`/heat` — sector seasonal heatmap.",
+                    "Or rephrase with a specific NSE symbol, e.g. `RELIANCE setup`.",
+                ]
+            # Dedupe while preserving order.
+            seen = set()
+            suggestions = [
+                s for s in suggestions
+                if not (s in seen or seen.add(s))
+            ][:5]
+
+            ack_lines = ["▶ HEADS-UP — response may be incomplete"]
+            for t in triggers:
+                ack_lines.append(f"  • {t}")
+            ack_lines.append("")
+            ack_lines.append("▶ TRY ONE OF THESE")
+            for s in suggestions:
+                ack_lines.append(f"  • {s}")
+            clarify = (
+                "Or rephrase with more context — e.g. mention a specific NSE "
+                "symbol, sector, or time window (intraday / EOD / 1-month)."
+            )
+            ack_lines.append("")
+            ack_lines.append(f"  {clarify}")
+            ack_lines.append("")
+
+            return "\n".join(ack_lines) + "\n" + (answer or "")
+        except Exception:
+            # Self-check must never break the response — fail open.
+            return answer
 
     def query(self, user_input: str, show_trace: bool = False) -> dict:
         """Process a user query. Returns {"answer": str, "trace": list, "backend": str}.
@@ -1480,6 +2559,7 @@ class Agent:
             elif _looks_like_intraday_query(user_input):
                 mode = "intraday"
 
+        clean_input = self._contextualize_pronouns(clean_input)
         market_context = market_context_for_agent()
         mode_context = (
             f"Data mode: {mode}. "
@@ -1504,7 +2584,10 @@ class Agent:
         )
         mode_sources = {
             "global": "cached global indices + correlations",
-            "intraday": "SQLite intraday/live tables",
+            # PG-source-label: intraday quote tape now lives in PostgreSQL
+            # (intraday.quote_snapshots, populated by the always-on capture
+            # daemon). SQLite intraday_ohlcv is still the bar/candle source.
+            "intraday": "PG intraday.quote_snapshots + SQLite intraday OHLCV",
             "historical": "EOD CSV + DB snapshot",
         }
         market_status = market_session_status()
@@ -1523,21 +2606,52 @@ class Agent:
                 f"Market: {market_status.compact_label} | "
                 f"Clock: {market_status.clock_label}_"
             )
-        if intent_plan.get("intent") == "intraday_market_recap":
+        if intent_plan.get("intent") == "market_situation_assessment":
             mode_suffix = (
-                f"\n\n_Mode: Intraday | Sources: NSE live API + intraday snapshots + DB breadth | "
+                f"\n\n_Mode: {mode.title()} | Sources: situation planner + NSE live API + DB breadth | "
+                f"Market: {market_status.compact_label} | "
+                f"Clock: {market_status.clock_label}_"
+            )
+        if intent_plan.get("intent") == "market_dashboard":
+            mode_suffix = (
+                f"\n\n_Mode: Intraday | Sources: dashboard planner + NSE live API + DB breadth + FII/DII + global context | "
+                f"Market: {market_status.compact_label} | "
+                f"Clock: {market_status.clock_label}_"
+            )
+        if intent_plan.get("intent") == "intraday_market_recap":
+            # PG-source-label: be explicit that the recap reads from PG
+            # intraday.quote_snapshots, not SQLite — these snapshots are
+            # captured every 60 s by terminal/intraday_capture.py.
+            mode_suffix = (
+                f"\n\n_Mode: Intraday | Sources: NSE live API + PG intraday.quote_snapshots + DB breadth | "
+                f"Market: {market_status.compact_label} | "
+                f"Clock: {market_status.clock_label}_"
+            )
+        if intent_plan.get("intent") == "fno_overview":
+            mode_suffix = (
+                f"\n\n_Mode: Intraday | Sources: NSE options/futures API + F&O EOD fallback | "
                 f"Market: {market_status.compact_label} | "
                 f"Clock: {market_status.clock_label}_"
             )
         if intent_plan.get("intent") in {
+            "greeting", "startup_morning_briefing", "global_market_assessment",
+            "market_situation_assessment",
             "strength_validation", "market_knowledge", "stock_brief",
+            "stock_comparison", "portfolio_review",
+            "event_calendar",
+            "fno_overview", "market_dashboard",
             "market_overview", "intraday_index_scan", "intraday_screener",
             "intraday_market_recap",
         }:
             trace.append({"step": "intent", "result": intent_plan})
             tool_results = _execute_plan(intent_plan["plan"])
             trace.extend(tool_results)
-            answer = _synthesize_no_llm(intent_plan["intent"], tool_results) + mode_suffix
+            answer = _synthesize_no_llm(
+                intent_plan["intent"],
+                tool_results,
+                intent_plan.get("assessment_plan"),
+            ) + mode_suffix
+            self._remember_interaction(clean_input, answer, tool_results)
             return {"answer": answer, "trace": trace, "backend": self.backend_name,
                     "intent": intent_plan["intent"]}
 
@@ -1555,7 +2669,16 @@ class Agent:
         tool_results = _execute_plan(intent_plan["plan"])
         trace.extend(tool_results)
 
-        answer = _synthesize_no_llm(intent_plan["intent"], tool_results) + mode_suffix
+        answer = _synthesize_no_llm(
+            intent_plan["intent"],
+            tool_results,
+            intent_plan.get("assessment_plan"),
+        ) + mode_suffix
+        # PG-self-check: same degraded-response guard for keyword fallback.
+        answer = self._quality_check(
+            user_input, intent_plan["intent"], tool_results, answer, mode_suffix,
+        )
+        self._remember_interaction(clean_input, answer, tool_results)
         return {"answer": answer, "trace": trace, "backend": self.backend_name,
                 "intent": intent_plan["intent"]}
 
@@ -1595,10 +2718,8 @@ class Agent:
                 if "research and learning only" not in answer[-400:]:
                     answer += "\n\n━━━ Not investment advice. For research and learning only. ━━━"
 
-                # ── Persist this turn to conversation history ──────────────
-                # Store only user + final assistant text (no tool messages — keeps history compact)
-                self._history.append({"role": "user",      "content": user_input})
-                self._history.append({"role": "assistant", "content": answer})
+                # ── Persist compact conversation and resolved entity state ──
+                self._remember_interaction(user_input, answer, tool_results)
 
                 # Extract news/catalyst results so they can be rendered with real URLs
                 # Priority: comprehensive_stock_research → search_latest_catalysts → search_yahoo_finance
@@ -1638,7 +2759,6 @@ class Agent:
         # If we exhausted rounds without a text response, synthesize from tool results
         answer = _synthesize_no_llm("stock_brief", tool_results)
         # Still save the turn so context is preserved
-        self._history.append({"role": "user",      "content": user_input})
-        self._history.append({"role": "assistant", "content": answer})
+        self._remember_interaction(user_input, answer, tool_results)
         return {"answer": answer, "trace": tool_results, "backend": self.backend_name,
                 "intent": "llm_driven_fallback", "turn": self.turn_count}

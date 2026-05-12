@@ -19,6 +19,7 @@ Mode commands (in chat):
   /live  or /l   → force Live / Intraday mode  (always calls NSE live API)
   /eod   or /h   → force EOD  / Historical mode (CSV + DB snapshot)
   /auto  or /a   → auto-detect from query keywords  (default)
+  /model         → show/switch main chat model backend (OpenAI/Ollama/keyword)
   /clear         → clear screen
   /help  or ?    → show this help
   1 / 2 / 3      → pick a suggested follow-up question
@@ -415,6 +416,8 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/scan vwap",        "VWAP Reclaim — price reclaiming/losing VWAP proxy"),
     ("/scan vcp",         "VCP — Volatility Contraction Pattern intraday"),
     ("/scan momentum",    "Momentum — MACD + RSI + Supertrend aligned"),
+    ("/dashboard",        "Comprehensive current-market dashboard + narrative"),
+    ("/dash",             "Alias: current-market dashboard + narrative"),
     # EOD screener shortcuts
     ("/screen stage2",    "Stage 2 uptrend stocks (Weinstein)"),
     ("/screen momentum",  "Near-52W-high momentum leaders (RS ≥ 1.0)"),
@@ -525,6 +528,11 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/forensic",                         "D5 Forensic analysis — Beneish M-score, Piotroski F-score, Altman Z'-score"),
     ("/forensic RELIANCE",                "Forensic accounting analysis for RELIANCE"),
     ("/forensic TCS INFY WIPRO",          "Forensic screening across multiple stocks"),
+    # ── Intraday market recap ──────────────────────────────────────────────
+    # PG-recap-slash: bare `/recap` had no handler → was falling through to the
+    # symbol planner and getting resolved to a random ticker (e.g. AVONMORE).
+    ("/recap",                            "Last 15-minute intraday market recap (PG intraday.quote_snapshots)"),
+    ("/recap 30",                         "Custom-window recap, e.g. last 30 minutes"),
     # ── Voice briefing (P3-2) ───────────────────────────────────────────────
     ("/voice-mode on",                    "Speak every normal Agent Adda answer until disabled"),
     ("/voice-mode off",                   "Disable automatic spoken responses"),
@@ -577,6 +585,11 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/live",             "Switch to LIVE mode (real-time NSE API)"),
     ("/eod",              "Switch to EOD mode (historical CSV/DB)"),
     ("/auto",             "Switch to AUTO mode (keyword detect)"),
+    ("/model",            "Show active main chat model/backend"),
+    ("/model gpt-4o",     "Switch main chat backend to OpenAI gpt-4o"),
+    ("/model ollama",     "Switch main chat backend to Ollama default model"),
+    ("/model ollama granite4:latest", "Switch main chat backend to a specific Ollama model"),
+    ("/model keyword",    "Disable LLM backend and use deterministic keyword/tool routing"),
     ("/global",           "Global market assessment + India read-through"),
     ("/context",          "Show conversation history & context budget"),
     ("/new",              "Start a fresh session (clear history)"),
@@ -629,6 +642,8 @@ _CMD_CATEGORIES: dict[str, tuple[str, str]] = {
     "/prompts":  ("Research Prompts",    "📋"),
     "/ric":      ("RIC Investigations",  "🔬"),
     "/scan":     ("Intraday Scanner",    "⚡"),
+    "/dashboard":("Market Dashboard",     "📊"),
+    "/dash":     ("Market Dashboard",     "📊"),
     "/screen":   ("EOD Screeners",       "🔍"),
     "/monitor":  ("Background Monitors", "👁️"),
     "/alert":    ("Watchlist Alerts",    "🔔"),
@@ -665,6 +680,7 @@ _CMD_CATEGORIES: dict[str, tuple[str, str]] = {
     "/live":     ("Session",             "💾"),
     "/eod":      ("Session",             "💾"),
     "/auto":     ("Session",             "💾"),
+    "/model":    ("Settings & Data",     "⚙️"),
     "/context":  ("Session",             "💾"),
     "/new":      ("Session",             "💾"),
     "/reset":    ("Session",             "💾"),
@@ -1181,7 +1197,7 @@ def print_banner() -> None:
         print(f"  {icon}  {colour}{Style.BRIGHT}{text}{Style.RESET_ALL}")
     print()
     print(Fore.WHITE + Style.DIM +
-          "  /live  /eod  /auto  │  /global  │  /heat  /cycle  /scenario  /narrative  │  /prompts  │  /help  │  exit")
+          "  /live  /eod  /auto  │  /model  │  /global  │  /heat  /cycle  /scenario  /narrative  │  /prompts  │  /help  │  exit")
     print()
     _separator()
     print()
@@ -1548,6 +1564,42 @@ def _build_prompt(agent=None) -> ANSI:
     turns = (f"  \x1b[2mt{agent.turn_count}\x1b[0m" if agent and agent.turn_count > 0 else "")
     clock = f"  \x1b[2m{_session_clock_label()}\x1b[0m"
     return ANSI(f"  {tag}{clock}{fup}{turns}\x1b[1;36m ❯ \x1b[0m")
+
+
+def _handle_model_command(agent, text: str) -> dict:
+    """Parse and execute `/model` for the main Agent Adda chat backend only."""
+    parts = text.strip().split()
+    if not parts or parts[0].lower() != "/model":
+        return {"handled": False}
+    if len(parts) == 1 or parts[1].lower() in {"status", "current", "show"}:
+        status = agent.model_status()
+        return {"handled": True, "status": "ok", "action": "status", **status}
+
+    provider = parts[1].lower()
+    model = " ".join(parts[2:]).strip() or None
+    result = agent.set_model_backend(provider, model=model)
+    return {"handled": True, "action": "switch", **result}
+
+
+def _print_model_command_result(result: dict) -> None:
+    if result.get("status") != "ok":
+        console.print(f"[red]  ✗ {result.get('error', 'model switch failed')}[/red]")
+        return
+
+    action = result.get("action")
+    provider = str(result.get("provider") or "keyword")
+    model = result.get("model") or "no LLM"
+    backend = result.get("backend") or provider
+    if action == "status":
+        console.print(
+            f"[green]  ✓ Main model:[/green] [bold]{backend}[/bold]"
+            f"[dim]  · provider: {provider}  · voice STT/TTS unchanged[/dim]"
+        )
+    else:
+        console.print(
+            f"[green]  ✓ Main model switched:[/green] [bold]{backend}[/bold]"
+            f"[dim]  · model: {model}  · voice STT/TTS unchanged[/dim]"
+        )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -2596,6 +2648,38 @@ def _check_monitor_alerts() -> None:
         _render_monitor_event_live(ev)
 
 
+def _render_monitor_event_console(ev: dict) -> None:
+    """Render one monitor event in response to an explicit /monitor command."""
+    kind = ev.get("type")
+    if kind == "alerts":
+        _render_alert_batch(ev)
+    elif kind == "heartbeat":
+        _render_monitor_heartbeat(ev)
+    elif kind == "error":
+        _mcon().print(
+            f"  ⚠  Monitor '{ev.get('strategy')}' error: {ev.get('message')}",
+            style="dim red", markup=False,
+        )
+
+
+def _print_monitor_results() -> None:
+    """Show monitor status plus queued/recent scan results."""
+    mon = get_monitor()
+    _print_monitor_status()
+
+    queued_events = mon.drain_alerts()
+    events = queued_events or (mon.recent_events() if hasattr(mon, "recent_events") else [])
+    mc = _mcon()
+    if not events:
+        mc.print("[dim]  No monitor scan results yet. The first real scan runs after the worker warm-up delay.[/dim]")
+        return
+
+    if not queued_events:
+        mc.print("[dim]  Showing recently displayed monitor results.[/dim]")
+    for ev in events[-10:]:
+        _render_monitor_event_console(ev)
+
+
 def _print_monitor_status() -> None:
     """Show status table for all running monitors."""
     mon = get_monitor()
@@ -2658,7 +2742,15 @@ def _parse_monitor_start_args(parts: list[str]) -> dict[str, object]:
 def _handle_monitor_command(parts: list[str]) -> None:
     """Handle /monitor [start|stop|status|list] [strategy] [index]."""
     mon = get_monitor()
-    sub = parts[1].lower() if len(parts) > 1 else "status"
+    sub = parts[1].lower() if len(parts) > 1 else "results"
+
+    if sub in MONITOR_STRATEGIES or sub == "all":
+        parts = [parts[0], "start", *parts[1:]]
+        sub = "start"
+
+    if sub in ("results", "result", "alerts", "show"):
+        _print_monitor_results()
+        return
 
     if sub == "list":
         mc = _mcon()
@@ -2691,6 +2783,15 @@ def _handle_monitor_command(parts: list[str]) -> None:
         interval = int(parsed["interval"])
         direction = str(parsed["direction"])
 
+        if strategy not in MONITOR_STRATEGIES:
+            _out = sys.__stdout__ or sys.stdout
+            _out.write(
+                f"\n  Unknown strategy '{strategy}'. "
+                f"Available: {', '.join(MONITOR_STRATEGIES)}\n\n"
+            )
+            _out.flush()
+            return
+
         msg = mon.start(
             strategy     = strategy,
             index        = index,
@@ -2700,7 +2801,9 @@ def _handle_monitor_command(parts: list[str]) -> None:
         # Use sys.__stdout__ directly — Rich+prompt_toolkit cursor conflict can swallow console.print()
         _out = sys.__stdout__ or sys.stdout
         _out.write(f"\n  {msg}\n")
-        _out.write(f"  Scanning: {index}  ·  Interval: {interval}m  ·  Direction: {direction}\n\n")
+        if "started" in msg.lower():
+            _out.write(f"  Scanning: {index}  ·  Interval: {interval}m  ·  Direction: {direction}\n")
+        _out.write("\n")
         _out.flush()
         return
 
@@ -2751,6 +2854,12 @@ def _print_help() -> None:
             "  [red]/live[/red]  or  [red]/l[/red]        — Live / Intraday  (real-time NSE API)\n"
             "  [blue]/eod[/blue]   or  [blue]/h[/blue]        — EOD / Historical (CSV + DB snapshot)\n"
             "  [white]/auto[/white]  or  [white]/a[/white]        — Auto-detect from query keywords\n\n"
+            "[bold cyan]MODEL COMMANDS[/bold cyan]\n"
+            "  [magenta]/model[/magenta]                 — Show active main chat model\n"
+            "  [magenta]/model gpt-4o[/magenta]          — Switch main chat backend to OpenAI gpt-4o\n"
+            "  [magenta]/model ollama[/magenta]          — Switch main chat backend to Ollama default\n"
+            "  [magenta]/model ollama granite4:latest[/magenta] — Switch to a specific Ollama model\n"
+            "  [magenta]/model keyword[/magenta]         — Disable LLM and use deterministic tool routing\n\n"
             "[bold cyan]INTRADAY SCREENER[/bold cyan]\n"
             "  [green]/scan[/green]                   — Scan NIFTY 50 (all strategies, 15m)\n"
             "  [green]/scan NIFTY BANK[/green]        — Scan any index (NIFTY IT, PHARMA…)\n"
@@ -2844,7 +2953,9 @@ def _print_help() -> None:
             "  [blue]/voice[/blue]                   — Generate daily voice briefing (MP3)\n"
             "  [blue]/concall TCS[/blue]              — Concall NLP: sentiment + themes + guidance\n\n"
             "[bold cyan]GLOBAL MARKET[/bold cyan]\n"
-            "  [green]/global[/green]                 — Global risk regime and India read-through\n\n"
+            "  [green]/global[/green]                 — Global risk regime and India read-through\n"
+            "  [green]/dashboard[/green]              — Current market dashboard + narrative\n"
+            "  [green]/dash[/green]                   — Alias for /dashboard\n\n"
             "[bold cyan]PROMPT LIBRARY[/bold cyan]\n"
             "  [yellow]/prompts[/yellow]               — Browse 60 curated prompts\n"
             "  [yellow]/prompts intraday[/yellow]      — Filter by category\n"
@@ -2928,6 +3039,23 @@ def _run_with_spinner(agent, query: str, show_trace: bool, animated: bool = True
     if exc:
         raise exc[0]
     return result
+
+
+def _is_plain_greeting(text: str) -> bool:
+    cleaned = re.sub(r"[^\w\s]", " ", text or "").strip().lower()
+    cleaned = re.sub(r"\s+", " ", cleaned)
+    return cleaned in {
+        "hello", "hi", "hey", "hey there", "hi there", "hello there",
+        "good morning", "good afternoon", "good evening",
+    }
+
+
+def _print_greeting_response() -> None:
+    console.print("[bold cyan]  Hello — Agent Adda is ready.[/bold cyan]")
+    console.print(
+        "[dim]  Try /live for current market status, /global for global cues, "
+        "/heat for breadth/sector heat, or ask about a specific NSE symbol.[/dim]"
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -3220,7 +3348,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
     )
 
     console.print(f"[bold green]  ✓ Agent Adda ready[/bold green] [dim]{_session_clock_label()}[/dim] — type your question and press Enter")
-    console.print("[dim]  Tip: /live  /eod  /auto  │  /prompts  │  /ric  │  1·2·3 = follow-ups  │  /new  │  /help  │  exit[/dim]")
+    console.print("[dim]  Tip: /live  /eod  /auto  │  /model  │  /prompts  │  /ric  │  1·2·3 = follow-ups  │  /new  │  /help  │  exit[/dim]")
     console.print()
 
     # Start background alert auto-display thread.
@@ -3260,6 +3388,11 @@ def _chat_loop(agent, show_trace: bool) -> None:
         if text.lower() in ("exit", "quit", "q", ":q"):
             break
 
+        if _is_plain_greeting(text):
+            _print_user(text)
+            _print_greeting_response()
+            continue
+
         # ── Mode commands ──────────────────────────────────────────────
         if text.lower() in ("/live", "/intraday", "/l"):
             _mode = "intraday"
@@ -3272,6 +3405,10 @@ def _chat_loop(agent, show_trace: bool) -> None:
         if text.lower() in ("/auto", "/a"):
             _mode = "auto"
             console.print("[dim]  ● Mode → AUTO  (keyword-based detection)[/dim]")
+            continue
+
+        if text.lower() == "/model" or text.lower().startswith("/model "):
+            _print_model_command_result(_handle_model_command(agent, text))
             continue
 
         # ── Utility commands ───────────────────────────────────────────
@@ -3326,6 +3463,15 @@ def _chat_loop(agent, show_trace: bool) -> None:
         if _handle_us_global_command(text):
             _separator()
             continue
+
+        # ── /dashboard: comprehensive current-market dashboard + narrative ─
+        if text.lower() in ("/dashboard", "/dash") or text.lower().startswith(("/dashboard ", "/dash ")):
+            topic = text.split(maxsplit=1)[1].strip() if len(text.split(maxsplit=1)) > 1 else ""
+            text = (
+                "current market dashboard with narrative"
+                + (f" focused on {topic}" if topic else "")
+            )
+            console.print("[dim]  → Market dashboard[/dim]")
 
         # ── /monitor-report: export monitor status + recent alerts as a report ──
         if text.lower().startswith("/monitor-report"):
@@ -4257,6 +4403,28 @@ def _chat_loop(agent, show_trace: bool) -> None:
                 console.print(f"[red]  ✗ /kb failed:[/red] {exc}")
                 continue
 
+        # ── /reports — Enhanced Comprehensive Analysis (Postgres-backed) ──
+        # PG-report: Migrated from legacy R script. Computes via SQL on
+        # market.equity_eod / market.index_eod, persists to report.* tables,
+        # then renders HTML by SELECT.
+        # Usage:  /reports                       → run + render HTML (default)
+        #         /reports run                   → compute + persist only
+        #         /reports html [--run-id N]     → render HTML for run (default: latest)
+        elif text.lower().startswith("/reports"):
+            try:
+                import shlex
+                from reports.enhanced_comprehensive_analysis import main as rpt_main
+                argv = shlex.split(text[len("/reports"):].strip()) or ["both"]
+                console.print(f"[dim]  → /reports {' '.join(argv)}[/dim]")
+                rpt_main(argv)
+                continue
+            except SystemExit:
+                console.print("[red]  ✗ Usage:[/red] /reports [run|html|both] [--run-id N]")
+                continue
+            except Exception as exc:
+                console.print(f"[red]  ✗ /reports failed:[/red] {exc}")
+                continue
+
         # ── /voice — P3-2 60-second daily audio briefing ─────────────────
         # PG-voice: Generates a market briefing script + audio (OpenAI TTS or macOS `say`).
         # Sources: signal_log.csv (today's BUY signals), regime_detector, fetch_fii_dii_flows.
@@ -4441,18 +4609,66 @@ def _chat_loop(agent, show_trace: bool) -> None:
                     console.print(t2)
                     console.print(f"[dim]  Source: {_src}[/dim]")
                     console.print()
-                    # Follow-up LLM narrative
-                    text = (
-                        f"The sector heat calendar for {_mn} shows: "
-                        f"TAILWIND sectors: {heat['tailwinds']}; "
-                        f"NEUTRAL: {heat['neutral']}. "
-                        f"Data source: {_src}. "
-                        f"Give 3-4 bullet actionable insights: which sectors to rotate into, "
-                        f"which to underweight, and how this aligns with the current market environment."
-                    )
+                    # PG-heat-routing-fix: previous behaviour rewrote `text`
+                    # and let it fall back into agent.query() — but the
+                    # follow-up phrase contained "current market environment",
+                    # which `_build_market_situation_assessment_plan` matched
+                    # via "market"+"current". The planner then ran
+                    # get_live_market_overview + get_market_breadth and dumped
+                    # 90+ index rows that had nothing to do with seasonality.
+                    # New: call backend.chat() directly with the heat data and
+                    # `continue` to skip the broken routing path.
+                    try:
+                        _hm_lines = []
+                        for sec in sorted(heat.get("heatmap", {}).keys()):
+                            cells = heat["heatmap"][sec]
+                            _hm_lines.append(
+                                f"  {sec}: " + ", ".join(
+                                    f"{m}={cells.get(m, 0):+.1f}%"
+                                    for m in ["Jan","Feb","Mar","Apr","May","Jun",
+                                              "Jul","Aug","Sep","Oct","Nov","Dec"]
+                                )
+                            )
+                        sys_msg = (
+                            "You are Agent Adda, an Indian-equities seasonality "
+                            "commentator. The user has just been shown a sector "
+                            "seasonality heatmap. Your job is to write 3-4 short "
+                            "actionable bullets reasoning ONLY from the seasonal "
+                            "numbers provided. Do NOT mention live prices, today's "
+                            "moves, or any data not present below. Do NOT call "
+                            "any tools."
+                        )
+                        usr_msg = (
+                            f"Month under review: {_mn}\n"
+                            f"TAILWIND sectors (>= +5% historical avg): {heat['tailwinds']}\n"
+                            f"NEUTRAL sectors: {heat['neutral']}\n"
+                            f"HEADWIND sectors: {heat.get('headwinds', [])}\n\n"
+                            f"12-month historical avg returns:\n"
+                            + "\n".join(_hm_lines)
+                            + "\n\nWrite 3-4 short bullets:\n"
+                            "  • Which 1-2 sectors to overweight this month and why "
+                            "(cite the historical avg).\n"
+                            "  • Which 1-2 sectors to underweight or avoid and why.\n"
+                            "  • One rotation idea: a likely leadership handoff "
+                            "from this month to next month based on the table.\n"
+                            "  • One caveat about reading too much into seasonality.\n"
+                            "End with: '━━━ Not investment advice. For research and learning only. ━━━'"
+                        )
+                        _resp = agent.backend.chat([
+                            {"role": "system", "content": sys_msg},
+                            {"role": "user",   "content": usr_msg},
+                        ])
+                        _commentary = (_resp or {}).get("content", "").strip()
+                        if _commentary:
+                            console.print()
+                            console.print(_commentary)
+                            console.print()
+                    except Exception as _llm_err:
+                        console.print(f"[dim yellow]  ⚠  LLM commentary skipped: {_llm_err}[/dim yellow]")
+                    continue
             except Exception as _e:
                 console.print(f"[bold red]  ❌  Heat calendar error: {_e}[/bold red]")
-                text = f"Sector heat calendar error: {_e}"
+                continue
 
         # ── /cycle — economic cycle assessment (direct render) ────────
         elif text.lower().startswith("/cycle"):
@@ -4852,6 +5068,20 @@ def _chat_loop(agent, show_trace: bool) -> None:
             )
             console.print(f"[dim]  → Strategy: {strat} on {sym}[/dim]")
 
+        # ── /recap — intraday market recap (PG intraday.quote_snapshots) ─
+        # PG-recap-slash: rewrite `/recap [minutes]` into a phrase that the
+        # planner's `intraday_market_recap` keyword rule accepts. Without this
+        # the bare token `/recap` fell through to the symbol planner and was
+        # resolved to a random ticker.
+        elif text.lower().startswith("/recap"):
+            parts = text.split()
+            try:
+                minutes = int(parts[1]) if len(parts) > 1 else 15
+            except (ValueError, IndexError):
+                minutes = 15
+            text = f"what happened in the market in the last {minutes} minutes"
+            console.print(f"[dim]  → Intraday recap: last {minutes} min[/dim]")
+
         # ── /theme — select color theme ────────────────────────────────────
         if text.lower().startswith("/theme"):
             from terminal.theme import get_theme_name, set_theme, list_themes, THEMES
@@ -5023,6 +5253,21 @@ def main() -> None:
                   f"[dim]  │  backend: {agent.backend_name}"
                   f"  │  mode: {_mode}"
                   f"  │  {_session_clock_label()}[/dim]")
+
+    # PG-intraday-capture: spawn daemon thread that polls the NSE live tape
+    # every minute (during market hours) and prunes rows older than 2 hours.
+    # Runs silently — never raises into the chat loop.
+    try:
+        from terminal.intraday_capture import (
+            start_background_capture, CAPTURE_INTERVAL_SEC, RETENTION_MINUTES,
+        )
+        if start_background_capture():
+            console.print(
+                f"[dim]  │  intraday capture: every {CAPTURE_INTERVAL_SEC}s · "
+                f"retain {RETENTION_MINUTES} min[/dim]"
+            )
+    except Exception as _e:
+        console.print(f"[dim red]  │  intraday capture disabled ({_e})[/dim red]")
     console.print()
 
     if args.query:
