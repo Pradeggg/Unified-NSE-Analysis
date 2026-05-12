@@ -310,6 +310,55 @@ class NSEAgentMonitorCommandTests(unittest.TestCase):
         self.assertEqual(len(rendered), 1)
         self.assertEqual(rendered[0]["type"], "error")
 
+    def test_monitor_autodisplay_suppresses_heartbeat_noise(self):
+        self.assertFalse(nse_agent._should_auto_render_monitor_event({"type": "heartbeat"}))
+        self.assertTrue(nse_agent._should_auto_render_monitor_event({"type": "alerts"}))
+        self.assertTrue(nse_agent._should_auto_render_monitor_event({"type": "error"}))
+
+    def test_check_monitor_alerts_only_live_renders_actionable_events(self):
+        class FakeMonitor:
+            def any_active(self):
+                return True
+
+            def drain_alerts(self):
+                return [
+                    {"type": "heartbeat", "strategy": "vcp"},
+                    {"type": "alerts", "strategy": "vcp"},
+                    {"type": "error", "strategy": "momentum"},
+                ]
+
+        rendered = []
+        with patch.object(nse_agent, "get_monitor", return_value=FakeMonitor()), patch.object(
+            nse_agent, "_render_monitor_event_live", side_effect=lambda ev: rendered.append(ev)
+        ):
+            nse_agent._check_monitor_alerts()
+
+        self.assertEqual([event["type"] for event in rendered], ["alerts", "error"])
+
+    def test_start_alert_autodisplay_is_idempotent_while_thread_alive(self):
+        class FakeThread:
+            starts = 0
+
+            def __init__(self, *args, **kwargs):
+                self.alive = True
+
+            def start(self):
+                FakeThread.starts += 1
+
+            def is_alive(self):
+                return self.alive
+
+        original_thread = nse_agent._alert_autodisplay_thread
+        try:
+            nse_agent._alert_autodisplay_thread = None
+            with patch.object(nse_agent.threading, "Thread", FakeThread):
+                first = nse_agent._start_alert_autodisplay()
+                second = nse_agent._start_alert_autodisplay()
+            self.assertIs(first, second)
+            self.assertEqual(FakeThread.starts, 1)
+        finally:
+            nse_agent._alert_autodisplay_thread = original_thread
+
 
 class NSEAgentScanRewriteTests(unittest.TestCase):
     def test_rewrite_default_scan_to_nifty_50_all_strategy_query(self):

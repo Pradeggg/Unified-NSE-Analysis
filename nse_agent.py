@@ -1481,6 +1481,7 @@ def _market_dashboard_renderable(snapshot: dict, *, width: int | None = None, he
     width = width or size.columns
     height = height or size.lines
     compact = width < 110 or height < 32
+    ultra_compact = width < 100 or height < 30
     row_limit = 3 if compact else 5
 
     live = snapshot.get("get_live_market_overview") or {}
@@ -1525,6 +1526,73 @@ def _market_dashboard_renderable(snapshot: dict, *, width: int | None = None, he
             index_rows.append((name, pct))
     leaders = sorted(index_rows, key=lambda item: item[1], reverse=True)[:row_limit]
     laggards = sorted(index_rows, key=lambda item: item[1])[:row_limit]
+
+    if ultra_compact:
+        def _idx_line(label: str, row: dict) -> str:
+            last = _dashboard_fmt_num(row.get("last", row.get("close")), 0)
+            pct = _dashboard_fmt_pct(row.get("pct_change", row.get("chg_pct")))
+            return f"{label} {last} {pct}"
+
+        def _short(text: str, max_len: int) -> str:
+            text = str(text)
+            return text if len(text) <= max_len else text[: max(0, max_len - 1)] + "…"
+
+        value_width = max(24, width - 28)
+        n50 = indices.get("NIFTY 50") or {}
+        bank = indices.get("NIFTY BANK") or {}
+        vix = indices.get("INDIA VIX") or {}
+        gainers = movers.get("gainers") or []
+        losers = movers.get("losers") or []
+        flows = []
+        for row in (fii.get("data") or [])[:2]:
+            net = row.get("net_crore")
+            net_txt = f"{net:+,.0f}Cr" if isinstance(net, (int, float)) else "n/a"
+            flows.append(f"{row.get('category', 'Flow')} {net_txt}")
+
+        rows = Table(box=box.SIMPLE_HEAD, expand=True, padding=(0, 1))
+        rows.add_column("Section", style="bold cyan", no_wrap=True, width=24)
+        rows.add_column("Live Snapshot", overflow="ellipsis", no_wrap=True)
+        rows.add_row("Market Tape", _short(" | ".join([
+            _idx_line("N50", n50),
+            _idx_line("BANK", bank),
+            _idx_line("INDIA VIX", vix),
+        ]), value_width))
+        rows.add_row(
+            "Breadth / Flows / Global",
+            _short(
+                f"Live {adv_dec.get('advances', '—')}A/{adv_dec.get('declines', '—')}D | "
+                f"DB {brd.get('advances', '—')}A/{brd.get('declines', '—')}D | "
+                f"{' | '.join(flows) or 'Flows n/a'} | {glob.get('risk_regime', 'mixed')}",
+                value_width,
+            ),
+        )
+        rows.add_row(
+            "Index Leadership",
+            _short(
+                (f"Lead {leaders[0][0]} {_dashboard_fmt_pct(leaders[0][1])}" if leaders else "Lead n/a")
+                + " | "
+                + (f"Weak {laggards[0][0]} {_dashboard_fmt_pct(laggards[0][1])}" if laggards else "Weak n/a"),
+                value_width,
+            ),
+        )
+        rows.add_row(
+            "Stock Movers",
+            _short(
+                (f"G {gainers[0].get('symbol', '—')} {_dashboard_fmt_pct(gainers[0].get('pct_change'))}" if gainers else "G n/a")
+                + " | "
+                + (f"L {losers[0].get('symbol', '—')} {_dashboard_fmt_pct(losers[0].get('pct_change'))}" if losers else "L n/a"),
+                value_width,
+            ),
+        )
+        rows.add_row("Narrative", _short(_compact_dashboard_narrative(snapshot), value_width))
+        rows.add_row("Ctrl+C to exit", "refresh 60s")
+        return Panel(
+            rows,
+            title=f"📊 Market Dashboard · {fetched_at} · focus: {focus}"[: max(40, width - 4)],
+            border_style="bold white",
+            expand=True,
+        )
+
     leadership = Table(box=box.SIMPLE_HEAD, expand=True, padding=(0, 1))
     leadership.add_column("Leaders", style="green")
     leadership.add_column("Laggards", style="red")
@@ -2759,10 +2827,24 @@ def _render_monitor_event_live(ev: dict) -> None:
 
 # ── Auto-display thread — drains the alert queue every 3s while user is idle ──
 _alert_autodisplay_stop = threading.Event()
+_alert_autodisplay_thread: threading.Thread | None = None
+
+
+def _should_auto_render_monitor_event(ev: dict) -> bool:
+    """Only interrupt the prompt for actionable monitor output.
+
+    Heartbeats are still retained by MonitorManager.recent_events() and shown
+    from the explicit `/monitor` view, but they should not redraw the active
+    prompt or interleave with an answer.
+    """
+    return ev.get("type") in {"alerts", "error"}
 
 
 def _start_alert_autodisplay() -> threading.Thread:
     """Start background thread that auto-prints monitor alerts via patch_stdout."""
+    global _alert_autodisplay_thread
+    if _alert_autodisplay_thread is not None and _alert_autodisplay_thread.is_alive():
+        return _alert_autodisplay_thread
     _alert_autodisplay_stop.clear()
 
     def _loop():
@@ -2774,13 +2856,14 @@ def _start_alert_autodisplay() -> threading.Thread:
                 mon = get_monitor()
                 events = mon.drain_alerts()
                 for ev in events:
-                    _render_monitor_event_live(ev)
+                    if _should_auto_render_monitor_event(ev):
+                        _render_monitor_event_live(ev)
             except Exception:
                 pass
 
-    t = threading.Thread(target=_loop, daemon=True, name="alert-autodisplay")
-    t.start()
-    return t
+    _alert_autodisplay_thread = threading.Thread(target=_loop, daemon=True, name="alert-autodisplay")
+    _alert_autodisplay_thread.start()
+    return _alert_autodisplay_thread
 
 
 def _render_alert_batch(event: dict) -> None:
@@ -2855,7 +2938,8 @@ def _check_monitor_alerts() -> None:
     if not mon.any_active():
         return
     for ev in mon.drain_alerts():
-        _render_monitor_event_live(ev)
+        if _should_auto_render_monitor_event(ev):
+            _render_monitor_event_live(ev)
 
 
 def _render_monitor_event_console(ev: dict) -> None:
