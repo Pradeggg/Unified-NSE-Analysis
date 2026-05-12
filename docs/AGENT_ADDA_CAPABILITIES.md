@@ -45,6 +45,19 @@
 
 ---
 
+### A2. CURRENT MARKET DASHBOARD 📊 (`/dashboard`)
+
+Deterministic market dashboard that consolidates live NSE tape, breadth, stock/index movers, FII/DII flows, global read-through, catalyst headlines, and a concise market narrative. In the terminal it opens as a compact full-screen live view that refreshes every 60 seconds; press `Ctrl+C` to exit.
+
+| Command | Alias | What It Shows |
+|---------|-------|---------------|
+| `/dashboard` | `/dash` | Auto-refreshing current market dashboard + narrative |
+| `/dashboard banks` | `/dash banks` | Same live dashboard with a user-specified focus note |
+
+Dashboard sections: Market Tape, Index Leadership, Breadth & Internal Health, Stock Movers, Flows, Global Read-through, Catalyst Tape, and Narrative.
+
+---
+
 ### B. RIC LIBRARY — Recursive Investigative Conversations 🔬 (8 Multi-Step Recipes)
 
 **Shorthand**: `/ric [name] [SYMBOL|SECTOR|INDEX]`
@@ -203,9 +216,11 @@ Auto-running background alert workers that scan at regular intervals and queue a
 
 | Subcommand | Syntax | What It Does |
 |-----------|--------|------------|
+| `/monitor` | `/monitor` or `/monitor results` | Show active monitors plus queued/recent scan results |
 | `/monitor list` | `/monitor list` | Show all 14 available strategies |
 | `/monitor status` | `/monitor status` | Show status of all running monitors |
 | `/monitor start` | `/monitor start STRATEGY [INDEX] [INTERVAL_MIN] [buy\|sell\|all]` | Start a background monitor |
+| `/monitor STRATEGY` | `/monitor STRATEGY [INDEX] [INTERVAL_MIN] [buy\|sell\|all]` | Shorthand for `/monitor start STRATEGY ...` |
 | `/monitor stop` | `/monitor stop STRATEGY` or `/monitor stop all` | Stop one or all monitors |
 
 #### Available Monitor Strategies (14 Total)
@@ -230,6 +245,8 @@ Auto-running background alert workers that scan at regular intervals and queue a
 #### Monitor Usage Examples
 ```
 /monitor start breakout NIFTY 500 15 buy        # Breakout on NIFTY 500, 15m, BUY only
+/monitor                                        # Show status + latest monitor results
+/monitor vcp                                    # VCP on NIFTY 500, 15m, all directions
 /monitor start momentum NIFTY BANK 10            # Momentum on NIFTY BANK, 10m, all directions
 /monitor start all 5 sell                        # All strategies, 5m, SELL only
 /monitor stop breakout                           # Stop breakout monitor

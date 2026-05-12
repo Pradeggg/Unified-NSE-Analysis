@@ -45,7 +45,8 @@ import colorama
 import pandas as pd
 from colorama import Fore, Style
 
-from rich.console import Console
+from rich.console import Console, Group
+from rich.live import Live
 from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.rule import Rule
@@ -416,7 +417,7 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/scan vwap",        "VWAP Reclaim — price reclaiming/losing VWAP proxy"),
     ("/scan vcp",         "VCP — Volatility Contraction Pattern intraday"),
     ("/scan momentum",    "Momentum — MACD + RSI + Supertrend aligned"),
-    ("/dashboard",        "Comprehensive current-market dashboard + narrative"),
+    ("/dashboard",        "Auto-refreshing current-market dashboard + narrative"),
     ("/dash",             "Alias: current-market dashboard + narrative"),
     # EOD screener shortcuts
     ("/screen stage2",    "Stage 2 uptrend stocks (Weinstein)"),
@@ -1403,6 +1404,215 @@ def _toolbar_narrative(indices: list[dict], adv_dec: dict | None = None, source:
         "Midcaps leading" if mid_pct > max(0.05, bank_pct) else "No clear leadership"
     )
     return f"Intraday narrative: {tone}; {leadership}.{breadth} Source: {source or 'market tape'}."
+
+
+def _dashboard_fmt_pct(value) -> str:
+    try:
+        fv = float(value)
+    except (TypeError, ValueError):
+        return "n/a"
+    return f"{fv:+.2f}%"
+
+
+def _dashboard_fmt_num(value, decimals: int = 2) -> str:
+    try:
+        fv = float(value)
+    except (TypeError, ValueError):
+        return "n/a"
+    return f"{fv:,.{decimals}f}"
+
+
+def _dashboard_pct_style(value) -> str:
+    try:
+        fv = float(value)
+    except (TypeError, ValueError):
+        return "white"
+    return "bold green" if fv > 0 else ("bold red" if fv < 0 else "bold yellow")
+
+
+def _fetch_market_dashboard_snapshot(focus: str = "") -> dict:
+    """Fetch one live dashboard snapshot from existing tools."""
+    from terminal.tools import call_tool
+
+    plan = [
+        ("get_live_market_overview", {}),
+        ("get_market_breadth", {}),
+        ("get_top_gainers_losers", {"index": "NIFTY 500", "top_n": 5, "direction": "both"}),
+        ("get_fii_dii_activity", {}),
+        ("get_global_market_assessment", {}),
+        ("search_latest_catalysts", {"symbol": "NIFTY India market today"}),
+    ]
+    out: dict[str, dict] = {"focus": focus, "fetched_at": datetime.now(_IST).strftime("%Y-%m-%d %H:%M:%S")}
+    for name, args in plan:
+        try:
+            out[name] = call_tool(name, args)
+        except Exception as exc:
+            out[name] = {"error": str(exc)}
+    return out
+
+
+def _compact_dashboard_narrative(snapshot: dict) -> str:
+    live = snapshot.get("get_live_market_overview") or {}
+    glob = snapshot.get("get_global_market_assessment") or {}
+    indices = live.get("indices") or {}
+    n50 = indices.get("NIFTY 50") or {}
+    adv_dec = live.get("adv_dec") or {}
+    n50_pct = n50.get("pct_change", n50.get("chg_pct"))
+    adv, dec = adv_dec.get("advances"), adv_dec.get("declines")
+    breadth_bias = "mixed"
+    if isinstance(adv, (int, float)) and isinstance(dec, (int, float)):
+        breadth_bias = "positive" if adv > dec else ("negative" if dec > adv else "flat")
+    tape_bias = "bullish" if isinstance(n50_pct, (int, float)) and n50_pct > 0.25 else (
+        "bearish" if isinstance(n50_pct, (int, float)) and n50_pct < -0.25 else "range-bound"
+    )
+    regime = glob.get("risk_regime", "mixed")
+    if tape_bias == "bearish" and breadth_bias == "negative":
+        stance = "defensive / risk-off"
+    elif tape_bias == "bullish" and breadth_bias != "negative":
+        stance = "constructive but selective"
+    else:
+        stance = "mixed and confirmation-led"
+    return f"{stance}: NIFTY tape {tape_bias}, breadth {breadth_bias}, global regime {regime}. Confirm sector leadership and invalidation before acting."
+
+
+def _market_dashboard_renderable(snapshot: dict, *, width: int | None = None, height: int | None = None):
+    """Return a screen-fitting Rich renderable for the live market dashboard."""
+    size = shutil.get_terminal_size((120, 34))
+    width = width or size.columns
+    height = height or size.lines
+    compact = width < 110 or height < 32
+    row_limit = 3 if compact else 5
+
+    live = snapshot.get("get_live_market_overview") or {}
+    brd = snapshot.get("get_market_breadth") or {}
+    movers = snapshot.get("get_top_gainers_losers") or {}
+    fii = snapshot.get("get_fii_dii_activity") or {}
+    glob = snapshot.get("get_global_market_assessment") or {}
+    cat = snapshot.get("search_latest_catalysts") or {}
+
+    indices = live.get("indices") or {}
+    adv_dec = live.get("adv_dec") or {}
+    focus = snapshot.get("focus") or "whole market"
+    fetched_at = snapshot.get("fetched_at") or datetime.now(_IST).strftime("%Y-%m-%d %H:%M:%S")
+
+    title = (
+        f"📊 Market Dashboard  ·  {fetched_at}  ·  focus: {focus}  ·  "
+        f"refresh: 60s  ·  Ctrl+C to exit"
+    )
+
+    tape = Table(box=box.SIMPLE_HEAD, expand=True, show_lines=False, padding=(0, 1))
+    tape.add_column("Metric", style="bold cyan", no_wrap=True)
+    tape.add_column("Last", justify="right")
+    tape.add_column("Chg%", justify="right")
+    for label, row in (
+        ("NIFTY 50", indices.get("NIFTY 50") or {}),
+        ("NIFTY BANK", indices.get("NIFTY BANK") or {}),
+        ("MIDCAP", indices.get("NIFTY MIDCAP SELECT") or indices.get("NIFTY MIDCAP 50") or indices.get("NIFTY MIDCAP 100") or {}),
+        ("SMALLCAP", indices.get("NIFTY SMALLCAP 100") or indices.get("NIFTY SMALLCAP 250") or {}),
+        ("INDIA VIX", indices.get("INDIA VIX") or {}),
+    ):
+        pct = row.get("pct_change", row.get("chg_pct"))
+        tape.add_row(label, _dashboard_fmt_num(row.get("last", row.get("close"))), f"[{_dashboard_pct_style(pct)}]{_dashboard_fmt_pct(pct)}[/]")
+    if adv_dec:
+        tape.add_row("Live Breadth", f"{adv_dec.get('advances', '—')}A", f"{adv_dec.get('declines', '—')}D")
+
+    index_rows = []
+    for name, row in indices.items():
+        if name.upper() == "INDIA VIX":
+            continue
+        pct = row.get("pct_change", row.get("chg_pct"))
+        if isinstance(pct, (int, float)):
+            index_rows.append((name, pct))
+    leaders = sorted(index_rows, key=lambda item: item[1], reverse=True)[:row_limit]
+    laggards = sorted(index_rows, key=lambda item: item[1])[:row_limit]
+    leadership = Table(box=box.SIMPLE_HEAD, expand=True, padding=(0, 1))
+    leadership.add_column("Leaders", style="green")
+    leadership.add_column("Laggards", style="red")
+    for i in range(max(len(leaders), len(laggards), 1)):
+        l = f"{leaders[i][0]} {_dashboard_fmt_pct(leaders[i][1])}" if i < len(leaders) else ""
+        r = f"{laggards[i][0]} {_dashboard_fmt_pct(laggards[i][1])}" if i < len(laggards) else ""
+        leadership.add_row(l, r)
+
+    health = Table(box=box.SIMPLE, expand=True, padding=(0, 1), show_header=False)
+    health.add_column("Label", style="bold")
+    health.add_column("Value")
+    if brd and not brd.get("error"):
+        health.add_row("DB Breadth", f"{brd.get('advances', '—')}A / {brd.get('declines', '—')}D  A/D {brd.get('ad_ratio', '—')}")
+        if brd.get("avg_rs_pct") is not None:
+            health.add_row("Avg RS", f"{brd.get('avg_rs_pct'):+.1f}%")
+        sd = brd.get("stage_distribution") or {}
+        if sd:
+            health.add_row("Stages", " | ".join(
+                f"S{i}:{int(sd.get(f'STAGE_{i}', sd.get(f'stage_{i}', 0)) or 0)}" for i in range(1, 5)
+            ))
+    flows = []
+    for row in (fii.get("data") or [])[:3]:
+        net = row.get("net_crore")
+        net_txt = f"{net:+,.0f} Cr" if isinstance(net, (int, float)) else "n/a"
+        flows.append(f"{row.get('category', 'Flow')} {net_txt}")
+    if flows:
+        health.add_row("Flows", " | ".join(flows))
+    health.add_row("Global", str(glob.get("risk_regime", "mixed")))
+
+    move_tbl = Table(box=box.SIMPLE_HEAD, expand=True, padding=(0, 1))
+    move_tbl.add_column("Gainers", style="green")
+    move_tbl.add_column("Losers", style="red")
+    gainers = movers.get("gainers") or []
+    losers = movers.get("losers") or []
+    for i in range(row_limit):
+        g = gainers[i] if i < len(gainers) else {}
+        lo = losers[i] if i < len(losers) else {}
+        move_tbl.add_row(
+            f"{g.get('symbol', '')} {_dashboard_fmt_pct(g.get('pct_change'))}" if g else "",
+            f"{lo.get('symbol', '')} {_dashboard_fmt_pct(lo.get('pct_change'))}" if lo else "",
+        )
+
+    bottom = Table.grid(expand=True)
+    bottom.add_column(ratio=1)
+    bottom.add_column(ratio=1)
+    bottom.add_row(Panel(health, title="Breadth / Flows / Global", border_style="blue"), Panel(move_tbl, title="Stock Movers", border_style="magenta"))
+
+    top = Table.grid(expand=True)
+    top.add_column(ratio=1)
+    top.add_column(ratio=1)
+    top.add_row(Panel(tape, title="Market Tape", border_style="cyan"), Panel(leadership, title="Index Leadership", border_style="green"))
+
+    narrative = _compact_dashboard_narrative(snapshot)
+    catalyst_titles = [str(r.get("title", ""))[:90] for r in (cat.get("results") or [])[:2] if r.get("title")]
+    narrative_text = narrative
+    if catalyst_titles and not compact:
+        narrative_text += "\n" + " | ".join(catalyst_titles)
+
+    return Panel(
+        Group(top, bottom, Panel(narrative_text, title="Narrative", border_style="yellow")),
+        title=title[: max(40, width - 4)],
+        border_style="bold white",
+        expand=True,
+    )
+
+
+def _run_market_dashboard_live(focus: str = "", *, refresh_secs: int = 60, max_cycles: int | None = None) -> None:
+    """Run the auto-refreshing compact dashboard until Ctrl+C."""
+    con = _mcon()
+    snapshot = _fetch_market_dashboard_snapshot(focus)
+    cycles = 0
+    with Live(
+        _market_dashboard_renderable(snapshot),
+        console=con,
+        screen=True,
+        auto_refresh=False,
+        transient=False,
+    ) as live:
+        while True:
+            live.update(_market_dashboard_renderable(snapshot), refresh=True)
+            cycles += 1
+            if max_cycles is not None and cycles >= max_cycles:
+                return
+            try:
+                time.sleep(refresh_secs)
+                snapshot = _fetch_market_dashboard_snapshot(focus)
+            except KeyboardInterrupt:
+                return
 
 
 def _get_market_toolbar_data(force: bool = False) -> dict | None:
@@ -3467,11 +3677,11 @@ def _chat_loop(agent, show_trace: bool) -> None:
         # ── /dashboard: comprehensive current-market dashboard + narrative ─
         if text.lower() in ("/dashboard", "/dash") or text.lower().startswith(("/dashboard ", "/dash ")):
             topic = text.split(maxsplit=1)[1].strip() if len(text.split(maxsplit=1)) > 1 else ""
-            text = (
-                "current market dashboard with narrative"
-                + (f" focused on {topic}" if topic else "")
-            )
-            console.print("[dim]  → Market dashboard[/dim]")
+            try:
+                _run_market_dashboard_live(topic)
+            finally:
+                console.print("[dim]  Dashboard closed.[/dim]")
+            continue
 
         # ── /monitor-report: export monitor status + recent alerts as a report ──
         if text.lower().startswith("/monitor-report"):

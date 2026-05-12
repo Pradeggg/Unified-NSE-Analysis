@@ -42,6 +42,14 @@ class MarketKnowledgeTests(unittest.TestCase):
                 }
                 response.text = ""
                 return response
+            if "Relative%20strength%20index" in url:
+                response.json.return_value = {
+                    "title": "Relative strength index",
+                    "extract": "The relative strength index is a technical indicator used in financial market analysis.",
+                    "content_urls": {"desktop": {"page": "https://en.wikipedia.org/wiki/Relative_strength_index"}},
+                }
+                response.text = ""
+                return response
             response.json.return_value = {
                 "title": "Price-earnings ratio",
                 "extract": "The price-earnings ratio is the ratio of a company's share price to the company's earnings per share.",
@@ -104,6 +112,16 @@ class MarketKnowledgeTests(unittest.TestCase):
         titles = {source["title"] for source in result["sources"]}
         self.assertIn("Return on capital employed", titles)
         self.assertIn("Return on equity", titles)
+        self.assertFalse(any("w/api.php" in call.args[0] for call in mock_get.call_args_list))
+
+    @patch("requests.get")
+    def test_market_knowledge_rsi_uses_relative_strength_index_exact_page(self, mock_get):
+        mock_get.side_effect = self._mock_get
+
+        result = search_market_knowledge("What is RSI and how is it used?", sources=["wikipedia"])
+
+        self.assertEqual(result["sources"][0]["title"], "Relative strength index")
+        self.assertIn("technical indicator", result["answer_markdown"])
         self.assertFalse(any("w/api.php" in call.args[0] for call in mock_get.call_args_list))
 
     def test_keyword_router_detects_market_education_questions(self):

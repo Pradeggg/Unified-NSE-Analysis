@@ -166,8 +166,10 @@ SECTIONS: dict[str, dict] = {
         "title":  "Seasonal & Macro",
         "icon":   "🌡",
         "color":  "blue",
-        "aliases": ["heat", "cycle", "scenario", "narrative", "voice", "macro", "seasonal", "concall", "global"],
+        "aliases": ["heat", "cycle", "scenario", "narrative", "voice", "macro", "seasonal", "concall", "global", "dashboard", "dash"],
         "entries": [
+            ("/dashboard",              "Auto-refreshing current market dashboard + narrative"),
+            ("/dash",                   "Alias for /dashboard"),
             ("/heat",                   "Sector seasonal heatmap (current month)"),
             ("/heat 3",                 "Seasonal signals for March"),
             ("/cycle",                  "Economic cycle phase + sector positioning"),
@@ -189,6 +191,7 @@ SECTIONS: dict[str, dict] = {
         "color":  "magenta",
         "aliases": ["monitor", "monitors", "alert", "alerts", "background", "notification"],
         "entries": [
+            ("/monitor",                            "Show active monitors + latest scan results"),
             ("/monitor list",                       "Show available strategies"),
             ("/monitor status",                     "Show active monitors"),
             ("/monitor start breakout",             "Start breakout alert every 15m"),

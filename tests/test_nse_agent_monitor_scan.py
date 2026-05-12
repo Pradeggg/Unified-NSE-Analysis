@@ -8,6 +8,19 @@ from terminal import tools
 
 
 class NSEAgentMonitorCommandTests(unittest.TestCase):
+    def _capture_stdout(self):
+        captured = io.StringIO()
+        original_stdout = nse_agent.sys.__stdout__
+        nse_agent.sys.__stdout__ = captured
+        return captured, original_stdout
+
+    def _restore_stdout(self, original_stdout):
+        nse_agent.sys.__stdout__ = original_stdout
+
+    class _FakeConsole:
+        def print(self, *args, **kwargs):
+            pass
+
     def test_parse_monitor_start_keeps_nifty_50_as_index_and_extracts_interval(self):
         parsed = nse_agent._parse_monitor_start_args(
             ["/monitor", "start", "breakout", "NIFTY", "50", "15", "buy"]
@@ -26,6 +39,14 @@ class NSEAgentMonitorCommandTests(unittest.TestCase):
         self.assertEqual(parsed["interval"], 15)
         self.assertEqual(parsed["direction"], "sell")
 
+    def test_parse_monitor_start_without_strategy_defaults_to_all(self):
+        parsed = nse_agent._parse_monitor_start_args(["/monitor", "start"])
+
+        self.assertEqual(parsed["strategy"], "all")
+        self.assertEqual(parsed["index"], "NIFTY 500")
+        self.assertEqual(parsed["interval"], 15)
+        self.assertEqual(parsed["direction"], "all")
+
     def test_handle_monitor_start_uses_parsed_arguments(self):
         class FakeMonitor:
             def __init__(self):
@@ -36,16 +57,14 @@ class NSEAgentMonitorCommandTests(unittest.TestCase):
                 return "started"
 
         fake = FakeMonitor()
-        captured = io.StringIO()
-        original_stdout = nse_agent.sys.__stdout__
+        captured, original_stdout = self._capture_stdout()
         try:
-            nse_agent.sys.__stdout__ = captured
             with patch.object(nse_agent, "get_monitor", return_value=fake):
                 nse_agent._handle_monitor_command(
                     ["/monitor", "start", "momentum", "NIFTY", "BANK", "10", "sell"]
                 )
         finally:
-            nse_agent.sys.__stdout__ = original_stdout
+            self._restore_stdout(original_stdout)
 
         self.assertEqual(
             fake.calls,
@@ -61,6 +80,235 @@ class NSEAgentMonitorCommandTests(unittest.TestCase):
         self.assertIn("Scanning: NIFTY BANK", captured.getvalue())
         self.assertIn("Interval: 10m", captured.getvalue())
         self.assertIn("Direction: sell", captured.getvalue())
+
+    def test_handle_monitor_strategy_shorthand_starts_monitor(self):
+        class FakeMonitor:
+            def __init__(self):
+                self.calls = []
+
+            def start(self, **kwargs):
+                self.calls.append(kwargs)
+                return "started"
+
+        fake = FakeMonitor()
+        captured, original_stdout = self._capture_stdout()
+        try:
+            with patch.object(nse_agent, "get_monitor", return_value=fake):
+                nse_agent._handle_monitor_command(["/monitor", "vcp"])
+        finally:
+            self._restore_stdout(original_stdout)
+
+        self.assertEqual(
+            fake.calls,
+            [
+                {
+                    "strategy": "vcp",
+                    "index": "NIFTY 500",
+                    "interval_min": 15,
+                    "direction": "all",
+                }
+            ],
+        )
+        self.assertIn("Scanning: NIFTY 500", captured.getvalue())
+        self.assertIn("Interval: 15m", captured.getvalue())
+
+    def test_handle_monitor_strategy_shorthand_accepts_options(self):
+        class FakeMonitor:
+            def __init__(self):
+                self.calls = []
+
+            def start(self, **kwargs):
+                self.calls.append(kwargs)
+                return "started"
+
+        fake = FakeMonitor()
+        captured, original_stdout = self._capture_stdout()
+        try:
+            with patch.object(nse_agent, "get_monitor", return_value=fake):
+                nse_agent._handle_monitor_command(["/monitor", "breakout", "NIFTY", "500", "15", "buy"])
+        finally:
+            self._restore_stdout(original_stdout)
+
+        self.assertEqual(
+            fake.calls,
+            [
+                {
+                    "strategy": "breakout",
+                    "index": "NIFTY 500",
+                    "interval_min": 15,
+                    "direction": "buy",
+                }
+            ],
+        )
+        self.assertIn("Direction: buy", captured.getvalue())
+
+    def test_handle_monitor_all_shorthand_accepts_interval_and_direction(self):
+        class FakeMonitor:
+            def __init__(self):
+                self.calls = []
+
+            def start(self, **kwargs):
+                self.calls.append(kwargs)
+                return "started"
+
+        fake = FakeMonitor()
+        captured, original_stdout = self._capture_stdout()
+        try:
+            with patch.object(nse_agent, "get_monitor", return_value=fake):
+                nse_agent._handle_monitor_command(["/monitor", "all", "5", "sell"])
+        finally:
+            self._restore_stdout(original_stdout)
+
+        self.assertEqual(
+            fake.calls,
+            [
+                {
+                    "strategy": "all",
+                    "index": "NIFTY 500",
+                    "interval_min": 5,
+                    "direction": "sell",
+                }
+            ],
+        )
+        self.assertIn("Interval: 5m", captured.getvalue())
+        self.assertIn("Direction: sell", captured.getvalue())
+
+    def test_handle_monitor_start_default_starts_all_monitor(self):
+        class FakeMonitor:
+            def __init__(self):
+                self.calls = []
+
+            def start(self, **kwargs):
+                self.calls.append(kwargs)
+                return "started"
+
+        fake = FakeMonitor()
+        captured, original_stdout = self._capture_stdout()
+        try:
+            with patch.object(nse_agent, "get_monitor", return_value=fake):
+                nse_agent._handle_monitor_command(["/monitor", "start"])
+        finally:
+            self._restore_stdout(original_stdout)
+
+        self.assertEqual(
+            fake.calls,
+            [
+                {
+                    "strategy": "all",
+                    "index": "NIFTY 500",
+                    "interval_min": 15,
+                    "direction": "all",
+                }
+            ],
+        )
+        self.assertIn("Scanning: NIFTY 500", captured.getvalue())
+
+    def test_handle_monitor_unknown_strategy_does_not_print_scanning_line(self):
+        class FakeMonitor:
+            def __init__(self):
+                self.calls = []
+
+            def start(self, **kwargs):
+                self.calls.append(kwargs)
+                return "should not be called"
+
+        fake = FakeMonitor()
+        captured, original_stdout = self._capture_stdout()
+        try:
+            with patch.object(nse_agent, "get_monitor", return_value=fake):
+                nse_agent._handle_monitor_command(["/monitor", "start", "unknown"])
+        finally:
+            self._restore_stdout(original_stdout)
+
+        self.assertEqual(fake.calls, [])
+        self.assertIn("Unknown strategy 'unknown'", captured.getvalue())
+        self.assertNotIn("Scanning:", captured.getvalue())
+
+    def test_handle_monitor_duplicate_start_does_not_print_scanning_line(self):
+        class FakeMonitor:
+            def start(self, **kwargs):
+                return "⚠️  Monitor 'vcp' on NIFTY 500 is already running."
+
+        captured, original_stdout = self._capture_stdout()
+        try:
+            with patch.object(nse_agent, "get_monitor", return_value=FakeMonitor()):
+                nse_agent._handle_monitor_command(["/monitor", "vcp"])
+        finally:
+            self._restore_stdout(original_stdout)
+
+        self.assertIn("already running", captured.getvalue())
+        self.assertNotIn("Scanning:", captured.getvalue())
+
+    def test_handle_monitor_stop_passes_strategy_and_index(self):
+        class FakeMonitor:
+            def __init__(self):
+                self.calls = []
+
+            def stop(self, strategy="all", index=None):
+                self.calls.append((strategy, index))
+                return "stopped"
+
+        fake = FakeMonitor()
+        class FakeConsole:
+            def print(self, *args, **kwargs):
+                pass
+
+        with patch.object(nse_agent, "get_monitor", return_value=fake), patch.object(nse_agent, "_mcon", return_value=FakeConsole()):
+            nse_agent._handle_monitor_command(["/monitor", "stop", "breakout", "NIFTY", "50"])
+
+        self.assertEqual(fake.calls, [("breakout", "NIFTY 50")])
+
+    def test_handle_monitor_status_delegates_to_status_renderer(self):
+        with patch.object(nse_agent, "get_monitor"), patch.object(nse_agent, "_print_monitor_status") as status:
+            nse_agent._handle_monitor_command(["/monitor", "status"])
+
+        status.assert_called_once_with()
+
+    def test_handle_bare_monitor_shows_results_view(self):
+        with patch.object(nse_agent, "get_monitor"), patch.object(nse_agent, "_print_monitor_results") as results:
+            nse_agent._handle_monitor_command(["/monitor"])
+
+        results.assert_called_once_with()
+
+    def test_print_monitor_results_renders_queued_events(self):
+        class FakeMonitor:
+            def status(self):
+                return []
+
+            def drain_alerts(self):
+                return [{"type": "heartbeat", "strategy": "vcp", "index": "NIFTY 500", "as_of": "10:55", "run_n": 1}]
+
+            def recent_events(self):
+                return []
+
+        rendered = []
+        with patch.object(nse_agent, "get_monitor", return_value=FakeMonitor()), patch.object(
+            nse_agent, "_render_monitor_event_console", side_effect=lambda ev: rendered.append(ev)
+        ), patch.object(nse_agent, "_mcon", return_value=self._FakeConsole()):
+            nse_agent._print_monitor_results()
+
+        self.assertEqual(len(rendered), 1)
+        self.assertEqual(rendered[0]["type"], "heartbeat")
+
+    def test_print_monitor_results_falls_back_to_recent_events(self):
+        class FakeMonitor:
+            def status(self):
+                return []
+
+            def drain_alerts(self):
+                return []
+
+            def recent_events(self):
+                return [{"type": "error", "strategy": "vcp", "message": "scan failed"}]
+
+        rendered = []
+        with patch.object(nse_agent, "get_monitor", return_value=FakeMonitor()), patch.object(
+            nse_agent, "_render_monitor_event_console", side_effect=lambda ev: rendered.append(ev)
+        ), patch.object(nse_agent, "_mcon", return_value=self._FakeConsole()):
+            nse_agent._print_monitor_results()
+
+        self.assertEqual(len(rendered), 1)
+        self.assertEqual(rendered[0]["type"], "error")
 
 
 class NSEAgentScanRewriteTests(unittest.TestCase):
@@ -102,6 +350,100 @@ class NSEAgentScanRewriteTests(unittest.TestCase):
                     f"Run intraday screener {screen_type} on NIFTY 500 on 15m charts",
                 )
                 self.assertEqual(status, f"Intraday screener: {label}")
+
+
+class MarketDashboardLiveTests(unittest.TestCase):
+    def _sample_snapshot(self):
+        return {
+            "focus": "banks",
+            "fetched_at": "2026-05-12 11:30:00",
+            "get_live_market_overview": {
+                "source": "NSE live API",
+                "as_of": "2026-05-12 11:30:00",
+                "indices": {
+                    "NIFTY 50": {"last": 23600.0, "pct_change": -0.5},
+                    "NIFTY BANK": {"last": 54000.0, "pct_change": -0.2},
+                    "INDIA VIX": {"last": 19.0, "pct_change": 4.0},
+                    "NIFTY METAL": {"last": 13000.0, "pct_change": 1.2},
+                    "NIFTY IT": {"last": 28000.0, "pct_change": -2.0},
+                },
+                "adv_dec": {"advances": 100, "declines": 400},
+            },
+            "get_market_breadth": {
+                "advances": 300,
+                "declines": 700,
+                "ad_ratio": 0.43,
+                "avg_rs_pct": -1.2,
+                "stage_distribution": {"STAGE_1": 10, "STAGE_2": 20, "STAGE_3": 30, "STAGE_4": 40},
+            },
+            "get_top_gainers_losers": {
+                "gainers": [{"symbol": "AAA", "pct_change": 5.0}],
+                "losers": [{"symbol": "ZZZ", "pct_change": -4.0}],
+            },
+            "get_fii_dii_activity": {"data": [{"category": "FII", "net_crore": -1000.0}]},
+            "get_global_market_assessment": {"risk_regime": "RISK_OFF"},
+            "search_latest_catalysts": {"results": [{"title": "Market headline"}]},
+        }
+
+    def test_market_dashboard_renderable_is_compact_and_excludes_vix_from_leaders(self):
+        from rich.console import Console as RichConsole
+
+        capture = io.StringIO()
+        con = RichConsole(file=capture, force_terminal=False, width=100, height=28)
+        con.print(nse_agent._market_dashboard_renderable(self._sample_snapshot(), width=100, height=28))
+        output = capture.getvalue()
+
+        self.assertIn("Market Dashboard", output)
+        self.assertIn("INDIA VIX", output)
+        self.assertIn("NIFTY METAL", output)
+        self.assertIn("NIFTY IT", output)
+        self.assertIn("defensive / risk-off", output)
+        self.assertEqual(output.count("INDIA VIX"), 1)
+
+    def test_live_dashboard_loop_supports_single_cycle_for_tests(self):
+        class FakeLive:
+            def __init__(self, renderable, **kwargs):
+                self.updates = []
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+            def update(self, renderable, refresh=False):
+                self.updates.append((renderable, refresh))
+
+        with patch.object(nse_agent, "_fetch_market_dashboard_snapshot", return_value=self._sample_snapshot()) as fetch, patch.object(
+            nse_agent, "Live", FakeLive
+        ):
+            nse_agent._run_market_dashboard_live("banks", refresh_secs=0, max_cycles=1)
+
+        fetch.assert_called_once_with("banks")
+
+    def test_fetch_market_dashboard_snapshot_calls_expected_tools(self):
+        calls = []
+
+        def fake_call_tool(name, args):
+            calls.append((name, args))
+            return {"ok": True}
+
+        with patch("terminal.tools.call_tool", side_effect=fake_call_tool):
+            snapshot = nse_agent._fetch_market_dashboard_snapshot("banks")
+
+        self.assertEqual(snapshot["focus"], "banks")
+        self.assertIn("fetched_at", snapshot)
+        self.assertEqual(
+            [name for name, _ in calls],
+            [
+                "get_live_market_overview",
+                "get_market_breadth",
+                "get_top_gainers_losers",
+                "get_fii_dii_activity",
+                "get_global_market_assessment",
+                "search_latest_catalysts",
+            ],
+        )
 
 
 class FakeWorker:
@@ -221,6 +563,18 @@ class MonitorManagerTests(unittest.TestCase):
 
         self.assertEqual([event["type"] for event in events], ["heartbeat", "alerts"])
         self.assertEqual([event["type"] for event in remaining], ["error"])
+
+    def test_drain_alerts_records_recent_events_for_manual_monitor_view(self):
+        manager = monitor.MonitorManager()
+        manager.queue.put({"type": "heartbeat", "strategy": "breakout"})
+        manager.queue.put({"type": "error", "strategy": "vcp"})
+
+        manager.drain_alerts(max_items=1)
+        manager.drain_alerts(max_items=1)
+
+        recent = manager.recent_events()
+        self.assertEqual([event["type"] for event in recent], ["heartbeat", "error"])
+        self.assertEqual([event["strategy"] for event in manager.recent_events(max_items=1)], ["vcp"])
 
     def test_sig_to_alert_maps_trading_fields_and_confidence(self):
         alert = monitor._sig_to_alert(

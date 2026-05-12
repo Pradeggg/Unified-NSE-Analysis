@@ -287,6 +287,7 @@ class MonitorManager:
     def __init__(self):
         self.queue:   queue.Queue        = queue.Queue()
         self._workers: dict[str, AlertWorker] = {}  # key = "{strategy}:{index}"
+        self._recent_events: list[dict] = []
 
     def _worker_key(self, strategy: str, index: str) -> str:
         return f"{strategy}:{index}"
@@ -374,7 +375,14 @@ class MonitorManager:
                 events.append(self.queue.get_nowait())
         except queue.Empty:
             pass
+        if events:
+            self._recent_events.extend(events)
+            self._recent_events = self._recent_events[-100:]
         return events
+
+    def recent_events(self, max_items: int = 20) -> list[dict]:
+        """Return recently drained monitor events for manual review."""
+        return self._recent_events[-max_items:]
 
     def any_active(self) -> bool:
         return any(w.is_running for w in self._workers.values())
