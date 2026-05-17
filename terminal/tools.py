@@ -108,6 +108,7 @@ from terminal.results_tools import (
     reconcile_filing_facts,
     summarize_latest_results,
 )
+from terminal.youtube import analyze_youtube_channel_latest, analyze_youtube_video, list_youtube_channels
 from terminal.evidence_gate import (
     build_evidence_matrix,
     render_missing_evidence_block,
@@ -6313,6 +6314,47 @@ TOOL_REGISTRY: dict[str, Any] = {
         get_composite_cost_of_carry,
         "Return cost-of-carry from the composite F&O wrapper.",
         {"type": "object", "properties": {"symbol": {"type": "string"}}, "required": ["symbol"]},
+    ),
+    "analyze_youtube_video": (
+        analyze_youtube_video,
+        (
+            "Analyze a YouTube market video from metadata and available captions. "
+            "Audio speech-to-text is attempted only when transcribe=true. Never returns the full transcript."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "persist": {"type": "boolean", "default": True},
+                "max_segments": {"type": "integer", "default": 12},
+                "transcribe": {"type": "boolean", "default": False},
+                "transcription_backend": {"type": "string", "enum": ["local", "auto"], "default": "local"},
+            },
+            "required": ["source"],
+        },
+    ),
+    "list_youtube_channels": (
+        list_youtube_channels,
+        "List preset YouTube market channels from data/youtube_channels.json.",
+        {"type": "object", "properties": {}, "required": []},
+    ),
+    "analyze_youtube_channel_latest": (
+        analyze_youtube_channel_latest,
+        (
+            "Select a preset YouTube market channel by number/name/id, fetch its latest video, "
+            "then analyze metadata/captions. Speech-to-text is opt-in with transcribe=true."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "selection": {"type": "string"},
+                "persist": {"type": "boolean", "default": True},
+                "max_segments": {"type": "integer", "default": 12},
+                "transcribe": {"type": "boolean", "default": False},
+                "transcription_backend": {"type": "string", "enum": ["local", "auto"], "default": "local"},
+            },
+            "required": ["selection"],
+        },
     ),
     "recommend_options_strategy": (
         recommend_options_strategy,

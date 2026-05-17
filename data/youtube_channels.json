@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "channels": [
+    {
+      "id": "trade-with-trend-raunak-a",
+      "name": "Trade With Trend - Raunak A",
+      "channel_url": "https://www.youtube.com/@TradeWithTrend",
+      "channel_id": "UCPgT-N-DQ0K0H88skjaDgkA",
+      "category": "market-commentary",
+      "language": "en-IN",
+      "enabled": true,
+      "sample_video_url": "https://www.youtube.com/watch?v=0Hnffbj5pgE"
+    },
+    {
+      "id": "manual-youtube-market-video",
+      "name": "Manual YouTube Market Video",
+      "category": "one-off-video",
+      "language": "en-IN",
+      "enabled": true,
+      "latest_video_url": "https://www.youtube.com/watch?v=0Hnffbj5pgE"
+    }
+  ]
+}

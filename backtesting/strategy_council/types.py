@@ -25,6 +25,7 @@ class CouncilConfig:
         "rsi_pullback_stage2",
         "52w_high",
         "vcp",
+        "rule_composed",
     )
     recommendation_threshold: str = "validation_then_test"
 

@@ -5,6 +5,8 @@ from __future__ import annotations
 import pandas as pd
 
 from backtesting.engine import BacktestConfig, run_backtest
+from backtesting.strategy_council.rule_composed_engine import run_rule_composed_backtest
+from backtesting.strategy_council.strategy_generator import COMPOSED_STRATEGY_ID
 from backtesting.strategy_council.types import BacktestSliceResult, StrategySpec
 
 
@@ -15,6 +17,20 @@ def run_strategy_spec_on_split(
     split_name: str,
     initial_capital: float,
 ) -> BacktestSliceResult:
+    if spec.strategy_id == COMPOSED_STRATEGY_ID:
+        result = run_rule_composed_backtest(
+            df,
+            spec,
+            BacktestConfig(strategy_id=spec.strategy_id, initial_capital=initial_capital),
+        )
+        return BacktestSliceResult(
+            split=split_name,
+            strategy_id=spec.strategy_id,
+            horizon_days=spec.horizon_days,
+            metrics=result.metrics,
+            trade_count=int(result.metrics.get("trade_count") or 0),
+        )
+
     if spec.strategy_id != "stage2":
         metrics = {
             "trade_count": 0,
@@ -41,4 +57,3 @@ def run_strategy_spec_on_split(
         metrics=result.metrics,
         trade_count=int(result.metrics.get("trade_count") or 0),
     )
-
