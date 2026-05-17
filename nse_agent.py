@@ -206,14 +206,12 @@ def _is_open_last_report_request(text: str) -> bool:
 
 def _open_last_generated_report() -> str:
     report = _last_generated_report
+    from terminal.report_context import open_report
+
     if report is None:
         return "No report has been generated in this session yet."
-    if not report.exists():
-        return f"Last report path is no longer available: {report}"
-    import subprocess
-
-    subprocess.Popen(["open", str(report)])
-    return f"Opening report: {report}"
+    result = open_report(str(report))
+    return result.get("message") or f"Opening report: {report}"
 
 
 def _canonical_search_symbol(raw_symbol: str) -> str:

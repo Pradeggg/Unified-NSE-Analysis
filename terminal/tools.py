@@ -76,6 +76,14 @@ from terminal.postgres_tools import (
     load_historical_eod_to_postgres,
     load_intraday_ohlcv_to_postgres,
 )
+from terminal.report_context import (
+    compare_reports,
+    get_last_report,
+    list_generated_reports,
+    open_report,
+    read_report,
+    summarize_report,
+)
 
 # ── Seasonal / macro modules ──────────────────────────────────────────────────
 import sys as _sys
@@ -7885,6 +7893,81 @@ def _generate_report_tool(content: str, report_type: str = "research",
 
 
 TOOL_REGISTRY.update({
+    "list_generated_reports": (
+        list_generated_reports,
+        "List generated report artifacts with type, symbol, path, timestamp, and size metadata.",
+        {
+            "type": "object",
+            "properties": {
+                "project_root": {"type": "string"},
+                "report_type": {"type": "string", "default": "any"},
+                "limit": {"type": "integer", "default": 20},
+            },
+            "required": [],
+        },
+    ),
+    "get_last_report": (
+        get_last_report,
+        "Return the last generated report path/context, or request clarification if none is remembered.",
+        {
+            "type": "object",
+            "properties": {
+                "last_report_path": {"type": "string"},
+                "project_root": {"type": "string"},
+            },
+            "required": [],
+        },
+    ),
+    "open_report": (
+        open_report,
+        "Open a generated report file by path and return a structured status message.",
+        {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string"},
+                "project_root": {"type": "string"},
+            },
+            "required": ["path"],
+        },
+    ),
+    "read_report": (
+        read_report,
+        "Read a generated Markdown/HTML/JSON/CSV report and return content plus report metadata.",
+        {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string"},
+                "project_root": {"type": "string"},
+                "max_chars": {"type": "integer", "default": 12000},
+            },
+            "required": ["path"],
+        },
+    ),
+    "summarize_report": (
+        summarize_report,
+        "Summarize an existing report while preserving symbol, report type, recommendation, and source path.",
+        {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string"},
+                "project_root": {"type": "string"},
+            },
+            "required": ["path"],
+        },
+    ),
+    "compare_reports": (
+        compare_reports,
+        "Compare two generated reports and highlight recommendation changes.",
+        {
+            "type": "object",
+            "properties": {
+                "first_path": {"type": "string"},
+                "second_path": {"type": "string"},
+                "project_root": {"type": "string"},
+            },
+            "required": ["first_path", "second_path"],
+        },
+    ),
     "get_postgres_health": (
         get_postgres_health,
         "Check PostgreSQL connectivity, DSN/socket details, required schemas/tables, and row counts.",
