@@ -2529,6 +2529,24 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
             ))
 
         deep_candidates: list[dict] = []
+
+        # Primary: screener concalls list (clean, period-grouped, latest-first)
+        for entry in ((scr_fund or {}).get("concalls") or [])[:3]:
+            if not isinstance(entry, dict):
+                continue
+            period = entry.get("period") or ""
+            # Prefer PPT (= investor presentation), then transcript
+            if entry.get("ppt_url") and not _is_junk_url(entry["ppt_url"]):
+                deep_candidates.append({
+                    "title": f"{period} Investor Presentation",
+                    "url": entry["ppt_url"], "rank": 1, "kind": "investor_pres",
+                })
+            if entry.get("transcript_url") and not _is_junk_url(entry["transcript_url"]):
+                deep_candidates.append({
+                    "title": f"{period} Earnings Call Transcript",
+                    "url": entry["transcript_url"], "rank": 2, "kind": "earnings_outcome",
+                })
+
         nse_payload = nse_ann or {}
         if not nse_payload.get("error"):
             for item in (nse_payload.get("results") or nse_payload.get("announcements")
