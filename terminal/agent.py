@@ -28,6 +28,7 @@ from .tools import call_tool, get_symbol_snapshot, openai_tool_schemas, resolve_
 from .market_calendar import market_context_for_agent, market_session_status
 from .data_readiness import append_readiness_metadata
 from .entity_resolution import TECHNICAL_NON_SYMBOL_TERMS, validate_requested_symbols
+from .evidence_gate import validate_required_tools_executed
 from .situation_assessment import (
     TurnContext,
     assess_entity_topic_request,
@@ -1070,7 +1071,8 @@ def _validate_required_tools(query: str, intent: str, tool_results: list[dict]) 
         required = tuple(t for t in required if t not in document_safe_skip)
         if not required:
             return None
-    missing = [tool for tool in required if tool not in executed]
+    validation = validate_required_tools_executed(list(required), tool_results or [])
+    missing = validation.get("missing_tools") or [tool for tool in required if tool not in executed]
     if not missing:
         return None
     lines = [

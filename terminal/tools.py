@@ -108,6 +108,12 @@ from terminal.results_tools import (
     reconcile_filing_facts,
     summarize_latest_results,
 )
+from terminal.evidence_gate import (
+    build_evidence_matrix,
+    render_missing_evidence_block,
+    validate_answer_against_evidence,
+    validate_required_tools_executed,
+)
 
 # ── Seasonal / macro modules ──────────────────────────────────────────────────
 import sys as _sys
@@ -6178,6 +6184,48 @@ TOOL_REGISTRY: dict[str, Any] = {
         summarize_latest_results,
         "Summarize a latest-results evidence pack without inventing missing revenue/PAT/EPS facts.",
         {"type": "object", "properties": {"results_pack": {"type": "object"}}, "required": ["results_pack"]},
+    ),
+    "build_evidence_matrix": (
+        build_evidence_matrix,
+        "Build a semantic evidence matrix from executed tool results by category.",
+        {"type": "object", "properties": {"tool_results": {"type": "array", "items": {"type": "object"}}}, "required": ["tool_results"]},
+    ),
+    "validate_answer_against_evidence": (
+        validate_answer_against_evidence,
+        "Validate rendered answer text against available evidence categories and report unsupported claim categories.",
+        {
+            "type": "object",
+            "properties": {
+                "answer": {"type": "string"},
+                "tool_results": {"type": "array", "items": {"type": "object"}},
+            },
+            "required": ["answer", "tool_results"],
+        },
+    ),
+    "render_missing_evidence_block": (
+        render_missing_evidence_block,
+        "Render a standard missing-evidence block for blocked unsupported conclusions.",
+        {
+            "type": "object",
+            "properties": {
+                "intent": {"type": "string"},
+                "missing_categories": {"type": "array", "items": {"type": "string"}},
+                "missing_tools": {"type": "array", "items": {"type": "string"}},
+            },
+            "required": ["intent"],
+        },
+    ),
+    "validate_required_tools_executed": (
+        validate_required_tools_executed,
+        "Validate that all required evidence tools executed for a planned intent.",
+        {
+            "type": "object",
+            "properties": {
+                "required_tools": {"type": "array", "items": {"type": "string"}},
+                "tool_results": {"type": "array", "items": {"type": "object"}},
+            },
+            "required": ["required_tools", "tool_results"],
+        },
     ),
     "get_technical_setup": (
         get_technical_setup,
