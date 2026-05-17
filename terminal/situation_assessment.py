@@ -747,11 +747,7 @@ def _entity_topic_plan_preview(assessment: EntityTopicAssessment) -> list[tuple[
     if command == "/results":
         return [
             ("resolve_symbol", {"query": assessment.canonical_symbol}),
-            ("scrape_screener_in", {"symbol": assessment.canonical_symbol}),
-            ("search_nse_announcements", {"symbol": assessment.canonical_symbol}),
-            ("search_bse_filings", {"symbol": assessment.canonical_symbol}),
-            ("search_concall_transcripts", {"symbol": assessment.canonical_symbol}),
-            ("search_latest_catalysts", {"symbol": assessment.canonical_symbol}),
+            ("get_latest_results", {"symbol": assessment.canonical_symbol}),
         ]
     if command in {"/fno", "/chain", "/oi", "/options"}:
         tools = [("get_options_chain", {"symbol": assessment.canonical_symbol})]

@@ -953,11 +953,7 @@ _REQUIRED_TOOLS_BY_INTENT: dict[str, tuple[str, ...]] = {
     "stock_brief": ("resolve_symbol", "get_symbol_snapshot"),
     "stock_results": (
         "resolve_symbol",
-        "scrape_screener_in",
-        "search_nse_announcements",
-        "search_bse_filings",
-        "search_concall_transcripts",
-        "search_latest_catalysts",
+        "get_latest_results",
     ),
 }
 
@@ -1049,7 +1045,7 @@ def _required_tools_for_query(intent: str, query: str) -> tuple[str, ...]:
         "balance sheet", "cash flow statement", "financial statements",
         "fundamental analysis", "quarterly numbers", "quarterly financials",
     )):
-        required.append("scrape_screener_in")
+        required.append("get_latest_results")
     return tuple(dict.fromkeys(required))
 
 
@@ -1255,11 +1251,7 @@ def _entity_topic_execution_plan(assessment) -> list[tuple[str, dict]]:
     if command == "/results":
         return [
             ("resolve_symbol", {"query": symbol}),
-            ("scrape_screener_in", {"symbol": symbol}),
-            ("search_nse_announcements", {"symbol": symbol}),
-            ("search_bse_filings", {"symbol": symbol}),
-            ("search_concall_transcripts", {"symbol": symbol}),
-            ("search_latest_catalysts", {"symbol": symbol}),
+            ("get_latest_results", {"symbol": symbol}),
         ]
     if command in {"/fno", "/chain", "/oi", "/options"}:
         plan = [
@@ -1841,12 +1833,7 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
         sym_q = _primary_symbol_query(candidates, symbol_candidates, routing_text)
         return {"intent": "stock_results", "plan": [
             ("resolve_symbol",           {"query": sym_q}),
-            ("scrape_screener_in",       {"symbol": sym_q.upper()}),
-            ("search_nse_announcements", {"symbol": sym_q.upper()}),
-            ("search_bse_filings",       {"symbol": sym_q.upper()}),
-            ("search_concall_transcripts", {"symbol": sym_q.upper()}),
-            ("search_latest_catalysts",  {"symbol": sym_q.upper()}),
-            ("get_symbol_snapshot",      {"symbol": sym_q.upper()}),
+            ("get_latest_results",       {"symbol": sym_q.upper()}),
         ]}
 
     if candidates and explicit_stock_subject and any(term in q for term in forensic_stock_terms):
@@ -2168,6 +2155,7 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
     nse_ann  = _get("search_nse_announcements")
     bse_filings = _get("search_bse_filings")
     concalls = _get("search_concall_transcripts")
+    latest_results = _get("get_latest_results")
     latest_report = _get("find_latest_report")
     listed_reports = _get("list_generated_reports")
     opened_report = _get("open_report")
@@ -2751,10 +2739,47 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
         return "\n".join(lines)
 
     if intent == "stock_results":
-        _render_stock_results(sym or (scr_fund or {}).get("symbol", ""))
+        if latest_results:
+            lines.append(f"━━━ {latest_results.get('symbol', 'SYMBOL')} — Latest Results Evidence ━━━")
+            lines.append("")
+            lines.append("▶ LATEST RESULTS PACK")
+            lines.append(f"  Status: {latest_results.get('status', 'unknown')}")
+            lines.append(f"  Period: {latest_results.get('period', 'latest')}")
+            selected = latest_results.get("selected_filing") or {}
+            if selected:
+                lines.append(f"  Selected filing: {selected.get('title') or selected.get('url') or 'N/A'}")
+                if selected.get("source"):
+                    lines.append(f"  Filing source:   {selected.get('source')}")
+            facts = latest_results.get("facts") or {}
+            if facts:
+                lines.append("")
+                lines.append("▶ RECONCILED FACTS")
+                for label, key in (("Revenue", "revenue"), ("PAT", "pat"), ("EPS", "eps")):
+                    item = facts.get(key)
+                    if item:
+                        lines.append(
+                            f"  {label}: {item.get('value')} "
+                            f"({item.get('period', 'latest')} · {item.get('source', 'source unavailable')})"
+                        )
+            missing = latest_results.get("missing_facts") or []
+            if missing:
+                lines.append("")
+                lines.append("▶ MISSING FACTS")
+                lines.append("  " + ", ".join(missing))
+            if latest_results.get("summary"):
+                lines.append("")
+                lines.append("▶ SUMMARY")
+                for line in str(latest_results.get("summary")).splitlines():
+                    lines.append(f"  {line}")
+        else:
+            _render_stock_results(sym or (scr_fund or {}).get("symbol", ""))
         lines.append("▶ SOURCE TRAIL")
-        for trail_line in _source_trail_lines(tool_results):
-            lines.append(trail_line)
+        if latest_results and isinstance(latest_results.get("source_trail"), dict):
+            for tool, status in latest_results["source_trail"].items():
+                lines.append(f"  {tool}: {status}")
+        else:
+            for trail_line in _source_trail_lines(tool_results):
+                lines.append(trail_line)
         lines.append("\n━━━ Not investment advice. For research and learning only. ━━━")
         body = "\n".join(lines)
         # Save Markdown deep-dive report alongside the terminal output
@@ -2829,6 +2854,26 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
                 lines.append(f"  Symbol: {fno_chain.get('symbol', symbol)}")
                 lines.append(f"  PCR: {fno_chain.get('pcr', 'n/a')}")
                 lines.append(f"  Max pain: {fno_chain.get('max_pain', 'n/a')}")
+        if latest_results is not None:
+            lines.append("")
+            lines.append("▶ Latest Results Evidence")
+            lines.append(f"  Status: {latest_results.get('status', 'unknown')}")
+            lines.append(f"  Period: {latest_results.get('period', 'latest')}")
+            selected = latest_results.get("selected_filing") or {}
+            if selected:
+                lines.append(f"  Selected filing: {selected.get('title') or selected.get('url') or 'N/A'}")
+            facts = latest_results.get("facts") or {}
+            for label, key in (("Revenue", "revenue"), ("PAT", "pat"), ("EPS", "eps")):
+                item = facts.get(key)
+                if item:
+                    lines.append(f"  {label}: {item.get('value')} ({item.get('period', 'latest')})")
+            missing = latest_results.get("missing_facts") or []
+            if missing:
+                lines.append(f"  Missing facts: {', '.join(missing)}")
+            if latest_results.get("summary"):
+                lines.append("  Summary:")
+                for line in str(latest_results.get("summary")).splitlines()[:6]:
+                    lines.append(f"    {line}")
         if scr_fund is not None and (nse_ann is not None or bse_filings is not None or concalls is not None):
             lines.append("")
             _render_stock_results(symbol)
@@ -2838,6 +2883,9 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
             result = tr.get("result") if isinstance(tr.get("result"), dict) else {}
             status = f"ERROR: {result.get('error')}" if result.get("error") else "ok"
             lines.append(f"  {tr.get('tool')}: {status}")
+            if tr.get("tool") == "get_latest_results" and isinstance(result.get("source_trail"), dict):
+                for sub_tool, sub_status in result["source_trail"].items():
+                    lines.append(f"  {sub_tool}: {sub_status}")
         lines.append("\n━━━ Not investment advice. For research and learning only. ━━━")
         return "\n".join(lines)
 

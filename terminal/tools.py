@@ -98,6 +98,16 @@ from terminal.situation_assessment import (
     resolve_entity_context,
     validate_intent_evidence_plan,
 )
+from terminal.results_tools import (
+    discover_financial_filings,
+    get_latest_results,
+    ingest_financial_filing,
+    parse_financial_filing,
+    parse_pdf_filing as parse_results_pdf_filing,
+    parse_xbrl_filing,
+    reconcile_filing_facts,
+    summarize_latest_results,
+)
 
 # ── Seasonal / macro modules ──────────────────────────────────────────────────
 import sys as _sys
@@ -6096,6 +6106,78 @@ TOOL_REGISTRY: dict[str, Any] = {
         get_symbol_snapshot,
         "Get the latest DB snapshot for a symbol: stage, RS, RSI, trading signal, sector, price",
         {"type": "object", "properties": {"symbol": {"type": "string"}}, "required": ["symbol"]},
+    ),
+    "discover_financial_filings": (
+        discover_financial_filings,
+        "Discover ranked latest-results filing candidates from NSE, BSE, and Screener for a symbol.",
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string"},
+                "max_results": {"type": "integer", "default": 10},
+            },
+            "required": ["symbol"],
+        },
+    ),
+    "ingest_financial_filing": (
+        ingest_financial_filing,
+        "Download/register a direct financial filing URL using the deterministic filing registry.",
+        {
+            "type": "object",
+            "properties": {
+                "url": {"type": "string"},
+                "symbol": {"type": "string"},
+                "period": {"type": "string", "default": "latest"},
+                "root_dir": {"type": "string"},
+                "force": {"type": "boolean", "default": False},
+            },
+            "required": ["url"],
+        },
+    ),
+    "parse_financial_filing": (
+        parse_financial_filing,
+        "Parse a registered financial filing manifest and return extracted evidence/facts when supported.",
+        {"type": "object", "properties": {"manifest_path": {"type": "string"}}, "required": ["manifest_path"]},
+    ),
+    "parse_xbrl_filing": (
+        parse_xbrl_filing,
+        "Parse an XBRL filing path when XBRL support is wired; currently returns explicit unsupported status.",
+        {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]},
+    ),
+    "parse_results_pdf_filing": (
+        parse_results_pdf_filing,
+        "Parse a local PDF results filing path using deterministic text/table extraction.",
+        {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]},
+    ),
+    "reconcile_filing_facts": (
+        reconcile_filing_facts,
+        "Reconcile parsed filing evidence with Screener quarterly tables without inventing missing revenue/PAT/EPS facts.",
+        {
+            "type": "object",
+            "properties": {
+                "parsed_filing": {"type": "object"},
+                "screener_data": {"type": "object"},
+            },
+            "required": [],
+        },
+    ),
+    "get_latest_results": (
+        get_latest_results,
+        "High-level latest-results evidence pack for a symbol: discovery, ingestion, parsing, reconciliation, missing facts, and source trail.",
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string"},
+                "period": {"type": "string", "default": "latest"},
+                "ingest": {"type": "boolean", "default": True},
+            },
+            "required": ["symbol"],
+        },
+    ),
+    "summarize_latest_results": (
+        summarize_latest_results,
+        "Summarize a latest-results evidence pack without inventing missing revenue/PAT/EPS facts.",
+        {"type": "object", "properties": {"results_pack": {"type": "object"}}, "required": ["results_pack"]},
     ),
     "get_technical_setup": (
         get_technical_setup,

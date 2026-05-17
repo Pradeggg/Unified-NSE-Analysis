@@ -719,11 +719,7 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
 
         self.assertEqual(routed["intent"], "stock_results")
         self.assertEqual(routed["plan"][0], ("resolve_symbol", {"query": "DMART"}))
-        self.assertIn(("scrape_screener_in", {"symbol": "DMART"}), routed["plan"])
-        self.assertIn(("search_nse_announcements", {"symbol": "DMART"}), routed["plan"])
-        self.assertIn(("search_bse_filings", {"symbol": "DMART"}), routed["plan"])
-        self.assertIn(("search_concall_transcripts", {"symbol": "DMART"}), routed["plan"])
-        self.assertIn(("search_latest_catalysts", {"symbol": "DMART"}), routed["plan"])
+        self.assertIn(("get_latest_results", {"symbol": "DMART"}), routed["plan"])
         self.assertNotIn("'RESULTS'", str(routed).upper())
 
     def test_market_education_examples_do_not_route_teach_as_symbol(self):
@@ -1244,29 +1240,32 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
             execute_plan.return_value = [
                 {"tool": "resolve_symbol", "args": {"query": "DMART"}, "result": {"symbol": "DMART"}},
                 {
-                    "tool": "scrape_screener_in",
+                    "tool": "get_latest_results",
                     "args": {"symbol": "DMART"},
                     "result": {
                         "symbol": "DMART",
-                        "ratios": {"Market Cap": "3,00,000", "Stock P/E": "95"},
-                        "quarterly": {
-                            "_headers": ["Mar 2026", "Dec 2025"],
-                            "Sales": ["14,000", "13,500"],
-                            "Net Profit": ["800", "760"],
+                        "status": "ok",
+                        "period": "latest",
+                        "selected_filing": {
+                            "title": "Audited financial results",
+                            "url": "https://bse.example/results.pdf",
+                            "source": "bse_filings",
                         },
-                        "annual_pl": {"_headers": ["2026", "2025"], "Sales": ["55,000", "48,000"]},
-                        "announcements": [{"title": "Audited financial results", "url": "https://bse.example/results.pdf"}],
-                        "concalls": [{"period": "May 2026", "transcript_url": "https://example.com/transcript.pdf"}],
+                        "facts": {
+                            "revenue": {"value": "14,000", "period": "Mar 2026", "source": "scrape_screener_in.quarterly"},
+                            "pat": {"value": "800", "period": "Mar 2026", "source": "scrape_screener_in.quarterly"},
+                        },
+                        "missing_facts": ["eps"],
+                        "summary": "Latest results evidence for DMART (latest).\nRevenue: 14,000 (Mar 2026)",
+                        "source_trail": {
+                            "discover_financial_filings": "ok",
+                            "search_bse_filings": "ok",
+                            "ingest_financial_filing": "ok",
+                            "parse_financial_filing": "ok",
+                            "reconcile_filing_facts": "ok",
+                        },
                     },
                 },
-                {
-                    "tool": "search_nse_announcements",
-                    "args": {"symbol": "DMART"},
-                    "result": {"symbol": "DMART", "results": [{"title": "Financial Results", "url": "https://nse.example"}]},
-                },
-                {"tool": "search_bse_filings", "args": {"symbol": "DMART"}, "result": {"symbol": "DMART", "results": []}},
-                {"tool": "search_concall_transcripts", "args": {"symbol": "DMART"}, "result": {"symbol": "DMART", "results": []}},
-                {"tool": "search_latest_catalysts", "args": {"symbol": "DMART"}, "result": {"symbol": "DMART", "results": []}},
             ]
             result = agent.query("/results DMART")
 
