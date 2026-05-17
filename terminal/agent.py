@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shlex
 import time
 from pathlib import Path
 from typing import Any
@@ -469,6 +470,7 @@ Produce a rich, detailed analysis with these sections as applicable:
     `/search SYMBOL news`        — 6-portal sector news pulse
     `/search SYMBOL social`      — Reddit, Valuepickr, Traderji retail buzz
     `/search SYMBOL dividend`    — dividend history + upcoming ex-dates
+    `/results-feed 2`            — companies that filed quarterly results in last N weeks
     `/events`                    — upcoming dividends, results, AGMs, splits (NIFTY 50)
     `/events SYMBOL`             — upcoming events for a specific stock
     `/chain SYMBOL`              — live option chain (PCR, max pain, OI)
@@ -1069,6 +1071,7 @@ def _validate_required_tools(query: str, intent: str, tool_results: list[dict]) 
             "search_latest_catalysts",
             "run_forensic_analysis",
             "scrape_screener_in",
+            "get_latest_results",
         }
         required = tuple(t for t in required if t not in document_safe_skip)
         if not required:
@@ -1096,7 +1099,8 @@ def _validate_symbol_grounding(
     intent: str,
     tool_results: list[dict],
 ) -> str | None:
-    requested = _explicit_requested_symbols(query)
+    stock_360_symbol = _stock_360_prompt_symbol(query)
+    requested = [stock_360_symbol] if stock_360_symbol else _explicit_requested_symbols(query)
     if not requested:
         return None
     if intent not in {
@@ -1534,6 +1538,168 @@ def _with_dynamic_stock_evidence(plan: list[tuple[str, dict]], q: str, symbol: s
     return plan
 
 
+def _stock_360_prompt_symbol(query: str) -> str:
+    """Extract the symbol from Agent-generated /analyze <symbol> 360 prompts."""
+    match = re.search(
+        r"\bcomprehensive\s+360(?:°|\s*degree)?\s+analysis\s+(?:of|for)\s+([A-Z][A-Z0-9&-]{1,20})\b",
+        query or "",
+        flags=re.IGNORECASE,
+    )
+    if not match:
+        return ""
+    symbol = match.group(1).upper()
+    return symbol if re.fullmatch(r"[A-Z0-9&-]{2,20}", symbol) else ""
+
+
+def _stock_360_prompt_plan(symbol: str, query: str) -> list[tuple[str, dict]]:
+    sym = symbol.upper()
+    plan: list[tuple[str, dict]] = [
+        ("resolve_symbol", {"query": sym}),
+        ("get_symbol_snapshot", {"symbol": sym}),
+        ("get_technical_setup", {"symbol": sym}),
+        ("comprehensive_stock_research", {"symbol": sym}),
+        ("run_forensic_analysis", {"symbol": sym}),
+        ("search_latest_catalysts", {"symbol": sym}),
+        ("get_sector_context", {"sector_or_symbol": sym}),
+        (
+            "deep_search",
+            {
+                "symbol": sym,
+                "verticals": ["shareholding", "insider_trades", "analyst_coverage"],
+                "context": "shareholding, insider trades, analyst targets",
+            },
+        ),
+    ]
+    return _with_dynamic_stock_evidence(plan, (query or "").lower(), sym)
+
+
+def _analyze_command_symbols(query: str) -> list[str]:
+    if not re.match(r"^\s*/analy[sz]e\b", query or "", flags=re.IGNORECASE):
+        return []
+    text = re.sub(r"^/analy[sz]e\b", "", query or "", flags=re.IGNORECASE).strip()
+    if not re.search(r"[,;/]", text):
+        return []
+    if not text or text.lower().startswith(("http://", "https://")) or any(
+        text.lower().endswith(ext) for ext in (".pdf", ".docx", ".doc", ".txt", ".csv", ".md", ".xlsx")
+    ):
+        return []
+    symbols = [
+        token.upper()
+        for token in re.split(r"[\s,;/]+", text)
+        if re.fullmatch(r"[A-Z0-9&-]{2,12}", token.upper())
+        and token.lower() not in {"html", "pdf", "md"}
+    ]
+    return list(dict.fromkeys(symbols))
+
+
+def _word_number(value: str) -> int | None:
+    mapping = {
+        "one": 1,
+        "two": 2,
+        "three": 3,
+        "four": 4,
+        "five": 5,
+        "six": 6,
+        "seven": 7,
+        "ten": 10,
+        "fourteen": 14,
+    }
+    value = (value or "").strip().lower()
+    if value.isdigit():
+        return int(value)
+    return mapping.get(value)
+
+
+def _results_feed_window_days(q: str) -> int | None:
+    """Detect symbol-less/latest-results feed requests and return a bounded day window."""
+    text = (q or "").lower()
+    if not any(term in text for term in ("result", "results", "earnings")):
+        return None
+    if (
+        "event" in text
+        or "corporate action" in text
+        or "corporate actions" in text
+        or "dividend" in text
+        or "agm" in text
+        or "ex-date" in text
+        or "ex date" in text
+    ):
+        return None
+
+    if "today" in text or "yesterday" in text:
+        return 2
+    if "fortnight" in text:
+        return 14
+    if "this month" in text or "last month" in text or "past month" in text or "previous month" in text:
+        return 30
+    if "this week" in text:
+        return 7
+
+    match = re.search(
+        r"\b(?:in|for|over|during|within)?\s*(?:the\s+)?(?:last|past|previous)\s+"
+        r"(?:(\d+|one|two|three|four|five|six|seven|ten|fourteen)\s+)?"
+        r"(days?|weeks?|months?)\b",
+        text,
+    )
+    if match:
+        amount = _word_number(match.group(1) or "1") or 1
+        unit = match.group(2)
+        multiplier = 30 if unit.startswith("month") else 7 if unit.startswith("week") else 1
+        return min(90, max(1, amount * multiplier))
+
+    feed_terms = (
+        "latest results", "latest result",
+        "who reported", "who has reported", "who all reported",
+        "results announced", "results posted", "results filed",
+        "results released", "results submitted",
+        "companies reported", "companies that reported",
+        "companies announced results", "companies posted results", "companies filed results",
+        "companies submitted results", "companies that announced", "announced results",
+        "announced their results", "earnings posted", "results feed",
+        "recent results", "recently reported", "result announcements", "results announcements",
+    )
+    if any(term in text for term in feed_terms):
+        return 7
+    return None
+
+
+def _results_feed_slash_days(query: str) -> int | None:
+    """Parse `/results-feed [weeks]` style commands into a bounded day window."""
+    text = (query or "").strip()
+    if not re.match(r"^/(?:results-feed|resultsfeed|latest-results)\b", text, flags=re.IGNORECASE):
+        return None
+    try:
+        parts = shlex.split(text)
+    except ValueError:
+        parts = text.split()
+    if not parts:
+        return None
+    command = parts[0].lower()
+    if command not in {"/results-feed", "/resultsfeed", "/latest-results"}:
+        return None
+    weeks = 2
+    args = parts[1:]
+    for i, token in enumerate(args):
+        lower = token.lower()
+        value = None
+        if lower in {"--weeks", "-w", "weeks"} and i + 1 < len(args):
+            value = args[i + 1]
+        elif lower.startswith("--weeks="):
+            value = lower.split("=", 1)[1]
+        else:
+            compact = re.fullmatch(r"(\d+)(?:w|wk|wks|week|weeks)?", lower)
+            if compact:
+                value = compact.group(1)
+        if value is None:
+            continue
+        try:
+            weeks = int(value)
+            break
+        except ValueError:
+            continue
+    return min(90, max(1, weeks * 7))
+
+
 def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
     """Detect intent and build a tool plan from keywords alone."""
     routing_text = _routing_query_text(query)
@@ -1553,6 +1719,19 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
 
     if _is_document_link_followup(q):
         return {"intent": "document_link_help", "plan": []}
+
+    results_feed_slash_days = _results_feed_slash_days(routing_text)
+    if results_feed_slash_days is not None:
+        return {"intent": "results_feed", "plan": [
+            ("get_latest_results_feed", {"days_back": results_feed_slash_days, "limit": 50}),
+        ]}
+
+    analyze_symbols = _analyze_command_symbols(routing_text)
+    if len(analyze_symbols) >= 2:
+        return {
+            "intent": "stock_comparison",
+            "plan": [("compare_stocks", {"symbols": analyze_symbols[:5], "aspects": ["both"]})],
+        }
 
     if q.startswith("/youtube") or "youtube.com/watch" in q or "youtu.be/" in q:
         if q.startswith("/youtube transcribe"):
@@ -1633,6 +1812,13 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
         symbol = _extract_fno_symbol(routing_text)
         plan = [("get_fno_overview", {"symbol": symbol, "expiry_index": 0})]
         return {"intent": "fno_overview", "plan": plan}
+
+    stock_360_symbol = _stock_360_prompt_symbol(routing_text)
+    if stock_360_symbol:
+        return {
+            "intent": "stock_brief",
+            "plan": _stock_360_prompt_plan(stock_360_symbol, routing_text),
+        }
 
     assessment_plan = _build_market_situation_assessment_plan(query, data_mode=data_mode)
     if assessment_plan:
@@ -1758,12 +1944,12 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
                 }
 
     words = re.findall(r"[A-Za-z][A-Za-z0-9\-&\.]+", routing_text)
-    skip  = {"show","me","the","latest","on","for","what","is","how","tell",
+    skip  = {        "show","me","the","latest","on","for","in","by","during","over","what","is","how","tell",
               "about","give","setup","stock","stocks","sector","nse","india","market","today","brief","full",
               "overview","intraday","levels","level","support","resistance","screener","scan",
               "deep","dive","analysis","technical","trade","trading","of",
               "answer","analyze","analyse","this","spoken","question","your","read","view",
-              "after","before","results","result","concise","evidence","aware","risk","first",
+              "after","before","results","result","submitted","submit","concise","evidence","aware","risk","first",
               "research","only","include","context","watch","next","hello","hi","hey",
               "happened","changed","change","last","minute","minutes","min","few",
               "compare","vs","versus","from","perspective","into","including","combine",
@@ -1776,7 +1962,8 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
               "filed","filing","filings","posted","posting","calendar",
               "earnings","dividend","dividends","agm","split","bonus","rights",
               "monday","tuesday","wednesday","thursday","friday","saturday","sunday",
-              "week","weekly","month","monthly","year","yearly","quarter","quarterly",
+              "week","weeks","weekly","month","months","monthly","year","years","yearly","quarter","quarterly",
+              "day","days","past","previous","various","company","companies","bse",
               "who","has","have","had","whose","whom"}
     candidates = [w for w in words if w.lower() not in skip and len(w) >= 2]
 
@@ -1940,33 +2127,13 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
     # Catches "latest results", "who reported today", "results this week",
     # "companies that announced", "recently reported", etc. Must come BEFORE
     # the per-symbol stock_results block so symbol-less queries are caught.
-    results_feed_terms = (
-        "latest results", "latest result",
-        "who reported", "who has reported", "who all reported",
-        "results today", "results this week", "results this month",
-        "results announced", "results posted", "results filed",
-        "results released",
-        "companies reported", "companies that reported",
-        "companies announced results", "companies posted results",
-        "companies that announced", "announced results", "announced their results",
-        "earnings today", "earnings this week", "earnings posted",
-        "results feed", "recent results", "recently reported",
-    )
+    results_feed_days = _results_feed_window_days(q)
     if (
         not symbol_candidates
-        and any(term in q for term in results_feed_terms)
+        and results_feed_days is not None
     ):
-        days = 7
-        if "today" in q or "yesterday" in q:
-            days = 2
-        elif "this week" in q or " week" in q:
-            days = 7
-        elif "this month" in q or " month" in q:
-            days = 30
-        elif "fortnight" in q or "two weeks" in q:
-            days = 14
         return {"intent": "results_feed", "plan": [
-            ("get_latest_results_feed", {"days_back": days, "limit": 50}),
+            ("get_latest_results_feed", {"days_back": results_feed_days, "limit": 50}),
         ]}
 
     if (
@@ -2337,6 +2504,14 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
     nse_intraday = _get("get_nse_intraday_snapshot")
     intra_legacy = _get("get_intraday_analysis")
     scr_fund = _get("scrape_screener_in")
+    research = _get("comprehensive_stock_research") or {}
+    # /analyze pipes through comprehensive_stock_research, which wraps
+    # scrape_screener_in under result["screener"]. Backfill scr_fund so the
+    # downstream FUNDAMENTAL ANALYSIS block has the data it needs.
+    if not scr_fund and isinstance(research, dict):
+        emb = research.get("screener")
+        if isinstance(emb, dict):
+            scr_fund = emb
     nse_ann  = _get("search_nse_announcements")
     bse_filings = _get("search_bse_filings")
     concalls = _get("search_concall_transcripts")
@@ -3739,6 +3914,126 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
                 lines.append("\n▶ SUMMARY")
                 for line in str(forensic["summary"]).splitlines():
                     lines.append(f"  {line}")
+
+        # ── FUNDAMENTAL ANALYSIS (for /analyze 360°) ────────────────────────
+        # /analyze runs comprehensive_stock_research which carries screener.in
+        # fundamentals under result["screener"] (already backfilled into
+        # scr_fund above). Surface ratios, P&L trend, pros/cons here so the
+        # user sees fundamentals alongside the forensic block.
+        if scr_fund and isinstance(scr_fund, dict) and not scr_fund.get("error"):
+            ratios_f = scr_fund.get("ratios") or {}
+            q_f = scr_fund.get("quarterly") or {}
+            annual_f = scr_fund.get("annual_pl") or {}
+            pros_f = scr_fund.get("pros") or []
+            cons_f = scr_fund.get("cons") or []
+
+            fund_lines: list[str] = []
+
+            if isinstance(ratios_f, dict) and ratios_f:
+                key_ratios = [
+                    ("Market Cap", ("Market Cap",)),
+                    ("Current Price", ("Current Price",)),
+                    ("Stock P/E", ("Stock P/E", "P/E")),
+                    ("Industry P/E", ("Industry PE", "Industry P/E")),
+                    ("Book Value", ("Book Value",)),
+                    ("Price to Book", ("Price to book value", "P/B")),
+                    ("Dividend Yield", ("Dividend Yield",)),
+                    ("ROCE", ("ROCE", "Return on capital employed")),
+                    ("ROE", ("ROE", "Return on equity")),
+                    ("Debt to Equity", ("Debt to equity",)),
+                    ("Sales Growth 3Y", ("Sales growth 3Years", "Compounded Sales Growth 3Years")),
+                    ("Profit Growth 3Y", ("Profit growth 3Years", "Compounded Profit Growth 3Years")),
+                    ("Promoter Holding", ("Promoter holding",)),
+                    ("FII Holding", ("FII holding",)),
+                ]
+                rendered_ratio_rows: list[tuple[str, str]] = []
+                norm_ratios = {str(k).strip().lower(): v for k, v in ratios_f.items()}
+                for label, keys in key_ratios:
+                    val = None
+                    for k in keys:
+                        v = norm_ratios.get(str(k).strip().lower())
+                        if v not in (None, "", "—"):
+                            val = v
+                            break
+                    if val not in (None, "", "—"):
+                        rendered_ratio_rows.append((label, str(val)))
+                if rendered_ratio_rows:
+                    fund_lines.append("\n▶ KEY RATIOS")
+                    for label, val in rendered_ratio_rows:
+                        fund_lines.append(f"  - {label}: {val}")
+
+            q_headers_f = q_f.get("_headers") if isinstance(q_f, dict) else []
+            if q_headers_f:
+                qmetrics = []
+                for labels in (
+                    ("Sales", "Revenue", "Operating Revenue"),
+                    ("Operating Profit",),
+                    ("OPM %",),
+                    ("Net Profit", "Profit after tax", "PAT"),
+                    ("EPS in Rs", "EPS"),
+                ):
+                    wanted = {l.strip().lower() for l in labels}
+                    for key, values in q_f.items():
+                        if str(key).startswith("_"):
+                            continue
+                        if str(key).strip().lower() in wanted and isinstance(values, list):
+                            if any(str(v).strip() for v in values):
+                                qmetrics.append((key, values))
+                                break
+                if qmetrics:
+                    fund_lines.append("\n▶ QUARTERLY P&L (₹ Cr — last 6 quarters)")
+                    hdrs = [str(h) for h in q_headers_f[-6:]]
+                    fund_lines.append("  | Metric              | " + " | ".join(f"{h:>10}" for h in hdrs) + " |")
+                    fund_lines.append("  |---------------------|" + ("------------|" * len(hdrs)))
+                    for label, values in qmetrics:
+                        tail = values[-len(hdrs):] if len(values) >= len(hdrs) else values
+                        padded = [""] * (len(hdrs) - len(tail)) + list(tail)
+                        cells = " | ".join(f"{str(v or '—'):>10}" for v in padded)
+                        fund_lines.append(f"  | {str(label)[:19]:<19} | {cells} |")
+
+            annual_headers_f = annual_f.get("_headers") if isinstance(annual_f, dict) else []
+            if annual_headers_f:
+                ametrics = []
+                for labels in (
+                    ("Sales", "Revenue"),
+                    ("Net Profit", "Profit after tax", "PAT"),
+                    ("EPS in Rs", "EPS"),
+                ):
+                    wanted = {l.strip().lower() for l in labels}
+                    for key, values in annual_f.items():
+                        if str(key).startswith("_"):
+                            continue
+                        if str(key).strip().lower() in wanted and isinstance(values, list):
+                            if any(str(v).strip() for v in values):
+                                ametrics.append((key, values))
+                                break
+                if ametrics:
+                    fund_lines.append("\n▶ ANNUAL P&L (₹ Cr — last 5 years)")
+                    hdrs = [str(h) for h in annual_headers_f[-5:]]
+                    fund_lines.append("  | Metric              | " + " | ".join(f"{h:>10}" for h in hdrs) + " |")
+                    fund_lines.append("  |---------------------|" + ("------------|" * len(hdrs)))
+                    for label, values in ametrics:
+                        tail = values[-len(hdrs):] if len(values) >= len(hdrs) else values
+                        padded = [""] * (len(hdrs) - len(tail)) + list(tail)
+                        cells = " | ".join(f"{str(v or '—'):>10}" for v in padded)
+                        fund_lines.append(f"  | {str(label)[:19]:<19} | {cells} |")
+
+            if pros_f or cons_f:
+                fund_lines.append("\n▶ SCREENER ANALYSIS")
+                if pros_f:
+                    fund_lines.append("  Pros:")
+                    for p in pros_f[:5]:
+                        fund_lines.append(f"    • {p}")
+                if cons_f:
+                    fund_lines.append("  Cons:")
+                    for c in cons_f[:5]:
+                        fund_lines.append(f"    • {c}")
+
+            if fund_lines:
+                lines.append("\n━━━ FUNDAMENTAL ANALYSIS ━━━")
+                lines.extend(fund_lines)
+                if scr_fund.get("source_url"):
+                    lines.append(f"\nSource: {scr_fund.get('source_url')}")
 
         lines.append("\n▶ SOURCE TRAIL")
         for tr in tool_results:
@@ -5334,6 +5629,7 @@ class Agent:
             "document_link_help",
             "strength_validation", "market_knowledge", "stock_brief",
             "stock_results",
+            "results_feed", "forthcoming_results",
             "stock_comparison", "portfolio_review",
             "event_calendar",
             "fno_overview", "market_dashboard", "screener",
