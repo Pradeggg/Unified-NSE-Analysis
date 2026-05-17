@@ -78,6 +78,38 @@ CONTEXT_NON_SYMBOL_TERMS: frozenset[str] = frozenset(
         "GIVE",
         "WHAT",
         "HOW",
+        # English connectives / instruction-template words that appear in
+        # /analyze, /canslim and other slash-command rewrites. None of these
+        # are valid NSE tickers and must never trigger symbol-grounding
+        # mismatches.
+        "ALL",
+        "ANY",
+        "AVOID",
+        "BUY",
+        "CALL",
+        "CALLS",
+        "DATA",
+        "DO",
+        "DROP",
+        "EACH",
+        "EXECUTE",
+        "FROM",
+        "HOLD",
+        "INTO",
+        "IN",
+        "NEW",
+        "NOT",
+        "ORDER",
+        "PASS",
+        "PERFORM",
+        "READ",
+        "SELL",
+        "SKIP",
+        "THEN",
+        "THESE",
+        "USE",
+        "USING",
+        "VERDICT",
     }
 )
 
