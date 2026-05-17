@@ -181,3 +181,21 @@ def test_doctor_is_registered_as_slash_command():
 
     assert "/doctor" in labels
     assert "/doctor --repair" in labels
+
+
+def test_single_query_doctor_routes_to_postgres_doctor(monkeypatch):
+    import nse_agent
+    import terminal.postgres_tools as pgtools
+
+    calls: list[bool] = []
+    monkeypatch.setattr(pgtools, "render_postgres_doctor", lambda repair=False: calls.append(repair) or "PostgreSQL Doctor\nStatus: ok")
+    monkeypatch.setattr(nse_agent, "_print_user", lambda query: None)
+    monkeypatch.setattr(nse_agent.console, "print", lambda *args, **kwargs: None)
+
+    class DummyAgent:
+        def query(self, *_args, **_kwargs):  # pragma: no cover - must not be called
+            raise AssertionError("agent.query should not handle /doctor")
+
+    nse_agent._single_query(DummyAgent(), "/doctor --repair", show_trace=False)
+
+    assert calls == [True]

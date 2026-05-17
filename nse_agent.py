@@ -4394,6 +4394,18 @@ def _single_query(agent, query: str, show_trace: bool) -> None:
         console.print(Markdown(_open_last_generated_report()))
         return
 
+    if query.strip().lower().startswith("/doctor"):
+        _print_user(query)
+        try:
+            from terminal.postgres_tools import render_postgres_doctor
+
+            parts = query.strip().split()
+            output = render_postgres_doctor(repair="--repair" in parts)
+            console.print(output)
+        except Exception as exc:
+            console.print(f"[bold red]  ❌ PostgreSQL doctor failed: {exc}[/bold red]")
+        return
+
     if query.strip().lower().startswith("/strength"):
         parts = query.strip().split()[1:]
         symbols = [re.sub(r"[^A-Za-z0-9&-]", "", p).upper() for p in parts]
