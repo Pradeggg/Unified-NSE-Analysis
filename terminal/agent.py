@@ -3915,6 +3915,108 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
                 for line in str(forensic["summary"]).splitlines():
                     lines.append(f"  {line}")
 
+        # ── TECHNICAL SETUP (for /analyze 360°) ─────────────────────────────
+        if tech and isinstance(tech, dict) and not tech.get("error"):
+            lines.append("\n━━━ TECHNICAL SETUP ━━━")
+            if tech.get("technical_score") is not None:
+                lines.append(
+                    f"  Derived score: {tech.get('technical_score')} "
+                    f"({tech.get('score_method', 'derived')})"
+                )
+            lines.append(f"  RSI:        {tech.get('rsi', '—')}")
+            lines.append(f"  ADX:        {tech.get('adx', '—')}  (>25 = trending)")
+            lines.append(f"  MACD:       {tech.get('macd', '—')}")
+            lines.append(f"  Supertrend: {tech.get('supertrend', '—')}")
+            ma_flags = []
+            if tech.get("above_sma20"):
+                ma_flags.append("▲ SMA20")
+            if tech.get("above_sma50"):
+                ma_flags.append("▲ SMA50")
+            if tech.get("above_sma200"):
+                ma_flags.append("▲ SMA200")
+            lines.append(f"  MAs:        {' | '.join(ma_flags) or '— below key MAs'}")
+            h52, l52, pct = tech.get("52w_high"), tech.get("52w_low"), tech.get("pct_from_52h")
+            if h52 and l52:
+                pct_txt = f"  ({pct:+.1f}% from high)" if isinstance(pct, (int, float)) else ""
+                lines.append(f"  52W Range:  ₹{l52:,.0f} – ₹{h52:,.0f}{pct_txt}")
+            vr = tech.get("vol_ratio")
+            if isinstance(vr, (int, float)):
+                lines.append(f"  Volume:     {vr:.1f}x avg")
+            if tech.get("stage"):
+                lines.append(f"  Stage:      {tech.get('stage')}")
+            if tech.get("trend_signal"):
+                lines.append(f"  Trend:      {tech.get('trend_signal')}")
+
+        # ── SECTOR CONTEXT (for /analyze 360°) ──────────────────────────────
+        if sec and isinstance(sec, dict) and not sec.get("error"):
+            lines.append("\n━━━ SECTOR CONTEXT ━━━")
+            lines.append(f"  Sector:         {sec.get('sector', '—')}")
+            lines.append(f"  Stocks in DB:   {sec.get('total_stocks', '—')}")
+            lines.append(f"  Stage 2 count:  {sec.get('stage2_count', '—')}")
+            lines.append(f"  Buy signals:    {sec.get('buy_signals', '—')}")
+            avg_rs = sec.get("avg_rs_pct")
+            if isinstance(avg_rs, (int, float)):
+                lines.append(f"  Avg RS:         {avg_rs:+.1f}%")
+            avg_1m = sec.get("avg_1m_pct")
+            if isinstance(avg_1m, (int, float)):
+                lines.append(f"  Avg 1M chg:     {avg_1m:+.2f}%")
+            top5 = sec.get("top5_by_score") or []
+            if top5:
+                lines.append(
+                    "  Top peers:      "
+                    + ", ".join(str(s.get("symbol", "?")) for s in top5[:5])
+                )
+
+        # ── LATEST CATALYSTS (for /analyze 360°) ────────────────────────────
+        if cat and isinstance(cat, dict) and (cat.get("results") or []):
+            lines.append("\n━━━ LATEST CATALYSTS ━━━")
+            for r in (cat.get("results") or [])[:5]:
+                if not isinstance(r, dict):
+                    continue
+                title = str(r.get("title") or "")[:100]
+                url = str(r.get("url") or "")
+                snippet = str(r.get("snippet") or "")[:140]
+                lines.append(f"  • {title}")
+                if url:
+                    lines.append(f"    {url}")
+                if snippet:
+                    lines.append(f"    {snippet}")
+            sentiment = cat.get("sentiment") or cat.get("overall_sentiment")
+            if sentiment:
+                lines.append(f"  Sentiment: {sentiment}")
+
+        # ── INSTITUTIONAL & INSIDER (deep_search for /analyze 360°) ─────────
+        if deep and isinstance(deep, dict) and not deep.get("error"):
+            verticals = deep.get("verticals") or deep.get("data") or {}
+            section_lines: list[str] = []
+            if isinstance(verticals, dict):
+                shareholding = verticals.get("shareholding") or {}
+                if isinstance(shareholding, dict) and shareholding:
+                    bits = []
+                    for k in ("promoters", "fii", "dii", "public", "mutual_funds"):
+                        v = shareholding.get(k)
+                        if v not in (None, ""):
+                            bits.append(f"{k.upper()} {v}")
+                    if bits:
+                        section_lines.append("  Shareholding: " + " | ".join(bits))
+                insider = verticals.get("insider_trades") or verticals.get("insiders") or []
+                if isinstance(insider, list) and insider:
+                    section_lines.append("  Recent insider activity:")
+                    for entry in insider[:3]:
+                        if isinstance(entry, dict):
+                            txt = entry.get("summary") or entry.get("description") or str(entry)
+                            section_lines.append(f"    • {str(txt)[:140]}")
+                targets = verticals.get("analyst_targets") or verticals.get("targets") or []
+                if isinstance(targets, list) and targets:
+                    section_lines.append("  Analyst targets:")
+                    for entry in targets[:3]:
+                        if isinstance(entry, dict):
+                            txt = entry.get("summary") or entry.get("target") or str(entry)
+                            section_lines.append(f"    • {str(txt)[:140]}")
+            if section_lines:
+                lines.append("\n━━━ INSTITUTIONAL & INSIDER ACTIVITY ━━━")
+                lines.extend(section_lines)
+
         # ── FUNDAMENTAL ANALYSIS (for /analyze 360°) ────────────────────────
         # /analyze runs comprehensive_stock_research which carries screener.in
         # fundamentals under result["screener"] (already backfilled into

@@ -833,16 +833,29 @@ _STAGE_SNAPSHOT_COLS = [
 
 
 def _stage_snapshot_missing_fields(snap: dict[str, Any]) -> list[str]:
+    """Critical fields whose absence prevents trustworthy stage analysis.
+
+    Advisory score fields (fundamental_score, can_slim_score, minervini_score)
+    are NOT included here — they are computed by separate offline pipelines and
+    often legitimately absent for many symbols. They go into
+    ``missing_optional_scores`` instead so renderers don't surface them as a
+    red-flag MISSING EVIDENCE block.
+    """
     missing: list[str] = []
     for field in ("stage", "stage_score", "price", "rsi", "relative_strength", "technical_score", "trading_signal"):
         if snap.get(field) is None:
             missing.append(field)
+    return missing
+
+
+def _stage_snapshot_missing_optional_scores(snap: dict[str, Any]) -> list[str]:
+    optional: list[str] = []
     if snap.get("fundamental_score") is None and snap.get("enhanced_fund_score") is None:
-        missing.append("fundamental_score")
+        optional.append("fundamental_score")
     for field in ("can_slim_score", "minervini_score"):
         if snap.get(field) is None:
-            missing.append(field)
-    return missing
+            optional.append(field)
+    return optional
 
 
 def _finalize_stage_snapshot(sym: str, snap: dict[str, Any], snapshot_date: str) -> dict[str, Any]:
@@ -852,6 +865,7 @@ def _finalize_stage_snapshot(sym: str, snap: dict[str, Any], snapshot_date: str)
     if rs is not None:
         snap["rs_pct"] = normalize_relative_strength_pct(rs)
     snap["missing_evidence"] = _stage_snapshot_missing_fields(snap)
+    snap["missing_optional_scores"] = _stage_snapshot_missing_optional_scores(snap)
     snap["evidence_coverage"] = "complete" if not snap["missing_evidence"] else "partial"
     return snap
 
