@@ -124,6 +124,13 @@ from terminal.fno_composite import (
     get_top_oi_strikes,
     recommend_options_strategy,
 )
+from terminal.company_evidence_tools import (
+    audit_company_search,
+    get_company_evidence_coverage,
+    promote_company_evidence_to_postgres,
+    search_company_filings as audit_search_company_filings,
+    search_company_official_sources,
+)
 
 # ── Seasonal / macro modules ──────────────────────────────────────────────────
 import sys as _sys
@@ -6318,6 +6325,60 @@ TOOL_REGISTRY: dict[str, Any] = {
                 "futures": {"type": "object"},
                 "raw_strategy": {"type": "object"},
             },
+            "required": ["symbol"],
+        },
+    ),
+    "audit_company_search": (
+        audit_company_search,
+        "Audit company evidence search attempts with source group, query, result count, parse status, and gaps.",
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string"},
+                "alias": {"type": "string"},
+                "include_external": {"type": "boolean", "default": False},
+            },
+            "required": ["symbol"],
+        },
+    ),
+    "search_company_official_sources": (
+        search_company_official_sources,
+        "Search or report official company source attempts before external sources.",
+        {
+            "type": "object",
+            "properties": {"symbol": {"type": "string"}, "alias": {"type": "string"}},
+            "required": ["symbol"],
+        },
+    ),
+    "search_company_filings": (
+        audit_search_company_filings,
+        "Search or report company filing-source attempts with auditable no-result gaps.",
+        {
+            "type": "object",
+            "properties": {"symbol": {"type": "string"}, "alias": {"type": "string"}},
+            "required": ["symbol"],
+        },
+    ),
+    "promote_company_evidence_to_postgres": (
+        promote_company_evidence_to_postgres,
+        "Prepare/dry-run promotion of company evidence records into PostgreSQL with source URL/path metadata.",
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string"},
+                "evidence": {"type": "array", "items": {"type": "object"}},
+                "dsn": {"type": "string"},
+                "dry_run": {"type": "boolean", "default": True},
+            },
+            "required": ["symbol"],
+        },
+    ),
+    "get_company_evidence_coverage": (
+        get_company_evidence_coverage,
+        "Report company evidence coverage counts and source gaps by category.",
+        {
+            "type": "object",
+            "properties": {"symbol": {"type": "string"}, "alias": {"type": "string"}},
             "required": ["symbol"],
         },
     ),
