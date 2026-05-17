@@ -11,6 +11,7 @@ from backtesting.strategy_council.llm import (
     RuleBasedStrategist,
 )
 from backtesting.strategy_council.runner import run_strategy_spec_on_split
+from backtesting.strategy_council.strategy_generator import CompositeStrategist
 from backtesting.strategy_council.splits import build_time_splits
 from backtesting.strategy_council.types import (
     CouncilConfig,
@@ -65,7 +66,16 @@ def run_strategy_council(
     strategist=None,
     critics=None,
 ) -> CouncilResult:
-    strategist = strategist or RuleBasedStrategist()
+    if strategist is None:
+        base = RuleBasedStrategist()
+        if config.use_rule_composition and "rule_composed" in config.allowed_strategies:
+            strategist = CompositeStrategist(
+                inner=base,
+                llm_ratio=config.rule_llm_ratio,
+                method=config.rule_generation_method,
+            )
+        else:
+            strategist = base
     critics = critics or (RuleBasedDataLeakageCritic(), RuleBasedRiskCritic())
     try:
         eod_data = compute_stage2_features(eod_data)

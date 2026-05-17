@@ -28,6 +28,9 @@ class CouncilConfig:
         "rule_composed",
     )
     recommendation_threshold: str = "validation_then_test"
+    use_rule_composition: bool = True
+    rule_llm_ratio: float = 0.4
+    rule_generation_method: str = "sampled"
 
 
 @dataclass
