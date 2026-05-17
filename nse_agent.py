@@ -670,6 +670,14 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/search RELIANCE news",             "Sector news from 6 portals"),
     ("/search RELIANCE social",           "Retail investor buzz: Reddit, Valuepickr, Traderji"),
     ("/search TATACONSUM deep",           "Full 11-vertical deep search"),
+    # ── YouTube market intelligence ─────────────────────────────────────────
+    ("/youtube",                          "List preset YouTube market channels"),
+    ("/youtube 1",                        "Analyze latest video from channel #1"),
+    ("/youtube Trade With Trend",         "Analyze latest video from preset channel by name"),
+    ("/youtube channels",                 "List configured YouTube channels"),
+    ("/youtube transcribe 1",             "Explicitly transcribe latest video from channel #1 if captions are unavailable"),
+    ("/youtube transcribe <url>",          "Explicitly transcribe a YouTube video if captions are unavailable"),
+    ("/youtube https://www.youtube.com/watch?v=...", "Analyze a direct YouTube market video URL"),
     # ── Market education commands ───────────────────────────────────────────
     ("/learn PE ratio",                   "Source-backed concept explainer from Investopedia + Wikipedia"),
     ("/define ROCE",                      "Define a market or accounting concept with source URLs"),
@@ -834,6 +842,7 @@ _CMD_CATEGORIES: dict[str, tuple[str, str]] = {
     "/chart":    ("Charts",              "📈"),
     "/search":   ("Deep Search",         "🌐"),
     "/results":  ("Latest Results",      "🧾"),
+    "/youtube":  ("YouTube Intelligence", "▶️"),
     "/learn":    ("Market Knowledge",    "📚"),
     "/define":   ("Market Knowledge",    "📚"),
     "/compare":  ("Market Knowledge",    "📚"),
@@ -4502,7 +4511,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
     )
 
     console.print(f"[bold green]  ✓ Agent Adda ready[/bold green] [dim]{_session_clock_label()}[/dim] — type your question and press Enter")
-    console.print("[dim]  Tip: /live  /eod  /auto  │  /model  │  /prompts  │  /ric  │  1·2·3 = follow-ups  │  /new  │  /help  │  exit[/dim]")
+    console.print("[dim]  Tip: /live  /eod  /auto  │  /model  │  /prompts  │  /youtube  │  /ric  │  1·2·3 = follow-ups  │  /new  │  /help  │  exit[/dim]")
     console.print()
 
     # Start background alert auto-display thread.

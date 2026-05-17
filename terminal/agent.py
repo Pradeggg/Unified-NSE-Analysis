@@ -1480,6 +1480,25 @@ def _split_compound_query(text: str) -> list[str]:
     return parts
 
 
+def _extract_youtube_url(text: str) -> str:
+    match = re.search(r"https?://(?:www\.|m\.)?(?:youtube\.com|youtu\.be)/\S+", text or "", re.I)
+    return match.group(0).rstrip(".,);]") if match else ""
+
+
+def _extract_youtube_selection(text: str) -> str:
+    return re.sub(r"^/youtube\b", "", text or "", flags=re.I).strip()
+
+
+def _extract_youtube_transcribe_args(text: str) -> tuple[str, str]:
+    selection = re.sub(r"^/youtube\s+transcribe\b", "", text or "", flags=re.I).strip()
+    backend = "local"
+    match = re.search(r"(?:^|\s)--backend(?:=|\s+)(local|auto)\b", selection, flags=re.I)
+    if match:
+        backend = match.group(1).lower()
+        selection = (selection[:match.start()] + " " + selection[match.end():]).strip()
+    return selection, backend
+
+
 def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
     """Detect intent and build a tool plan from keywords alone."""
     routing_text = _routing_query_text(query)
@@ -1499,6 +1518,35 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
 
     if _is_document_link_followup(q):
         return {"intent": "document_link_help", "plan": []}
+
+    if q.startswith("/youtube") or "youtube.com/watch" in q or "youtu.be/" in q:
+        if q.startswith("/youtube transcribe"):
+            selection, backend = _extract_youtube_transcribe_args(query)
+            youtube_url = _extract_youtube_url(selection)
+            if youtube_url:
+                return {"intent": "youtube_video_transcription", "plan": [
+                    ("analyze_youtube_video", {"source": youtube_url, "persist": True, "transcribe": True, "transcription_backend": backend}),
+                    ("list_youtube_channels", {}),
+                ]}
+            if not selection or selection.lower() in {"channels", "channel", "list", "show", "show channels"}:
+                return {"intent": "youtube_channels", "plan": [("list_youtube_channels", {})]}
+            return {"intent": "youtube_channel_transcription", "plan": [
+                ("analyze_youtube_channel_latest", {"selection": selection, "persist": True, "transcribe": True, "transcription_backend": backend}),
+                ("list_youtube_channels", {}),
+            ]}
+        selection = _extract_youtube_selection(query)
+        if (not selection or selection.lower() in {"channels", "channel", "list", "show", "show channels"}) and not _extract_youtube_url(query):
+            return {"intent": "youtube_channels", "plan": [("list_youtube_channels", {})]}
+        youtube_url = _extract_youtube_url(query)
+        if youtube_url:
+            return {"intent": "youtube_video_analysis", "plan": [
+                ("analyze_youtube_video", {"source": youtube_url, "persist": True}),
+                ("list_youtube_channels", {}),
+            ]}
+        return {"intent": "youtube_channel_latest", "plan": [
+            ("analyze_youtube_channel_latest", {"selection": selection, "persist": True}),
+            ("list_youtube_channels", {}),
+        ]}
 
     if _is_morning_briefing_query(q):
         return {
@@ -2159,6 +2207,8 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
     read_report_result = _get("read_report")
     report_summary = _get("summarize_report")
     last_report = _get("get_last_report")
+    youtube = _get("analyze_youtube_video") or _get("analyze_youtube_channel_latest")
+    youtube_channels = _get("list_youtube_channels")
 
     sym = (snap or {}).get("symbol") or (tech or {}).get("symbol") or ""
     if not sym and forensic:
@@ -2677,6 +2727,98 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
         lines.append("")
         lines.append("▶ SOURCE TRAIL")
         lines.append("  No equity symbol was resolved; no market conclusion was inferred.")
+        lines.append("\n━━━ Not investment advice. For research and learning only. ━━━")
+        return "\n".join(lines)
+
+    if intent in {
+        "youtube_video_analysis", "youtube_channel_latest",
+        "youtube_video_transcription", "youtube_channel_transcription",
+        "youtube_channels",
+    }:
+        if youtube and youtube.get("error"):
+            lines.append("▶ YOUTUBE ANALYSIS")
+            lines.append(f"  Error: {youtube.get('error')}")
+            lines.append("")
+        elif youtube:
+            lines.append("▶ YOUTUBE MARKET INTELLIGENCE")
+            selected = youtube.get("selected_channel") or {}
+            latest = youtube.get("latest_video") or {}
+            if selected:
+                lines.append(f"  Selected channel: {selected.get('name') or selected.get('id')}")
+            if latest:
+                lines.append(f"  Latest video:     {latest.get('title') or latest.get('video_id')}")
+            lines.append(f"  Title:   {youtube.get('title') or '—'}")
+            lines.append(f"  Channel: {youtube.get('channel') or '—'}")
+            lines.append(f"  Date:    {youtube.get('published_at') or '—'}")
+            lines.append(f"  URL:     {youtube.get('url')}")
+            transcript = youtube.get("transcript") or {}
+            lines.append(f"  Transcript: {'available' if transcript.get('available') else 'unavailable'} ({transcript.get('segment_count', 0)} segments)")
+            if not transcript.get("available") and transcript.get("reason"):
+                lines.append(f"  Transcript note: {transcript.get('reason')}")
+            transcription = youtube.get("transcription") or {}
+            if transcription.get("requested"):
+                detail = f"  Transcription: {transcription.get('status') or 'unknown'} via {transcription.get('backend') or '—'}"
+                if transcription.get("model"):
+                    detail += f" ({transcription.get('model')})"
+                lines.append(detail)
+                if transcription.get("reason"):
+                    lines.append(f"  Transcription note: {transcription.get('reason')}")
+                if transcription.get("temporary_audio_deleted"):
+                    lines.append("  Audio handling: temporary audio deleted after transcription")
+            elif not transcript.get("available"):
+                lines.append("  To run speech-to-text explicitly: /youtube transcribe <channel|url> [--backend local|auto]")
+            lines.append(f"  Market relevance: {youtube.get('market_relevance')}")
+            if youtube.get("artifact_path"):
+                lines.append(f"  Artifact: {youtube.get('artifact_path')}")
+            lines.append("")
+            topics = youtube.get("market_topic_counts") or {}
+            if topics:
+                lines.append("▶ TOPIC SIGNALS")
+                for topic, count in sorted(topics.items(), key=lambda kv: kv[1], reverse=True):
+                    lines.append(f"  {topic}: {count}")
+                lines.append("")
+            insights = youtube.get("market_insights") or []
+            if insights:
+                lines.append("▶ MARKET INSIGHTS")
+                for insight in insights[:6]:
+                    lines.append(f"  • {insight}")
+                lines.append("")
+            segments = youtube.get("market_segments") or []
+            lines.append("▶ TIMESTAMPED MARKET EXTRACTS")
+            if segments:
+                for segment in segments[:10]:
+                    lines.append(f"  {segment.get('timestamp', '—')}: {segment.get('excerpt', '')}")
+            else:
+                lines.append("  No market-specific transcript segments were detected.")
+            lines.append("")
+            followups = youtube.get("suggested_followups") or []
+            if followups:
+                lines.append("▶ FOLLOW-UP QUESTIONS")
+                for idx, followup in enumerate(followups[:6], start=1):
+                    suffix = f" — {followup.get('why')}" if followup.get("why") else ""
+                    lines.append(f"  {idx}. {followup.get('prompt')}{suffix}")
+                lines.append("")
+            lines.append("▶ SOURCE POLICY")
+            lines.append(f"  {youtube.get('source_policy')}")
+            lines.append("")
+        channels = (youtube_channels or {}).get("channels") or []
+        lines.append("▶ PRESET YOUTUBE CHANNELS")
+        if channels:
+            for channel in channels:
+                state = "enabled" if channel.get("enabled", True) else "disabled"
+                feed = "latest-feed" if channel.get("has_latest_feed") else "manual-url"
+                lines.append(f"  {channel.get('index', '—')}. {channel.get('name')} [{state}; {feed}] — {channel.get('category', 'market')}")
+        else:
+            lines.append("  No preset channels configured yet.")
+        lines.append("")
+        lines.append("▶ USAGE")
+        lines.append("  /youtube")
+        lines.append("  /youtube 1")
+        lines.append("  /youtube <channel name>")
+        lines.append("  /youtube <youtube-url>")
+        lines.append("  /youtube transcribe 1 [--backend local|auto]")
+        lines.append("  /youtube transcribe <youtube-url> [--backend local|auto]")
+        lines.append("  /youtube channels")
         lines.append("\n━━━ Not investment advice. For research and learning only. ━━━")
         return "\n".join(lines)
 
@@ -4825,6 +4967,19 @@ class Agent:
                 f"Clock: {market_status.clock_label}_"
             )
         if intent_plan.get("intent") in {
+            "youtube_video_analysis", "youtube_channel_latest",
+            "youtube_video_transcription", "youtube_channel_transcription",
+            "youtube_channels",
+        }:
+            source_label = "YouTube watch metadata + available captions + preset channel registry"
+            if intent_plan.get("intent") in {"youtube_video_transcription", "youtube_channel_transcription"}:
+                source_label += " + explicit audio speech-to-text when captions are unavailable"
+            mode_suffix = (
+                f"\n\n_Mode: Research | Sources: {source_label} | "
+                f"Market: {market_status.compact_label} | "
+                f"Clock: {market_status.clock_label}_"
+            )
+        if intent_plan.get("intent") in {
             "greeting", "startup_morning_briefing", "global_market_assessment",
             "market_situation_assessment", "placeholder_symbol_request",
             "document_link_help",
@@ -4836,6 +4991,9 @@ class Agent:
             "market_overview", "intraday_index_scan", "intraday_screener",
             "intraday_market_recap", "intraday_setup", "intraday_levels",
             "data_health", "intraday_health",
+            "youtube_video_analysis", "youtube_channel_latest",
+            "youtube_video_transcription", "youtube_channel_transcription",
+            "youtube_channels",
         }:
             trace.append({"step": "intent", "result": intent_plan})
             tool_results = _execute_plan(intent_plan["plan"])

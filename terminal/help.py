@@ -138,6 +138,22 @@ SECTIONS: dict[str, dict] = {
             ("How is ROCE different from ROE?", "Concept comparisons route here automatically"),
         ],
     },
+    "youtube": {
+        "title":  "YouTube Market Intelligence",
+        "icon":   "▶️",
+        "color":  "red",
+        "aliases": ["youtube", "video", "channels", "transcript", "transcribe"],
+        "entries": [
+            ("/youtube",             "List preset YouTube market channels"),
+            ("/youtube 1",           "Fetch latest video for channel #1 and analyze available captions"),
+            ("/youtube <channel>",   "Select a preset channel by name/id and analyze latest video"),
+            ("/youtube <url>",       "Analyze a YouTube market video from available captions/metadata"),
+            ("/youtube transcribe 1", "Explicitly run local speech-to-text for channel #1 latest video if captions are unavailable"),
+            ("/youtube transcribe <url> --backend local|auto", "Explicitly run local audio speech-to-text if captions are unavailable"),
+            ("/youtube channels",    "List preset YouTube market channels"),
+            ("",                     "Default mode does not download audio/video; transcribe mode uses temporary audio and never stores full transcripts"),
+        ],
+    },
     "forensic": {
         "title":  "Forensic Accounting",
         "icon":   "🧪",
