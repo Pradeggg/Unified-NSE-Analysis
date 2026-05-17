@@ -25,92 +25,13 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-import pandas as pd
 import psycopg2
-from psycopg2.extras import execute_values
 
-
-DEFAULT_DSN = "dbname=nse_market user=nse_admin host=/tmp"
-UPSERT_SQL = """
-INSERT INTO market.equity_eod
-    (trade_date, symbol, series, open, high, low, close, volume)
-VALUES %s
-ON CONFLICT (trade_date, symbol, series) DO NOTHING
-"""
-
-
-def _dsn() -> str:
-    return os.environ.get("AGENT_ADDA_PG_DSN") or os.environ.get("PG_DSN") or DEFAULT_DSN
-
-
-def _quiet_yf_download(yf, ticker: str, **kwargs) -> pd.DataFrame:
-    import io
-    import contextlib
-
-    buf = io.StringIO()
-    with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
-        return yf.download(ticker, **kwargs)
-
-
-def fetch_history(symbol: str, period: str = "5y") -> pd.DataFrame:
-    try:
-        import yfinance as yf
-    except Exception as exc:
-        raise RuntimeError(f"yfinance unavailable: {exc}")
-    try:
-        raw = _quiet_yf_download(
-            yf,
-            f"{symbol}.NS",
-            period=period,
-            interval="1d",
-            auto_adjust=False,
-            progress=False,
-            threads=False,
-        )
-    except Exception:
-        return pd.DataFrame()
-    if raw is None or raw.empty:
-        return pd.DataFrame()
-    if isinstance(raw.columns, pd.MultiIndex):
-        raw.columns = [str(col[0]) for col in raw.columns]
-    df = raw.reset_index().rename(
-        columns={
-            "Date": "trade_date",
-            "Open": "open",
-            "High": "high",
-            "Low": "low",
-            "Close": "close",
-            "Volume": "volume",
-        }
-    )
-    keep = ["trade_date", "open", "high", "low", "close", "volume"]
-    df = df[[c for c in keep if c in df.columns]].copy()
-    df = df.dropna(subset=["close"])
-    df["symbol"] = symbol.upper()
-    df["series"] = "EQ"
-    df["trade_date"] = pd.to_datetime(df["trade_date"]).dt.date
-    return df
-
-
-def upsert(conn, df: pd.DataFrame) -> int:
-    if df.empty:
-        return 0
-    rows = [
-        (
-            r["trade_date"],
-            r["symbol"],
-            r["series"],
-            None if pd.isna(r.get("open")) else float(r["open"]),
-            None if pd.isna(r.get("high")) else float(r["high"]),
-            None if pd.isna(r.get("low")) else float(r["low"]),
-            float(r["close"]),
-            None if pd.isna(r.get("volume")) else int(r["volume"]),
-        )
-        for _, r in df.iterrows()
-    ]
-    with conn.cursor() as cur:
-        execute_values(cur, UPSERT_SQL, rows, page_size=500)
-    return len(rows)
+from data_pipeline.equity_eod_backfill import (
+    fetch_history,
+    pg_dsn,
+    upsert_rows,
+)
 
 
 def list_symbols(conn) -> list[str]:
@@ -137,7 +58,7 @@ def main() -> int:
     ap.add_argument("--dry-run", action="store_true", help="Fetch but don't upsert")
     args = ap.parse_args()
 
-    with closing(psycopg2.connect(_dsn())) as conn:
+    with closing(psycopg2.connect(pg_dsn())) as conn:
         conn.autocommit = False
         if args.symbols:
             symbols = [s.strip().upper() for s in args.symbols.split(",") if s.strip()]
@@ -166,7 +87,7 @@ def main() -> int:
                 if args.dry_run:
                     print(f"  [{i:>5}/{len(symbols)}] {sym:<20} fetched {len(df)} rows (dry-run)")
                 else:
-                    n = upsert(conn, df)
+                    n = upsert_rows(conn, df)
                     conn.commit()
                     total_inserted += n
                     print(f"  [{i:>5}/{len(symbols)}] {sym:<20} upserted {n} rows")

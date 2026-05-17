@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from terminal.agent import SYSTEM_PROMPT
 from terminal.agent import Agent
@@ -28,7 +28,44 @@ class TerminalSymbolResolutionTests(unittest.TestCase):
         self.assertIsNone(result["symbol"])
         self.assertEqual(result["confidence"], "none")
         self.assertIn("No exact NSE symbol found", result["error"])
-        live_session.assert_not_called()
+
+    def test_resolve_symbol_live_search_requires_exact_match_for_ticker_shape(self):
+        search_response = Mock()
+        search_response.raise_for_status.return_value = None
+        search_response.json.return_value = {
+            "results": [{"symbol": "NIVABUPA", "symbol_info": "Niva Bupa Health Insurance"}]
+        }
+        quote_response = Mock()
+        quote_response.ok = False
+        session = Mock()
+        session.get.side_effect = [search_response, quote_response]
+
+        with patch("terminal.tools._all_symbols_map", return_value={}), patch(
+            "terminal.tools._get_live_session", return_value=session
+        ):
+            result = resolve_symbol("NAVABUPA")
+
+        self.assertIsNone(result["symbol"])
+        self.assertEqual(result["confidence"], "none")
+        self.assertIn("No exact NSE symbol found", result["error"])
+
+    def test_resolve_symbol_can_resolve_exact_ticker_from_live_quote_fallback(self):
+        search_response = Mock()
+        search_response.raise_for_status.return_value = None
+        search_response.json.return_value = {"results": []}
+        quote_response = Mock()
+        quote_response.ok = True
+        quote_response.json.return_value = {"info": {"symbol": "HDBFS", "companyName": "HDB Financial Services"}}
+        session = Mock()
+        session.get.side_effect = [search_response, quote_response]
+
+        with patch("terminal.tools._all_symbols_map", return_value={}), patch(
+            "terminal.tools._get_live_session", return_value=session
+        ):
+            result = resolve_symbol("HDBFS")
+
+        self.assertEqual(result["symbol"], "HDBFS")
+        self.assertEqual(result["confidence"], "nse-quote")
 
     def test_resolve_symbol_handles_usl_alias_locally(self):
         with patch("terminal.tools._get_live_session") as live_session:

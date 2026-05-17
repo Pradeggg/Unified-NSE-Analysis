@@ -3029,6 +3029,9 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
                 lines.append(f"  Selected filing: {selected.get('title') or selected.get('url') or 'N/A'}")
                 if selected.get("source"):
                     lines.append(f"  Filing source:   {selected.get('source')}")
+            warning = latest_results.get("warning") or {}
+            if warning.get("message"):
+                lines.append(f"  ⚠ {warning.get('message')}")
             facts = latest_results.get("facts") or {}
             if facts:
                 lines.append("")
@@ -4651,6 +4654,30 @@ class Agent:
     _HISTORY_CHAR_BUDGET = 40_000
     # Hard cap: never keep more than 20 turns (40 messages) regardless of size
     _HISTORY_MAX_TURNS   = 20
+    _OPENAI_TOOL_SCHEMA_LIMIT = 128
+    _FALLBACK_TOOL_PRIORITY = (
+        "resolve_symbol",
+        "get_symbol_snapshot",
+        "get_technical_setup",
+        "get_sector_context",
+        "scrape_screener_in",
+        "search_latest_catalysts",
+        "search_nse_announcements",
+        "search_bse_filings",
+        "search_concall_transcripts",
+        "search_broker_research",
+        "run_forensic_analysis",
+        "get_latest_results",
+        "analyze_document",
+        "fetch_pdf_text",
+        "generate_report",
+    )
+    _TOOL_SEARCH_STOPWORDS = {
+        "the", "and", "for", "with", "from", "this", "that", "what", "when",
+        "where", "which", "would", "should", "could", "please", "using",
+        "about", "into", "then", "than", "your", "tool", "tools", "call",
+        "latest", "best", "show", "give", "tell", "need", "want", "based",
+    }
 
     def __init__(self):
         self.backend      = _detect_backend()
@@ -4661,6 +4688,104 @@ class Agent:
         self._history: list[dict] = []
         self._last_symbols: list[str] = []
         self._last_turn_context: TurnContext | None = None
+
+    @staticmethod
+    def _tool_schema_name(schema: dict) -> str:
+        function = schema.get("function") if isinstance(schema, dict) else {}
+        return str((function or {}).get("name") or "")
+
+    @classmethod
+    def _tool_query_terms(cls, text: str) -> set[str]:
+        return {
+            token
+            for token in re.findall(r"[a-z0-9]{3,}", (text or "").lower())
+            if token not in cls._TOOL_SEARCH_STOPWORDS
+        }
+
+    @classmethod
+    def _tool_schema_search_text(cls, schema: dict) -> str:
+        function = schema.get("function") if isinstance(schema, dict) else {}
+        name = str((function or {}).get("name") or "")
+        description = str((function or {}).get("description") or "")
+        params = ((function or {}).get("parameters") or {}).get("properties") or {}
+        param_names = " ".join(str(key) for key in params.keys()) if isinstance(params, dict) else ""
+        return f"{name} {name.replace('_', ' ')} {description} {param_names}".lower()
+
+    @classmethod
+    def _tool_schema_score(cls, schema: dict, query: str, query_terms: set[str]) -> int:
+        name = cls._tool_schema_name(schema).lower()
+        if not name:
+            return 0
+        search_text = cls._tool_schema_search_text(schema)
+        schema_terms = cls._tool_query_terms(search_text)
+        name_terms = cls._tool_query_terms(name.replace("_", " "))
+        overlap = query_terms & schema_terms
+        score = len(overlap)
+        score += 3 * len(query_terms & name_terms)
+        if name in query:
+            score += 20
+        if name.replace("_", " ") in query:
+            score += 12
+        if name_terms and name_terms.issubset(query_terms):
+            score += 8
+        return score
+
+    def _tool_selection_text(self, user_input: str) -> str:
+        parts = [user_input or ""]
+        context = self._last_turn_context
+        if context is not None:
+            parts.extend([
+                str(context.intent or ""),
+                str(context.result_summary or ""),
+                " ".join(str(symbol) for symbol in (context.symbols or [])),
+                " ".join(str(tool) for tool in (context.tools or [])),
+            ])
+        return "\n".join(part for part in parts if part)
+
+    def _tool_schemas_for_query(self, user_input: str) -> list[dict]:
+        """Return a bounded, query-relevant tool schema list for LLM calls."""
+        schemas = list(self.tool_schemas or [])
+        if len(schemas) <= self._OPENAI_TOOL_SCHEMA_LIMIT:
+            return schemas
+
+        query = (user_input or "").lower()
+        mentioned = [
+            schema for schema in schemas
+            if self._tool_schema_name(schema)
+            and re.search(rf"(?<![A-Za-z0-9_]){re.escape(self._tool_schema_name(schema).lower())}(?![A-Za-z0-9_])", query)
+        ]
+        if mentioned:
+            return mentioned[: self._OPENAI_TOOL_SCHEMA_LIMIT]
+
+        query_terms = self._tool_query_terms(query)
+        scored = [
+            (self._tool_schema_score(schema, query, query_terms), idx, schema)
+            for idx, schema in enumerate(schemas)
+        ]
+        searched = [
+            schema
+            for score, _idx, schema in sorted(scored, key=lambda item: (-item[0], item[1]))
+            if score > 0
+        ]
+        if searched:
+            return searched[: self._OPENAI_TOOL_SCHEMA_LIMIT]
+
+        by_name = {self._tool_schema_name(schema): schema for schema in schemas}
+        selected: list[dict] = []
+        seen: set[str] = set()
+        for name in self._FALLBACK_TOOL_PRIORITY:
+            schema = by_name.get(name)
+            if schema:
+                selected.append(schema)
+                seen.add(name)
+        for schema in schemas:
+            name = self._tool_schema_name(schema)
+            if name and name not in seen:
+                selected.append(schema)
+                seen.add(name)
+            if len(selected) >= self._OPENAI_TOOL_SCHEMA_LIMIT:
+                break
+        return selected
 
     def model_status(self) -> dict:
         """Return the active main chat backend status. Voice STT/TTS models are separate."""
@@ -5330,7 +5455,7 @@ class Agent:
         max_rounds = 10
 
         for round_n in range(max_rounds):
-            resp = self.backend.chat(messages, tools=self.tool_schemas)
+            resp = self.backend.chat(messages, tools=self._tool_schemas_for_query(self._tool_selection_text(user_input)))
 
             if resp["tool_calls"]:
                 # Execute each tool call

@@ -1,0 +1,152 @@
+{
+  "status": "ok",
+  "video_id": "WI0tdUjH_Vg",
+  "url": "https://www.youtube.com/watch?v=WI0tdUjH_Vg",
+  "start_seconds": null,
+  "title": "RBI Rate Cut - What Market Breadth Reveals About the Next Big Move In Stock Market (2025)",
+  "channel": "Trade With Trend - Raunak A",
+  "channel_id": "UCPgT-N-DQ0K0H88skjaDgkA",
+  "published_at": "2025-06-06T21:00:30-07:00",
+  "duration_seconds": 1097,
+  "transcript": {
+    "available": true,
+    "reason": null,
+    "language": "en",
+    "name": "speech-to-text",
+    "is_auto_generated": true,
+    "source": "audio_stt",
+    "segment_count": 206,
+    "stored_full_text": false
+  },
+  "transcription": {
+    "requested": true,
+    "attempted": true,
+    "status": "ok",
+    "available": true,
+    "backend": "local",
+    "model": "base",
+    "source": "audio_stt",
+    "temporary_audio_deleted": true,
+    "stored_full_text": false
+  },
+  "market_topic_counts": {
+    "indices": 4,
+    "sectors": 33,
+    "macro": 48,
+    "technicals": 28,
+    "flows": 2
+  },
+  "market_segments": [
+    {
+      "timestamp": "15:44",
+      "start": 944.24,
+      "symbols": [],
+      "excerpt": "the US market. Valuations are very high given the kind of interest rates that exist in the US market.",
+      "source": "audio_stt"
+    },
+    {
+      "timestamp": "15:38",
+      "start": 938.24,
+      "symbols": [],
+      "excerpt": "interest rates in the US. The fourth point I'll tell you is about overvalued large cap stocks in",
+      "source": "audio_stt"
+    },
+    {
+      "timestamp": "07:03",
+      "start": 423.04,
+      "symbols": [],
+      "excerpt": "will do well. Some sectors like banks, capital markets, IPOs,",
+      "source": "audio_stt"
+    },
+    {
+      "timestamp": "15:57",
+      "start": 957.92,
+      "symbols": [],
+      "excerpt": "inevitable. There is also excessive market concentration. This means that US stocks represent about",
+      "source": "audio_stt"
+    },
+    {
+      "timestamp": "15:26",
+      "start": 926.72,
+      "symbols": [],
+      "excerpt": "interest rates higher. And my guess is that interest rates in the US are going to remain high for",
+      "source": "audio_stt"
+    },
+    {
+      "timestamp": "15:17",
+      "start": 917.36,
+      "symbols": [],
+      "excerpt": "is that Federal Reserve obviously is not working with the government and I'll again reiterate",
+      "source": "audio_stt"
+    },
+    {
+      "timestamp": "14:07",
+      "start": 847.92,
+      "symbols": [],
+      "excerpt": "sectors are not going to come back and test their lows and then maybe a sustainable move begins in",
+      "source": "audio_stt"
+    },
+    {
+      "timestamp": "13:33",
+      "start": 813.52,
+      "symbols": [],
+      "excerpt": "And last is the sector trend. The theme remains that of selective strong pockets in the market,",
+      "source": "audio_stt"
+    },
+    {
+      "timestamp": "13:22",
+      "start": 802.88,
+      "symbols": [],
+      "excerpt": "haven't recovered to a large extent. Mid cap to top 150 stocks based on market cap. Top 150",
+      "source": "audio_stt"
+    },
+    {
+      "timestamp": "13:18",
+      "start": 798.32,
+      "symbols": [],
+      "excerpt": "small cap stocks. Breath remains relatively poor in this space. A lot of stocks from this space",
+      "source": "audio_stt"
+    },
+    {
+      "timestamp": "13:14",
+      "start": 794.24,
+      "symbols": [],
+      "excerpt": "in this market. This is a trend that should continue for some more time. Microcaps stocks and",
+      "source": "audio_stt"
+    },
+    {
+      "timestamp": "13:09",
+      "start": 789.76,
+      "symbols": [],
+      "excerpt": "Irrespective of sector strength, large to mid cap stocks continue to attract more money",
+      "source": "audio_stt"
+    }
+  ],
+  "market_insights": [
+    "Sector selection matters more than broad-index direction; leadership is framed as pocket-specific.",
+    "Positive pockets mentioned include pharma/healthcare, capital-market names, and select small-cap opportunities.",
+    "IT is used as a cautionary valuation example where sentiment can reverse quickly."
+  ],
+  "suggested_followups": [
+    {
+      "prompt": "Which pharma and healthcare stocks are leading right now?",
+      "why": "Validate the video's positive healthcare/pharma pocket."
+    },
+    {
+      "prompt": "Show Stage 2 capital market stocks with high RS",
+      "why": "Check whether the highlighted capital-market theme has technical confirmation."
+    },
+    {
+      "prompt": "Compare large caps vs midcap and smallcap leadership",
+      "why": "Test the large-cap versus SMID hierarchy."
+    },
+    {
+      "prompt": "Assess NIFTY IT sector trend and derating risk",
+      "why": "Confirm the IT caution with trend and RS data."
+    }
+  ],
+  "market_relevance": "HIGH",
+  "source_policy": "Captions are used first. Audio speech-to-text runs only for explicit /youtube transcribe requests; temporary audio is deleted and the full transcript is not stored.",
+  "transcript_hash": "38d62061fe35ba197a2bbab868326ac4446c1ecab3741961e9d455ffd43d4137",
+  "stored_at": "2026-05-17T07:10:00.589295+00:00"
+}

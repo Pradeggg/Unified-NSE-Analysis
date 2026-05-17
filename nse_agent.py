@@ -763,6 +763,9 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/strategy-council DMART", "Iterative strategist + critic EOD simulation with train/validation/test discipline"),
     ("/strategy-council DMART --iterations 3 --horizon 1w,2w,4w", "Run Strategy Council with explicit horizons"),
     ("/strategy-council DMART --llm", "Use configured LLM strategist and critics, with deterministic fallback if unavailable"),
+    ("/data-coverage NIFTY500", "📊 Audit EOD history coverage for an index (default 5-year threshold)"),
+    ("/data-coverage NIFTY500 --backfill", "Audit and yfinance-backfill any symbols below the 5-year threshold"),
+    ("/data-coverage NIFTY500 --details", "Audit and list the worst-covered symbols"),
     ("/pnl",              "💼 Live portfolio P&L — unrealised gains/losses from holdings.csv"),
     ("/live",             "Switch to LIVE mode (real-time NSE API)"),
     ("/eod",              "Switch to EOD mode (historical CSV/DB)"),
@@ -855,6 +858,7 @@ _CMD_CATEGORIES: dict[str, tuple[str, str]] = {
     "/backtest": ("Strategy Lab",         "🧪"),
     "/strategy-lab": ("Strategy Lab",     "🧪"),
     "/strategy-council": ("Strategy Council", "🧠"),
+    "/data-coverage": ("Data Coverage", "📊"),
     "/forensic": ("Forensic",            "🧪"),
     "/voice-mode": ("Voice Briefing",    "🎙️"),
     "/events":   ("Events Calendar",     "📅"),
@@ -4398,6 +4402,12 @@ def _single_query(agent, query: str, show_trace: bool) -> None:
         console.print(Markdown(handle_backtest_command(query)))
         return
 
+    if query.strip().lower().startswith("/data-coverage"):
+        from terminal.data_coverage import handle_data_coverage_command
+        _print_user(query)
+        console.print(Markdown(handle_data_coverage_command(query)))
+        return
+
     if _is_open_last_report_request(query):
         _print_user(query)
         console.print(Markdown(_open_last_generated_report()))
@@ -4645,6 +4655,13 @@ def _chat_loop(agent, show_trace: bool) -> None:
             from terminal.backtest import handle_backtest_command
             _print_user(text)
             console.print(Markdown(handle_backtest_command(text)))
+            _separator()
+            continue
+
+        if text.lower().startswith("/data-coverage"):
+            from terminal.data_coverage import handle_data_coverage_command
+            _print_user(text)
+            console.print(Markdown(handle_data_coverage_command(text)))
             _separator()
             continue
 

@@ -57,6 +57,7 @@ def test_contextual_source_questions_trigger_assessment():
     assert needs_situation_assessment("/fno United Spirits")
     assert needs_situation_assessment("/report technical United Spirits pdf")
     assert needs_situation_assessment("/results United Spirits latest quarter")
+    assert needs_situation_assessment("what would be your recommendation based on the above financial analysis")
 
 
 def test_direct_queries_do_not_trigger_assessment():
@@ -325,6 +326,56 @@ def test_render_context_answer_for_stage2_last_30_question():
     assert "2026-05-14" in answer
     assert "not from the last 30 minutes" in answer
     assert "Not investment advice" in answer
+
+
+def test_recommendation_based_on_above_analysis_answers_from_context():
+    ctx = TurnContext(
+        user_input="HDBFS financial analysis",
+        intent="stock_brief",
+        mode="historical",
+        tools=["resolve_symbol", "get_symbol_snapshot", "get_technical_setup", "scrape_screener_in"],
+        source_label="EOD CSV + DB snapshot + screener.in",
+        freshness="2026-05-15",
+        result_type="stock_brief",
+        result_summary="stock brief for HDBFS; price 674.95; signal SELL; stage UNKNOWN; risk: low interest coverage.",
+        symbols=["HDBFS"],
+    )
+
+    assessment = assess_followup("what would be your recommendation based on the above financial analysis", ctx)
+    answer = render_context_answer("what would be your recommendation based on the above financial analysis", assessment, ctx)
+
+    assert assessment.decision == "answer_from_context"
+    assert assessment.resolved_entities == ["HDBFS"]
+    assert "CONTEXTUAL RECOMMENDATION" in answer
+    assert "cautious / avoid fresh entry" in answer
+    assert "Do not resolve words" in assessment.plan[1]
+
+
+def test_stock_context_summary_preserves_decision_signals():
+    ctx = build_turn_context(
+        user_input="HDBFS financial analysis",
+        intent="stock_brief",
+        mode="historical",
+        source_label="EOD CSV + DB snapshot",
+        tool_results=[
+            {
+                "tool": "get_symbol_snapshot",
+                "args": {"symbol": "HDBFS"},
+                "result": {"symbol": "HDBFS", "price": 674.95, "signal": "SELL", "stage": "UNKNOWN", "rs": -5},
+            },
+            {
+                "tool": "scrape_screener_in",
+                "args": {"symbol": "HDBFS"},
+                "result": {"symbol": "HDBFS", "cons": ["Company has low interest coverage ratio."]},
+            },
+        ],
+        answer="Data Freshness: snapshot 2026-05-15",
+    )
+
+    assert "HDBFS" in ctx.result_summary
+    assert "SELL" in ctx.result_summary
+    assert "UNKNOWN" in ctx.result_summary
+    assert "low interest coverage" in ctx.result_summary
 
 
 def test_scan_these_for_15m_setups_builds_tool_plan():

@@ -71,6 +71,14 @@ _CONTEXTUAL_PATTERNS = (
     "which expiry",
     "based on the report",
     "based on report",
+    "based on the above",
+    "based on above",
+    "above financial analysis",
+    "above analysis",
+    "previous analysis",
+    "your recommendation",
+    "what would be your recommendation",
+    "what is your recommendation",
     "the report",
     "previous conversation",
     "same for",
@@ -371,6 +379,23 @@ def assess_followup(user_input: str, previous_context: TurnContext | None) -> Si
             "Do you mean technical setup, fundamentals, news/catalysts, intraday levels, or F&O context for these?",
         )
 
+    if _asks_contextual_recommendation(q):
+        return SituationAssessment(
+            applies=True,
+            decision="answer_from_context",
+            confidence="high",
+            user_is_asking="A recommendation based on the prior financial/market analysis.",
+            context_found=_context_found(previous_context),
+            source_assessment=_source_assessment(previous_context),
+            resolved_entities=previous_context.symbols,
+            evidence_plan=previous_context.tools,
+            plan=[
+                "Use the previous turn context as the evidence base.",
+                "Do not resolve words from the follow-up as a new ticker.",
+                "Give an evidence-gated research stance, not investment advice.",
+            ],
+        )
+
     if _asks_report_reference(q):
         report_path = _report_path_from_context(previous_context)
         if report_path and ("open" in q or "show" in q):
@@ -633,6 +658,13 @@ def render_context_answer(
             f"━━━ Not investment advice. For research and learning only. ━━━"
         )
 
+    if assessment.decision == "answer_from_context" and _asks_contextual_recommendation(_normalize(user_input)):
+        return (
+            f"{block}\n\n"
+            f"{_render_contextual_recommendation(previous_context)}\n\n"
+            f"━━━ Not investment advice. For research and learning only. ━━━"
+        )
+
     return (
         f"{block}\n\n"
         f"▶ ANSWER\n"
@@ -674,6 +706,36 @@ def _asks_report_reference(q: str) -> bool:
     )
 
 
+def _asks_contextual_recommendation(q: str) -> bool:
+    contextual = any(
+        phrase in q
+        for phrase in (
+            "based on the above",
+            "based on above",
+            "above financial analysis",
+            "above analysis",
+            "previous analysis",
+            "based on this analysis",
+            "based on the analysis",
+            "based on financial analysis",
+        )
+    )
+    asks_recommendation = any(
+        phrase in q
+        for phrase in (
+            "recommendation",
+            "recommend",
+            "what would you do",
+            "what should i do",
+            "buy",
+            "sell",
+            "hold",
+            "avoid",
+        )
+    )
+    return contextual and asks_recommendation
+
+
 def _asks_scan_15m(q: str) -> bool:
     return ("scan these" in q or "check these" in q) and ("15m" in q or "15 m" in q or "15-minute" in q)
 
@@ -697,6 +759,47 @@ def _source_assessment(context: TurnContext) -> str:
     if context.result_summary:
         pieces.append(context.result_summary)
     return " ".join(pieces)
+
+
+def _render_contextual_recommendation(context: TurnContext) -> str:
+    summary = context.result_summary or "Previous analysis is available."
+    lower = summary.lower()
+    symbol_text = ", ".join(context.symbols[:3]) if context.symbols else "the prior subject"
+    caution_terms = ("sell", "weak", "not in stage 2", "unknown", "bearish", "missing evidence", "low interest coverage")
+    positive_terms = ("buy", "stage 2", "strong", "bullish", "high rs")
+
+    lines = ["▶ CONTEXTUAL RECOMMENDATION"]
+    if any(term in lower for term in caution_terms):
+        stance = "Research stance: cautious / avoid fresh entry until evidence improves."
+        rationale = (
+            "The prior analysis had negative or incomplete evidence, so the safer research conclusion is to wait for confirmation "
+            "rather than infer a buy case."
+        )
+    elif any(term in lower for term in positive_terms):
+        stance = "Research stance: constructive, but only with confirmation and risk controls."
+        rationale = (
+            "The prior analysis had supportive signals, but this still needs price confirmation, source freshness, and position-risk checks."
+        )
+    else:
+        stance = "Research stance: neutral / watchlist until stronger evidence is available."
+        rationale = (
+            "The prior context is not enough to justify a decisive buy/sell conclusion without fresh technical, fundamental, and catalyst checks."
+        )
+
+    lines.append(f"  Subject: {symbol_text}")
+    lines.append(f"  {stance}")
+    lines.append(f"  Why: {rationale}")
+    lines.append("")
+    lines.append("▶ EVIDENCE USED")
+    lines.append(f"  {summary}")
+    lines.append(f"  Source: {context.source_label}{_freshness_suffix(context)}.")
+    if context.tools:
+        lines.append(f"  Tools: {', '.join(context.tools)}.")
+    lines.append("")
+    lines.append("▶ WHAT WOULD CHANGE THE VIEW")
+    lines.append("  • Positive: Stage 2/price strength, improving RS, supportive fundamentals, and fresh catalysts.")
+    lines.append("  • Negative: weak trend, SELL/UNKNOWN stage, deteriorating margins/coverage, or missing key evidence.")
+    return "\n".join(lines)
 
 
 def _report_path_from_context(context: TurnContext) -> str:
@@ -854,9 +957,43 @@ def _summarize_result(
             return f"F&O overview for {symbol}, expiry {expiry}."
         return f"F&O overview for {symbol}."
 
+    if symbols and {"stock_brief", "stock_results", "market_situation_assessment"} & {result_type}:
+        symbol = symbols[0]
+        snapshot = _first_result_dict(tool_results, "get_symbol_snapshot")
+        technical = _first_result_dict(tool_results, "get_technical_setup")
+        screener = _first_result_dict(tool_results, "scrape_screener_in")
+        parts = [f"{result_type.replace('_', ' ')} for {symbol}"]
+        price = snapshot.get("price") or snapshot.get("last_price") or snapshot.get("last")
+        signal = snapshot.get("signal") or snapshot.get("trading_signal") or technical.get("signal")
+        stage = snapshot.get("stage") or technical.get("stage")
+        rs = snapshot.get("rs") or snapshot.get("relative_strength")
+        if price is not None:
+            parts.append(f"price {price}")
+        if signal:
+            parts.append(f"signal {signal}")
+        if stage:
+            parts.append(f"stage {stage}")
+        if rs is not None:
+            parts.append(f"RS {rs}")
+        if technical.get("macd"):
+            parts.append(f"MACD {technical.get('macd')}")
+        if technical.get("supertrend"):
+            parts.append(f"supertrend {technical.get('supertrend')}")
+        cons = screener.get("cons") if isinstance(screener.get("cons"), list) else []
+        if cons:
+            parts.append(f"risk: {str(cons[0])[:80]}")
+        return "; ".join(parts) + "."
+
     if symbols:
         return f"{result_type.replace('_', ' ')} for {', '.join(symbols[:5])}."
     return result_type.replace("_", " ").strip()
+
+
+def _first_result_dict(tool_results: list[dict[str, Any]], tool_name: str) -> dict[str, Any]:
+    for item in tool_results:
+        if item.get("tool") == tool_name and isinstance(item.get("result"), dict):
+            return item.get("result") or {}
+    return {}
 
 
 def _dedupe(values: Any) -> list[str]:

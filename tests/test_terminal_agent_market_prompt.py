@@ -1261,6 +1261,15 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
         self.assertIn("search_bse_filings: ok", result["answer"])
         self.assertNotIn("REQUIRED TOOL VALIDATION FAILED", result["answer"])
 
+    def test_latest_results_of_mixed_case_company_routes_to_stock_results(self):
+        from terminal.agent import _keyword_intent
+
+        routed = _keyword_intent("latest results of Delhivery")
+
+        self.assertEqual(routed["intent"], "stock_results")
+        self.assertEqual(routed["plan"][0], ("resolve_symbol", {"query": "Delhivery"}))
+        self.assertEqual(routed["plan"][1], ("get_latest_results", {"symbol": "DELHIVERY"}))
+
     def test_required_tool_validator_blocks_unsupported_broker_claims(self):
         agent = Agent()
         agent.backend = object()
@@ -1325,6 +1334,135 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
              "result": {"text_length": 4500}},
         ]
         self.assertIsNone(_validate_required_tools(analyze_prompt, "llm_driven", tool_results))
+
+    def test_llm_query_sends_only_analyze_document_schema_for_document_prompt(self):
+        class CapturingBackend:
+            def __init__(self):
+                self.tool_names = []
+
+            def chat(self, messages, tools=None):
+                self.tool_names = [schema["function"]["name"] for schema in (tools or [])]
+                return {"content": "Document analysis complete.", "tool_calls": [], "finish_reason": "stop"}
+
+        schemas = [
+            {"type": "function", "function": {"name": f"tool_{i}", "description": "x", "parameters": {"type": "object"}}}
+            for i in range(137)
+        ]
+        schemas.append(
+            {"type": "function", "function": {"name": "analyze_document", "description": "x", "parameters": {"type": "object"}}}
+        )
+        backend = CapturingBackend()
+        agent = Agent.__new__(Agent)
+        agent.backend = backend
+        agent.backend_name = "TestBackend"
+        agent.tool_schemas = schemas
+        agent._history = []
+        agent._last_symbols = []
+        agent._last_turn_context = None
+
+        result = agent._llm_query(
+            "Use the analyze_document tool with source='https://example.com/doc.pdf', max_pages=60.",
+            show_trace=False,
+        )
+
+        self.assertEqual(result["intent"], "llm_driven")
+        self.assertEqual(backend.tool_names, ["analyze_document"])
+
+    def test_llm_tool_schema_fallback_is_bounded_to_openai_limit(self):
+        agent = Agent.__new__(Agent)
+        agent.tool_schemas = [
+            {"type": "function", "function": {"name": f"tool_{i}", "description": "x", "parameters": {"type": "object"}}}
+            for i in range(138)
+        ]
+
+        selected = agent._tool_schemas_for_query("general market question")
+
+        self.assertLessEqual(len(selected), 128)
+
+    def test_llm_tool_schema_search_prefers_relevant_tools_by_description(self):
+        agent = Agent.__new__(Agent)
+        agent.tool_schemas = [
+            {"type": "function", "function": {"name": f"tool_{i}", "description": "unrelated utility", "parameters": {"type": "object"}}}
+            for i in range(136)
+        ] + [
+            {
+                "type": "function",
+                "function": {
+                    "name": "search_concall_transcripts",
+                    "description": "Search earnings call transcripts for management commentary, guidance, and Q&A.",
+                    "parameters": {"type": "object", "properties": {"symbol": {"type": "string"}}},
+                },
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "search_broker_research",
+                    "description": "Search broker research reports, analyst ratings, and target price changes.",
+                    "parameters": {"type": "object", "properties": {"symbol": {"type": "string"}}},
+                },
+            },
+        ]
+
+        selected = agent._tool_schemas_for_query("Find management commentary and guidance after latest results")
+        names = [schema["function"]["name"] for schema in selected[:5]]
+
+        self.assertIn("search_concall_transcripts", names)
+        self.assertLessEqual(len(selected), 128)
+
+    def test_llm_tool_schema_search_uses_prior_context_after_assessment(self):
+        class PriorContext:
+            intent = "document_analysis"
+            result_summary = "Previous turn analyzed a Delhivery filing document."
+            symbols = ["DELHIVERY"]
+            tools = ["analyze_document"]
+
+        agent = Agent.__new__(Agent)
+        agent.tool_schemas = [
+            {"type": "function", "function": {"name": f"tool_{i}", "description": "unrelated utility", "parameters": {"type": "object"}}}
+            for i in range(137)
+        ] + [
+            {
+                "type": "function",
+                "function": {
+                    "name": "analyze_document",
+                    "description": "Read and extract text from PDFs, filings, reports, and web URLs.",
+                    "parameters": {"type": "object", "properties": {"source": {"type": "string"}}},
+                },
+            },
+        ]
+        agent._last_turn_context = PriorContext()
+
+        selection_text = agent._tool_selection_text("Follow up on the same report")
+        selected = agent._tool_schemas_for_query(selection_text)
+
+        self.assertEqual([schema["function"]["name"] for schema in selected], ["analyze_document"])
+
+    def test_stock_brief_plan_includes_concall_when_management_commentary_requested(self):
+        from terminal.agent import _keyword_intent
+
+        routed = _keyword_intent(
+            "Perform comprehensive 360 analysis of HDBFS including news, management commentary, guidance and analyst views"
+        )
+        tools = [name for name, _args in routed["plan"]]
+
+        self.assertEqual(routed["intent"], "stock_brief")
+        self.assertIn("search_latest_catalysts", tools)
+        self.assertIn("search_concall_transcripts", tools)
+        self.assertIn("search_broker_research", tools)
+
+    def test_required_tool_validator_allows_stock_brief_when_dynamic_tools_run(self):
+        from terminal.agent import _validate_required_tools
+
+        query = "HDBFS news management commentary guidance analyst views"
+        tool_results = [
+            {"tool": "resolve_symbol", "args": {"query": "HDBFS"}, "result": {"symbol": "HDBFS"}},
+            {"tool": "get_symbol_snapshot", "args": {"symbol": "HDBFS"}, "result": {"symbol": "HDBFS"}},
+            {"tool": "search_latest_catalysts", "args": {"symbol": "HDBFS"}, "result": {"symbol": "HDBFS"}},
+            {"tool": "search_concall_transcripts", "args": {"symbol": "HDBFS"}, "result": {"symbol": "HDBFS"}},
+            {"tool": "search_broker_research", "args": {"symbol": "HDBFS"}, "result": {"symbol": "HDBFS"}},
+        ]
+
+        self.assertIsNone(_validate_required_tools(query, "stock_brief", tool_results))
 
 
 if __name__ == "__main__":

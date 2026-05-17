@@ -62,7 +62,6 @@ def test_unresolved_exact_ticker_returns_explicit_unresolved_status():
     assert result["status"] == "unresolved"
     assert result["canonical_symbol"] is None
     assert "No exact NSE symbol found" in result["error"]
-    live_session.assert_not_called()
 
 
 def test_validate_requested_symbols_ignores_indicator_terms():

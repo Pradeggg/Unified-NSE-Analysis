@@ -760,13 +760,7 @@ def resolve_symbol(query: str) -> dict:
             "query": query,
             "error": f"'{query}' contains search/report context, not a resolvable NSE symbol.",
         }
-    if re.fullmatch(r"[A-Z0-9&-]{2,12}", query.strip()):
-        # Ticker-shaped query — don't return early. Local DB already missed,
-        # so let the NSE live-search and quote-equity fallbacks below try to
-        # resolve it. This covers symbols that exist on NSE but haven't been
-        # ingested into our local symbol DB yet (e.g. small-caps surfaced by
-        # NSE feeds).
-        pass
+    exact_ticker_query = bool(re.fullmatch(r"[A-Z0-9&-]{2,12}", query.strip()))
 
     # Fall back to NSE live search API
     try:
@@ -774,23 +768,28 @@ def resolve_symbol(query: str) -> dict:
         url = f"https://www.nseindia.com/api/search?q={_req.utils.quote(query)}&type=equity"
         r   = s.get(url, timeout=10)
         r.raise_for_status()
-        results = r.json().get("results", [])
+        payload = r.json()
+        results = payload.get("results", []) if isinstance(payload, dict) else []
         if results:
             # Prefer exact ticker match when the user passed a ticker-shaped
             # query, otherwise NSE search ranks by relevance and a substring
             # match can land first (e.g. RELIANCE → RELIANCEPOWER).
             q_up = query.strip().upper()
-            top = results[0]
+            top = None
             for r_ in results:
-                if (r_.get("symbol") or "").upper() == q_up:
+                if isinstance(r_, dict) and (r_.get("symbol") or "").upper() == q_up:
                     top = r_
                     break
+            if top is None and not exact_ticker_query:
+                top = next((r_ for r_ in results if isinstance(r_, dict)), None)
+            if top is None:
+                raise ValueError("No exact NSE search result for ticker-shaped query")
             return {
                 "symbol":     top.get("symbol"),
                 "name":       top.get("symbol_info"),
                 "confidence": "nse-search",
                 "query":      query,
-                "candidates": [x.get("symbol") for x in results[:5]],
+                "candidates": [x.get("symbol") for x in results[:5] if isinstance(x, dict)],
             }
     except Exception:
         pass
@@ -804,8 +803,9 @@ def resolve_symbol(query: str) -> dict:
             s = _get_live_session()
             url = f"https://www.nseindia.com/api/quote-equity?symbol={_req.utils.quote(q_clean)}"
             r = s.get(url, timeout=10)
-            if r.ok:
-                info = (r.json() or {}).get("info") or {}
+            if r.ok is True:
+                payload = r.json()
+                info = (payload.get("info") or {}) if isinstance(payload, dict) else {}
                 resolved = (info.get("symbol") or "").strip().upper()
                 if resolved == q_clean:
                     return {
@@ -819,7 +819,7 @@ def resolve_symbol(query: str) -> dict:
             pass
 
     return {"symbol": None, "confidence": "none", "query": query,
-            "error": f"No NSE symbol found for '{query}'"}
+            "error": f"No exact NSE symbol found for '{query}'" if exact_ticker_query else f"No NSE symbol found for '{query}'"}
 
 
 _STAGE_SNAPSHOT_COLS = [
