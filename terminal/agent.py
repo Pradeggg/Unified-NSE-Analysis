@@ -1448,6 +1448,10 @@ def _split_compound_query(text: str) -> list[str]:
     raw = (text or "").strip()
     if not raw or raw.startswith("/"):
         return [raw] if raw else []
+    if re.search(r"\brun\s+a\s+comprehensive\s+deep\s+search\s+for\s+[A-Z][A-Z0-9&-]{1,20}\b", raw, flags=re.IGNORECASE):
+        return [raw]
+    if "deep_search" in raw:
+        return [raw]
     # Skip internal/programmatic prompts: multi-line text (the morning
     # briefing prompt, RIC recipes, etc.) and very long inputs are not
     # natural conversational compound questions — they're templates.
@@ -1592,6 +1596,29 @@ def _analyze_command_symbols(query: str) -> list[str]:
     return list(dict.fromkeys(symbols))
 
 
+def _generated_deep_search_prompt(query: str) -> dict | None:
+    """Parse Agent-generated `/search SYMBOL ...` prompts without treating verbs as tickers."""
+    text = query or ""
+    match = re.search(
+        r"\brun\s+a\s+comprehensive\s+deep\s+search\s+for\s+([A-Z][A-Z0-9&-]{1,20})\b",
+        text,
+        flags=re.IGNORECASE,
+    )
+    if not match or "deep_search" not in text.lower():
+        return None
+    symbol = match.group(1).upper()
+    if not re.fullmatch(r"[A-Z0-9&-]{2,20}", symbol):
+        return None
+    context = "full overview"
+    ctx_match = re.search(r"\bContext:\s*['\"]?([^'\".]+)", text, flags=re.IGNORECASE)
+    if ctx_match:
+        context = ctx_match.group(1).strip() or context
+    return {
+        "intent": "entity_topic_command",
+        "plan": [("deep_search", {"symbol": symbol, "context": context})],
+    }
+
+
 def _word_number(value: str) -> int | None:
     mapping = {
         "one": 1,
@@ -1719,6 +1746,10 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
 
     if _is_document_link_followup(q):
         return {"intent": "document_link_help", "plan": []}
+
+    generated_deep_search = _generated_deep_search_prompt(routing_text)
+    if generated_deep_search:
+        return generated_deep_search
 
     results_feed_slash_days = _results_feed_slash_days(routing_text)
     if results_feed_slash_days is not None:
@@ -3985,20 +4016,33 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
             if sentiment:
                 lines.append(f"  Sentiment: {sentiment}")
 
-        # ── INSTITUTIONAL & INSIDER (deep_search for /analyze 360°) ─────────
+        # ── INSTITUTIONAL & INSIDER (screener shareholding + deep_search) ───
+        section_lines: list[str] = []
+        shp_src = (scr_fund or {}).get("shareholding") if isinstance(scr_fund, dict) else None
+        if isinstance(shp_src, dict) and shp_src:
+            for label, keys in (
+                ("Promoters", ("Promoters", "Promoter")),
+                ("FII",       ("FIIs", "FII")),
+                ("DII",       ("DIIs", "DII")),
+                ("Government",("Government",)),
+                ("Public",    ("Public",)),
+            ):
+                v = None
+                for k in keys:
+                    if shp_src.get(k) not in (None, ""):
+                        v = shp_src.get(k); break
+                if v is not None:
+                    trend = shp_src.get(f"{keys[0]}_trend") or shp_src.get(f"{label}_trend")
+                    extra = ""
+                    if isinstance(trend, list) and len(trend) >= 2:
+                        extra = f"  (trend: {' → '.join(str(t) for t in trend[-4:])})"
+                    section_lines.append(f"  {label:<11} {v}{extra}")
+            quarters = shp_src.get("_quarters")
+            if isinstance(quarters, list) and quarters:
+                section_lines.append(f"  Quarters covered: {quarters[0]} → {quarters[-1]}")
         if deep and isinstance(deep, dict) and not deep.get("error"):
             verticals = deep.get("verticals") or deep.get("data") or {}
-            section_lines: list[str] = []
             if isinstance(verticals, dict):
-                shareholding = verticals.get("shareholding") or {}
-                if isinstance(shareholding, dict) and shareholding:
-                    bits = []
-                    for k in ("promoters", "fii", "dii", "public", "mutual_funds"):
-                        v = shareholding.get(k)
-                        if v not in (None, ""):
-                            bits.append(f"{k.upper()} {v}")
-                    if bits:
-                        section_lines.append("  Shareholding: " + " | ".join(bits))
                 insider = verticals.get("insider_trades") or verticals.get("insiders") or []
                 if isinstance(insider, list) and insider:
                     section_lines.append("  Recent insider activity:")
@@ -4032,6 +4076,8 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
             fund_lines: list[str] = []
 
             if isinstance(ratios_f, dict) and ratios_f:
+                def _norm_key(k: str) -> str:
+                    return str(k).strip().rstrip("+").strip().lower()
                 key_ratios = [
                     ("Market Cap", ("Market Cap",)),
                     ("Current Price", ("Current Price",)),
@@ -4049,11 +4095,11 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
                     ("FII Holding", ("FII holding",)),
                 ]
                 rendered_ratio_rows: list[tuple[str, str]] = []
-                norm_ratios = {str(k).strip().lower(): v for k, v in ratios_f.items()}
+                norm_ratios = {_norm_key(k): v for k, v in ratios_f.items()}
                 for label, keys in key_ratios:
                     val = None
                     for k in keys:
-                        v = norm_ratios.get(str(k).strip().lower())
+                        v = norm_ratios.get(_norm_key(k))
                         if v not in (None, "", "—"):
                             val = v
                             break
@@ -4078,9 +4124,10 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
                     for key, values in q_f.items():
                         if str(key).startswith("_"):
                             continue
-                        if str(key).strip().lower() in wanted and isinstance(values, list):
+                        norm_k = str(key).strip().rstrip("+").strip().lower()
+                        if norm_k in wanted and isinstance(values, list):
                             if any(str(v).strip() for v in values):
-                                qmetrics.append((key, values))
+                                qmetrics.append((str(key).rstrip("+").strip(), values))
                                 break
                 if qmetrics:
                     fund_lines.append("\n▶ QUARTERLY P&L (₹ Cr — last 6 quarters)")
@@ -4088,7 +4135,10 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
                     fund_lines.append("  | Metric              | " + " | ".join(f"{h:>10}" for h in hdrs) + " |")
                     fund_lines.append("  |---------------------|" + ("------------|" * len(hdrs)))
                     for label, values in qmetrics:
-                        tail = values[-len(hdrs):] if len(values) >= len(hdrs) else values
+                        vals = list(values)
+                        if vals and isinstance(vals[0], str) and vals[0].strip().rstrip("+").strip().lower() == label.strip().lower():
+                            vals = vals[1:]
+                        tail = vals[-len(hdrs):] if len(vals) >= len(hdrs) else vals
                         padded = [""] * (len(hdrs) - len(tail)) + list(tail)
                         cells = " | ".join(f"{str(v or '—'):>10}" for v in padded)
                         fund_lines.append(f"  | {str(label)[:19]:<19} | {cells} |")
@@ -4105,9 +4155,10 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
                     for key, values in annual_f.items():
                         if str(key).startswith("_"):
                             continue
-                        if str(key).strip().lower() in wanted and isinstance(values, list):
+                        norm_k = str(key).strip().rstrip("+").strip().lower()
+                        if norm_k in wanted and isinstance(values, list):
                             if any(str(v).strip() for v in values):
-                                ametrics.append((key, values))
+                                ametrics.append((str(key).rstrip("+").strip(), values))
                                 break
                 if ametrics:
                     fund_lines.append("\n▶ ANNUAL P&L (₹ Cr — last 5 years)")
@@ -4115,7 +4166,10 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
                     fund_lines.append("  | Metric              | " + " | ".join(f"{h:>10}" for h in hdrs) + " |")
                     fund_lines.append("  |---------------------|" + ("------------|" * len(hdrs)))
                     for label, values in ametrics:
-                        tail = values[-len(hdrs):] if len(values) >= len(hdrs) else values
+                        vals = list(values)
+                        if vals and isinstance(vals[0], str) and vals[0].strip().rstrip("+").strip().lower() == label.strip().lower():
+                            vals = vals[1:]
+                        tail = vals[-len(hdrs):] if len(vals) >= len(hdrs) else vals
                         padded = [""] * (len(hdrs) - len(tail)) + list(tail)
                         cells = " | ".join(f"{str(v or '—'):>10}" for v in padded)
                         fund_lines.append(f"  | {str(label)[:19]:<19} | {cells} |")
@@ -5729,7 +5783,7 @@ class Agent:
             "greeting", "startup_morning_briefing", "global_market_assessment",
             "market_situation_assessment", "placeholder_symbol_request",
             "document_link_help",
-            "strength_validation", "market_knowledge", "stock_brief",
+            "strength_validation", "market_knowledge", "entity_topic_command", "stock_brief",
             "stock_results",
             "results_feed", "forthcoming_results",
             "stock_comparison", "portfolio_review",
