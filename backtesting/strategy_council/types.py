@@ -37,6 +37,7 @@ class CouncilConfig:
     train_val_corr_threshold: float = 0.3
     beta_threshold: float = 1.5
     dashboard_output_dir: str | None = None
+    min_bars_required: int = 300
 
 
 @dataclass

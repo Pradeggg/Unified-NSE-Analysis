@@ -82,6 +82,13 @@ def _positive_float(raw: str | None, *, name: str, default: float) -> float:
     return value
 
 
+def _symbols_for(df: pd.DataFrame, canonical: str) -> list[str]:
+    matched = df[df["INDEX_NAME"].astype(str).str.upper() == canonical.upper()]
+    return (
+        matched["STOCK_SYMBOL"].dropna().astype(str).str.strip().str.upper().tolist()
+    )
+
+
 def _load_index_symbols(index_name: str, project_root: Path) -> list[str]:
     canonical = _canonical_index(index_name)
     csv_path = project_root / DEFAULT_INDEX_MAPPING_CSV
@@ -90,6 +97,21 @@ def _load_index_symbols(index_name: str, project_root: Path) -> list[str]:
     df = pd.read_csv(csv_path)
     if "INDEX_NAME" not in df.columns or "STOCK_SYMBOL" not in df.columns:
         raise ValueError(f"Unexpected schema in {csv_path}: {list(df.columns)}")
+
+    # NIFTY SMALLCAP 250 isn't published in the index_stock_mapping CSV;
+    # derive it as the official methodology does: NIFTY 500 minus the
+    # NIFTY LARGEMIDCAP 250 (which is NIFTY 100 + NIFTY MIDCAP 150).
+    if canonical.upper() == "NIFTY SMALLCAP 250":
+        n500 = set(_symbols_for(df, "NIFTY 500"))
+        nlm250 = set(_symbols_for(df, "NIFTY LARGEMIDCAP 250"))
+        derived = sorted(n500 - nlm250)
+        if not derived:
+            raise ValueError(
+                "Cannot derive NIFTY SMALLCAP 250: NIFTY 500 / LARGEMIDCAP 250 "
+                "missing in mapping CSV."
+            )
+        return derived
+
     matched = df[df["INDEX_NAME"].astype(str).str.upper() == canonical.upper()]
     if matched.empty:
         available = (

@@ -98,6 +98,26 @@ def run_strategy_council(
         eod_data = compute_stage2_features(eod_data)
     except Exception:
         pass
+
+    min_bars_required = getattr(config, "min_bars_required", 300)
+    if len(eod_data) < min_bars_required:
+        rationale = (
+            f"Insufficient price history: only {len(eod_data)} EOD bars available "
+            f"(need >= {min_bars_required} for reliable train/validation/test splits). "
+            "Backfill via `/data-coverage <INDEX> --backfill` or wait for more "
+            "trading history before running the council on this symbol. "
+            "Research-only output, not investment advice."
+        )
+        return CouncilResult(
+            config=config,
+            evidence=evidence,
+            iterations=(),
+            locked_strategy=None,
+            test_results=(),
+            recommendation="NO_TRADE",
+            rationale=rationale,
+        )
+
     splits = build_time_splits(
         eod_data,
         validation_from=config.validation_from,
