@@ -115,7 +115,8 @@ class NSEAgentBacktestTests(unittest.TestCase):
 
             output = handle_backtest_command("/backtest run stage2", project_root=root)
 
-        self.assertIn("requires --symbol or --max-symbols", output)
+        self.assertIn("--symbol", output)
+        self.assertIn("--max-symbols", output)
 
     def test_default_nse_backtest_with_symbol_uses_real_data_path_and_computed_features(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import csv
 import shlex
+from datetime import date, timedelta
 from pathlib import Path
 
 import pandas as pd
@@ -11,6 +13,73 @@ from backtesting.data import inspect_backtest_data
 from backtesting.engine import BacktestConfig, run_backtest
 from backtesting.storage import load_latest_backtest_report, persist_backtest_result
 from backtesting.strategy_registry import list_strategies
+
+
+def _strategy_ids() -> set[str]:
+    return {s.id for s in list_strategies()}
+
+
+_UNIVERSE_ALIASES = {
+    "nifty50": "NIFTY 50",
+    "nifty100": "NIFTY 100",
+    "nifty200": "NIFTY 200",
+    "nifty500": "NIFTY 500",
+    "niftymidcap50": "NIFTY MIDCAP 50",
+    "niftymidcap100": "NIFTY MIDCAP 100",
+    "niftymidcap150": "NIFTY MIDCAP 150",
+    "niftysmallcap100": "NIFTY SMALLCAP 100",
+    "niftysmallcap250": "NIFTY SMALLCAP 250",
+    "niftymicrocap250": "NIFTY MICROCAP 250",
+    "niftylargemidcap250": "NIFTY LARGEMIDCAP 250",
+}
+
+
+def _resolve_universe(name: str, project_root: Path) -> tuple[str, list[str]]:
+    """Return (display_label, symbols[]) for a universe alias."""
+    key = name.lower().replace(" ", "").replace("_", "").replace("-", "")
+    label = _UNIVERSE_ALIASES.get(key)
+    if not label:
+        raise ValueError(
+            f"Unknown universe '{name}'. Try: " + ", ".join(sorted(_UNIVERSE_ALIASES))
+        )
+    mapping = project_root / "data" / "index_stock_mapping.csv"
+    if not mapping.exists():
+        raise ValueError(f"index_stock_mapping.csv not found at {mapping}")
+    syms: list[str] = []
+    with mapping.open() as f:
+        for row in csv.DictReader(f):
+            if (row.get("INDEX_NAME") or "").strip().upper() == label.upper():
+                s = (row.get("STOCK_SYMBOL") or "").strip().upper()
+                if s:
+                    syms.append(s)
+    return label, sorted(set(syms))
+
+
+def _usage_block() -> str:
+    examples = (
+        "Usage:\n"
+        "  /backtest list                            — show available strategies\n"
+        "  /strategy-lab validate                    — check EOD data readiness\n"
+        "  /backtest run <strategy> [options]        — execute a backtest\n"
+        "  /backtest <strategy> <SYMBOL>             — shorthand for last 2y on one symbol\n"
+        "  /backtest report latest                   — show last persisted run\n"
+        "\n"
+        "Run options:\n"
+        "  --symbol <SYM>            single symbol (NSE ticker)\n"
+        "  --universe <name>         nifty500 | nifty50 | niftysmallcap250 | …\n"
+        "  --max-symbols <N>         cap universe to first N tickers\n"
+        "  --from YYYY-MM-DD         start date (default: 2 years before today)\n"
+        "  --to YYYY-MM-DD           end date (default: today)\n"
+        "  --capital <amount>        initial capital (default 100000)\n"
+        "  --persist                 store run + trades in PostgreSQL\n"
+        "  --data <path>             override CSV (default data/nse_sec_full_data.csv)\n"
+        "\n"
+        "Examples:\n"
+        "  /backtest stage2 DMART\n"
+        "  /backtest run vcp --symbol RELIANCE --from 2024-01-01\n"
+        "  /backtest run canslim --universe nifty500 --from 2024-01-01 --persist"
+    )
+    return examples
 
 
 def _render_strategy_list() -> str:
@@ -57,13 +126,35 @@ def handle_backtest_command(text: str, *, project_root: Path | None = None) -> s
     if len(parts) >= 3 and parts[0].lower() == "/backtest" and parts[1].lower() == "run":
         return _run_backtest_command(parts[2:], project_root=project_root)
 
-    return (
-        "Usage:\n"
-        "  /backtest list\n"
-        "  /strategy-lab validate\n"
-        "  /backtest run <strategy> --universe nifty500 --from YYYY-MM-DD  "
-        "(engine implementation pending)"
-    )
+    # Shorthand: /backtest <strategy> <SYMBOL>
+    if (
+        len(parts) >= 3
+        and parts[0].lower() == "/backtest"
+        and parts[1].lower().replace("-", "_") in _strategy_ids()
+    ):
+        strategy = parts[1].lower().replace("-", "_")
+        symbol = parts[2].upper()
+        default_from = (date.today() - timedelta(days=730)).isoformat()
+        return _run_backtest_command(
+            [strategy, "--symbol", symbol, "--from", default_from],
+            project_root=project_root,
+        )
+
+    head = parts[0] if parts else raw
+    hint = ""
+    if " /" in raw:
+        hint = (
+            "\n\nNote: it looks like two slash-commands were joined on one line "
+            f"('{raw[:80]}…'). Run them one at a time."
+        )
+    elif len(parts) >= 2 and parts[0].lower() == "/backtest":
+        sid = parts[1].lower().replace("-", "_")
+        if sid not in _strategy_ids():
+            hint = (
+                f"\n\nNote: '{parts[1]}' is not a known strategy id. "
+                "Run /backtest list to see all 12 strategies."
+            )
+    return f"Unrecognized: {head}\n\n{_usage_block()}{hint}"
 
 
 def _arg_value(parts: list[str], name: str, default: str | None = None) -> str | None:
@@ -92,11 +183,24 @@ def _run_backtest_command(parts: list[str], *, project_root: Path | None = None)
         capital = float(_arg_value(parts, "--capital", "100000") or "100000")
         symbol = _arg_value(parts, "--symbol")
         max_symbols = _arg_value(parts, "--max-symbols")
+        universe = _arg_value(parts, "--universe")
         from_date = _arg_value(parts, "--from")
         to_date = _arg_value(parts, "--to")
         persist = "--persist" in parts or "--postgres" in parts
-        if not data_arg and not symbol and not max_symbols:
-            return "Default NSE backtest requires --symbol or --max-symbols to avoid accidental all-universe runs."
+        universe_symbols: list[str] | None = None
+        universe_label: str | None = None
+        if universe:
+            universe_label, universe_symbols = _resolve_universe(universe, root)
+            if not universe_symbols:
+                return f"Universe '{universe}' resolved to 0 symbols — check data/index_stock_mapping.csv"
+        if not data_arg and not symbol and not max_symbols and not universe_symbols:
+            return (
+                "Need a scope. Pass one of:\n"
+                "  --symbol <SYM>           (single ticker)\n"
+                "  --universe <name>        (e.g. nifty500, nifty50, niftysmallcap250)\n"
+                "  --max-symbols <N>        (first N tickers in the CSV)\n"
+                "  --data <path>            (custom CSV that defines its own scope)"
+            )
 
         df = pd.read_csv(data_path)
         df = df.rename(columns={col: col.strip().lower() for col in df.columns})
@@ -106,6 +210,8 @@ def _run_backtest_command(parts: list[str], *, project_root: Path | None = None)
             df = df.rename(columns={"tottrdqty": "volume"})
         if symbol and "symbol" in df.columns:
             df = df[df["symbol"].astype(str).str.upper() == symbol.upper()]
+        elif universe_symbols and "symbol" in df.columns:
+            df = df[df["symbol"].astype(str).str.upper().isin(set(universe_symbols))]
         elif max_symbols and "symbol" in df.columns:
             symbols = sorted(df["symbol"].dropna().astype(str).str.upper().unique().tolist())
             keep = set(symbols[: int(max_symbols)])
@@ -114,6 +220,14 @@ def _run_backtest_command(parts: list[str], *, project_root: Path | None = None)
             df = df[pd.to_datetime(df["date"], errors="coerce") >= pd.to_datetime(from_date)]
         if to_date and to_date.lower() != "today" and "date" in df.columns:
             df = df[pd.to_datetime(df["date"], errors="coerce") <= pd.to_datetime(to_date)]
+
+        if df.empty:
+            scope_bits = []
+            if symbol: scope_bits.append(f"symbol={symbol}")
+            if universe_label: scope_bits.append(f"universe={universe_label} ({len(universe_symbols or [])} tickers)")
+            if from_date: scope_bits.append(f"from={from_date}")
+            if to_date: scope_bits.append(f"to={to_date}")
+            return f"No rows after filtering ({', '.join(scope_bits) or 'no filters'}). Try a different symbol/universe/date range."
 
         result = run_backtest(
             df,
