@@ -61,6 +61,7 @@ nse_analysis.db
 
 # Local agent/session runtime state
 .superpowers/
+.worktrees/
 
 # Local PostgreSQL clusters/backups created by postgres/start_pg.sh and recovery
 postgres/data/
