@@ -957,6 +957,7 @@ _REQUIRED_TOOLS_BY_INTENT: dict[str, tuple[str, ...]] = {
         "get_latest_results",
     ),
     "results_feed": ("get_latest_results_feed",),
+    "forthcoming_results": ("get_forthcoming_results",),
 }
 
 
@@ -1911,6 +1912,29 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
     # If user is primarily asking for news/catalysts, defer to that branch.
     news_priority_terms = ("news", "catalyst", "catalysts", "announcement", "announcements")
     explicit_stock_subject = bool(symbol_candidates or _symbol_phrase_after_preposition(routing_text))
+    result_entity_match = re.search(
+        r"\bresults?\b\s+(?:of|for)\s+([A-Za-z][A-Za-z0-9&.\-]*(?:\s+[A-Za-z][A-Za-z0-9&.\-]*){0,4})",
+        routing_text,
+        flags=re.IGNORECASE,
+    ) or re.search(
+        r"\b(?:of|for)\s+([A-Za-z][A-Za-z0-9&.\-]*(?:\s+[A-Za-z][A-Za-z0-9&.\-]*){0,4})\s+results?\b",
+        routing_text,
+        flags=re.IGNORECASE,
+    )
+    if result_entity_match and (any(term in q for term in results_stock_terms) or _results_freeform):
+        raw_entity = result_entity_match.group(1).strip(" ?.,")
+        raw_entity = re.sub(r"\b(?:latest|recent|quarterly|annual|fy|q[1-4])\b", "", raw_entity, flags=re.IGNORECASE).strip()
+        if raw_entity and raw_entity.lower() not in {"companies", "stocks", "market"}:
+            try:
+                resolved = resolve_symbol(raw_entity)
+                resolved_symbol = str(resolved.get("symbol") or "").strip().upper() if isinstance(resolved, dict) else ""
+            except Exception:
+                resolved_symbol = ""
+            if resolved_symbol:
+                return {"intent": "stock_results", "plan": [
+                    ("resolve_symbol", {"query": raw_entity}),
+                    ("get_latest_results", {"symbol": resolved_symbol}),
+                ]}
 
     # Market-wide latest results feed — no specific symbol in the query.
     # Catches "latest results", "who reported today", "results this week",
@@ -2153,6 +2177,38 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
     # Data health
     if any(w in q for w in ["data health", "data fresh", "stale", "last update", "when was"]):
         return {"intent": "data_health", "plan": [("get_data_health", {})]}
+
+    # Forthcoming results / earnings calendar — companies with scheduled board
+    # meetings to declare quarterly results. Routes to a dedicated tool that
+    # surfaces a results-only event table (not generic corporate-actions prose).
+    forthcoming_results_terms = (
+        "results due", "earnings due",
+        "results next week", "earnings next week",
+        "results tomorrow", "earnings tomorrow",
+        "reporting tomorrow", "reporting this week", "reporting next week",
+        "who has results", "who's reporting", "whos reporting", "who is reporting",
+        "who is reporting results", "who's reporting results",
+        "results scheduled", "earnings scheduled",
+        "forthcoming results", "forthcoming earnings",
+        "upcoming results", "upcoming earnings",
+        "results calendar this week", "results calendar next week",
+        "earnings calendar this week", "earnings calendar next week",
+        "results expected", "earnings expected",
+    )
+    if not symbol_candidates and any(term in q for term in forthcoming_results_terms):
+        days = 14
+        if "tomorrow" in q:
+            days = 2
+        elif "this week" in q:
+            days = 7
+        elif "next week" in q:
+            days = 14
+        elif "this month" in q or "next month" in q:
+            days = 30
+        return {
+            "intent": "forthcoming_results",
+            "plan": [("get_forthcoming_results", {"days_ahead": days, "limit": 50})],
+        }
 
     if any(
         phrase in q
@@ -3091,6 +3147,43 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
                 lines.append("▶ XBRL FILINGS (top 8)")
                 for s_, u_ in xbrl_links:
                     lines.append(f"  • {s_}: {u_}")
+        lines.append("")
+        lines.append("▶ SOURCE TRAIL")
+        for trail_line in _source_trail_lines(tool_results):
+            lines.append(trail_line)
+        lines.append("\n━━━ Not investment advice. For research and learning only. ━━━")
+        return "\n".join(lines)
+
+    if intent == "forthcoming_results":
+        feed = {}
+        for tr in tool_results:
+            if tr.get("tool") == "get_forthcoming_results":
+                feed = tr.get("result") if isinstance(tr.get("result"), dict) else {}
+                break
+        rows = feed.get("results") or []
+        days_ahead = feed.get("days_ahead", 14)
+        lines.append(f"━━━ Forthcoming Results — next {days_ahead} day(s) ━━━")
+        note = feed.get("window_note") or ""
+        if note:
+            lines.append(f"  {note}")
+        src = feed.get("source") or "n/a"
+        total_avail = feed.get("total_available", "?")
+        total_in_win = feed.get("total_in_window", 0)
+        lines.append(f"  Source: {src}  ·  in-window: {total_in_win}  ·  upcoming-total: {total_avail}")
+        if feed.get("error"):
+            lines.append(f"  ⚠ {feed.get('error')}")
+        if not rows:
+            lines.append("\n  No forthcoming results events found.")
+        else:
+            lines.append("")
+            lines.append("| # | Date | Symbol | Company | Purpose |")
+            lines.append("|---|------|--------|---------|---------|")
+            for i, r in enumerate(rows[:50], 1):
+                dt_     = (r.get("date") or "")[:12]
+                sym_c   = (r.get("symbol") or "")[:14]
+                co      = (r.get("company") or "")[:34]
+                purpose = (r.get("purpose") or "")[:40]
+                lines.append(f"| {i} | {dt_} | {sym_c} | {co} | {purpose} |")
         lines.append("")
         lines.append("▶ SOURCE TRAIL")
         for trail_line in _source_trail_lines(tool_results):

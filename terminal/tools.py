@@ -4956,6 +4956,92 @@ def get_latest_results_feed(days_back: int = 7, limit: int = 50) -> dict:
     return out
 
 
+_FORTHCOMING_RESULTS_CACHE: dict = {"ts": 0.0, "rows": None}
+
+
+def _fetch_nse_event_calendar() -> list[dict]:
+    """Pull NSE event-calendar; 30-min in-process cache."""
+    import time as _time
+    now = _time.time()
+    if _FORTHCOMING_RESULTS_CACHE["rows"] is not None and (now - _FORTHCOMING_RESULTS_CACHE["ts"]) < 1800:
+        return _FORTHCOMING_RESULTS_CACHE["rows"]
+    try:
+        sess = _get_live_session()
+        r = sess.get("https://www.nseindia.com/api/event-calendar?index=equities", timeout=15)
+        if not r.ok:
+            return []
+        rows = r.json() if isinstance(r.json(), list) else []
+    except Exception:
+        return []
+    _FORTHCOMING_RESULTS_CACHE["ts"] = now
+    _FORTHCOMING_RESULTS_CACHE["rows"] = rows
+    return rows
+
+
+def get_forthcoming_results(days_ahead: int = 14, limit: int = 50) -> dict:
+    """Forthcoming board meetings/events that will declare financial results.
+
+    Sources NSE `/api/event-calendar?index=equities` (cached 30 min) and filters
+    purposes containing 'Financial Results'. Returns a chronologically sorted
+    list of upcoming results events with company-level details.
+
+    Args:
+        days_ahead: Calendar days ahead to include (default 14).
+        limit:      Max rows to return (default 50).
+
+    Returns:
+        dict with `results` (list), `total_in_window`, `total_available`,
+        `window_note`, `source`, `days_ahead`.
+    """
+    import datetime as _dt
+    out: dict = {"days_ahead": int(days_ahead), "results": [], "source": ""}
+    raw = _fetch_nse_event_calendar()
+    if not raw:
+        out["error"] = "Could not fetch NSE event-calendar"
+        out["source"] = "nseindia.com/api/event-calendar"
+        return out
+
+    today = _dt.datetime.now().date()
+    horizon = today + _dt.timedelta(days=int(days_ahead))
+    decorated: list[dict] = []
+    for row in raw:
+        purpose = (row.get("purpose") or "").strip()
+        if "financial results" not in purpose.lower():
+            continue
+        date_s = (row.get("date") or "").strip()
+        try:
+            evt_date = _dt.datetime.strptime(date_s, "%d-%b-%Y").date()
+        except Exception:
+            continue
+        decorated.append({
+            "symbol":      (row.get("symbol") or "").strip(),
+            "company":     (row.get("company") or "").strip(),
+            "purpose":     purpose,
+            "description": (row.get("bm_desc") or "").strip(),
+            "date":        date_s,
+            "_d":          evt_date,
+        })
+    decorated.sort(key=lambda r: r["_d"])
+    in_window = [r for r in decorated if today <= r["_d"] <= horizon]
+
+    if in_window:
+        chosen = in_window[: int(limit)]
+        out["window_note"] = f"Showing results events in next {days_ahead} day(s)."
+    else:
+        chosen = decorated[: int(limit)]
+        out["window_note"] = (
+            f"No results events scheduled within next {days_ahead} day(s); "
+            f"showing earliest upcoming entries from feed."
+        )
+    for r in chosen:
+        r.pop("_d", None)
+    out["results"] = chosen
+    out["total_in_window"] = len(in_window)
+    out["total_available"] = len(decorated)
+    out["source"] = "nseindia.com/api/event-calendar"
+    return out
+
+
 def get_event_calendar_summary(
     index: str = "NIFTY 50",
     days_ahead: int = 14,
@@ -7989,6 +8075,33 @@ TOOL_REGISTRY.update({
                     "type": "integer",
                     "description": "Calendar days back to include (default 7).",
                     "default": 7,
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Max rows to return (default 50).",
+                    "default": 50,
+                },
+            },
+            "required": [],
+        },
+    ),
+    "get_forthcoming_results": (
+        get_forthcoming_results,
+        (
+            "Forthcoming results / earnings events from NSE event-calendar — companies "
+            "with scheduled board meetings to declare quarterly financial results. "
+            "Use for: 'results due this week', 'who is reporting tomorrow', 'upcoming "
+            "earnings', 'forthcoming results', 'results calendar this week'. Returns "
+            "symbol, company, scheduled date, purpose, board-meeting description; "
+            "sorted earliest first."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "days_ahead": {
+                    "type": "integer",
+                    "description": "Calendar days ahead to include (default 14).",
+                    "default": 14,
                 },
                 "limit": {
                     "type": "integer",
