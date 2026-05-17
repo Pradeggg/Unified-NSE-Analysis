@@ -84,6 +84,14 @@ def parse_strategy_council_command(text: str) -> CouncilConfig:
     symbol = parts[1].upper()
     strategies = _arg(parts, "--strategies")
     default = CouncilConfig(symbol=symbol)
+    enrichment = not _flag_enabled(parts, "--no-enrichment")
+    advanced_critics = not _flag_enabled(parts, "--no-advanced-critics")
+    dashboard_dir = _arg(parts, "--dashboard-dir")
+    dashboard_enabled = not _flag_enabled(parts, "--no-dashboard")
+    if dashboard_enabled and dashboard_dir is None:
+        dashboard_dir = "reports/dashboards"
+    elif not dashboard_enabled:
+        dashboard_dir = None
     return CouncilConfig(
         symbol=symbol,
         horizons=_parse_horizons(_arg(parts, "--horizon")),
@@ -93,6 +101,9 @@ def parse_strategy_council_command(text: str) -> CouncilConfig:
         validation_from=_arg(parts, "--validation-from"),
         test_from=_arg(parts, "--test-from"),
         allowed_strategies=_parse_strategies(strategies, default),
+        include_enrichment=enrichment,
+        use_advanced_critics=advanced_critics,
+        dashboard_output_dir=dashboard_dir,
     )
 
 
@@ -224,6 +235,23 @@ def handle_strategy_council_command(
         if mode == "intraday":
             evidence, intraday_summary = _build_intraday_evidence(config.symbol, evidence)
         eod = _load_symbol_eod(config.symbol, root, config.from_date)
+        if config.include_enrichment:
+            try:
+                from backtesting.strategy_council.evidence_enrichment import enrich_with_market_signals
+                enrich_with_market_signals(evidence, eod)
+            except Exception:
+                pass
+        if config.use_advanced_critics:
+            try:
+                from backtesting.strategy_council.critics_advanced import build_advanced_critics
+                critics = tuple(critics) + build_advanced_critics(
+                    evidence=evidence,
+                    max_drawdown_pct=config.max_drawdown_threshold_pct,
+                    correlation_threshold=config.train_val_corr_threshold,
+                    beta_threshold=config.beta_threshold,
+                )
+            except Exception:
+                pass
         result = run_strategy_council(eod, evidence=evidence, config=config, strategist=strategist, critics=critics)
         report = write_council_report(result, output_dir=root / "reports" / "strategy_council")
         result = replace(result, report_path=str(report))
@@ -238,8 +266,13 @@ def handle_strategy_council_command(
         f"Recommendation: {result.recommendation}",
         f"Locked strategy: {result.locked_strategy.strategy_id if result.locked_strategy else 'none'}",
         f"Iterations: {len(result.iterations)}",
+        f"Enhancements: enrichment={'on' if config.include_enrichment else 'off'}, "
+        f"advanced_critics={'on' if config.use_advanced_critics else 'off'}, "
+        f"dashboard={'on' if config.dashboard_output_dir else 'off'}",
         f"Report: {report}",
     ]
+    if result.dashboard_path:
+        lines.append(f"Dashboard: {result.dashboard_path}")
     if persisted:
         lines.append(f"PostgreSQL council run: {persisted['run_id']}")
         lines.append(f"Persisted split results: {persisted['split_results_inserted']}")
