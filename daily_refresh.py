@@ -221,6 +221,29 @@ def step_postgres_load(dry_run: bool) -> bool:
     )
 
 
+def step_screener_fundamentals_backfill(
+    dry_run: bool,
+    index: str = "NIFTY 500",
+    delay: float = 2.5,
+    skip_fresh_days: int = 7,
+) -> bool:
+    """Refresh PG fundamentals cache for the given index via screener.in.
+
+    Polite (delay+jitter) by default; only re-scrapes symbols whose snapshot
+    is older than ``skip_fresh_days`` so weekly runs cost ~zero on no-op days.
+    """
+    _section(f"STEP 8 — Fundamentals Backfill ({index})")
+    if not _ensure_postgres_running(dry_run=dry_run):
+        return False
+    cmd = [
+        PYTHON, "-u", "-m", "scripts.backfill_screener_fundamentals",
+        "--index", index,
+        "--delay", str(delay),
+        "--skip-fresh-days", str(skip_fresh_days),
+    ]
+    return _run(f"Screener fundamentals backfill ({index})", cmd, dry_run=dry_run)
+
+
 def step_comprehensive_r_reports(dry_run: bool) -> bool:
     """Run R-based comprehensive reports: All Indexes + All Sectors HTML.
 
@@ -262,6 +285,12 @@ def main() -> int:
                         help="Skip auxiliary data fetch (FII/DII, F&O, events)")
     parser.add_argument("--comprehensive",   action="store_true",
                         help="Also run R-based comprehensive index + sector HTML reports")
+    parser.add_argument("--fundamentals-backfill", action="store_true",
+                        help="Force NIFTY 500 fundamentals backfill (otherwise runs only on Sundays)")
+    parser.add_argument("--skip-fundamentals", action="store_true",
+                        help="Skip fundamentals backfill even on its scheduled day")
+    parser.add_argument("--fundamentals-index", default="NIFTY 500",
+                        help="Index label for fundamentals backfill (default: NIFTY 500)")
     parser.add_argument("--dry-run",         action="store_true",
                         help="Print plan without executing anything")
     args = parser.parse_args()
@@ -329,6 +358,18 @@ def main() -> int:
     if not step_postgres_load(args.dry_run):
         print("  ⚠️  PostgreSQL load failed — screeners not updated")
         failed.append("PostgreSQL screeners")
+
+    # 7b. Weekly fundamentals backfill (default: Sundays only, or --fundamentals-backfill)
+    run_fundamentals = (
+        args.fundamentals_backfill
+        or (not args.skip_fundamentals and datetime.now().weekday() == 6)
+    )
+    if run_fundamentals:
+        if not step_screener_fundamentals_backfill(args.dry_run, index=args.fundamentals_index):
+            print("  ⚠️  Fundamentals backfill had failures — see reports/backfill_screener_errors_*.json")
+            failed.append("Fundamentals backfill")
+    elif not args.skip_fundamentals:
+        print(f"\n  (skipping fundamentals backfill — runs on Sundays or with --fundamentals-backfill)")
 
     # 8. Optional comprehensive R reports (All Indexes + All Sectors HTML)
     if args.comprehensive:
