@@ -84,6 +84,13 @@ from terminal.report_context import (
     read_report,
     summarize_report,
 )
+from terminal.entity_resolution import (
+    detect_non_symbol_terms,
+    resolve_company_alias,
+    resolve_index_or_stock,
+    resolve_stock_entity,
+    validate_requested_symbols,
+)
 
 # ── Seasonal / macro modules ──────────────────────────────────────────────────
 import sys as _sys
@@ -5997,6 +6004,38 @@ TOOL_REGISTRY: dict[str, Any] = {
     "resolve_symbol": (
         resolve_symbol,
         "Resolve a company name, alias, or near-match to its canonical NSE ticker symbol. Call this before stock-specific tools.",
+        {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]},
+    ),
+    "resolve_stock_entity": (
+        resolve_stock_entity,
+        "Resolve a stock/company mention to a canonical NSE equity symbol with status, confidence, and mismatch-safe output.",
+        {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]},
+    ),
+    "resolve_company_alias": (
+        resolve_company_alias,
+        "Resolve a company alias/name such as USL or United Spirits to the canonical NSE equity symbol.",
+        {"type": "object", "properties": {"alias": {"type": "string"}}, "required": ["alias"]},
+    ),
+    "validate_requested_symbols": (
+        validate_requested_symbols,
+        "Validate explicit ticker-looking symbols requested by the user against symbols used in executed evidence, ignoring indicators like RSI/ADX/MA.",
+        {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string"},
+                "executed_symbols": {"type": "array", "items": {"type": "string"}},
+            },
+            "required": ["query"],
+        },
+    ),
+    "detect_non_symbol_terms": (
+        detect_non_symbol_terms,
+        "Detect market or technical terms such as RSI, ADX, MA, MACD that must not be routed as stock symbols.",
+        {"type": "object", "properties": {"text": {"type": "string"}}, "required": ["text"]},
+    ),
+    "resolve_index_or_stock": (
+        resolve_index_or_stock,
+        "Resolve index/derivative underlyings such as NIFTY/BANKNIFTY first, otherwise resolve the query as an NSE stock.",
         {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]},
     ),
     "get_symbol_snapshot": (

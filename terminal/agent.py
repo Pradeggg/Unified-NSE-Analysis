@@ -27,6 +27,7 @@ load_dotenv(Path(__file__).parent.parent / ".env")
 from .tools import call_tool, get_symbol_snapshot, openai_tool_schemas, resolve_symbol
 from .market_calendar import market_context_for_agent, market_session_status
 from .data_readiness import append_readiness_metadata
+from .entity_resolution import TECHNICAL_NON_SYMBOL_TERMS, validate_requested_symbols
 from .situation_assessment import (
     TurnContext,
     assess_entity_topic_request,
@@ -937,7 +938,7 @@ _SYMBOL_VALIDATION_SKIP: frozenset[str] = frozenset(
         "PDF", "URL", "HTML", "EOD", "DB", "PG", "API", "LLM", "AI",
         "BUY", "SELL", "HOLD", "LONG", "SHORT", "OPEN", "HIGH", "LOW",
     }
-)
+) | TECHNICAL_NON_SYMBOL_TERMS
 
 
 _REQUIRED_TOOLS_BY_INTENT: dict[str, tuple[str, ...]] = {
@@ -977,9 +978,9 @@ _DYNAMIC_EVIDENCE_REQUIRED_INTENTS: frozenset[str] = frozenset(
 
 def _explicit_requested_symbols(query: str) -> list[str]:
     """Return explicit ticker-looking symbols from user text without fuzzy substitution."""
-    tokens = re.findall(r"\b[A-Z][A-Z0-9&-]{1,12}\b", query or "")
+    requested = validate_requested_symbols(query or "").get("requested_symbols", [])
     symbols: list[str] = []
-    for token in tokens:
+    for token in requested:
         clean = token.strip().upper()
         if clean in _SYMBOL_VALIDATION_SKIP:
             continue
