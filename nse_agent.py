@@ -805,6 +805,8 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/refresh status",   "Check if refresh is running"),
     ("/refresh stop",     "Stop a running refresh"),
     ("/data-status",      "Check technical/fundamental DB readiness"),
+    ("/doctor",           "Check PostgreSQL process, DSN, schemas, tables, and source readiness"),
+    ("/doctor --repair",  "Create/repair core PostgreSQL schemas and then rerun doctor checks"),
     ("/refresh-data",     "Run readiness refresh if DB is stale or partial"),
     ("/refresh-data --check", "Show the refresh plan without running it"),
     # ── Command discovery ──────────────────────────────────────────────────
@@ -871,6 +873,7 @@ _CMD_CATEGORIES: dict[str, tuple[str, str]] = {
     "/scale":    ("Settings & Data",     "⚙️"),
     "/refresh":  ("Settings & Data",     "⚙️"),
     "/data-status": ("Settings & Data",  "⚙️"),
+    "/doctor": ("Settings & Data",       "⚙️"),
     "/refresh-data": ("Settings & Data", "⚙️"),
     "/commands": ("Help",                "❓"),
 }
@@ -4990,6 +4993,18 @@ def _chat_loop(agent, show_trace: bool) -> None:
             topic = parts[1].strip() if len(parts) > 1 else "market assessment for India"
             text = f"global {topic}"
             console.print(f"[dim]  → Global assessment: {topic}[/dim]")
+
+        # ── /doctor — PostgreSQL operational health ────────────────────────
+        if text.lower().startswith("/doctor"):
+            try:
+                from terminal.postgres_tools import render_postgres_doctor
+
+                parts = text.split()
+                output = render_postgres_doctor(repair="--repair" in parts)
+                console.print(output)
+            except Exception as exc:
+                console.print(f"[bold red]  ❌ PostgreSQL doctor failed: {exc}[/bold red]")
+            continue
 
         # ── /data-status and /refresh-data — startup data readiness ─────────
         if text.lower().startswith("/data-status") or text.lower().startswith("/refresh-data"):

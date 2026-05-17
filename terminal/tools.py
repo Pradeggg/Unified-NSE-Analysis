@@ -68,6 +68,14 @@ from terminal.search_engine import (
 
 # ── Forensic accounting suite ─────────────────────────────────────────────────
 from terminal.forensics import run_forensic_analysis, screen_forensic_watchlist
+from terminal.postgres_tools import (
+    audit_postgres_coverage,
+    ensure_postgres_schema,
+    get_data_source_manifest,
+    get_postgres_health,
+    load_historical_eod_to_postgres,
+    load_intraday_ohlcv_to_postgres,
+)
 
 # ── Seasonal / macro modules ──────────────────────────────────────────────────
 import sys as _sys
@@ -7877,6 +7885,64 @@ def _generate_report_tool(content: str, report_type: str = "research",
 
 
 TOOL_REGISTRY.update({
+    "get_postgres_health": (
+        get_postgres_health,
+        "Check PostgreSQL connectivity, DSN/socket details, required schemas/tables, and row counts.",
+        {
+            "type": "object",
+            "properties": {"dsn": {"type": "string", "description": "Optional PostgreSQL DSN override"}},
+            "required": [],
+        },
+    ),
+    "ensure_postgres_schema": (
+        ensure_postgres_schema,
+        "Idempotently create core Agent Adda PostgreSQL schemas/tables required by runtime tools.",
+        {
+            "type": "object",
+            "properties": {"dsn": {"type": "string", "description": "Optional PostgreSQL DSN override"}},
+            "required": [],
+        },
+    ),
+    "audit_postgres_coverage": (
+        audit_postgres_coverage,
+        "Audit PostgreSQL table existence and row-count coverage for market, intraday, scores, and report data.",
+        {
+            "type": "object",
+            "properties": {"dsn": {"type": "string", "description": "Optional PostgreSQL DSN override"}},
+            "required": [],
+        },
+    ),
+    "load_historical_eod_to_postgres": (
+        load_historical_eod_to_postgres,
+        "Report or trigger historical EOD loading into PostgreSQL once the load orchestrator is wired.",
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string"},
+                "days": {"type": "integer", "default": 0},
+                "dsn": {"type": "string"},
+            },
+            "required": [],
+        },
+    ),
+    "load_intraday_ohlcv_to_postgres": (
+        load_intraday_ohlcv_to_postgres,
+        "Report or trigger intraday OHLCV loading into PostgreSQL once the load orchestrator is wired.",
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string"},
+                "timeframe": {"type": "string", "default": "15m"},
+                "dsn": {"type": "string"},
+            },
+            "required": [],
+        },
+    ),
+    "get_data_source_manifest": (
+        get_data_source_manifest,
+        "Return Agent Adda's active data-source manifest, PostgreSQL primary-store policy, and fallback rules.",
+        {"type": "object", "properties": {}, "required": []},
+    ),
     "generate_report": (
         _generate_report_tool,
         ("Generate a formatted report file (HTML, PDF, or Markdown) from analysis content. "
