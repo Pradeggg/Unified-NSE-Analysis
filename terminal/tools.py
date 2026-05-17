@@ -730,6 +730,13 @@ def resolve_symbol(query: str) -> dict:
         "REVIEW", "TOP", "HIGH", "LOW", "NEW", "BEST", "WORST",
         "STRONG", "WEAK", "BUY", "SELL", "HOLD",
         "GROWTH", "STRATEGY", "STRATEGIES", "OUTLOOK", "REPORT", "RESULTS",
+        # Time/calendar/event tokens — never a ticker.
+        "DUE", "TOMORROW", "YESTERDAY", "TODAY", "TONIGHT",
+        "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY",
+        "WEEK", "WEEKLY", "MONTH", "MONTHLY", "YEAR", "YEARLY",
+        "UPCOMING", "FORTHCOMING", "RECENT", "RECENTLY",
+        "REPORTING", "REPORTED", "ANNOUNCED", "FILED", "POSTED",
+        "EARNINGS", "DIVIDEND", "DIVIDENDS", "AGM", "RIGHTS", "SPLIT", "BONUS",
     }
     if q in _CONCEPT_TOKENS:
         return {
@@ -754,12 +761,12 @@ def resolve_symbol(query: str) -> dict:
             "error": f"'{query}' contains search/report context, not a resolvable NSE symbol.",
         }
     if re.fullmatch(r"[A-Z0-9&-]{2,12}", query.strip()):
-        return {
-            "symbol": None,
-            "confidence": "none",
-            "query": query,
-            "error": f"No exact NSE symbol found for '{query}'",
-        }
+        # Ticker-shaped query — don't return early. Local DB already missed,
+        # so let the NSE live-search and quote-equity fallbacks below try to
+        # resolve it. This covers symbols that exist on NSE but haven't been
+        # ingested into our local symbol DB yet (e.g. small-caps surfaced by
+        # NSE feeds).
+        pass
 
     # Fall back to NSE live search API
     try:
@@ -769,7 +776,15 @@ def resolve_symbol(query: str) -> dict:
         r.raise_for_status()
         results = r.json().get("results", [])
         if results:
+            # Prefer exact ticker match when the user passed a ticker-shaped
+            # query, otherwise NSE search ranks by relevance and a substring
+            # match can land first (e.g. RELIANCE → RELIANCEPOWER).
+            q_up = query.strip().upper()
             top = results[0]
+            for r_ in results:
+                if (r_.get("symbol") or "").upper() == q_up:
+                    top = r_
+                    break
             return {
                 "symbol":     top.get("symbol"),
                 "name":       top.get("symbol_info"),
@@ -779,6 +794,29 @@ def resolve_symbol(query: str) -> dict:
             }
     except Exception:
         pass
+
+    # Secondary fallback: NSE quote-equity endpoint. /api/search is frequently
+    # rate-limited or returns HTTP 500; the per-symbol quote endpoint is far
+    # more reliable. Only attempt if the query already looks like a ticker.
+    q_clean = query.strip().upper()
+    if re.fullmatch(r"[A-Z0-9&-]{2,12}", q_clean):
+        try:
+            s = _get_live_session()
+            url = f"https://www.nseindia.com/api/quote-equity?symbol={_req.utils.quote(q_clean)}"
+            r = s.get(url, timeout=10)
+            if r.ok:
+                info = (r.json() or {}).get("info") or {}
+                resolved = (info.get("symbol") or "").strip().upper()
+                if resolved == q_clean:
+                    return {
+                        "symbol":     resolved,
+                        "name":       info.get("companyName") or info.get("symbol_info"),
+                        "confidence": "nse-quote",
+                        "query":      query,
+                        "candidates": [resolved],
+                    }
+        except Exception:
+            pass
 
     return {"symbol": None, "confidence": "none", "query": query,
             "error": f"No NSE symbol found for '{query}'"}
@@ -4760,6 +4798,164 @@ def get_upcoming_events(
     }
 
 
+# ─── Market-wide latest quarterly results feed ─────────────────────────────
+_RESULTS_FEED_CACHE: dict[str, Any] = {"ts": 0.0, "data": None}
+_RESULTS_FEED_TTL = 1800  # 30 minutes
+
+
+def _fetch_screener_latest_results() -> list[dict]:
+    """Screener.in /results/latest/ fallback parser. Best-effort only."""
+    try:
+        import requests as _req
+        from bs4 import BeautifulSoup  # type: ignore
+        r = _req.get(
+            "https://www.screener.in/results/latest/",
+            timeout=15,
+            headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_0) "
+                                     "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121"},
+        )
+        if not r.ok:
+            return []
+        soup = BeautifulSoup(r.text, "html.parser")
+        rows: list[dict] = []
+        for a in soup.select("a[href^='/company/']")[:200]:
+            href = a.get("href", "")
+            sym = href.rstrip("/").split("/")[-1].upper()
+            name = a.get_text(strip=True)
+            if not sym or not name or len(sym) > 12:
+                continue
+            rows.append({
+                "symbol":   sym,
+                "company":  name,
+                "industry": "",
+                "period":   "",
+                "filing_date": "",
+                "audited":  "",
+                "consolidated": "",
+                "xbrl_url": "",
+                "isin":     "",
+                "source":   "screener.in/results/latest",
+            })
+        return rows
+    except Exception:
+        return []
+
+
+def get_latest_results_feed(days_back: int = 7, limit: int = 50) -> dict:
+    """
+    Market-wide feed of companies that have filed quarterly financial results.
+
+    Primary source: NSE `corporates-financial-results` API (cached 30 min).
+    Fallback: screener.in `/results/latest/` HTML scrape.
+
+    When no filings exist within `days_back`, returns the most recent rows
+    available with an explanatory `window_note`.
+
+    Args:
+        days_back: calendar days back to include (default 7).
+        limit:     max rows to return (default 50).
+    """
+    import requests as _req
+    import datetime as _dt
+    import time as _time
+
+    out: dict[str, Any] = {
+        "results": [], "days_back": days_back, "limit": limit,
+        "total_in_window": 0, "total_available": 0,
+        "source": None, "window_note": "",
+    }
+
+    def _parse_dt(s: str) -> _dt.datetime | None:
+        for fmt in ("%d-%b-%Y %H:%M", "%d-%b-%Y %H:%M:%S", "%d-%b-%Y"):
+            try:
+                return _dt.datetime.strptime(s, fmt)
+            except Exception:
+                continue
+        return None
+
+    # Use cached payload when fresh
+    now_ts = _time.time()
+    cached = _RESULTS_FEED_CACHE.get("data")
+    if cached and (now_ts - float(_RESULTS_FEED_CACHE.get("ts") or 0)) < _RESULTS_FEED_TTL:
+        rows = cached
+    else:
+        rows = None
+        try:
+            s = _get_live_session()
+            url = ("https://www.nseindia.com/api/corporates-financial-results"
+                   "?index=equities&period=Quarterly")
+            r = s.get(url, timeout=15)
+            if r.ok:
+                payload = r.json()
+                rows = (payload if isinstance(payload, list)
+                        else payload.get("data") or payload.get("results") or [])
+                _RESULTS_FEED_CACHE["data"] = rows
+                _RESULTS_FEED_CACHE["ts"] = now_ts
+        except Exception as exc:
+            out["nse_error"] = str(exc)
+
+    if not rows:
+        screener_rows = _fetch_screener_latest_results()
+        if screener_rows:
+            out["results"] = screener_rows[: int(limit)]
+            out["total_available"] = len(screener_rows)
+            out["source"] = "screener.in/results/latest"
+            out["window_note"] = "NSE feed unavailable; using screener.in fallback."
+        else:
+            out["source"] = "none"
+            out["window_note"] = "Both NSE and screener.in fallbacks failed."
+        return out
+
+    # Decorate and sort by filing date
+    decorated: list[dict] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        fd = _parse_dt(str(row.get("filingDate") or row.get("broadCastDate") or ""))
+        if not fd:
+            continue
+        xbrl = row.get("xbrl") or ""
+        if isinstance(xbrl, str) and xbrl.endswith("/-"):
+            xbrl = ""
+        decorated.append({
+            "symbol":         row.get("symbol", ""),
+            "company":        row.get("companyName", ""),
+            "industry":       row.get("industry", "") if row.get("industry") != "-" else "",
+            "period":         row.get("relatingTo", ""),
+            "from_date":      row.get("fromDate", ""),
+            "to_date":        row.get("toDate", ""),
+            "financial_year": row.get("financialYear", ""),
+            "filing_date":    row.get("filingDate", ""),
+            "audited":        row.get("audited", ""),
+            "consolidated":   row.get("consolidated", ""),
+            "xbrl_url":       xbrl,
+            "isin":           row.get("isin", ""),
+            "_dt":            fd,
+        })
+    decorated.sort(key=lambda x: x["_dt"], reverse=True)
+
+    cutoff = _dt.datetime.now() - _dt.timedelta(days=int(days_back))
+    in_window = [r_ for r_ in decorated if r_["_dt"] >= cutoff]
+    if in_window:
+        filtered = in_window
+        out["window_note"] = f"Showing filings from last {days_back} day(s)."
+    else:
+        filtered = decorated[: int(limit)]
+        if decorated:
+            age_days = (_dt.datetime.now() - decorated[0]["_dt"]).days
+            out["window_note"] = (
+                f"No filings in last {days_back} day(s); "
+                f"showing most recent available (latest filed {age_days} days ago)."
+            )
+    for f in filtered:
+        f.pop("_dt", None)
+    out["results"] = filtered[: int(limit)]
+    out["total_in_window"] = len(in_window)
+    out["total_available"] = len(decorated)
+    out["source"] = "nseindia.com/api/corporates-financial-results"
+    return out
+
+
 def get_event_calendar_summary(
     index: str = "NIFTY 50",
     days_ahead: int = 14,
@@ -7771,6 +7967,33 @@ TOOL_REGISTRY.update({
                     "type": "integer",
                     "description": "Days ahead to look (default 14)",
                     "default": 14,
+                },
+            },
+            "required": [],
+        },
+    ),
+    "get_latest_results_feed": (
+        get_latest_results_feed,
+        (
+            "Market-wide feed of companies that have just declared quarterly financial "
+            "results across NSE. Pulls NSE corporates-financial-results JSON (cached 30 min) "
+            "with screener.in /results/latest fallback. "
+            "Use for: 'latest results', 'who reported today', 'results this week', "
+            "'companies that announced results', 'results posted recently'. Do NOT use "
+            "when the user names a specific symbol — use stock_results path instead."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "days_back": {
+                    "type": "integer",
+                    "description": "Calendar days back to include (default 7).",
+                    "default": 7,
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Max rows to return (default 50).",
+                    "default": 50,
                 },
             },
             "required": [],

@@ -956,6 +956,7 @@ _REQUIRED_TOOLS_BY_INTENT: dict[str, tuple[str, ...]] = {
         "resolve_symbol",
         "get_latest_results",
     ),
+    "results_feed": ("get_latest_results_feed",),
 }
 
 
@@ -1499,6 +1500,39 @@ def _extract_youtube_transcribe_args(text: str) -> tuple[str, str]:
     return selection, backend
 
 
+def _with_dynamic_stock_evidence(plan: list[tuple[str, dict]], q: str, symbol: str) -> list[tuple[str, dict]]:
+    """Keep stock_brief plans aligned with dynamic evidence validation."""
+    sym = (symbol or "").upper()
+    if not sym:
+        return plan
+    existing = {name for name, _ in plan}
+
+    def add_once(name: str, args: dict) -> None:
+        if name not in existing:
+            plan.append((name, args))
+            existing.add(name)
+
+    if any(term in q for term in ("news", "catalyst", "catalysts", "recent announcement")):
+        add_once("search_latest_catalysts", {"symbol": sym})
+    if any(term in q for term in ("broker", "analyst target", "target price", "rating", "brokerage", "analyst views")):
+        add_once("search_broker_research", {"symbol": sym})
+    if any(term in q for term in ("concall", "earnings call", "management commentary", "guidance")):
+        add_once("search_concall_transcripts", {"symbol": sym})
+    if any(term in q for term in ("forensic", "red flag", "red flags", "manipulation", "earnings quality")):
+        add_once("run_forensic_analysis", {"symbol": sym})
+    if any(term in q for term in (
+        "latest results", "quarterly results", "quarterly result",
+        "q1 results", "q2 results", "q3 results", "q4 results",
+        "annual results", "yearly results",
+        "earnings results", "earnings report",
+        "p&l statement", "profit and loss",
+        "balance sheet", "cash flow statement", "financial statements",
+        "fundamental analysis", "quarterly numbers", "quarterly financials",
+    )):
+        add_once("get_latest_results", {"symbol": sym})
+    return plan
+
+
 def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
     """Detect intent and build a tool plan from keywords alone."""
     routing_text = _routing_query_text(query)
@@ -1653,11 +1687,12 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
         m = re.search(r"\b(?:for|of)\s+([A-Z][A-Z0-9&-]{1,11}(?:\s+[A-Z][A-Z0-9&-]{1,11}){0,2})\b", routing_text)
         if m:
             sym_q = m.group(1).strip()
-            return {"intent": "stock_brief", "plan": [
+            plan = [
                 ("resolve_symbol",      {"query": sym_q}),
                 ("scrape_screener_in",  {"symbol": sym_q.upper().replace(" ", "")}),
                 ("get_symbol_snapshot", {"symbol": sym_q.upper().replace(" ", "")}),
-            ]}
+            ]
+            return {"intent": "stock_brief", "plan": _with_dynamic_stock_evidence(plan, q, sym_q.upper().replace(" ", ""))}
 
     if any(w in q for w in breadth_words) or q.strip() in {"overview", "market"}:
         plan = [
@@ -1733,7 +1768,15 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
               "compare","vs","versus","from","perspective","into","including","combine",
               "fundamental","fundamentals","forensic","red","flags","flag",
               "own","portfolio","holding","holdings","monitor","should",
-              "detailed","detail","complete","comprehensive"}
+              "detailed","detail","complete","comprehensive",
+              # Calendar / event / time tokens — never a ticker.
+              "due","tomorrow","yesterday","tonight","upcoming","forthcoming",
+              "recent","recently","reporting","reported","announced","announce",
+              "filed","filing","filings","posted","posting","calendar",
+              "earnings","dividend","dividends","agm","split","bonus","rights",
+              "monday","tuesday","wednesday","thursday","friday","saturday","sunday",
+              "week","weekly","month","monthly","year","yearly","quarter","quarterly",
+              "who","has","have","had","whose","whom"}
     candidates = [w for w in words if w.lower() not in skip and len(w) >= 2]
 
     symbol_candidates = [
@@ -1869,6 +1912,39 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
     news_priority_terms = ("news", "catalyst", "catalysts", "announcement", "announcements")
     explicit_stock_subject = bool(symbol_candidates or _symbol_phrase_after_preposition(routing_text))
 
+    # Market-wide latest results feed — no specific symbol in the query.
+    # Catches "latest results", "who reported today", "results this week",
+    # "companies that announced", "recently reported", etc. Must come BEFORE
+    # the per-symbol stock_results block so symbol-less queries are caught.
+    results_feed_terms = (
+        "latest results", "latest result",
+        "who reported", "who has reported", "who all reported",
+        "results today", "results this week", "results this month",
+        "results announced", "results posted", "results filed",
+        "results released",
+        "companies reported", "companies that reported",
+        "companies announced results", "companies posted results",
+        "companies that announced", "announced results", "announced their results",
+        "earnings today", "earnings this week", "earnings posted",
+        "results feed", "recent results", "recently reported",
+    )
+    if (
+        not symbol_candidates
+        and any(term in q for term in results_feed_terms)
+    ):
+        days = 7
+        if "today" in q or "yesterday" in q:
+            days = 2
+        elif "this week" in q or " week" in q:
+            days = 7
+        elif "this month" in q or " month" in q:
+            days = 30
+        elif "fortnight" in q or "two weeks" in q:
+            days = 14
+        return {"intent": "results_feed", "plan": [
+            ("get_latest_results_feed", {"days_back": days, "limit": 50}),
+        ]}
+
     if (
         candidates and explicit_stock_subject
         and (any(term in q for term in results_stock_terms) or _results_freeform)
@@ -1882,13 +1958,14 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
 
     if candidates and explicit_stock_subject and any(term in q for term in forensic_stock_terms):
         sym_q = _primary_symbol_query(candidates, symbol_candidates, routing_text)
-        return {"intent": "stock_brief", "plan": [
+        plan = [
             ("resolve_symbol",       {"query": sym_q}),
             ("get_symbol_snapshot",  {"symbol": sym_q.upper()}),
             ("get_technical_setup",  {"symbol": sym_q.upper()}),
             ("get_sector_context",   {"sector_or_symbol": sym_q.upper()}),
             ("run_forensic_analysis", {"symbol": sym_q.upper()}),
-        ]}
+        ]
+        return {"intent": "stock_brief", "plan": _with_dynamic_stock_evidence(plan, q, sym_q)}
 
     # Intraday routing: PostgreSQL bars first, NSE website live snapshot second,
     # yfinance candle analysis only as fallback for OHLCV history.
@@ -1897,13 +1974,14 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
             return {"intent": "intraday_screener", "plan": [("run_intraday_screener", {"screen_type": "rsi_divergence"})]}
         if candidates and explicit_stock_subject and any(w in q for w in ["news", "catalyst", "catalysts", "recent"]):
             sym_q = _primary_symbol_query(candidates, symbol_candidates, routing_text)
-            return {"intent": "stock_brief", "plan": [
+            plan = [
                 ("resolve_symbol",       {"query": sym_q}),
                 ("get_symbol_snapshot",  {"symbol": sym_q.upper()}),
                 ("get_technical_setup",  {"symbol": sym_q.upper()}),
                 ("get_sector_context",   {"sector_or_symbol": sym_q.upper()}),
                 ("search_latest_catalysts", {"symbol": sym_q.upper()}),
-            ]}
+            ]
+            return {"intent": "stock_brief", "plan": _with_dynamic_stock_evidence(plan, q, sym_q)}
         if (
             candidates
             and explicit_stock_subject
@@ -1977,22 +2055,24 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
         and any(term in q for term in fundamental_stock_terms)
     ):
         sym_q = _primary_symbol_query(candidates, symbol_candidates, routing_text)
-        return {"intent": "stock_brief", "plan": [
+        plan = [
             ("resolve_symbol",       {"query": sym_q}),
             ("scrape_screener_in",   {"symbol": sym_q.upper()}),
             ("get_symbol_snapshot",  {"symbol": sym_q.upper()}),
             ("get_technical_setup",  {"symbol": sym_q.upper()}),
             ("get_sector_context",   {"sector_or_symbol": sym_q.upper()}),
-        ]}
+        ]
+        return {"intent": "stock_brief", "plan": _with_dynamic_stock_evidence(plan, q, sym_q)}
 
     if candidates and any(term in q for term in technical_stock_terms) and (" for " in f" {q} " or "setup" in q):
         sym_q = _primary_symbol_query(candidates, symbol_candidates, routing_text)
-        return {"intent": "stock_brief", "plan": [
+        plan = [
             ("resolve_symbol",       {"query": sym_q}),
             ("get_symbol_snapshot",  {"symbol": sym_q.upper()}),
             ("get_technical_setup",  {"symbol": sym_q.upper()}),
             ("get_sector_context",   {"sector_or_symbol": sym_q.upper()}),
-        ]}
+        ]
+        return {"intent": "stock_brief", "plan": _with_dynamic_stock_evidence(plan, q, sym_q)}
 
     # Index query
     index_words = ["nifty", "sensex", "bank nifty", "nifty it", "nifty 50"]
@@ -2080,6 +2160,12 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
             "upcoming events", "event calendar", "events this week", "corporate action",
             "corporate actions", "upcoming results", "results this week", "board meeting",
             "dividend", "agm", "ex-date", "ex date",
+            # Forthcoming results / earnings calendar phrasings
+            "results due", "earnings due", "results next week", "earnings next week",
+            "results tomorrow", "earnings tomorrow", "reporting tomorrow",
+            "reporting this week", "reporting next week",
+            "who has results", "who's reporting", "whos reporting", "who is reporting",
+            "results scheduled", "earnings scheduled", "forthcoming results",
         ]
     ) or ("events" in q and any(term in q for term in ("results", "corporate", "actions", "week", "watch"))):
         return {
@@ -2114,9 +2200,7 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
             ("scrape_screener_in",   {"symbol": sym_q.upper()}),
             ("search_nse_announcements", {"symbol": sym_q.upper()}),
         ]
-        if any(w in q for w in ["news", "catalyst", "recent", "latest news"]):
-            plan.append(("search_latest_catalysts", {"symbol": sym_q.upper()}))
-        return {"intent": "stock_brief", "plan": plan}
+        return {"intent": "stock_brief", "plan": _with_dynamic_stock_evidence(plan, q, sym_q)}
 
     return {"intent": "unknown", "plan": [("get_market_breadth", {})]}
 
@@ -2966,6 +3050,53 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
         except Exception as _save_exc:
             body += f"\n\n⚠ MD save failed: {_save_exc}"
         return body
+
+    if intent == "results_feed":
+        feed = {}
+        for tr in tool_results:
+            if tr.get("tool") == "get_latest_results_feed":
+                feed = tr.get("result") if isinstance(tr.get("result"), dict) else {}
+                break
+        rows = feed.get("results") or []
+        days_back = feed.get("days_back", 7)
+        lines.append(f"━━━ Latest Quarterly Results Feed — last {days_back} day(s) ━━━")
+        note = feed.get("window_note") or ""
+        if note:
+            lines.append(f"  {note}")
+        src = feed.get("source") or "n/a"
+        total_avail = feed.get("total_available", "?")
+        total_in_win = feed.get("total_in_window", 0)
+        lines.append(f"  Source: {src}  ·  in-window: {total_in_win}  ·  available: {total_avail}")
+        if feed.get("nse_error"):
+            lines.append(f"  ⚠ NSE error: {feed.get('nse_error')}")
+        if not rows:
+            lines.append("\n  No results filings found.")
+        else:
+            lines.append("")
+            lines.append("| # | Symbol | Company | Period | FY | Filed | Audited | Cons | Industry |")
+            lines.append("|---|--------|---------|--------|----|-------|---------|------|----------|")
+            for i, r in enumerate(rows[:50], 1):
+                sym_c   = (r.get("symbol") or "")[:12]
+                co      = (r.get("company") or "")[:32]
+                period  = (r.get("period")  or "")[:18]
+                fy      = (r.get("financial_year") or "")[:7]
+                filed   = (r.get("filing_date") or "")[:17]
+                aud     = (r.get("audited") or "")[:10]
+                cons    = (r.get("consolidated") or "")[:6]
+                ind     = (r.get("industry") or "")[:22]
+                lines.append(f"| {i} | {sym_c} | {co} | {period} | {fy} | {filed} | {aud} | {cons} | {ind} |")
+            xbrl_links = [(r.get("symbol",""), r.get("xbrl_url","")) for r in rows[:8] if r.get("xbrl_url")]
+            if xbrl_links:
+                lines.append("")
+                lines.append("▶ XBRL FILINGS (top 8)")
+                for s_, u_ in xbrl_links:
+                    lines.append(f"  • {s_}: {u_}")
+        lines.append("")
+        lines.append("▶ SOURCE TRAIL")
+        for trail_line in _source_trail_lines(tool_results):
+            lines.append(trail_line)
+        lines.append("\n━━━ Not investment advice. For research and learning only. ━━━")
+        return "\n".join(lines)
 
     if intent == "entity_topic_command":
         symbol = ""
