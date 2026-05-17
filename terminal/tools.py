@@ -91,6 +91,13 @@ from terminal.entity_resolution import (
     resolve_stock_entity,
     validate_requested_symbols,
 )
+from terminal.situation_assessment import (
+    assess_user_situation,
+    request_clarification,
+    resolve_conversation_reference,
+    resolve_entity_context,
+    validate_intent_evidence_plan,
+)
 
 # ── Seasonal / macro modules ──────────────────────────────────────────────────
 import sys as _sys
@@ -6037,6 +6044,53 @@ TOOL_REGISTRY: dict[str, Any] = {
         resolve_index_or_stock,
         "Resolve index/derivative underlyings such as NIFTY/BANKNIFTY first, otherwise resolve the query as an NSE stock.",
         {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]},
+    ),
+    "assess_user_situation": (
+        assess_user_situation,
+        "Assess what the user is asking, prior context needs, resolved entities, evidence plan, and clarification needs before routing.",
+        {
+            "type": "object",
+            "properties": {
+                "user_input": {"type": "string"},
+                "data_mode": {"type": "string", "default": "historical"},
+            },
+            "required": ["user_input"],
+        },
+    ),
+    "resolve_conversation_reference": (
+        resolve_conversation_reference,
+        "Resolve contextual references like 'the report' or 'these' against prior turn context when available.",
+        {"type": "object", "properties": {"user_input": {"type": "string"}}, "required": ["user_input"]},
+    ),
+    "resolve_entity_context": (
+        resolve_entity_context,
+        "Resolve entity plus topic from commands or natural prompts such as 'search USL growth strategy'.",
+        {"type": "object", "properties": {"user_input": {"type": "string"}}, "required": ["user_input"]},
+    ),
+    "validate_intent_evidence_plan": (
+        validate_intent_evidence_plan,
+        "Validate a planned evidence-tool list against required tools for an intent.",
+        {
+            "type": "object",
+            "properties": {
+                "intent": {"type": "string"},
+                "evidence_plan": {"type": "array", "items": {"type": "string"}},
+                "required_tools": {"type": "array", "items": {"type": "string"}},
+            },
+            "required": ["intent"],
+        },
+    ),
+    "request_clarification": (
+        request_clarification,
+        "Return a structured clarification request when situation assessment cannot safely choose tools.",
+        {
+            "type": "object",
+            "properties": {
+                "question": {"type": "string"},
+                "reason": {"type": "string"},
+            },
+            "required": ["question"],
+        },
     ),
     "get_symbol_snapshot": (
         get_symbol_snapshot,

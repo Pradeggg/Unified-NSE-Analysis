@@ -2168,6 +2168,12 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
     nse_ann  = _get("search_nse_announcements")
     bse_filings = _get("search_bse_filings")
     concalls = _get("search_concall_transcripts")
+    latest_report = _get("find_latest_report")
+    listed_reports = _get("list_generated_reports")
+    opened_report = _get("open_report")
+    read_report_result = _get("read_report")
+    report_summary = _get("summarize_report")
+    last_report = _get("get_last_report")
 
     sym = (snap or {}).get("symbol") or (tech or {}).get("symbol") or ""
     if not sym and forensic:
@@ -2686,6 +2692,61 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
         lines.append("")
         lines.append("▶ SOURCE TRAIL")
         lines.append("  No equity symbol was resolved; no market conclusion was inferred.")
+        lines.append("\n━━━ Not investment advice. For research and learning only. ━━━")
+        return "\n".join(lines)
+
+    if intent == "report_lookup":
+        report_payload = opened_report or report_summary or read_report_result or last_report or listed_reports or latest_report or {}
+        status = report_payload.get("status") or ("ok" if report_payload else "unknown")
+        lines.append("▶ REPORT CONTEXT")
+        if opened_report:
+            lines.append(f"  Status: {status}")
+            lines.append(f"  Path:   {opened_report.get('path') or 'N/A'}")
+            if opened_report.get("message"):
+                lines.append(f"  Note:   {opened_report.get('message')}")
+        elif report_summary:
+            lines.append(f"  Status:         {status}")
+            lines.append(f"  Path:           {report_summary.get('path') or 'N/A'}")
+            if report_summary.get("symbol"):
+                lines.append(f"  Symbol:         {report_summary.get('symbol')}")
+            if report_summary.get("recommendation"):
+                lines.append(f"  Recommendation: {report_summary.get('recommendation')}")
+            if report_summary.get("summary"):
+                lines.append("")
+                lines.append("▶ SUMMARY")
+                for line in str(report_summary.get("summary")).splitlines()[:12]:
+                    lines.append(f"  {line}")
+        elif read_report_result:
+            lines.append(f"  Status: {status}")
+            lines.append(f"  Path:   {read_report_result.get('path') or 'N/A'}")
+            content = str(read_report_result.get("content") or "").strip()
+            if content:
+                lines.append("")
+                lines.append("▶ PREVIEW")
+                for line in content.splitlines()[:12]:
+                    if line.strip():
+                        lines.append(f"  {line[:140]}")
+        elif last_report and last_report.get("report"):
+            report = last_report.get("report") or {}
+            lines.append(f"  Status: {status}")
+            lines.append(f"  Path:   {report.get('path') or report.get('absolute_path') or 'N/A'}")
+            lines.append(f"  Type:   {report.get('report_type') or 'report'}")
+        elif listed_reports:
+            reports = listed_reports.get("reports") or []
+            lines.append(f"  Status: {status}")
+            lines.append(f"  Count:  {listed_reports.get('count', len(reports))}")
+            for row in reports[:10]:
+                lines.append(f"  - {row.get('name')} | {row.get('report_type')} | {row.get('path')}")
+        elif latest_report:
+            files = latest_report.get("files") or []
+            lines.append(f"  Count: {latest_report.get('count', len(files))}")
+            for row in files[:10]:
+                lines.append(f"  - {row.get('name')} | {row.get('path')}")
+        else:
+            lines.append("  No report context was available.")
+        lines.append("")
+        lines.append("▶ SOURCE TRAIL")
+        lines.extend(_source_trail_lines(tool_results))
         lines.append("\n━━━ Not investment advice. For research and learning only. ━━━")
         return "\n".join(lines)
 
@@ -4609,12 +4670,17 @@ class Agent:
             if assessment.applies and assessment.decision == "run_tool_plan":
                 tool_results = _execute_plan(assessment.tool_plan)
                 trace.extend(tool_results)
+                synthesis_intent = (
+                    "report_lookup"
+                    if any(name in {"open_report", "read_report", "summarize_report", "get_last_report", "list_generated_reports"} for name, _ in assessment.tool_plan)
+                    else "intraday_symbol_scan"
+                )
                 answer_body = (
                     render_assessment_block(assessment)
                     + "\n\n"
-                    + _synthesize_no_llm("intraday_symbol_scan", tool_results)
+                    + _synthesize_no_llm(synthesis_intent, tool_results)
                 )
-                answer_body = _apply_response_guardrails(clean_input, "intraday_symbol_scan", tool_results, answer_body)
+                answer_body = _apply_response_guardrails(clean_input, synthesis_intent, tool_results, answer_body)
                 answer = answer_body + mode_suffix
                 turn_context = build_turn_context(
                     user_input=clean_input,

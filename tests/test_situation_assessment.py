@@ -2,9 +2,14 @@ from terminal.situation_assessment import (
     EntityTopicAssessment,
     SituationAssessment,
     TurnContext,
+    assess_user_situation,
     assess_entity_topic_request,
     assess_followup,
     build_turn_context,
+    request_clarification,
+    resolve_conversation_reference,
+    resolve_entity_context,
+    validate_intent_evidence_plan,
     needs_situation_assessment,
     render_assessment_block,
     render_context_answer,
@@ -68,6 +73,17 @@ def test_entity_topic_assessment_resolves_search_alias_before_topic():
     assert assessment.entity_query == "USL"
     assert assessment.topic == "growth strategy"
     assert "canonical symbol UNITDSPR" in assessment.plan[0]
+
+
+def test_natural_search_assessment_resolves_entity_before_topic():
+    assessment = assess_entity_topic_request("search USL growth strategy")
+
+    assert assessment.applies
+    assert assessment.decision == "route_with_entity_topic"
+    assert assessment.command == "/search"
+    assert assessment.canonical_symbol == "UNITDSPR"
+    assert assessment.topic == "growth strategy"
+    assert assessment.rewritten_input == "/search UNITDSPR growth strategy"
 
 
 def test_entity_topic_assessment_handles_multiword_company_name_and_format():
@@ -330,3 +346,105 @@ def test_scan_these_for_15m_setups_builds_tool_plan():
     assert assessment.tool_plan == [
         ("scan_symbols_intraday", {"symbols": ["BLISSGVS", "IPCALAB"], "interval": "15m"})
     ]
+
+
+def test_open_report_after_strategy_council_uses_prior_report_context():
+    ctx = TurnContext(
+        user_input="/strategy-council KIRLOSENG llm",
+        intent="strategy_council",
+        mode="historical",
+        tools=["run_strategy_council"],
+        source_label="Strategy Council report",
+        result_type="strategy_council_report",
+        result_summary="Strategy Council report for KIRLOSENG recommendation NO_TRADE.",
+        symbols=["KIRLOSENG"],
+        result_items=["/tmp/strategy_council_KIRLOSENG.md"],
+    )
+
+    assessment = assess_followup("open the report", ctx)
+
+    assert assessment.decision == "run_tool_plan"
+    assert assessment.tool_plan == [("open_report", {"path": "/tmp/strategy_council_KIRLOSENG.md"})]
+    assert assessment.resolved_entities == ["KIRLOSENG"]
+    assert "open the prior report" in assessment.user_is_asking.lower()
+
+
+def test_based_on_report_results_uses_report_context():
+    ctx = TurnContext(
+        user_input="/strategy-council KIRLOSENG llm",
+        intent="strategy_council",
+        mode="historical",
+        tools=["run_strategy_council"],
+        source_label="Strategy Council report",
+        result_type="strategy_council_report",
+        result_summary="Strategy Council report for KIRLOSENG recommendation NO_TRADE.",
+        symbols=["KIRLOSENG"],
+        result_items=["/tmp/strategy_council_KIRLOSENG.md"],
+    )
+
+    assessment = assess_followup("Based on the report how has been the results", ctx)
+
+    assert assessment.decision == "run_tool_plan"
+    assert assessment.tool_plan == [
+        ("read_report", {"path": "/tmp/strategy_council_KIRLOSENG.md", "max_chars": 12000}),
+        ("summarize_report", {"path": "/tmp/strategy_council_KIRLOSENG.md"}),
+    ]
+    assert "prior report context" in assessment.context_found.lower()
+
+
+def test_assess_user_situation_returns_v2_contract_for_ambiguous_followup():
+    assessment = assess_user_situation("what about these", previous_context=None)
+
+    assert assessment["applies"] is True
+    assert assessment["decision"] == "ask_clarification"
+    assert assessment["user_is_asking"]
+    assert assessment["context_found"]
+    assert assessment["evidence_plan"] == []
+    assert assessment["clarification_question"]
+
+
+def test_resolve_conversation_reference_report_context():
+    ctx = TurnContext(
+        user_input="/report technical UNITDSPR",
+        intent="report_lookup",
+        mode="historical",
+        tools=["open_report"],
+        source_label="generated reports",
+        result_type="report",
+        result_items=["/tmp/UNITDSPR_report.html"],
+    )
+
+    result = resolve_conversation_reference("open the report", ctx)
+
+    assert result["status"] == "resolved"
+    assert result["reference_type"] == "report"
+    assert result["path"] == "/tmp/UNITDSPR_report.html"
+
+
+def test_resolve_entity_context_for_search_prompt():
+    result = resolve_entity_context("search USL growth strategy")
+
+    assert result["status"] == "resolved"
+    assert result["canonical_symbol"] == "UNITDSPR"
+    assert result["topic"] == "growth strategy"
+
+
+def test_validate_intent_evidence_plan_identifies_missing_tools():
+    result = validate_intent_evidence_plan(
+        intent="stock_results",
+        evidence_plan=["resolve_symbol", "scrape_screener_in"],
+        required_tools=["resolve_symbol", "scrape_screener_in", "search_bse_filings"],
+    )
+
+    assert result["status"] == "missing_required_tools"
+    assert result["missing_tools"] == ["search_bse_filings"]
+
+
+def test_request_clarification_contract():
+    result = request_clarification(
+        question="Which report should I use?",
+        reason="No prior report context.",
+    )
+
+    assert result["decision"] == "ask_clarification"
+    assert result["clarification_question"] == "Which report should I use?"
