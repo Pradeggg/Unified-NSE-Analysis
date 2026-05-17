@@ -114,6 +114,16 @@ from terminal.evidence_gate import (
     validate_answer_against_evidence,
     validate_required_tools_executed,
 )
+from terminal.fno_composite import (
+    get_cost_of_carry as get_composite_cost_of_carry,
+    get_fno_overview,
+    get_futures_basis as get_composite_futures_basis,
+    get_max_pain as get_composite_max_pain,
+    get_option_chain_summary,
+    get_pcr_summary,
+    get_top_oi_strikes,
+    recommend_options_strategy,
+)
 
 # ── Seasonal / macro modules ──────────────────────────────────────────────────
 import sys as _sys
@@ -6225,6 +6235,90 @@ TOOL_REGISTRY: dict[str, Any] = {
                 "tool_results": {"type": "array", "items": {"type": "object"}},
             },
             "required": ["required_tools", "tool_results"],
+        },
+    ),
+    "get_fno_overview": (
+        get_fno_overview,
+        "Composite F&O overview: option-chain PCR/max-pain/top OI, futures basis/carry, and a gated options-strategy recommendation.",
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string", "default": "NIFTY"},
+                "expiry_index": {"type": "integer", "default": 0},
+            },
+            "required": [],
+        },
+    ),
+    "get_option_chain_summary": (
+        get_option_chain_summary,
+        "Summarize option-chain PCR, max pain, and top OI strikes for an index/equity.",
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string"},
+                "expiry_index": {"type": "integer", "default": 0},
+            },
+            "required": ["symbol"],
+        },
+    ),
+    "get_composite_max_pain": (
+        get_composite_max_pain,
+        "Return max-pain summary from the composite option-chain wrapper.",
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string"},
+                "expiry_index": {"type": "integer", "default": 0},
+            },
+            "required": ["symbol"],
+        },
+    ),
+    "get_pcr_summary": (
+        get_pcr_summary,
+        "Return put-call ratio and regime from the composite option-chain wrapper.",
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string"},
+                "expiry_index": {"type": "integer", "default": 0},
+            },
+            "required": ["symbol"],
+        },
+    ),
+    "get_top_oi_strikes": (
+        get_top_oi_strikes,
+        "Return top call and put OI strikes from the composite option-chain wrapper.",
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string"},
+                "expiry_index": {"type": "integer", "default": 0},
+            },
+            "required": ["symbol"],
+        },
+    ),
+    "get_composite_futures_basis": (
+        get_composite_futures_basis,
+        "Return futures basis from the composite F&O wrapper.",
+        {"type": "object", "properties": {"symbol": {"type": "string"}}, "required": ["symbol"]},
+    ),
+    "get_composite_cost_of_carry": (
+        get_composite_cost_of_carry,
+        "Return cost-of-carry from the composite F&O wrapper.",
+        {"type": "object", "properties": {"symbol": {"type": "string"}}, "required": ["symbol"]},
+    ),
+    "recommend_options_strategy": (
+        recommend_options_strategy,
+        "Recommend a gated research-only options strategy from option-chain and futures evidence.",
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string"},
+                "option_chain": {"type": "object"},
+                "futures": {"type": "object"},
+                "raw_strategy": {"type": "object"},
+            },
+            "required": ["symbol"],
         },
     ),
     "get_technical_setup": (

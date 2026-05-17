@@ -948,7 +948,7 @@ _REQUIRED_TOOLS_BY_INTENT: dict[str, tuple[str, ...]] = {
     "intraday_index_scan": ("scan_intraday_market",),
     "intraday_setup": ("explain_intraday_setup", "get_nse_intraday_snapshot"),
     "intraday_levels": ("get_intraday_levels", "get_nse_intraday_snapshot"),
-    "fno_overview": ("get_options_chain", "get_futures_analysis"),
+    "fno_overview": ("get_fno_overview",),
     "stock_comparison": ("compare_stocks",),
     "strength_validation": ("validate_strength_watchlist",),
     "stock_brief": ("resolve_symbol", "get_symbol_snapshot"),
@@ -1256,12 +1256,11 @@ def _entity_topic_execution_plan(assessment) -> list[tuple[str, dict]]:
             ("get_latest_results", {"symbol": symbol}),
         ]
     if command in {"/fno", "/chain", "/oi", "/options"}:
+        if command == "/fno":
+            return [("get_fno_overview", {"symbol": symbol, "expiry_index": 0})]
         plan = [
             ("get_options_chain", {"symbol": symbol, "expiry_index": 0}),
         ]
-        if command == "/fno":
-            plan.append(("get_futures_analysis", {"symbol": symbol}))
-            plan.append(("get_strategy_recommendations", {"symbol": symbol}))
         return plan
     if command == "/report":
         report_type = (topic.split() or ["research"])[0]
@@ -1549,12 +1548,7 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
     )
     if any(term in f" {q} " for term in fno_terms):
         symbol = _extract_fno_symbol(routing_text)
-        plan = [
-            ("get_options_chain", {"symbol": symbol, "expiry_index": 0}),
-            ("get_futures_analysis", {"symbol": symbol}),
-        ]
-        if any(term in q for term in ("strategy", "recommend", "best options", "options play")):
-            plan.append(("get_strategy_recommendations", {"symbol": symbol}))
+        plan = [("get_fno_overview", {"symbol": symbol, "expiry_index": 0})]
         return {"intent": "fno_overview", "plan": plan}
 
     assessment_plan = _build_market_situation_assessment_plan(query, data_mode=data_mode)
@@ -2143,6 +2137,7 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
     fno_chain = _get("get_options_chain") or _get("get_option_chain")
     fno_futures = _get("get_futures_analysis")
     fno_strategy = _get("get_strategy_recommendations")
+    fno_overview = _get("get_fno_overview")
     forensic = _get("run_forensic_analysis")
     deep = _get("deep_search")
     intra_setup = _get("explain_intraday_setup")
@@ -3178,6 +3173,48 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
         return "\n".join(l for l in lines if str(l).strip() != "")
 
     if intent == "fno_overview":
+        if fno_overview:
+            symbol = fno_overview.get("symbol") or "NIFTY"
+            lines.append(f"━━━ {symbol} — F&O Overview ━━━")
+            lines.append("\n▶ OPTION CHAIN")
+            chain = fno_overview.get("option_chain") or {}
+            if chain.get("status") == "missing" or chain.get("error"):
+                lines.append(f"  ERROR: {chain.get('error') or 'option-chain evidence missing'}")
+            else:
+                lines.append(f"  PCR: {fno_overview.get('pcr', '—')} | Max pain: {fno_overview.get('max_pain', '—')}")
+                top_oi = fno_overview.get("top_oi_strikes") or {}
+                lines.append(f"  Top call OI: {top_oi.get('calls') or '—'}")
+                lines.append(f"  Top put OI: {top_oi.get('puts') or '—'}")
+            lines.append("\n▶ FUTURES BASIS & CARRY")
+            futures = fno_overview.get("futures") or {}
+            if futures.get("status") == "missing" or futures.get("error"):
+                lines.append(f"  ERROR: {futures.get('error') or 'futures evidence missing'}")
+            else:
+                lines.append(f"  Basis: {fno_overview.get('basis', '—')} | Cost of carry: {fno_overview.get('cost_of_carry', '—')}")
+            rec = fno_overview.get("recommendation") or {}
+            lines.append("\n▶ STRATEGY CONTEXT")
+            if rec.get("status") == "blocked":
+                lines.append(f"  Blocked: {rec.get('reason')}")
+            else:
+                lines.append(f"  Strategy: {rec.get('strategy', '—')}")
+                if rec.get("conditions"):
+                    lines.append("  Conditions: " + " | ".join(map(str, rec.get("conditions") or [])))
+                if rec.get("invalidation"):
+                    lines.append(f"  Invalidation: {rec.get('invalidation')}")
+                if rec.get("max_loss"):
+                    lines.append(f"  Max loss: {rec.get('max_loss')}")
+                if rec.get("max_profit"):
+                    lines.append(f"  Max profit: {rec.get('max_profit')}")
+            missing = fno_overview.get("missing_evidence") or []
+            if missing:
+                lines.append("\n▶ MISSING EVIDENCE")
+                lines.append("  " + ", ".join(missing))
+            lines.append("\n▶ SOURCE TRAIL")
+            for tool, status in (fno_overview.get("source_trail") or {}).items():
+                lines.append(f"  {tool}: {status}")
+            lines.append("\n━━━ Not investment advice. For research and learning only. ━━━")
+            return "\n".join(l for l in lines if str(l).strip() != "")
+
         def _fmt_num(value, decimals: int = 2) -> str:
             if isinstance(value, (int, float)):
                 return f"{value:,.{decimals}f}"

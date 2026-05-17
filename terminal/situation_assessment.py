@@ -750,12 +750,9 @@ def _entity_topic_plan_preview(assessment: EntityTopicAssessment) -> list[tuple[
             ("get_latest_results", {"symbol": assessment.canonical_symbol}),
         ]
     if command in {"/fno", "/chain", "/oi", "/options"}:
-        tools = [("get_options_chain", {"symbol": assessment.canonical_symbol})]
         if command == "/fno":
-            tools.extend([
-                ("get_futures_analysis", {"symbol": assessment.canonical_symbol}),
-                ("get_strategy_recommendations", {"symbol": assessment.canonical_symbol}),
-            ])
+            return [("get_fno_overview", {"symbol": assessment.canonical_symbol, "expiry_index": 0})]
+        tools = [("get_options_chain", {"symbol": assessment.canonical_symbol})]
         return tools
     return [("resolve_symbol", {"query": assessment.canonical_symbol})]
 
@@ -769,7 +766,7 @@ def _infer_result_type(intent: str, tool_results: list[dict[str, Any]]) -> str:
             if screen_type == "stage2":
                 return "stage2_screener"
         return "screener"
-    if {"get_options_chain", "get_futures_analysis"} & tool_names:
+    if {"get_options_chain", "get_futures_analysis", "get_fno_overview"} & tool_names:
         return "fno_overview"
     if "explain_intraday_setup" in tool_names:
         return "intraday_setup"
