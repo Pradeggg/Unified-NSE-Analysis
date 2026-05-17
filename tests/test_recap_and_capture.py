@@ -124,12 +124,26 @@ class TestSourceLabel(unittest.TestCase):
 # ─────────────────────────────────────────────────────────────────────────────
 class TestIntradayCaptureDaemon(unittest.TestCase):
     def setUp(self):
+        self._capture_env_backup = {
+            "AGENT_ADDA_CAPTURE_INTERVAL_SEC": os.environ.pop("AGENT_ADDA_CAPTURE_INTERVAL_SEC", None),
+            "AGENT_ADDA_CAPTURE_RETENTION_MIN": os.environ.pop("AGENT_ADDA_CAPTURE_RETENTION_MIN", None),
+        }
         # Force a fresh import so previous start_background_capture() calls
         # don't leak between tests.
         for mod in list(sys.modules):
             if mod == "terminal.intraday_capture":
                 del sys.modules[mod]
         self.cap = importlib.import_module("terminal.intraday_capture")
+
+    def tearDown(self):
+        for key, value in getattr(self, "_capture_env_backup", {}).items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+        for mod in list(sys.modules):
+            if mod == "terminal.intraday_capture":
+                del sys.modules[mod]
 
     def test_default_knobs(self):
         self.assertEqual(self.cap.CAPTURE_INTERVAL_SEC, 60)
