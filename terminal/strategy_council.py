@@ -261,24 +261,29 @@ def handle_strategy_council_command(
     except Exception as exc:
         return f"Strategy Council failed: {exc}"
 
-    lines = [
-        f"Strategy Council — {config.symbol}",
-        f"Recommendation: {result.recommendation}",
-        f"Locked strategy: {result.locked_strategy.strategy_id if result.locked_strategy else 'none'}",
-        f"Iterations: {len(result.iterations)}",
-        f"Enhancements: enrichment={'on' if config.include_enrichment else 'off'}, "
+    header = f"### Strategy Council — {config.symbol}"
+    bullets = [
+        f"- **Recommendation:** {result.recommendation}",
+        f"- **Locked strategy:** {result.locked_strategy.strategy_id if result.locked_strategy else 'none'}",
+        f"- **Iterations:** {len(result.iterations)}",
+        f"- **Enhancements:** enrichment={'on' if config.include_enrichment else 'off'}, "
         f"advanced_critics={'on' if config.use_advanced_critics else 'off'}, "
         f"dashboard={'on' if config.dashboard_output_dir else 'off'}",
-        f"Report: {report}",
+        f"- **Report:** `{report}`",
     ]
     if result.dashboard_path:
-        lines.append(f"Dashboard: {result.dashboard_path}")
+        bullets.append(f"- **Dashboard:** `{result.dashboard_path}`")
     if persisted:
-        lines.append(f"PostgreSQL council run: {persisted['run_id']}")
-        lines.append(f"Persisted split results: {persisted['split_results_inserted']}")
+        bullets.append(f"- **PostgreSQL council run:** {persisted['run_id']}")
+        bullets.append(f"- **Persisted split results:** {persisted['split_results_inserted']}")
     if intraday_summary:
-        lines.extend(_format_intraday_lines(intraday_summary))
-        lines.append(f"Mode: Intraday Strategy Council ({agent_mode}); research-only, not investment advice.")
+        for line in _format_intraday_lines(intraday_summary):
+            bullets.append(f"- {line}")
+        bullets.append(
+            f"- _Mode: Intraday Strategy Council ({agent_mode}); research-only, not investment advice._"
+        )
     else:
-        lines.append(f"Mode: EOD Strategy Council simulation ({agent_mode}); research-only, not investment advice.")
-    return "\n".join(lines)
+        bullets.append(
+            f"- _Mode: EOD Strategy Council simulation ({agent_mode}); research-only, not investment advice._"
+        )
+    return "\n".join([header, ""] + bullets)
