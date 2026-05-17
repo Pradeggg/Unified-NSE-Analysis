@@ -31,6 +31,12 @@ class CouncilConfig:
     use_rule_composition: bool = True
     rule_llm_ratio: float = 0.4
     rule_generation_method: str = "sampled"
+    include_enrichment: bool = False
+    use_advanced_critics: bool = False
+    max_drawdown_threshold_pct: float = 15.0
+    train_val_corr_threshold: float = 0.3
+    beta_threshold: float = 1.5
+    dashboard_output_dir: str | None = None
 
 
 @dataclass
@@ -97,3 +103,4 @@ class CouncilResult:
     recommendation: Recommendation
     rationale: str
     report_path: str | None = None
+    dashboard_path: str | None = None

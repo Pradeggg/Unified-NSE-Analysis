@@ -5,6 +5,9 @@ from __future__ import annotations
 import pandas as pd
 
 from backtesting.engine import compute_stage2_features
+from backtesting.strategy_council.critics_advanced import build_advanced_critics
+from backtesting.strategy_council.dashboard_generator import write_dashboard
+from backtesting.strategy_council.evidence_enrichment import enrich_with_market_signals
 from backtesting.strategy_council.llm import (
     RuleBasedDataLeakageCritic,
     RuleBasedRiskCritic,
@@ -76,7 +79,21 @@ def run_strategy_council(
             )
         else:
             strategist = base
-    critics = critics or (RuleBasedDataLeakageCritic(), RuleBasedRiskCritic())
+    if config.include_enrichment:
+        try:
+            enrich_with_market_signals(evidence, eod_data)
+        except Exception:
+            pass
+    if critics is None:
+        base_critics: tuple = (RuleBasedDataLeakageCritic(), RuleBasedRiskCritic())
+        if config.use_advanced_critics:
+            base_critics = base_critics + build_advanced_critics(
+                evidence=evidence,
+                max_drawdown_pct=config.max_drawdown_threshold_pct,
+                correlation_threshold=config.train_val_corr_threshold,
+                beta_threshold=config.beta_threshold,
+            )
+        critics = base_critics
     try:
         eod_data = compute_stage2_features(eod_data)
     except Exception:
@@ -144,7 +161,7 @@ def run_strategy_council(
         "Final recommendation is based on validation-selected strategy and one-shot test results. "
         "This is research-only output, not investment advice."
     )
-    return CouncilResult(
+    result = CouncilResult(
         config=config,
         evidence=evidence,
         iterations=tuple(iterations),
@@ -153,3 +170,20 @@ def run_strategy_council(
         recommendation=recommendation,
         rationale=rationale,
     )
+    if config.dashboard_output_dir:
+        try:
+            dashboard_path = write_dashboard(result, config.dashboard_output_dir)
+            result = CouncilResult(
+                config=result.config,
+                evidence=result.evidence,
+                iterations=result.iterations,
+                locked_strategy=result.locked_strategy,
+                test_results=result.test_results,
+                recommendation=result.recommendation,
+                rationale=result.rationale,
+                report_path=result.report_path,
+                dashboard_path=str(dashboard_path),
+            )
+        except Exception:
+            pass
+    return result
