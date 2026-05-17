@@ -67,6 +67,27 @@ def _run(label: str, cmd: list[str], dry_run: bool = False, cwd: Path | None = N
         return False
 
 
+def _ensure_postgres_running(dry_run: bool = False) -> bool:
+    """Start the local project PostgreSQL cluster if it is not already running."""
+    script = ROOT / "postgres" / "start_pg.sh"
+    if dry_run:
+        print(f"   [DRY RUN — would ensure PostgreSQL via {script}]")
+        return True
+    if not script.exists():
+        print(f"   ⚠️  PostgreSQL start script not found: {script}")
+        return False
+    status = subprocess.run(
+        [str(script), "status"],
+        cwd=str(ROOT),
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    if status.returncode == 0:
+        return True
+    print("   PostgreSQL is not running; attempting local start …")
+    return _run("Start local PostgreSQL", [str(script), "start"], dry_run=False)
+
+
 def _section(title: str) -> None:
     print(f"\n{'═'*60}")
     print(f"  {title}")
@@ -96,10 +117,12 @@ def step_fetch_eod_data(dry_run: bool) -> bool:
 
 
 def step_postgres_eod_load(dry_run: bool) -> bool:
-    """Load latest local EOD bhavcopy into PostgreSQL before analysis."""
-    _section("STEP 0B — PostgreSQL EOD Load")
+    """Load latest local equity and index EOD files into PostgreSQL before analysis."""
+    _section("STEP 0B — PostgreSQL Equity + Index EOD Load")
+    if not _ensure_postgres_running(dry_run=dry_run):
+        return False
     return _run(
-        "Load latest bhavcopy → market.equity_eod",
+        "Load latest bhavcopy/index EOD → market.equity_eod + market.index_eod",
         [PYTHON, "postgres/loader.py", "--eod-only"],
         dry_run=dry_run,
     )
@@ -189,6 +212,8 @@ def step_voice_briefing(dry_run: bool) -> bool:
 def step_postgres_load(dry_run: bool) -> bool:
     """Load today's EOD data into PostgreSQL and run all 40 screeners."""
     _section("STEP 7 — PostgreSQL Load + Screener Run")
+    if not _ensure_postgres_running(dry_run=dry_run):
+        return False
     return _run(
         "PostgreSQL loader + screeners",
         [PYTHON, "postgres/loader.py"],

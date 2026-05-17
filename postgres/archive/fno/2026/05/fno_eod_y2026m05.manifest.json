@@ -1,0 +1,9 @@
+{
+  "source_table": "derivatives.fno_eod_y2026m05",
+  "start": "2026-05-01",
+  "end": "2026-06-01",
+  "rows": 41107,
+  "archive_file": "postgres/archive/fno/2026/05/fno_eod_y2026m05.csv.gz",
+  "sha256": "dbed5c258f05ed632fb4a8a8637a6e4a6cd514845a6bbe85f54a9ce6cbdc2f78",
+  "created_at": "2026-05-11T08:32:55"
+}

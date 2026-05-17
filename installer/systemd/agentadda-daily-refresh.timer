@@ -1,0 +1,12 @@
+# Agent Adda — Daily Refresh timer (weekdays 16:15 Asia/Kolkata).
+[Unit]
+Description=Agent Adda — Schedule daily refresh weekdays 16:15 IST
+Requires=agentadda-daily-refresh.service
+
+[Timer]
+OnCalendar=Mon..Fri *-*-* 16:15:00 Asia/Kolkata
+Persistent=true
+Unit=agentadda-daily-refresh.service
+
+[Install]
+WantedBy=timers.target

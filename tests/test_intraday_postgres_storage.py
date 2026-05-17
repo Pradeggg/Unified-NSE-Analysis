@@ -48,7 +48,9 @@ class IntradayPostgresStorageTests(unittest.TestCase):
         self.assertIn("CREATE SCHEMA IF NOT EXISTS intraday", sql_text)
         self.assertIn("CREATE TABLE IF NOT EXISTS intraday.quote_snapshots", sql_text)
         self.assertIn("CREATE TABLE IF NOT EXISTS intraday.ohlcv_bars", sql_text)
+        self.assertIn("CREATE TABLE IF NOT EXISTS intraday.futures_snapshots", sql_text)
         self.assertIn("idx_intraday_quote_symbol_time", sql_text)
+        self.assertIn("idx_intraday_futures_symbol_expiry_time", sql_text)
         self.assertEqual(conn.commits, 1)
 
     @patch("terminal.intraday_storage.execute_values")
@@ -88,6 +90,38 @@ class IntradayPostgresStorageTests(unittest.TestCase):
 
         self.assertFalse(result["ok"])
         self.assertEqual(result["rows_inserted"], 0)
+
+    @patch("terminal.intraday_storage.execute_values")
+    def test_persist_live_futures_snapshot_upserts_futures_history(self, mock_execute_values):
+        from terminal.intraday_storage import persist_live_futures_snapshot
+
+        conn = FakeConnection()
+        snapshot = {
+            "symbol": "NIFTY",
+            "underlying": 23700.0,
+            "source": "live-nse-api",
+            "as_of": "13:15:00",
+            "lot_size": 75,
+            "futures": [
+                {
+                    "expiry": "2026-05-28",
+                    "last_price": 23742.0,
+                    "change_pct": 0.2,
+                    "oi": 100000,
+                    "oi_change": 5000,
+                    "volume": 12000,
+                }
+            ],
+        }
+
+        result = persist_live_futures_snapshot(snapshot, conn=conn)
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["rows_inserted"], 1)
+        self.assertEqual(conn.commits, 1)
+        insert_sql = mock_execute_values.call_args.args[1]
+        self.assertIn("INSERT INTO intraday.futures_snapshots", insert_sql)
+        self.assertIn("ON CONFLICT (symbol, expiry, source, as_of)", insert_sql)
 
     @patch("terminal.intraday_storage.execute_values")
     def test_persist_intraday_scan_result_upserts_scan_signals(self, mock_execute_values):

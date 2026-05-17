@@ -5,6 +5,23 @@
 
 ---
 
+## DELIBERATION ENGINE
+
+`terminal/deliberation/` separates agent reasoning into testable components:
+
+| Module | Role |
+|--------|------|
+| `planner.py` | Plan-of-thought conversion from user query to executable tool tasks |
+| `hypothesis.py` | Tree-of-thought competing market or symbol hypotheses |
+| `evaluator.py` | Evidence scoring, freshness labeling, and missing-data capture |
+| `simulator.py` | Scenario and strategy implication simulation |
+| `memory.py` | In-session watchlist and thesis memory primitives |
+| `renderer.py` | Persona-specific final answer rendering from plans and evidence |
+
+Placeholder requests such as `/assess SYMBOL` now stop safely and ask for a real NSE symbol instead of fabricating a market brief from missing evidence.
+
+---
+
 ## I. OPERATING MODES (Global State)
 
 ### Mode Commands
@@ -47,14 +64,14 @@
 
 ### A2. CURRENT MARKET DASHBOARD 📊 (`/dashboard`)
 
-Deterministic market dashboard that consolidates live NSE tape, breadth, stock/index movers, FII/DII flows, global read-through, catalyst headlines, and a concise market narrative. In the terminal it opens as a compact full-screen live view that refreshes every 60 seconds; press `Ctrl+C` to exit.
+Stock-market-TV dashboard that consolidates live NSE tape, animated ticker, sharp rise/fall alerts, sectoral heatmap, F&O positioning, RS screener leaders, intraday view, preset alert/screen ideas, top gainers/losers, FII/DII flows, global read-through, catalyst headlines, and an LLM narrative with deterministic fallback. In the terminal it opens as a compact full-screen live view: ticker/pulse animates every second, live data refreshes every 60 seconds, and `Ctrl+C` exits.
 
 | Command | Alias | What It Shows |
 |---------|-------|---------------|
-| `/dashboard` | `/dash` | Auto-refreshing current market dashboard + narrative |
+| `/dashboard` | `/dash` | Auto-refreshing stock-market-TV dashboard + narrative |
 | `/dashboard banks` | `/dash banks` | Same live dashboard with a user-specified focus note |
 
-Dashboard sections: Market Tape, Index Leadership, Breadth & Internal Health, Stock Movers, Flows, Global Read-through, Catalyst Tape, and Narrative.
+Dashboard sections: Live Ticker, Market Tape, Sharp Moves, Sectoral Heatmap, Breadth/Flows/Global, Index Leadership, Top Gainers/Top Losers, F&O, RS Screener, Intraday View, Preset Alerts/Screens, News Now, and LLM Narrative.
 
 ---
 
@@ -136,6 +153,7 @@ Runs daily EOD/historical screeners with Weinstein stage analysis.
 | Command | Screener | Criteria | Output |
 |---------|----------|----------|--------|
 | `/screen stage2` | stage2 | Stage 2 uptrend stocks | Advancing, RS ≥ 0.8, technical score high |
+| `/screen newhighs` | new_highs | Companies creating new highs | Latest close within 5% of computed 52-week high |
 | `/screen momentum` | momentum_52w | Near-52W-high momentum leaders | RS ≥ 1.0, within 5% of 52W high |
 | `/screen highrs` | high_rs | Top RS ≥ 1.15 market leaders | Strongest relative strength |
 | `/screen turnaround` | turnaround | Turnaround recovery setups | Stage 1→2 transition, dip reversals |
@@ -203,6 +221,40 @@ The Stage 2 implementation has been smoke-tested against DMART using real EOD da
 | `/backtest report latest` | Rendered persisted run summary and trade table from PostgreSQL |
 
 **Important**: Strategy Lab output is for research, testing, and learning. It is not investment advice and should not be used without independent validation of data freshness, survivorship bias, slippage, liquidity, transaction costs, and corporate actions.
+
+---
+
+### E2. STRATEGY COUNCIL SIMULATION 🧠🧪 (`/strategy-council`)
+
+The Strategy Council is an iterative EOD research simulator. A strategist proposes stock-specific strategies, deterministic tools backtest train/validation data, two critics challenge data leakage and risk, the strategist revises for 2-3 iterations, and a final locked strategy is tested once on the held-out test split.
+
+| Command | What It Does |
+|---|---|
+| `/strategy-council DMART` | Run default 1w/2w/4w Strategy Council simulation |
+| `/strategy-council DMART --iterations 3` | Run three strategist/critic revision loops |
+| `/strategy-council DMART --horizon 1w,2w,4w` | Explicit horizons |
+| `/strategy-council DMART --from 2022-01-01 --test-from 2026-01-01` | Explicit time split |
+| `/strategy-council DMART --strategies stage2,vcp` | Restrict candidate strategy families |
+| `/strategy-council DMART --llm` | Use configured LLM strategist and critic adapters, with deterministic fallback if unavailable |
+| `/strategy-council DMART --persist` | Store the run, iterations, candidates, critiques, split results, final recommendation, and report path in PostgreSQL |
+
+#### Strategy Council Loop
+
+1. Evidence pack: latest EOD technical context and explicit missing-data labels.
+2. Strategist: proposes bounded strategy candidates.
+3. POT compiler: converts candidates into constrained `StrategySpec` rules.
+4. Deterministic runner: backtests train and validation slices.
+5. Critics: data/leakage critic plus market/risk critic challenge the results.
+6. Revision: strategist receives critic feedback and reruns for the configured iteration count.
+7. Final lock: best validation candidate is locked, then tested once on held-out test data.
+8. Report: Markdown audit trail is written under `reports/strategy_council/`.
+9. Optional persistence: `--persist` writes the audit trail to the PostgreSQL `strategy_council` schema.
+
+Guardrails:
+- Test data is hidden until the final strategy is locked.
+- LLM adapters can propose and critique with `--llm`; deterministic tools always calculate metrics.
+- Missing evidence is shown explicitly.
+- Output is research-only and not investment advice.
 
 ---
 

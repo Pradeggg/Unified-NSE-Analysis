@@ -406,6 +406,8 @@ CREATE TABLE scores.fundamentals (
     pnl_summary         TEXT,
     quarterly_summary   TEXT,
     balance_sheet_summary TEXT,
+    cash_flow_summary   TEXT,
+    investor_summary    TEXT,
     ratios_summary      TEXT,
     -- Forensic scores (computed on-demand via screener.in scrape)
     piotroski_score     NUMERIC(4,1),
@@ -430,10 +432,24 @@ CREATE TABLE scores.fundamental_snapshots (
     pnl_summary         TEXT,
     quarterly_summary   TEXT,
     balance_sheet_summary TEXT,
+    cash_flow_summary   TEXT,
+    investor_summary    TEXT,
     ratios_summary      TEXT,
     source_file         TEXT,
     loaded_at           TIMESTAMPTZ DEFAULT now(),
     PRIMARY KEY (snapshot_date, symbol)
+);
+
+-- Normalized, section-wise fundamental snapshot store.
+-- Keeps each Screener section independently queryable while preserving dated snapshots.
+CREATE TABLE scores.fundamental_section_snapshots (
+    snapshot_date       DATE        NOT NULL,
+    symbol              TEXT        NOT NULL,
+    section_name        TEXT        NOT NULL,
+    section_summary     TEXT,
+    source_file         TEXT,
+    loaded_at           TIMESTAMPTZ DEFAULT now(),
+    PRIMARY KEY (snapshot_date, symbol, section_name)
 );
 
 CREATE VIEW scores.v_latest_fundamentals AS

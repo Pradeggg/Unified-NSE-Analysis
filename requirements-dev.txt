@@ -1,0 +1,9 @@
+# Agent Adda — development-only dependencies.
+# Install with:  .venv/bin/pip install -r requirements-dev.txt
+#
+# These are NOT needed to run the agent or daily refresh — only to run the
+# test suite and lint/format. Keep this list short; production deps live in
+# requirements.txt.
+
+pytest>=8.0
+pytest-mock>=3.12

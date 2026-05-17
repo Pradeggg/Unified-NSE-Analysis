@@ -1,0 +1,16 @@
+usage: nse_agent.py [-h] [--query QUERY] [--trace]
+                    [--mode {auto,intraday,historical}] [--no-briefing]
+                    [--theme THEME] [--scale SCALE]
+
+Agent Adda — NSE Market Research Chat
+
+options:
+  -h, --help            show this help message and exit
+  --query, -q QUERY     Single query (non-interactive)
+  --trace, -t           Show tool execution trace
+  --mode, -m {auto,intraday,historical}
+                        Default data mode (default: auto)
+  --no-briefing, -nb    Skip the startup market briefing
+  --theme THEME         Color theme: dark, dracula, solarized, high-contrast,
+                        nord
+  --scale SCALE         Layout scale: compact, normal, large

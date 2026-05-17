@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>nse_agent.py --help</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #071018;
+      --chrome: #111d2a;
+      --line: #26384a;
+      --ink: #d6e6f2;
+      --muted: #8ea4b8;
+      --green: #55d88a;
+      --yellow: #ffd166;
+      --blue: #79b8ff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #071018;
+      color: var(--ink);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      padding: 32px;
+    }
+    .terminal {
+      width: min(1320px, calc(100vw - 64px));
+      min-height: calc(100vh - 64px);
+      margin: 0 auto;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #08131d;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, .45);
+      overflow: hidden;
+    }
+    .bar {
+      height: 42px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 16px;
+      background: var(--chrome);
+      border-bottom: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .dot { width: 11px; height: 11px; border-radius: 999px; display: inline-block; }
+    .red { background: #ff5f57; }
+    .amber { background: #febc2e; }
+    .green { background: #28c840; }
+    .title { margin-left: 12px; color: var(--ink); font-weight: 700; }
+    .subtitle { margin-left: auto; color: var(--muted); }
+    pre {
+      margin: 0;
+      padding: 24px 28px 30px;
+      white-space: pre-wrap;
+      font-size: 14px;
+      line-height: 1.48;
+    }
+    .prompt { color: var(--green); }
+  </style>
+</head>
+<body>
+  <section class="terminal">
+    <div class="bar">
+      <span class="dot red"></span><span class="dot amber"></span><span class="dot green"></span>
+      <span class="title">nse_agent.py --help</span>
+      <span class="subtitle">CLI options and modes</span>
+    </div>
+    <pre>$ ./.venv/bin/python nse_agent.py --help
+
+usage: nse_agent.py [-h] [--query QUERY] [--trace]
+                    [--mode {auto,intraday,historical}] [--no-briefing]
+                    [--theme THEME] [--scale SCALE]
+
+Agent Adda — NSE Market Research Chat
+
+options:
+  -h, --help            show this help message and exit
+  --query, -q QUERY     Single query (non-interactive)
+  --trace, -t           Show tool execution trace
+  --mode, -m {auto,intraday,historical}
+                        Default data mode (default: auto)
+  --no-briefing, -nb    Skip the startup market briefing
+  --theme THEME         Color theme: dark, dracula, solarized, high-contrast,
+                        nord
+  --scale SCALE         Layout scale: compact, normal, large
+</pre>
+  </section>
+</body>
+</html>

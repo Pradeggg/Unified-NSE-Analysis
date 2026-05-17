@@ -203,6 +203,37 @@ class SectorBreadthTests(unittest.TestCase):
 
         self.assertEqual(result.iloc[0]["breadth_signal"], "NO_DATA")
 
+    def test_compute_sector_breadth_missing_sma_is_no_data_not_zero(self):
+        metrics = self._make_stock_metrics(
+            [
+                {"sym": "AA", "close": 110, "sma50": float("nan")},
+                {"sym": "AB", "close": 90, "sma50": float("nan")},
+            ]
+        )
+        constituents = {"NIFTY AUTO": ["AA", "AB"]}
+        sector_indices = {"NIFTY AUTO": "Auto"}
+
+        result = compute_sector_breadth(metrics, constituents, sector_indices=sector_indices)
+
+        self.assertTrue(pd.isna(result.iloc[0]["pct_above_50dma"]))
+        self.assertEqual(result.iloc[0]["breadth_signal"], "NO_DATA")
+
+    def test_compute_sector_breadth_uses_constituent_aliases(self):
+        metrics = self._make_stock_metrics(
+            [
+                {"sym": "CM1", "close": 110, "sma50": 100},
+                {"sym": "CM2", "close": 90, "sma50": 100},
+            ]
+        )
+        constituents = {"NIFTY CAPITAL MARKETS": ["CM1", "CM2"]}
+        sector_indices = {"NIFTY CAPITAL MKT": "Capital Markets"}
+
+        result = compute_sector_breadth(metrics, constituents, sector_indices=sector_indices)
+
+        self.assertEqual(result.iloc[0]["sector"], "Capital Markets")
+        self.assertAlmostEqual(result.iloc[0]["pct_above_50dma"], 50.0)
+        self.assertEqual(result.iloc[0]["breadth_signal"], "NEUTRAL")
+
     def _make_divergence_stock_data(self, n_days: int = 10) -> pd.DataFrame:
         """Build multi-date stock data for sector_breadth_divergence tests."""
         dates = pd.date_range("2026-01-01", periods=n_days)

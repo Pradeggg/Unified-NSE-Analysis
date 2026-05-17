@@ -15,8 +15,14 @@ case "$cmd" in
     if pg_ctl -D "$PG_DATA" status &>/dev/null; then
       echo "✅ PostgreSQL already running"
     else
+      chmod 700 "$PG_DATA" 2>/dev/null || true
+      rm -f "$PG_DATA/postmaster.pid"
       echo "Starting PostgreSQL…"
-      pg_ctl -D "$PG_DATA" -l "$PG_LOG" start
+      if ! pg_ctl -D "$PG_DATA" -l "$PG_LOG" start; then
+        echo "❌ PostgreSQL failed to start. Last log lines:"
+        tail -40 "$PG_LOG" 2>/dev/null || true
+        exit 1
+      fi
       echo "✅ PostgreSQL started  (log: $PG_LOG)"
     fi
     ;;

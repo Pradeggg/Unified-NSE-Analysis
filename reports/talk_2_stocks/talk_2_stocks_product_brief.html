@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Talk 2 Stocks Product Brief</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <link rel="stylesheet" href="brief.css" />
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Talk 2 Stocks Product Brief</h1>
+</header>
+<h1
+id="talk-2-stocks-your-personal-ai-assistant-for-market-intelligence">Talk
+2 Stocks: Your Personal AI Assistant for Market Intelligence</h1>
+<p><strong>Product brief for AI and product builders</strong><br />
+<strong>Date:</strong> 2026-05-09<br />
+<strong>System:</strong> Agent Adda / <code>nse_agent.py</code><br />
+<strong>Positioning:</strong> Research and learning assistant, not a
+trading recommendation engine.</p>
+<h2 id="executive-summary">Executive Summary</h2>
+<p>Most market AI demos start with a simple promise: ask any question
+about a stock. Real research rarely works that way.</p>
+<p>Market intelligence is a repeated workflow. A user has to understand
+the market state, pick the right data mode, retrieve evidence, inspect
+technical context, compare sectors, check global cues, review filings or
+events, and then synthesize a view with appropriate risk framing. Agent
+Adda, surfaced through <code>nse_agent.py</code>, turns that workflow
+into a terminal-first personal AI assistant.</p>
+<p>The goal is not prediction. The value is disciplined synthesis,
+repeatable investigation, faster navigation across scattered artifacts,
+and a clearer path from question to evidence-backed view.</p>
+<h2 id="why-we-built-it">Why We Built It</h2>
+<p>Market research is fragmented. Indices live in one place, stock-level
+data in another, sector rotation in another, corporate events in
+another, and global context somewhere else. Even when the data exists
+locally, the workflow is repetitive: open reports, scan screeners,
+compare symbols, inspect indicators, write notes, and remember what to
+check next.</p>
+<p>Large language models help with synthesis, but a chat box alone is
+not enough. Market intelligence needs tools, rules, data freshness,
+context routing, and reusable research recipes. Agent Adda exists to
+combine these pieces into one working assistant.</p>
+<h2 id="what-agent-adda-is">What Agent Adda Is</h2>
+<p>Agent Adda is a terminal-first AI market intelligence assistant for
+NSE-first workflows, with expanding support for US and global market
+context. It combines natural language questions, slash commands, curated
+prompts, Recursive Investigative Conversations (RICs), technical
+screeners, HTML reports, and local data tools.</p>
+<p>At the center is <code>nse_agent.py</code>, the interactive research
+terminal. The terminal exposes chat, command shortcuts, data-mode
+controls, prompt libraries, scan workflows, monitor hooks, and report
+generation surfaces.</p>
+<figure>
+<img src="assets/nse_agent_research_help.png"
+alt="Agent Adda terminal startup and help" />
+<figcaption aria-hidden="true">Agent Adda terminal startup and
+help</figcaption>
+</figure>
+<p><em>The <code>nse_agent.py</code> terminal shows the product surface:
+natural language entry, slash commands, market research prompts, help
+output, and the research-only disclaimer.</em></p>
+<h2 id="core-product-capabilities">Core Product Capabilities</h2>
+<ul>
+<li><strong>Natural language research:</strong> Ask about stocks,
+indices, sectors, screeners, or market conditions without remembering
+exact function names.</li>
+<li><strong>Mode-aware analysis:</strong> Use <code>/live</code>,
+<code>/eod</code>, and <code>/auto</code> to control whether the
+assistant prioritizes intraday/live context, historical snapshots, or
+automatic routing.</li>
+<li><strong>Screeners and scans:</strong> Run rule-based research
+screens for Stage 2 setups, breakouts, momentum, Supertrend, VCP,
+relative strength, and market breadth.</li>
+<li><strong>Prompt library:</strong> Use curated prompts for recurring
+analyst workflows such as market pulse, sector health, technical setup,
+stock deep dive, and portfolio review.</li>
+<li><strong>RIC workflows:</strong> Turn vague research goals into
+multi-step investigations such as Sherlock stock deep dive, Sector
+X-Ray, Breakout Hunter, Earnings Playbook, Index Pulse, Peer Battle,
+Risk Radar, and Morning Intel.</li>
+<li><strong>Report generation:</strong> Produce HTML/PDF-style research
+artifacts for sector rotation, stage tracking, global market context,
+and product QA views.</li>
+<li><strong>Filing intelligence:</strong> Support research around PDFs,
+XBRL/iXBRL, and evidence-backed summaries for financial documents.</li>
+</ul>
+<figure>
+<img src="assets/nse_agent_cli_help.png"
+alt="Agent Adda command-line modes" />
+<figcaption aria-hidden="true">Agent Adda command-line
+modes</figcaption>
+</figure>
+<p><em>The CLI help view documents non-interactive query mode, trace
+mode, data-mode selection, briefing controls, themes, and layout
+scale.</em></p>
+<h2 id="solution-architecture">Solution Architecture</h2>
+<p>Agent Adda is easiest to understand as a workflow assistant with five
+layers.</p>
+<ol type="1">
+<li><strong>Input layer:</strong> natural language, slash commands,
+prompt-library entries, and RIC recipes.</li>
+<li><strong>Orchestration layer:</strong> intent detection, mode
+selection, context/session state, tool routing, and follow-up
+handling.</li>
+<li><strong>Data layer:</strong> historical CSV/SQLite, intraday SQLite,
+NSE/yfinance fallbacks, report artifacts, and filing documents.</li>
+<li><strong>Analysis layer:</strong> technical indicators, screeners,
+global context, corporate-event checks, filing extraction, and LLM
+synthesis.</li>
+<li><strong>Output layer:</strong> terminal answers, Markdown-style
+narratives, HTML reports, PDF reports, and exportable product
+briefs.</li>
+</ol>
+<p>This architecture is deliberately practical. The assistant does not
+try to replace every market tool. It coordinates the repeated steps that
+usually sit between raw data and a usable research view.</p>
+<h2 id="evidence-surfaces-and-reports">Evidence Surfaces and
+Reports</h2>
+<p>Agent Adda produces visual artifacts that make research easier to
+revisit and share. The screenshots below show local report surfaces used
+as evidence and product examples.</p>
+<figure>
+<img src="assets/sector_rotation_report.png"
+alt="Sector rotation report" />
+<figcaption aria-hidden="true">Sector rotation report</figcaption>
+</figure>
+<p><em>The sector rotation report turns market breadth, rotation, and
+technical context into a reusable research artifact.</em></p>
+<figure>
+<img src="assets/stage2_tracker.png" alt="Stage 2 tracker" />
+<figcaption aria-hidden="true">Stage 2 tracker</figcaption>
+</figure>
+<p><em>The Stage 2 tracker focuses the workflow on leadership, trend
+quality, relative strength, and setup readiness.</em></p>
+<figure>
+<img src="assets/us_market_report.png"
+alt="US and global market report" />
+<figcaption aria-hidden="true">US and global market report</figcaption>
+</figure>
+<p><em>The US/global report adds overnight context, risk regime, and
+India read-through to an NSE-first workflow.</em></p>
+<figure>
+<img src="assets/talk_2_stocks_pov_companion.png"
+alt="Product POV companion" />
+<figcaption aria-hidden="true">Product POV companion</figcaption>
+</figure>
+<p><em>The POV companion summarizes the article structure, architecture
+story, and screenshot plan for the LinkedIn/product narrative.</em></p>
+<h2 id="why-ric-matters">Why RIC Matters</h2>
+<p>RIC stands for Recursive Investigative Conversations. The point is
+simple: market research often requires sequence.</p>
+<p>A one-shot prompt can answer a narrow question, but it does not
+reliably guide a user through the whole investigation. A RIC can start
+with a broad question, break it into sub-questions, retrieve evidence,
+compare alternatives, refine the hypothesis, and produce a final view
+with caveats.</p>
+<p>Examples include:</p>
+<ul>
+<li><strong>Sherlock stock deep dive:</strong> inspect company,
+technicals, events, filings, peers, and risk.</li>
+<li><strong>Sector X-Ray:</strong> compare sector breadth, leaders,
+laggards, rotation, and catalysts.</li>
+<li><strong>Breakout Hunter:</strong> identify technical breakouts with
+confirmation and invalidation levels.</li>
+<li><strong>Earnings Playbook:</strong> organize pre- and post-result
+research checks.</li>
+<li><strong>Index Pulse:</strong> summarize index trend, breadth,
+support/resistance, and sector leadership.</li>
+<li><strong>Peer Battle:</strong> compare several stocks across
+fundamentals, technicals, and relative strength.</li>
+<li><strong>Risk Radar:</strong> inspect downside triggers,
+concentration, event risk, and weak evidence.</li>
+<li><strong>Morning Intel:</strong> produce a structured market-prep
+workflow.</li>
+</ul>
+<h2 id="why-curated-prompts-matter">Why Curated Prompts Matter</h2>
+<p>Prompt libraries reduce friction. Many users know what they want to
+investigate but do not want to remember the exact syntax, data mode,
+screener name, or tool chain.</p>
+<p>Curated prompts encode recurring analyst questions. They also make
+the system more teachable: users can browse common workflows, run one,
+then adapt it to their own research style. This makes the assistant feel
+less like an empty chat box and more like an operating surface for
+market intelligence.</p>
+<h2 id="how-it-saves-time">How It Saves Time</h2>
+<p>Agent Adda saves time by reducing repeated navigation and synthesis
+work.</p>
+<ul>
+<li>It brings commands, reports, scans, prompts, and research flows into
+one terminal surface.</li>
+<li>It turns recurring analyst patterns into repeatable recipes.</li>
+<li>It generates structured summaries instead of leaving the user with
+raw tables only.</li>
+<li>It preserves report outputs that can be reviewed later.</li>
+<li>It supports a faster move from question to evidence-backed
+view.</li>
+</ul>
+<p>The time saving is not just speed. It is consistency. A repeatable
+workflow is easier to audit, improve, and teach than an improvised
+series of browser tabs and ad hoc notes.</p>
+<h2 id="builder-takeaway">Builder Takeaway</h2>
+<p>The durable value in applied AI agents is not the chat box. It is the
+tool-using, evidence-aware workflow around the chat box.</p>
+<p>For market intelligence, that means an assistant that can route
+intent, choose data modes, run screeners, read reports, produce
+artifacts, and keep the user inside a disciplined research loop. Agent
+Adda is a working example of that product pattern.</p>
+<h2 id="research-only-disclaimer">Research-Only Disclaimer</h2>
+<p>Agent Adda and Talk 2 Stocks are for research, education, and
+workflow exploration only. They are not investment advice, trading
+recommendations, financial planning, or a substitute for independent
+judgement, risk management, or regulatory obligations. Market data can
+be delayed, incomplete, stale, or incorrect. Users should verify
+evidence independently before making financial decisions.</p>
+</body>
+</html>

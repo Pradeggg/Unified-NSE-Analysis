@@ -1,0 +1,217 @@
+{
+  "version": 1,
+  "description": "End-to-end scenario matrix for Agent Adda NSE workflows.",
+  "scenarios": [
+    {
+      "id": "cli-bootstrap-smoke",
+      "title": "Top-level CLI setup and historical bootstrap",
+      "tier": "smoke",
+      "area": "cli",
+      "entrypoints": ["agent_adda/cli.py"],
+      "command": ["{python}", "-m", "pytest", "tests/test_agent_adda_cli.py", "-q"],
+      "assertions": [
+        "setup --non-interactive writes config",
+        "data bootstrap --historical creates a market_data.sqlite database"
+      ]
+    },
+    {
+      "id": "data-readiness-smoke",
+      "title": "Data readiness planner and executor",
+      "tier": "smoke",
+      "area": "data-readiness",
+      "entrypoints": ["terminal/data_readiness.py", "daily_refresh.py"],
+      "command": ["{python}", "-m", "pytest", "tests/test_data_readiness.py", "tests/test_refresh_failure_handling.py", "-q"],
+      "assertions": [
+        "readiness detects missing or stale datasets",
+        "PostgreSQL startup is attempted before loader execution",
+        "insufficient history exits cleanly instead of crashing"
+      ]
+    },
+    {
+      "id": "daily-refresh-dry-run",
+      "title": "Daily refresh orchestrator plan",
+      "tier": "smoke",
+      "area": "refresh",
+      "entrypoints": ["daily_refresh.py"],
+      "command": ["{python}", "daily_refresh.py", "--dry-run", "--skip-aux"],
+      "assertions": [
+        "refresh pipeline prints all planned stages",
+        "dry-run mode does not execute external fetch/load commands"
+      ]
+    },
+    {
+      "id": "terminal-routing-critical",
+      "title": "Terminal routing, symbol grounding, and response guardrails",
+      "tier": "critical",
+      "area": "terminal-agent",
+      "entrypoints": ["terminal/agent.py", "terminal/tools.py", "terminal/renderer.py"],
+      "command": ["{python}", "-m", "pytest", "tests/test_terminal_agent_market_prompt.py", "tests/test_terminal_symbol_resolution.py", "tests/test_terminal_renderer_guards.py", "-q"],
+      "assertions": [
+        "market prompts route to the intended tools",
+        "requested symbols cannot be silently substituted",
+        "missing-evidence guardrails block unsupported conclusions",
+        "placeholder metrics are removed from rendered answers"
+      ]
+    },
+    {
+      "id": "intraday-critical",
+      "title": "Intraday live snapshot, fallback, and PostgreSQL persistence",
+      "tier": "critical",
+      "area": "intraday",
+      "entrypoints": ["terminal/intraday.py", "terminal/intraday_storage.py", "terminal/intraday_ohlcv_loader.py"],
+      "command": ["{python}", "-m", "pytest", "tests/test_terminal_intraday_fallback.py", "tests/test_intraday_postgres_storage.py", "tests/test_nse_intraday_snapshot.py", "-q"],
+      "assertions": [
+        "intraday analysis uses persisted OHLCV when available",
+        "missing OHLCV is surfaced as missing evidence",
+        "NSE live snapshot remains a snapshot and is not treated as candles"
+      ]
+    },
+    {
+      "id": "sector-rotation-critical",
+      "title": "Sector rotation tracker, breadth, and report generation",
+      "tier": "critical",
+      "area": "sector-rotation",
+      "entrypoints": ["sector_rotation_tracker.py", "sector_rotation_report.py", "market_breadth.py"],
+      "command": ["{python}", "-m", "pytest", "tests/test_sector_rotation_tracker.py", "tests/test_sector_rotation_report.py", "tests/test_market_breadth.py", "-q"],
+      "assertions": [
+        "duplicate display sectors are deduplicated",
+        "missing SMA breadth is NO_DATA rather than false 0%",
+        "forced backfill cannot overwrite classified snapshots with all UNKNOWN stages"
+      ]
+    },
+    {
+      "id": "screeners-critical",
+      "title": "Stage, momentum, turnaround, and terminal screener flows",
+      "tier": "critical",
+      "area": "screeners",
+      "entrypoints": ["screeners.py", "terminal/tools.py", "postgres/screener_schema.sql"],
+      "command": ["{python}", "-m", "pytest", "tests/test_screeners.py", "tests/test_agent_entity_topic_commands.py", "-q"],
+      "assertions": [
+        "stage screener classifies candidates from price history",
+        "terminal screener requests dispatch to deterministic screener tools"
+      ]
+    },
+    {
+      "id": "postgres-loader-full",
+      "title": "PostgreSQL loader, screeners, F&O analytics, and views",
+      "tier": "full",
+      "area": "postgres",
+      "requires": ["postgres"],
+      "entrypoints": ["postgres/schema.sql", "postgres/screener_schema.sql", "postgres/fno_analytics.sql", "postgres/loader.py"],
+      "command": ["{python}", "postgres/loader.py", "--skip-fno"],
+      "assertions": [
+        "EOD equities and indices are loaded",
+        "screeners run without missing schema/function errors",
+        "materialized views refresh successfully"
+      ]
+    },
+    {
+      "id": "postgres-report-pipeline",
+      "title": "Enhanced PostgreSQL report run and HTML rendering",
+      "tier": "full",
+      "area": "reports",
+      "requires": ["postgres"],
+      "entrypoints": ["reports/enhanced_comprehensive_analysis.py"],
+      "command": ["{python}", "-m", "pytest", "tests/test_reports_pipeline.py", "-q"],
+      "assertions": [
+        "report run persists a new run_id",
+        "HTML rendering creates a non-trivial artifact",
+        "report tables have no orphan rows",
+        "slash-command parsing for /reports is stable"
+      ]
+    },
+    {
+      "id": "document-analysis-critical",
+      "title": "Document/PDF analysis, company intelligence, and filings",
+      "tier": "critical",
+      "area": "documents",
+      "entrypoints": ["terminal/tools.py", "financial_filing_agent.py", "company_xray_command.py", "company_index_command.py"],
+      "command": ["{python}", "-m", "pytest", "tests/test_document_analysis.py", "tests/test_financial_filing_agent.py", "tests/test_company_xray_command.py", "tests/test_company_index_command.py", "-q"],
+      "assertions": [
+        "wrapped PDF viewer URLs resolve to source PDFs",
+        "financial filing ingestion classifies and extracts evidence",
+        "company xray/index commands produce grounded outputs"
+      ]
+    },
+    {
+      "id": "strategy-council-critical",
+      "title": "Strategy council and monitor scan terminal flows",
+      "tier": "critical",
+      "area": "strategy",
+      "entrypoints": ["terminal/strategy_council.py", "nse_agent.py"],
+      "command": ["{python}", "-m", "pytest", "tests/test_nse_agent_strategy_council.py", "tests/test_strategy_council_postgres_storage.py", "tests/test_nse_agent_monitor_scan.py", "-q"],
+      "assertions": [
+        "strategy council routes multi-step prompts correctly",
+        "monitor scan commands return deterministic evidence-backed output"
+      ]
+    },
+    {
+      "id": "global-macro-critical",
+      "title": "Global market, macro proxy, and economic cycle flows",
+      "tier": "critical",
+      "area": "global-macro",
+      "entrypoints": ["global_market_intelligence.py", "fetch_macro_proxies.py"],
+      "command": ["{python}", "-m", "pytest", "tests/test_global_market_intelligence.py", "tests/test_nse_agent_global_us.py", "tests/test_economic_cycle.py", "-q"],
+      "assertions": [
+        "global market signals are generated with fallback-safe data",
+        "macro proxy cache/stale paths are handled explicitly",
+        "US/global prompts route to global intelligence flows"
+      ]
+    },
+    {
+      "id": "terminal-reports-critical",
+      "title": "Terminal report generation and latest-report lookup",
+      "tier": "critical",
+      "area": "reports",
+      "entrypoints": ["terminal/reports.py", "terminal/tools.py"],
+      "command": ["{python}", "-m", "pytest", "tests/test_terminal_reports.py", "tests/test_terminal_report_lookup.py", "-q"],
+      "assertions": [
+        "preset reports generate expected artifacts",
+        "latest-report lookup finds the intended report family"
+      ]
+    },
+    {
+      "id": "knowledge-base-smoke",
+      "title": "Knowledge base CLI contract",
+      "tier": "smoke",
+      "area": "knowledge-base",
+      "entrypoints": ["knowledge_base/__main__.py"],
+      "command": ["{python}", "-m", "knowledge_base", "--help"],
+      "assertions": [
+        "knowledge base CLI entry point starts and exposes subcommands"
+      ]
+    },
+    {
+      "id": "syntax-entrypoints-smoke",
+      "title": "Script and core module syntax smoke",
+      "tier": "smoke",
+      "area": "entrypoints",
+      "entrypoints": [
+        "daily_refresh.py",
+        "fixed_nse_universe_analysis.py",
+        "sector_rotation_tracker.py",
+        "sector_rotation_report.py",
+        "postgres/loader.py",
+        "global_market_intelligence.py",
+        "financial_filing_agent.py",
+        "nse_agent.py"
+      ],
+      "command": [
+        "{python}",
+        "-m",
+        "py_compile",
+        "daily_refresh.py",
+        "fixed_nse_universe_analysis.py",
+        "sector_rotation_tracker.py",
+        "sector_rotation_report.py",
+        "postgres/loader.py",
+        "global_market_intelligence.py",
+        "financial_filing_agent.py",
+        "nse_agent.py"
+      ],
+      "assertions": [
+        "major script entry points compile before E2E execution"
+      ]
+    }
+  ]
+}

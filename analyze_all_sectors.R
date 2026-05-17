@@ -9,6 +9,8 @@ suppressPackageStartupMessages({
   library(jsonlite)
 })
 
+source("report_dashboard_helpers.R")
+
 cat("=== ANALYZING TOP STOCKS FOR ALL NSE SECTORS ===\n\n")
 
 # Set working directory — use PROJECT_ROOT env var (set by daily_refresh.py) or script location
@@ -24,16 +26,74 @@ if (.project_root == "") {
 }
 setwd(.project_root)
 
-# Load latest comprehensive analysis results
-analysis_files <- list.files("reports", pattern = "comprehensive_nse_enhanced_.*\\.csv", full.names = TRUE)
-if (length(analysis_files) == 0) {
-  stop("No comprehensive analysis results found. Please run the main analysis pipeline first.")
-}
-latest_analysis_file <- analysis_files[order(file.info(analysis_files)$mtime, decreasing = TRUE)[1]]
-cat("Loading analysis results from:", basename(latest_analysis_file), "\n\n")
+# Load latest comprehensive analysis results from PostgreSQL first; CSV remains fallback.
+load_latest_analysis <- function() {
+  Sys.setenv(PATH = paste("/opt/homebrew/opt/postgresql@16/bin", Sys.getenv("PATH"), sep = .Platform$path.sep))
+  psql <- Sys.which("psql")
+  if (nzchar(psql)) {
+    tmp <- tempfile(fileext = ".csv")
+    query <- paste(
+      "SELECT",
+      "score_date AS \"SCORE_DATE\",",
+      "symbol AS \"SYMBOL\",",
+      "company_name AS \"COMPANY_NAME\",",
+      "sector AS \"SECTOR\",",
+      "market_cap_cat AS \"MARKET_CAP_CATEGORY\",",
+      "current_price AS \"CURRENT_PRICE\",",
+      "change_1d_pct AS \"CHANGE_1D\",",
+      "change_1w_pct AS \"CHANGE_1W\",",
+      "change_1m_pct AS \"CHANGE_1M\",",
+      "technical_score AS \"TECHNICAL_SCORE\",",
+      "rsi AS \"RSI\",",
+      "relative_strength AS \"RELATIVE_STRENGTH\",",
+      "trend_signal AS \"TREND_SIGNAL\",",
+      "trading_signal AS \"TRADING_SIGNAL\",",
+      "can_slim_score AS \"CAN_SLIM_SCORE\",",
+      "minervini_score AS \"MINERVINI_SCORE\",",
+      "fundamental_score AS \"FUNDAMENTAL_SCORE\",",
+      "enhanced_fund_score AS \"ENHANCED_FUND_SCORE\",",
+      "earnings_quality AS \"EARNINGS_QUALITY\",",
+      "sales_growth AS \"SALES_GROWTH\",",
+      "financial_strength AS \"FINANCIAL_STRENGTH\",",
+      "institutional_backing AS \"INSTITUTIONAL_BACKING\",",
+      "trading_value AS \"TRADING_VALUE\",",
+      "RANK() OVER (ORDER BY technical_score DESC NULLS LAST) AS \"RANK\"",
+      "FROM scores.daily_scores",
+      "WHERE score_date = (SELECT MAX(score_date) FROM scores.daily_scores)",
+      "ORDER BY technical_score DESC NULLS LAST"
+    )
+    copy_cmd <- paste0("COPY (", query, ") TO STDOUT WITH CSV HEADER;")
+    status <- suppressWarnings(system2(psql, c("-d", "nse_market", "-U", "nse_admin", "-h", "/tmp", "-q"), input = copy_cmd, stdout = tmp, stderr = FALSE))
+    if (identical(status, 0L) && file.exists(tmp) && file.info(tmp)$size > 0) {
+      df <- read_csv(tmp, show_col_types = FALSE)
+      if (nrow(df) > 0) {
+        cat("Loading analysis results from PostgreSQL scores.daily_scores (latest date:", as.character(max(df$SCORE_DATE, na.rm = TRUE)), ")\n\n")
+        return(df)
+      }
+    }
+  }
 
-all_stocks_analysis <- read_csv(latest_analysis_file, show_col_types = FALSE)
+  analysis_files <- list.files("reports", pattern = "comprehensive_nse_enhanced_.*\\.csv", full.names = TRUE)
+  if (length(analysis_files) == 0) {
+    stop("No comprehensive analysis results found in PostgreSQL or CSV. Please run the main analysis pipeline first.")
+  }
+  latest_analysis_file <- analysis_files[order(file.info(analysis_files)$mtime, decreasing = TRUE)[1]]
+  cat("Loading analysis results from CSV fallback:", basename(latest_analysis_file), "\n\n")
+  read_csv(latest_analysis_file, show_col_types = FALSE)
+}
+
+all_stocks_analysis <- load_latest_analysis()
 cat("Total stocks analyzed:", nrow(all_stocks_analysis), "\n\n")
+
+analysis_data_date <- Sys.Date()
+if ("SCORE_DATE" %in% names(all_stocks_analysis)) {
+  parsed_score_dates <- suppressWarnings(as.Date(all_stocks_analysis$SCORE_DATE))
+  if (any(!is.na(parsed_score_dates))) {
+    analysis_data_date <- max(parsed_score_dates, na.rm = TRUE)
+  }
+}
+analysis_date_label <- format(analysis_data_date, "%B %d, %Y")
+analysis_date_suffix <- format(analysis_data_date, "%Y%m%d")
 
 # Define all major sectors with their constituent stocks (based on keywords and known companies)
 sector_keywords <- list(
@@ -157,6 +217,7 @@ analyze_sector <- function(sector_name, keywords, all_stocks) {
     sector_name = sector_name,
     sector_strength = sector_strength,
     stocks = top_stocks,
+    all_stocks = sector_stocks,
     total_stocks = nrow(sector_stocks)
   ))
 }
@@ -199,11 +260,12 @@ all_sector_data <- list()
 for(sector_name in sorted_sectors) {
   all_sector_data[[sector_name]] <- sector_results[[sector_name]]
 }
+sector_profiles <- build_group_profiles(all_sector_data, "Sector")
+all_sector_data <- all_sector_data[sector_profiles$GROUP]
 
 # Generate HTML report
-generate_html_report <- function(sector_data, output_dir = "reports") {
-  timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
-  html_file <- file.path(output_dir, paste0("All_Sectors_Analysis_Report_", timestamp, ".html"))
+generate_html_report <- function(sector_data, output_dir = "reports", report_date_label = analysis_date_label, report_date_suffix = analysis_date_suffix) {
+  html_file <- file.path(output_dir, paste0("All_Sectors_Analysis_Report_", report_date_suffix, ".html"))
   
   # Helper function to format stock list for a sector (with clickable items)
   format_sector_list <- function(stocks_df, sector_name) {
@@ -235,8 +297,7 @@ generate_html_report <- function(sector_data, output_dir = "reports") {
     return(html)
   }
   
-  # Get analysis date
-  analysis_date <- format(Sys.Date(), "%B %d, %Y")
+  analysis_date <- report_date_label
   
   # Build HTML content
   html_content <- paste0('<!DOCTYPE html>
@@ -649,6 +710,198 @@ generate_html_report <- function(sector_data, output_dir = "reports") {
                 padding: 20px;
             }
         }
+
+        /* Sector Rotation visual system override */
+        :root {
+            --bg: #f0f4f8;
+            --card: #ffffff;
+            --text: #1a2332;
+            --muted: #64748b;
+            --border: #e2e8f0;
+            --primary: #1e3a5f;
+            --primary-alt: #2563eb;
+            --radius: 8px;
+            --shadow: 0 1px 3px rgba(0,0,0,0.08);
+            --shadow-md: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            font-size: 14px;
+        }
+        .container {
+            max-width: 1400px;
+            padding: 20px;
+        }
+        .header {
+            background: var(--primary);
+            color: #fff;
+            text-align: left;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-md);
+            padding: 18px 22px;
+            margin-bottom: 14px;
+            border: 1px solid rgba(255,255,255,0.12);
+        }
+        .header::before {
+            content: "NSE MARKET INTELLIGENCE";
+            display: block;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: .08em;
+            color: rgba(255,255,255,.78);
+            margin-bottom: 4px;
+        }
+        .header h1 {
+            font-size: 1.35rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-bottom: 5px;
+            text-shadow: none;
+        }
+        .header p {
+            font-size: 12px;
+            color: rgba(255,255,255,.84);
+            opacity: 1;
+        }
+        .header + .summary-grid::before {
+            content: "Research and learning only. Not investment advice. Data is based on latest generated EOD snapshots.";
+            grid-column: 1 / -1;
+            display: block;
+            background: #fff8e1;
+            border: 1px solid #ffe082;
+            color: #5d4037;
+            border-radius: var(--radius);
+            padding: 8px 12px;
+            font-size: 11px;
+            text-align: center;
+            margin-bottom: 2px;
+        }
+        .summary-grid {
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .summary-card,
+        .sector-section,
+        .screener-card,
+        .modal-content {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+        }
+        .summary-card {
+            padding: 14px 16px;
+            text-align: left;
+        }
+        .summary-card .number {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: var(--primary);
+            line-height: 1;
+            margin: 0 0 5px;
+        }
+        .summary-card p,
+        .section-header p,
+        .screener-header p,
+        .stock-price {
+            color: var(--muted);
+        }
+        .summary-card p {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+        }
+        .sector-section {
+            margin: 16px 0;
+            padding: 18px;
+        }
+        .section-header {
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 12px;
+            margin-bottom: 14px;
+        }
+        .section-header h2 {
+            color: var(--primary);
+            font-size: 1.05rem;
+            font-weight: 800;
+        }
+        .strength-badge {
+            background: var(--primary);
+            color: #fff;
+            border-radius: 20px;
+            padding: 4px 10px;
+            font-size: 11px;
+            font-weight: 800;
+            box-shadow: none;
+        }
+        .stat-badge {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            color: var(--muted);
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .screeners-grid {
+            grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+            gap: 14px;
+        }
+        .screener-card {
+            padding: 15px;
+        }
+        .screener-header h3 {
+            color: var(--primary);
+            font-size: 13px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+        }
+        .screener-item {
+            border-bottom: 1px solid var(--border);
+            padding: 9px 0;
+        }
+        .screener-item:hover {
+            background: #f0f7ff;
+            border-radius: 6px;
+        }
+        .stock-symbol {
+            color: var(--text);
+            font-weight: 800;
+        }
+        .metric-value {
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: .03em;
+            white-space: nowrap;
+        }
+        .metric-value.score {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        .modal-title,
+        .metric-card-value {
+            color: var(--primary);
+            font-weight: 800;
+        }
+        .detail-row,
+        .metric-card {
+            background: #f8fafc;
+            border-color: var(--border);
+            border-left-color: var(--primary-alt);
+        }
+        .insight-box {
+            background: #f8fbff;
+            border-left-color: var(--primary-alt);
+        }
+        .insight-title {
+            color: var(--primary);
+        }
+', dashboard_css, '
     </style>
 </head>
 <body>
@@ -672,35 +925,50 @@ generate_html_report <- function(sector_data, output_dir = "reports") {
                 <div class="number">', sprintf("%.1f", max(sapply(sector_data, function(x) x$sector_strength))), '</div>
                 <p>Strongest Sector Score</p>
             </div>
-        </div>')
+        </div>
+        ', dashboard_html(sector_data, sector_profiles, "Sector"), '')
   
   # Add each sector section
   for(sector_name in names(sector_data)) {
     sector_info <- sector_data[[sector_name]]
     stocks_html <- format_sector_list(sector_info$stocks, sector_name)
+    profile <- sector_profiles %>% filter(GROUP == sector_name) %>% slice(1)
+    weak_stocks <- group_all_stocks(sector_info) %>% filter(is_weak_proxy(.)) %>% arrange(TECHNICAL_SCORE, CHANGE_1M) %>% head(5)
+    weak_html <- stock_row_html(weak_stocks, sector_name, 5)
     
     html_content <- paste0(html_content, '
         <div class="sector-section">
             <div class="section-header">
                 <div>
                     <h2>📊 ', sector_name, '</h2>
-                    <p>Top 5 stocks by Technical Score</p>
-                    <div class="sector-stats">
-                        <span class="stat-badge">Total Stocks: ', sector_info$total_stocks, '</span>
-                    </div>
-                </div>
-                <div class="strength-badge">Strength: ', sprintf("%.1f", sector_info$sector_strength), '</div>
-            </div>
-            <div class="screeners-grid">
+                     <p>Top 5 stocks by Technical Score</p>
+                     <div class="sector-stats">
+                         <span class="stat-badge">Total Stocks: ', sector_info$total_stocks, '</span>
+                         <span class="stat-badge">Leadership: ', fmt_num(profile$LEADERSHIP_SCORE, 1), '</span>
+                         <span class="stat-badge">Stage 2 Proxy: ', fmt_num(profile$STAGE2_PCT, 0, "%"), '</span>
+                         <span class="stat-badge">1M Breadth: ', fmt_num(profile$BREADTH_PCT, 0, "%"), '</span>
+                         <span class="stat-badge">Bucket: ', profile$ROTATION_BUCKET, '</span>
+                     </div>
+                 </div>
+                 <div class="strength-badge">Strength: ', sprintf("%.1f", sector_info$sector_strength), '</div>
+             </div>
+             <div class="screeners-grid">
                 <div class="screener-card">
                     <div class="screener-header">
                         <h3>💪 Top 5 Stocks</h3>
                         <p>Ranked by Technical Score</p>
-                    </div>
-                    ', stocks_html, '
-                </div>
-            </div>
-        </div>')
+                     </div>
+                     ', stocks_html, '
+                 </div>
+                 <div class="screener-card">
+                     <div class="screener-header">
+                         <h3>⚠️ Weak Links</h3>
+                         <p>SELL / bearish / low technical-score constituents to monitor.</p>
+                     </div>
+                     ', weak_html, '
+                 </div>
+             </div>
+         </div>')
   }
   
   # Prepare all stock data for JavaScript
@@ -976,13 +1244,13 @@ cat("\n✅ HTML report saved to:", html_file, "\n")
 csv_data <- data.frame()
 for(sector_name in sorted_sectors) {
   result <- sector_results[[sector_name]]
+  profile <- sector_profiles %>% filter(GROUP == sector_name) %>% slice(1)
   stocks_df <- result$stocks %>%
-    mutate(SECTOR_NAME = sector_name, SECTOR_STRENGTH = result$sector_strength, TOTAL_STOCKS = result$total_stocks) %>%
+    mutate(SECTOR_NAME = sector_name, SECTOR_STRENGTH = result$sector_strength, LEADERSHIP_SCORE = profile$LEADERSHIP_SCORE, ROTATION_BUCKET = profile$ROTATION_BUCKET, TOTAL_STOCKS = result$total_stocks) %>%
     select(SECTOR_NAME, SECTOR_STRENGTH, TOTAL_STOCKS, everything())
   csv_data <- rbind(csv_data, stocks_df)
 }
 
-csv_file <- file.path("reports", paste0("all_sectors_top5_analysis_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".csv"))
+csv_file <- file.path("reports", paste0("all_sectors_top5_analysis_", analysis_date_suffix, ".csv"))
 write_csv(csv_data, csv_file)
 cat("✅ CSV results saved to:", csv_file, "\n")
-

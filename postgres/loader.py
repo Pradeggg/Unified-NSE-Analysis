@@ -34,8 +34,16 @@ FUNDAMENTAL_SCORE_CSVS = [
     BASE / "archive" / "fundamental_scores_database.csv",
 ]
 SCREENER_FUND_CACHE = DATA / "_sector_rotation_fund_cache.csv"
+WORKING_SECTOR_OUTPUT = BASE / "working-sector" / "output"
 
 TODAY   = str(date.today())
+
+
+def display_path(path: Path) -> str:
+    try:
+        return str(path.relative_to(BASE))
+    except ValueError:
+        return str(path)
 
 
 def pg():
@@ -54,6 +62,16 @@ def safe_int(v):
         return int(float(v)) if v is not None and str(v).strip() not in ('', 'NA', 'nan', 'NaN', 'None') else None
     except (ValueError, TypeError):
         return None
+
+
+def safe_numeric_8_4(v):
+    try:
+        value = float(v)
+    except (ValueError, TypeError):
+        return None
+    if abs(value) >= 10000:
+        return None
+    return value
 
 
 def safe_bool(v):
@@ -79,6 +97,40 @@ def upsert(cur, table, rows, conflict_cols, update_cols=None):
                f"ON CONFLICT ({conflict}) DO NOTHING")
     execute_values(cur, sql, values, page_size=PAGE_SIZE)
     return len(values)
+
+
+def benchmark_return_1m(cur, snapshot_date, index_symbol="Nifty 500"):
+    """Return benchmark 1M % move for deriving RS when upstream RS is absent."""
+    cur.execute(
+        """
+        WITH latest AS (
+            SELECT trade_date, close
+            FROM market.index_eod
+            WHERE UPPER(index_symbol)=UPPER(%s)
+              AND trade_date <= %s
+              AND close IS NOT NULL
+            ORDER BY trade_date DESC
+            LIMIT 1
+        ),
+        prev AS (
+            SELECT close
+            FROM market.index_eod
+            WHERE UPPER(index_symbol)=UPPER(%s)
+              AND trade_date <= (SELECT trade_date FROM latest) - INTERVAL '1 month'
+              AND close IS NOT NULL
+            ORDER BY trade_date DESC
+            LIMIT 1
+        )
+        SELECT CASE
+            WHEN latest.close IS NOT NULL AND prev.close IS NOT NULL AND prev.close <> 0
+            THEN (latest.close / prev.close - 1) * 100
+        END
+        FROM latest, prev
+        """,
+        (index_symbol, snapshot_date, index_symbol),
+    )
+    row = cur.fetchone()
+    return safe_float(row[0]) if row else None
 
 
 def update_existing(cur, table, rows, key_cols, update_cols):
@@ -125,19 +177,48 @@ def latest_report(pattern: str):
     return max(candidates, key=lambda p: (p.stat().st_mtime, p.name))
 
 
+def find_latest_fundamental_details_csv() -> Path | None:
+    """Return newest working-sector/output/**/fundamental_details.csv if present."""
+    candidates: list[Path] = []
+    direct = WORKING_SECTOR_OUTPUT / "fundamental_details.csv"
+    if direct.exists():
+        candidates.append(direct)
+    if WORKING_SECTOR_OUTPUT.exists():
+        candidates.extend(p for p in WORKING_SECTOR_OUTPUT.glob("*/fundamental_details.csv") if p.is_file())
+    if not candidates:
+        return None
+    return max(candidates, key=lambda p: p.stat().st_mtime)
+
+
 # ---------------------------------------------------------------------------
 # Load latest equity EOD CSV → market.equity_eod
 # ---------------------------------------------------------------------------
 
-def load_equity_eod(cur):
-    csv_path = DATA / "nse_sec_full_data.csv"
-    if not csv_path.exists():
-        print("  market.equity_eod: data/nse_sec_full_data.csv not found")
-        return 0
+def equity_eod_csv_paths():
+    candidates = [
+        DATA / "data" / "nse-raw" / "nse_sec_full_data.csv",
+        DATA / "data" / "nse_sec_full_data.csv",
+        DATA / "nse-raw" / "nse_sec_full_data.csv",
+        DATA / "nse_sec_full_data.csv",
+    ]
+    seen = set()
+    paths = []
+    for path in candidates:
+        if path in seen or not path.exists():
+            continue
+        seen.add(path)
+        paths.append(path)
+    return paths
 
-    df = pd.read_csv(csv_path, low_memory=False)
+
+def _equity_rows_from_csv(csv_path: Path):
+    try:
+        df = pd.read_csv(csv_path, low_memory=False)
+    except Exception as exc:
+        print(f"  market.equity_eod: skipped {display_path(csv_path)} ({type(exc).__name__}: {exc})")
+        return []
     if df.empty:
-        return 0
+        return []
 
     rows = []
     for _, r in df.iterrows():
@@ -148,7 +229,7 @@ def load_equity_eod(cur):
             continue
         prev_close = safe_float(r.get("PREVCLOSE"))
         change_abs = (close - prev_close) if prev_close is not None else None
-        change_pct = ((close - prev_close) / prev_close * 100) if prev_close not in (None, 0) else None
+        change_pct = safe_numeric_8_4((close - prev_close) / prev_close * 100) if prev_close not in (None, 0) else None
         rows.append({
             "trade_date": dt,
             "symbol": sym.strip().upper(),
@@ -167,6 +248,24 @@ def load_equity_eod(cur):
             "week52_high": safe_float(r.get("HI_52_WK")),
             "week52_low": safe_float(r.get("LO_52_WK")),
         })
+    print(f"  market.equity_eod: read {len(rows)} rows from {display_path(csv_path)}")
+    return rows
+
+
+def load_equity_eod(cur):
+    csv_paths = equity_eod_csv_paths()
+    if not csv_paths:
+        print("  market.equity_eod: no nse_sec_full_data.csv files found")
+        return 0
+
+    rows = []
+    for csv_path in csv_paths:
+        rows.extend(_equity_rows_from_csv(csv_path))
+
+    deduped = {}
+    for row in rows:
+        deduped[(row["trade_date"], row["symbol"], row["series"])] = row
+    rows = sorted(deduped.values(), key=lambda r: (r["trade_date"], r["symbol"], r["series"]))
 
     n = upsert(cur, "market.equity_eod", rows,
                ["trade_date", "symbol", "series"],
@@ -176,6 +275,61 @@ def load_equity_eod(cur):
     dates = sorted({r["trade_date"] for r in rows})
     suffix = f" ({dates[0]} → {dates[-1]})" if dates else ""
     print(f"  market.equity_eod: {n} rows upserted{suffix}")
+    return n
+
+
+# ---------------------------------------------------------------------------
+# Load latest/all available NSE index EOD CSV → market.index_eod
+# ---------------------------------------------------------------------------
+
+def load_index_eod(cur):
+    csv_path = DATA / "nse_index_data.csv"
+    if not csv_path.exists():
+        print("  market.index_eod: data/nse_index_data.csv not found")
+        return 0
+
+    df = pd.read_csv(csv_path, low_memory=False)
+    if df.empty:
+        print("  market.index_eod: data/nse_index_data.csv empty")
+        return 0
+
+    rows = []
+    for _, r in df.iterrows():
+        idx = clean_text(r.get("SYMBOL"))
+        dt = norm_date(r.get("TIMESTAMP"))
+        close = safe_float(r.get("CLOSE"))
+        if not idx or not dt or close is None:
+            continue
+        turnover = safe_float(r.get("TOTTRDVAL"))
+        prev_close = safe_float(r.get("PREVCLOSE"))
+        change_pct = ((close - prev_close) / prev_close * 100) if prev_close not in (None, 0) else safe_float(r.get("CHANGE_PCT"))
+        rows.append({
+            "trade_date": dt,
+            "index_symbol": idx.strip(),
+            "open": safe_float(r.get("OPEN")),
+            "high": safe_float(r.get("HIGH")),
+            "low": safe_float(r.get("LOW")),
+            "close": close,
+            "prev_close": prev_close,
+            "change_pct": change_pct,
+            "volume": safe_int(r.get("TOTTRDQTY")),
+            "turnover_cr": round(turnover / 1e7, 4) if turnover is not None else None,
+            "total_trades": safe_int(r.get("TOTALTRADES")),
+            "week52_high": safe_float(r.get("HI_52_WK")),
+            "week52_low": safe_float(r.get("LO_52_WK")),
+        })
+
+    n = upsert(
+        cur,
+        "market.index_eod",
+        rows,
+        ["trade_date", "index_symbol"],
+        ["open", "high", "low", "close", "prev_close", "change_pct", "volume",
+         "turnover_cr", "total_trades", "week52_high", "week52_low"],
+    )
+    dates = sorted({r["trade_date"] for r in rows})
+    suffix = f" ({dates[0]} → {dates[-1]})" if dates else ""
+    print(f"  market.index_eod: {n} rows upserted from nse_index_data.csv{suffix}")
     return n
 
 
@@ -262,12 +416,18 @@ def load_stage_snapshots(cur):
         )
         conn.close()
 
+    snapshot_date = norm_date(df["snapshot_date"].iloc[0]) if not df.empty else TODAY
+    bench_1m = benchmark_return_1m(cur, snapshot_date)
     rows = []
     for _, r in df.iterrows():
         sym = str(r.get("symbol", "")).strip()
         dt  = norm_date(r.get("snapshot_date"))
         if not sym or not dt:
             continue
+        change_1m = safe_float(r.get("change_1m_pct"))
+        relative_strength = safe_float(r.get("relative_strength"))
+        if relative_strength is None and change_1m is not None and bench_1m is not None:
+            relative_strength = round(change_1m - bench_1m, 4)
         fd = r.get("fund_details")
         if fd and isinstance(fd, str) and fd.strip():
             try:
@@ -287,14 +447,14 @@ def load_stage_snapshots(cur):
             "price_date":         norm_date(r.get("price_date")),
             "change_1d_pct":      safe_float(r.get("change_1d_pct")),
             "change_1w_pct":      safe_float(r.get("change_1w_pct")),
-            "change_1m_pct":      safe_float(r.get("change_1m_pct")),
+            "change_1m_pct":      change_1m,
             "stage":              str(r.get("stage", "")).strip() or None,
             "stage_score":        safe_float(r.get("stage_score")),
             "technical_score":    safe_float(r.get("technical_score")),
             "rsi":                safe_float(r.get("rsi")),
             "trend_signal":       str(r.get("trend_signal", "")).strip() or None,
             "trading_signal":     str(r.get("trading_signal", "")).strip() or None,
-            "relative_strength":  safe_float(r.get("relative_strength")),
+            "relative_strength":  relative_strength,
             "supertrend_state":   str(r.get("supertrend_state", "")).strip() or None,
             "supertrend_value":   safe_float(r.get("supertrend_value")),
             "can_slim_score":     safe_float(r.get("can_slim_score")),
@@ -311,10 +471,11 @@ def load_stage_snapshots(cur):
             "fund_details":       json.dumps(fd) if fd else None,
             "source_csv":         str(r.get("source_csv", "")).strip() or None,
         })
+    if not rows:
+        return 0
     n = upsert(cur, "scores.stage_snapshots", rows,
                ["snapshot_date", "symbol"],
-               ["live_price", "stage", "stage_score", "technical_score",
-                "investment_score", "trading_signal", "rsi", "narrative"])
+               [c for c in rows[0].keys() if c not in {"snapshot_date", "symbol"}])
     print(f"  scores.stage_snapshots: {n} rows upserted for {dt}")
     return n
 
@@ -370,39 +531,68 @@ def load_stage_changes(cur):
 # ---------------------------------------------------------------------------
 
 def load_screener_fundamentals(cur, snapshot_date=None):
-    if not SCREENER_FUND_CACHE.exists():
-        print("  scores.fundamental_snapshots: no _sector_rotation_fund_cache.csv found")
-        return 0
+    sources: list[tuple[Path, pd.DataFrame]] = []
+    if SCREENER_FUND_CACHE.exists():
+        df_cache = pd.read_csv(SCREENER_FUND_CACHE, low_memory=False)
+        if not df_cache.empty:
+            sources.append((SCREENER_FUND_CACHE, df_cache))
 
-    df = pd.read_csv(SCREENER_FUND_CACHE, low_memory=False)
-    if df.empty:
+    details_csv = find_latest_fundamental_details_csv()
+    if details_csv and details_csv.exists():
+        df_details = pd.read_csv(details_csv, low_memory=False)
+        if not df_details.empty:
+            sources.append((details_csv, df_details))
+
+    if not sources:
+        print("  scores.fundamental_snapshots: no Screener fundamental source CSV found")
         return 0
 
     snap_date = norm_date(snapshot_date) or TODAY
     rows = []
-    for _, r in df.iterrows():
-        sym = clean_text(r.get("SYMBOL")) or clean_text(r.get("symbol"))
-        if not sym:
-            continue
-        row = {
-            "snapshot_date": snap_date,
-            "symbol": sym.strip().upper(),
-            "pnl_summary": clean_text(r.get("pnl_summary")),
-            "quarterly_summary": clean_text(r.get("quarterly_summary")),
-            "balance_sheet_summary": clean_text(r.get("balance_sheet_summary")),
-            "ratios_summary": clean_text(r.get("ratios_summary")),
-            "source_file": str(SCREENER_FUND_CACHE.relative_to(BASE)),
-        }
-        if any(row.get(c) for c in ["pnl_summary", "quarterly_summary", "balance_sheet_summary", "ratios_summary"]):
-            rows.append(row)
+    for source_path, df in sources:
+        for _, r in df.iterrows():
+            sym = clean_text(r.get("SYMBOL")) or clean_text(r.get("symbol"))
+            if not sym:
+                continue
+            row = {
+                "snapshot_date": snap_date,
+                "symbol": sym.strip().upper(),
+                "pnl_summary": clean_text(r.get("pnl_summary")),
+                "quarterly_summary": clean_text(r.get("quarterly_summary")),
+                "balance_sheet_summary": clean_text(r.get("balance_sheet_summary")),
+                "cash_flow_summary": clean_text(r.get("cash_flow_summary")),
+                "investor_summary": clean_text(r.get("investor_summary")),
+                "ratios_summary": clean_text(r.get("ratios_summary")),
+                "source_file": str(source_path.relative_to(BASE)) if source_path.is_relative_to(BASE) else str(source_path),
+            }
+            if any(
+                row.get(c)
+                for c in [
+                    "pnl_summary",
+                    "quarterly_summary",
+                    "balance_sheet_summary",
+                    "cash_flow_summary",
+                    "investor_summary",
+                    "ratios_summary",
+                ]
+            ):
+                rows.append(row)
 
     if not rows:
         return 0
 
+    # Changed: multiple source files can emit the same (snapshot_date, symbol).
+    # Keep the last-seen row (details CSV takes precedence because it is loaded after cache).
+    deduped = {}
+    for row in rows:
+        deduped[(row["snapshot_date"], row["symbol"])] = row
+    rows = list(deduped.values())
+
     n = upsert(cur, "scores.fundamental_snapshots", rows,
                ["snapshot_date", "symbol"],
                ["pnl_summary", "quarterly_summary", "balance_sheet_summary",
-                "ratios_summary", "source_file", "loaded_at"])
+                "cash_flow_summary", "investor_summary", "ratios_summary",
+                "source_file", "loaded_at"])
 
     latest_rows = [
         {
@@ -410,6 +600,8 @@ def load_screener_fundamentals(cur, snapshot_date=None):
             "pnl_summary": r["pnl_summary"],
             "quarterly_summary": r["quarterly_summary"],
             "balance_sheet_summary": r["balance_sheet_summary"],
+            "cash_flow_summary": r["cash_flow_summary"],
+            "investor_summary": r["investor_summary"],
             "ratios_summary": r["ratios_summary"],
             "updated_at": datetime.now(),
         }
@@ -418,7 +610,41 @@ def load_screener_fundamentals(cur, snapshot_date=None):
     upsert(cur, "scores.fundamentals", latest_rows,
            ["symbol"],
            ["pnl_summary", "quarterly_summary", "balance_sheet_summary",
-            "ratios_summary", "updated_at"])
+            "cash_flow_summary", "investor_summary", "ratios_summary", "updated_at"])
+
+    # Changed: maintain section-wise snapshots for granular auditability.
+    cur.execute("SELECT to_regclass('scores.fundamental_section_snapshots')")
+    if cur.fetchone()[0] is not None:
+        section_rows = []
+        section_map = {
+            "pnl": "pnl_summary",
+            "quarterly": "quarterly_summary",
+            "balance_sheet": "balance_sheet_summary",
+            "cash_flow": "cash_flow_summary",
+            "investor": "investor_summary",
+            "ratios": "ratios_summary",
+        }
+        for r in rows:
+            for section_name, col in section_map.items():
+                value = r.get(col)
+                if not value:
+                    continue
+                section_rows.append({
+                    "snapshot_date": r["snapshot_date"],
+                    "symbol": r["symbol"],
+                    "section_name": section_name,
+                    "section_summary": value,
+                    "source_file": r.get("source_file"),
+                    "loaded_at": datetime.now(),
+                })
+        if section_rows:
+            upsert(
+                cur,
+                "scores.fundamental_section_snapshots",
+                section_rows,
+                ["snapshot_date", "symbol", "section_name"],
+                ["section_summary", "source_file", "loaded_at"],
+            )
     print(f"  scores.fundamental_snapshots: {n} rows for {snap_date}")
     return n
 
@@ -812,11 +1038,13 @@ def main():
     try:
         if args.eod_only:
             load_equity_eod(cur)
+            load_index_eod(cur)
             conn.commit()
             print(f"\n✅ PostgreSQL EOD load complete for {run_date}")
             return
 
         load_equity_eod(cur)
+        load_index_eod(cur)
         load_ref_instruments(cur)
         load_fundamental_scores(cur)
         load_screener_fundamentals(cur, run_date)

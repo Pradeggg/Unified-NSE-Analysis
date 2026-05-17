@@ -553,11 +553,11 @@ get_screener_shareholdingpattern_data <- function(symbol)
   shareholdingpattern<- cbind(Items = shareholdingpattern$Items, shp)
   
   #close.connection(url)
-  Sys.sleep(3)
+  Sys.sleep(4)  # Increased from 3s to reduce rate limiting
   },
   error = function(e){
     
-    shareholdingpattern<- 0
+    shareholdingpattern<- data.frame()  # Return empty data frame instead of 0
     message('Caught an error!')
     print(paste0( "from fn:get_screener_shareholdingpattern_data ",  e))
     

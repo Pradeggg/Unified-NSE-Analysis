@@ -36,6 +36,7 @@ import html
 import json
 import math
 import sqlite3
+import warnings
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Optional
@@ -46,6 +47,20 @@ ROOT = Path(__file__).resolve().parent
 DB_PATH = ROOT / "data" / "sector_rotation_tracker.db"
 REPORTS_DIR = ROOT / "reports" / "sector_rotation"
 STOCK_CSV = ROOT / "data" / "nse_sec_full_data.csv"
+PG_DSN = "dbname=nse_market user=nse_admin host=/tmp"
+FUNDAMENTAL_SCORE_PATHS = [
+    ROOT / "data" / "fundamental_scores_database.csv",
+    ROOT / "organized" / "data" / "fundamental_scores_database.csv",
+    ROOT / "archive" / "repo-cleanup-20260511" / "organized" / "data" / "fundamental_scores_database.csv",
+    ROOT / "archive" / "fundamental_scores_database.csv",
+]
+FUNDAMENTAL_SCORE_FIELDS = [
+    "ENHANCED_FUND_SCORE",
+    "EARNINGS_QUALITY",
+    "SALES_GROWTH",
+    "FINANCIAL_STRENGTH",
+    "INSTITUTIONAL_BACKING",
+]
 
 # ─────────────────────────────────────────────────────────────────────────────
 # DB helpers
@@ -145,7 +160,138 @@ def list_snapshot_dates(conn: sqlite3.Connection) -> list[str]:
     return [r[0] for r in cur.fetchall()]
 
 
+def _pg_query(sql: str, params: tuple = ()) -> pd.DataFrame:
+    try:
+        import psycopg2
+        pg = psycopg2.connect(PG_DSN)
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", UserWarning)
+                return pd.read_sql_query(sql, pg, params=params)
+        finally:
+            pg.close()
+    except Exception:
+        return pd.DataFrame()
+
+
+def _pg_snapshot_dates() -> list[str]:
+    df = _pg_query("SELECT DISTINCT snapshot_date::text AS snapshot_date FROM scores.stage_snapshots ORDER BY snapshot_date DESC")
+    return df["snapshot_date"].astype(str).tolist() if not df.empty else []
+
+
+def _pg_stage_snapshots(snap_date: str, stage: str | None = None) -> pd.DataFrame:
+    if stage:
+        return _pg_query(
+            "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = %s AND stage = %s ORDER BY stage_score DESC NULLS LAST",
+            (snap_date, stage),
+        )
+    return _pg_query(
+        "SELECT * FROM scores.stage_snapshots WHERE snapshot_date = %s ORDER BY symbol",
+        (snap_date,),
+    )
+
+
+def _pg_snapshot_history(limit: int = 30) -> pd.DataFrame:
+    return _pg_query(
+        """
+        SELECT snapshot_date::text AS snapshot_date,
+               COUNT(*) AS total_stocks,
+               SUM(CASE WHEN stage='STAGE_2' THEN 1 ELSE 0 END) AS stage2_count
+        FROM scores.stage_snapshots
+        GROUP BY snapshot_date
+        ORDER BY snapshot_date DESC
+        LIMIT %s
+        """,
+        (limit,),
+    )
+
+
+def _pg_stage_counts(snap_date: str) -> dict[str, int] | None:
+    df = _pg_query(
+        """
+        SELECT stage, COUNT(*) AS count
+        FROM scores.stage_snapshots
+        WHERE snapshot_date = %s
+        GROUP BY stage
+        """,
+        (snap_date,),
+    )
+    if df.empty:
+        return None
+    counts = {str(row["stage"]): int(row["count"] or 0) for _, row in df.iterrows()}
+    return {stage: counts.get(stage, 0) for stage in ["STAGE_1", "STAGE_2", "STAGE_3", "STAGE_4"]}
+
+
+def _write_snapshot_to_pg(rows: list[dict]) -> int:
+    try:
+        import psycopg2
+        from psycopg2.extras import Json, execute_values
+    except Exception:
+        return 0
+
+    if not rows:
+        return 0
+
+    cols = [
+        "snapshot_date", "symbol", "company_name", "sector", "market_cap_cat", "price", "live_price",
+        "price_date", "change_1d_pct", "change_1w_pct", "change_1m_pct", "stage", "stage_score",
+        "technical_score", "rsi", "trend_signal", "trading_signal", "relative_strength",
+        "supertrend_state", "supertrend_value", "can_slim_score", "minervini_score", "fundamental_score",
+        "enhanced_fund_score", "earnings_quality", "sales_growth", "financial_strength",
+        "institutional_backing", "investment_score", "stance", "narrative", "fund_details", "source_csv",
+    ]
+    values = []
+    for row in rows:
+        fund_details = row.get("fund_details")
+        if isinstance(fund_details, str) and fund_details.strip():
+            try:
+                fund_details = Json(json.loads(fund_details))
+            except Exception:
+                fund_details = None
+        else:
+            fund_details = None
+        values.append([
+            row.get("snapshot_date"), row.get("symbol"), row.get("company_name"), row.get("sector"),
+            row.get("market_cap_cat"), row.get("price"), row.get("live_price"), row.get("price_date"),
+            row.get("change_1d_pct"), row.get("change_1w_pct"), row.get("change_1m_pct"), row.get("stage"),
+            row.get("stage_score"), row.get("technical_score"), row.get("rsi"), row.get("trend_signal"),
+            row.get("trading_signal"), row.get("relative_strength"), row.get("supertrend_state"),
+            row.get("supertrend_value"), row.get("can_slim_score"), row.get("minervini_score"),
+            row.get("fundamental_score"), row.get("enhanced_fund_score"), row.get("earnings_quality"),
+            row.get("sales_growth"), row.get("financial_strength"), row.get("institutional_backing"),
+            row.get("investment_score"), row.get("stance"), row.get("narrative"), fund_details,
+            row.get("source_csv"),
+        ])
+
+    update_cols = [c for c in cols if c not in {"snapshot_date", "symbol"}]
+    sql = (
+        f"INSERT INTO scores.stage_snapshots ({', '.join(cols)}) VALUES %s "
+        f"ON CONFLICT (snapshot_date, symbol) DO UPDATE SET "
+        + ", ".join(f"{c} = EXCLUDED.{c}" for c in update_cols)
+    )
+
+    try:
+        conn = psycopg2.connect("dbname=nse_market user=nse_admin host=/tmp")
+        try:
+            with conn, conn.cursor() as cur:
+                snapshot_dates = sorted({row.get("snapshot_date") for row in rows if row.get("snapshot_date")})
+                cur.execute(
+                    "DELETE FROM scores.stage_snapshots WHERE snapshot_date::text = ANY(%s)",
+                    (snapshot_dates,),
+                )
+                execute_values(cur, sql, values, page_size=500)
+        finally:
+            conn.close()
+    except Exception as exc:
+        print(f"  Warning: could not write PostgreSQL stage snapshot: {exc}")
+        return 0
+    return len(values)
+
+
 def load_snapshot(conn: sqlite3.Connection, snap_date: str) -> pd.DataFrame:
+    pg_df = _pg_stage_snapshots(snap_date)
+    if not pg_df.empty:
+        return pg_df
     return pd.read_sql_query(
         "SELECT * FROM stage_snapshots WHERE snapshot_date=?", conn, params=(snap_date,)
     )
@@ -179,6 +325,7 @@ def _parse_date_tokens_from_name(name: str) -> Optional[datetime]:
 
 def _latest_comprehensive_csv() -> Optional[Path]:
     candidates = list((ROOT / "reports" / "generated_csv").rglob("comprehensive_nse_enhanced_*.csv"))
+    candidates.extend((ROOT / "reports").glob("comprehensive_nse_enhanced_*.csv"))
     if not candidates:
         return None
 
@@ -192,14 +339,75 @@ def _latest_comprehensive_csv() -> Optional[Path]:
     )
 
 
+def _load_analysis_from_pg(score_date: Optional[str] = None) -> tuple[pd.DataFrame, Path | None]:
+    where = "WHERE score_date = %s" if score_date else "WHERE score_date = (SELECT MAX(score_date) FROM scores.daily_scores)"
+    params = (score_date,) if score_date else ()
+    df = _pg_query(
+        f"""
+        SELECT symbol AS "SYMBOL",
+               company_name AS "COMPANY_NAME",
+               sector AS "SECTOR",
+               market_cap_cat AS "MARKET_CAP_CATEGORY",
+               current_price AS "CURRENT_PRICE",
+               change_1d_pct AS "CHANGE_1D",
+               change_1w_pct AS "CHANGE_1W",
+               change_1m_pct AS "CHANGE_1M",
+               trading_value AS "TRADING_VALUE",
+               technical_score AS "TECHNICAL_SCORE",
+               rsi AS "RSI",
+               relative_strength AS "RELATIVE_STRENGTH",
+               trend_signal AS "TREND_SIGNAL",
+               trading_signal AS "TRADING_SIGNAL",
+               can_slim_score AS "CAN_SLIM_SCORE",
+               minervini_score AS "MINERVINI_SCORE",
+               fundamental_score AS "FUNDAMENTAL_SCORE",
+               enhanced_fund_score AS "ENHANCED_FUND_SCORE",
+               earnings_quality AS "EARNINGS_QUALITY",
+               sales_growth AS "SALES_GROWTH",
+               financial_strength AS "FINANCIAL_STRENGTH",
+               institutional_backing AS "INSTITUTIONAL_BACKING"
+        FROM scores.daily_scores
+        {where}
+        ORDER BY symbol
+        """,
+        params,
+    )
+    if df.empty:
+        return df, None
+    return df, Path("PostgreSQL") / "scores.daily_scores"
+
+
 def _load_price_history() -> pd.DataFrame:
-    if not STOCK_CSV.exists():
-        return pd.DataFrame()
-    print("  Loading price history from nse_sec_full_data.csv …")
-    cols = ["SYMBOL", "TIMESTAMP", "OPEN", "HIGH", "LOW", "CLOSE", "TOTTRDQTY"]
-    df = pd.read_csv(STOCK_CSV, usecols=lambda c: c in cols)
-    df["TIMESTAMP"] = pd.to_datetime(df["TIMESTAMP"])
-    return df
+    df = pd.DataFrame()
+    if STOCK_CSV.exists():
+        print("  Loading price history from nse_sec_full_data.csv …")
+        cols = ["SYMBOL", "TIMESTAMP", "OPEN", "HIGH", "LOW", "CLOSE", "TOTTRDQTY"]
+        df = pd.read_csv(STOCK_CSV, usecols=lambda c: c in cols)
+        df["TIMESTAMP"] = pd.to_datetime(df["TIMESTAMP"])
+        max_history = int(df.groupby("SYMBOL")["TIMESTAMP"].nunique().max()) if not df.empty else 0
+        if max_history >= 50:
+            return df
+        print("  Local CSV has insufficient history; loading PostgreSQL EOD history …")
+
+    pg_df = _pg_query(
+        """
+        SELECT symbol AS "SYMBOL",
+               trade_date AS "TIMESTAMP",
+               open AS "OPEN",
+               high AS "HIGH",
+               low AS "LOW",
+               close AS "CLOSE",
+               volume AS "TOTTRDQTY"
+        FROM market.equity_eod
+        WHERE close IS NOT NULL
+          AND close > 0
+        ORDER BY symbol, trade_date
+        """
+    )
+    if pg_df.empty:
+        return df
+    pg_df["TIMESTAMP"] = pd.to_datetime(pg_df["TIMESTAMP"])
+    return pg_df
 
 
 def _latest_eod_close_date(hist: pd.DataFrame | None = None) -> Optional[str]:
@@ -438,7 +646,7 @@ def _fetch_live_prices(symbols: list[str]) -> dict[str, float]:
 def update_live_prices(snap_date: Optional[str] = None) -> int:
     """Update live_price column for all symbols in the given (or latest) snapshot."""
     conn = get_conn()
-    dates = list_snapshot_dates(conn)
+    dates = _pg_snapshot_dates() or list_snapshot_dates(conn)
     if not dates:
         print("  No snapshots available.")
         conn.close()
@@ -509,12 +717,20 @@ def write_snapshot(
         conn.close()
         return 0
 
-    csv_path = csv_path_override or _latest_comprehensive_csv()
-    if csv_path is None:
-        raise FileNotFoundError("No comprehensive_nse_enhanced_*.csv found in reports/generated_csv/")
-
-    print(f"  Source CSV: {csv_path.name}")
-    analysis = analysis_override.copy() if analysis_override is not None else pd.read_csv(csv_path)
+    if analysis_override is not None:
+        analysis = analysis_override.copy()
+        csv_path = csv_path_override or Path("override")
+    else:
+        analysis, pg_source = _load_analysis_from_pg(price_date)
+        csv_path = pg_source
+        if analysis.empty:
+            csv_path = csv_path_override or _latest_comprehensive_csv()
+            if csv_path is None:
+                raise FileNotFoundError("No PostgreSQL scores.daily_scores rows or comprehensive_nse_enhanced_*.csv found")
+            print(f"  Source CSV: {csv_path.name}")
+            analysis = pd.read_csv(csv_path)
+        else:
+            print(f"  Source PostgreSQL: scores.daily_scores ({len(analysis)} rows)")
     screener_df = _run_screener(analysis, hist)
 
     live_prices: dict[str, float] = {}
@@ -523,11 +739,23 @@ def write_snapshot(
 
     # Build enrichment lookups
     sector_map = _build_sector_map()
+    company_name_map = _build_company_name_map()
 
     fund_cache: dict[str, dict] = {}
     fund_cache_path = ROOT / "data" / "_sector_rotation_fund_cache.csv"
     try:
-        if fund_cache_path.exists():
+        pg_fund_details = _pg_query("SELECT * FROM scores.v_latest_fundamentals")
+        if not pg_fund_details.empty:
+            for _, fcr in pg_fund_details.iterrows():
+                fund_cache[str(fcr.get("symbol", "")).upper()] = {
+                    "SYMBOL": fcr.get("symbol"),
+                    "pnl_summary": fcr.get("pnl_summary"),
+                    "quarterly_summary": fcr.get("quarterly_summary"),
+                    "balance_sheet_summary": fcr.get("balance_sheet_summary"),
+                    "ratios_summary": fcr.get("ratios_summary"),
+                }
+            print(f"  Loaded {len(fund_cache)} Screener fundamental entries from PostgreSQL")
+        elif fund_cache_path.exists():
             fc_df = pd.read_csv(fund_cache_path)
             for _, fcr in fc_df.iterrows():
                 fund_cache[str(fcr.get("SYMBOL", "")).upper()] = fcr.to_dict()
@@ -541,19 +769,9 @@ def write_snapshot(
     except Exception as e:
         print(f"  Warning: could not build comp lookup: {e}")
 
-    # Load fundamental scores DB (same pipeline as sector_rotation_report.py merge_fundamental_scores)
-    fund_scores_lookup: dict[str, dict] = {}
-    fund_scores_path = ROOT / "organized" / "data" / "fundamental_scores_database.csv"
-    try:
-        if fund_scores_path.exists():
-            fs_df = pd.read_csv(fund_scores_path)
-            for _, fsr in fs_df.iterrows():
-                sym_key = str(fsr.get("symbol", "")).strip().upper()
-                if sym_key:
-                    fund_scores_lookup[sym_key] = fsr.to_dict()
-            print(f"  Loaded {len(fund_scores_lookup)} entries from fundamental_scores_database.csv")
-    except Exception as e:
-        print(f"  Warning: could not load fundamental scores DB: {e}")
+    # Load and merge all available score sources. PostgreSQL remains primary, but
+    # local CSV fills any missing sub-scores such as earnings quality/sales growth.
+    fund_scores_lookup = _load_fundamental_score_lookup()
 
     def _get_fund_score(sym_up: str, comp_row: dict, key_upper: str, key_lower: str) -> float | None:
         """Get fund score: comp_lookup first (comprehensive CSV), fall back to fundamental_scores_database."""
@@ -561,19 +779,36 @@ def write_snapshot(
         if v is not None:
             return v
         fs_row = fund_scores_lookup.get(sym_up, {})
-        return _f(fs_row.get(key_lower) or fs_row.get(key_upper))
+        return _f(fs_row.get(key_lower) if fs_row.get(key_lower) is not None else fs_row.get(key_upper))
 
+    change_1m_series = pd.to_numeric(
+        screener_df["CHANGE_1M"] if "CHANGE_1M" in screener_df.columns else pd.Series(dtype=float),
+        errors="coerce",
+    )
+    universe_avg_1m = float(change_1m_series.mean()) if change_1m_series.notna().any() else None
     rows = []
     for _, r in screener_df.iterrows():
         sym = str(r.get("SYMBOL", ""))
         sym_up = sym.upper()
         comp_row = comp_lookup.get(sym_up, {})
         fc_row = fund_cache.get(sym_up, {})
+        csv_company_name = _text_or_none(r.get("COMPANY_NAME"))
+        ref_company_name = company_name_map.get(sym_up)
+        company_name = (
+            ref_company_name
+            if ref_company_name and (not csv_company_name or csv_company_name.upper() == sym_up)
+            else csv_company_name or ref_company_name or sym
+        )
+
+        change_1m = _f(r.get("CHANGE_1M"))
+        relative_strength = _f(r.get("RELATIVE_STRENGTH"))
+        if relative_strength is None and change_1m is not None and universe_avg_1m is not None:
+            relative_strength = round(change_1m - universe_avg_1m, 4)
 
         base = {
             "snapshot_date": today,
             "symbol": sym,
-            "company_name": str(r.get("COMPANY_NAME", "") or ""),
+            "company_name": company_name,
             "stage": str(r.get("STAGE", "UNKNOWN") or "UNKNOWN"),
             "stage_score": _f(r.get("STAGE_SCORE")),
             "price": _f(r.get("CLOSE") or r.get("CURRENT_PRICE")),
@@ -583,10 +818,10 @@ def write_snapshot(
             "rsi": _f(r.get("RSI")),
             "trading_signal": str(r.get("TRADING_SIGNAL", "") or ""),
             "trend_signal": str(r.get("TREND_SIGNAL", "") or ""),
-            "relative_strength": _f(r.get("RELATIVE_STRENGTH")),
+            "relative_strength": relative_strength,
             "change_1d_pct": _f(r.get("CHANGE_1D")),
             "change_1w_pct": _f(r.get("CHANGE_1W")),
-            "change_1m_pct": _f(r.get("CHANGE_1M")),
+            "change_1m_pct": change_1m,
             "market_cap_cat": str(r.get("MARKET_CAP_CATEGORY", "") or ""),
             "source_csv": csv_path.name,
             "sector": sector_map.get(sym_up, "Other"),
@@ -617,6 +852,21 @@ def write_snapshot(
         rows.append(base)
 
     if existing and force:
+        existing_classified = conn.execute(
+            """
+            SELECT COUNT(*) FROM stage_snapshots
+            WHERE snapshot_date=?
+              AND COALESCE(stage, 'UNKNOWN') <> 'UNKNOWN'
+            """,
+            (today,),
+        ).fetchone()[0]
+        if _should_skip_unknown_snapshot_overwrite(existing_classified, rows, force):
+            print(
+                f"  Refusing to overwrite classified snapshot for {today} "
+                "with all-UNKNOWN stages; check EOD history depth."
+            )
+            conn.close()
+            return 0
         conn.execute("DELETE FROM stage_snapshots WHERE snapshot_date=?", (today,))
 
     if compute_supertrend:
@@ -651,6 +901,7 @@ def write_snapshot(
         rows,
     )
     conn.commit()
+    _write_snapshot_to_pg(rows)
     print(f"  Wrote {len(rows)} rows for {today} ({sum(1 for r in rows if r['stage']=='STAGE_2')} Stage 2).")
 
     if recompute_changes:
@@ -692,14 +943,15 @@ def backfill_snapshots(
         print("  No EOD dates available for backfill.")
         return []
 
-    csv_path = _latest_comprehensive_csv()
-    if csv_path is None:
-        raise FileNotFoundError("No comprehensive_nse_enhanced_*.csv found in reports/generated_csv/")
-    analysis = pd.read_csv(csv_path)
-
     print(f"  Backfilling {len(dates)} snapshots from {dates[0]} to {dates[-1]} …")
     for d in dates:
         print(f"  Backfill snapshot {d}")
+        analysis, source_path = _load_analysis_from_pg(d)
+        if analysis.empty:
+            source_path = _latest_comprehensive_csv()
+            if source_path is None:
+                raise FileNotFoundError("No PostgreSQL scores.daily_scores rows or comprehensive_nse_enhanced_*.csv found")
+            analysis = pd.read_csv(source_path)
         hist_as_of = _history_as_of(hist_full, d)
         write_snapshot(
             snap_date=d,
@@ -709,7 +961,7 @@ def backfill_snapshots(
             compute_supertrend=False,
             hist_override=hist_as_of,
             analysis_override=analysis,
-            csv_path_override=csv_path,
+            csv_path_override=source_path,
             recompute_changes=False,
         )
 
@@ -728,6 +980,72 @@ def _f(v) -> Optional[float]:
         return None
 
 
+def _score_symbol(row: dict) -> str:
+    return str(row.get("symbol") or row.get("SYMBOL") or "").strip().upper()
+
+
+def _should_skip_unknown_snapshot_overwrite(existing_classified_count: int, rows: list[dict], force: bool) -> bool:
+    if not force or existing_classified_count <= 0 or not rows:
+        return False
+    return all(str(row.get("stage") or "UNKNOWN").upper() == "UNKNOWN" for row in rows)
+
+
+def _has_score_value(row: dict, key: str) -> bool:
+    return _f(row.get(key)) is not None
+
+
+def _merge_fundamental_score_row(current: dict, fallback: dict) -> dict:
+    """Fill missing score fields in current from fallback without overwriting values."""
+    merged = dict(current)
+    for key in FUNDAMENTAL_SCORE_FIELDS:
+        if not _has_score_value(merged, key) and _has_score_value(fallback, key):
+            merged[key] = fallback.get(key)
+    for key, value in fallback.items():
+        if key not in merged or _is_missing(merged.get(key)):
+            merged[key] = value
+    return merged
+
+
+def _load_fundamental_score_lookup(
+    pg_fund_scores: Optional[pd.DataFrame] = None,
+    csv_paths: Optional[list[Path]] = None,
+) -> dict[str, dict]:
+    """Load fundamental score lookup with PostgreSQL primary and CSV fill-forward fallback."""
+    lookup: dict[str, dict] = {}
+    try:
+        if pg_fund_scores is None:
+            pg_fund_scores = _pg_query("SELECT * FROM scores.v_latest_fundamental_scores")
+        if pg_fund_scores is not None and not pg_fund_scores.empty:
+            for _, fsr in pg_fund_scores.iterrows():
+                row = fsr.to_dict()
+                sym_key = _score_symbol(row)
+                if sym_key:
+                    lookup[sym_key] = row
+            print(f"  Loaded {len(lookup)} entries from PostgreSQL scores.v_latest_fundamental_scores")
+    except Exception as e:
+        print(f"  Warning: could not load PostgreSQL fundamental scores: {e}")
+
+    csv_loaded = 0
+    try:
+        for path in csv_paths or FUNDAMENTAL_SCORE_PATHS:
+            if not path.exists():
+                continue
+            fs_df = pd.read_csv(path)
+            for _, fsr in fs_df.iterrows():
+                row = fsr.to_dict()
+                sym_key = _score_symbol(row)
+                if not sym_key:
+                    continue
+                lookup[sym_key] = _merge_fundamental_score_row(lookup.get(sym_key, {}), row)
+                csv_loaded += 1
+            print(f"  Merged {csv_loaded} entries from {path.name}")
+            break
+    except Exception as e:
+        print(f"  Warning: could not merge fundamental scores CSV: {e}")
+
+    return lookup
+
+
 def _text_or_none(v) -> Optional[str]:
     """Return clean text, treating pandas NaN/empty/"nan" as missing."""
     if _is_missing(v):
@@ -743,6 +1061,7 @@ def _text_or_none(v) -> Optional[str]:
 # ─────────────────────────────────────────────────────────────────────────────
 
 _SECTOR_MAP_CACHE: dict | None = None
+_COMPANY_NAME_MAP_CACHE: dict | None = None
 
 
 def _build_sector_map() -> dict[str, str]:
@@ -779,6 +1098,49 @@ def _build_sector_map() -> dict[str, str]:
     except ImportError:
         pass
     _SECTOR_MAP_CACHE = result
+    return result
+
+
+def _build_company_name_map() -> dict[str, str]:
+    global _COMPANY_NAME_MAP_CACHE
+    if _COMPANY_NAME_MAP_CACHE is not None:
+        return _COMPANY_NAME_MAP_CACHE
+
+    result: dict[str, str] = {}
+    df = _pg_query(
+        """
+        SELECT symbol, company_name
+        FROM ref.instruments
+        WHERE company_name IS NOT NULL
+          AND btrim(company_name) <> ''
+        """
+    )
+    if not df.empty:
+        for _, row in df.iterrows():
+            sym = str(row.get("symbol", "")).strip().upper()
+            name = str(row.get("company_name", "")).strip()
+            if sym and name:
+                result[sym] = name
+
+    for path in [
+        ROOT / "archive" / "repo-cleanup-20260511" / "organized" / "data" / "company_names_mapping.csv",
+        ROOT / "archive" / "company_names_mapping.csv",
+    ]:
+        if not path.exists():
+            continue
+        try:
+            csv_df = pd.read_csv(path)
+        except Exception:
+            continue
+        if "SYMBOL" not in csv_df.columns or "COMPANY_NAME" not in csv_df.columns:
+            continue
+        for _, row in csv_df.iterrows():
+            sym = str(row.get("SYMBOL", "")).strip().upper()
+            name = str(row.get("COMPANY_NAME", "")).strip()
+            if sym and name and (sym not in result or result[sym].upper() == sym):
+                result[sym] = name
+
+    _COMPANY_NAME_MAP_CACHE = result
     return result
 
 
@@ -891,15 +1253,30 @@ def _compute_changes(conn: sqlite3.Connection, date_new: str, date_old: str) -> 
     if new_df.empty or old_df.empty:
         return 0
 
-    merged = new_df.merge(old_df[["symbol", "stage", "price", "stage_score"]],
+    merged = new_df.merge(old_df[["symbol", "company_name", "stage", "price", "stage_score"]],
                           on="symbol", how="outer", suffixes=("", "_prev"))
+    company_name_map = _build_company_name_map()
     rows = []
     for _, r in merged.iterrows():
-        stage_now  = r.get("stage") or "UNKNOWN"
-        stage_prev = r.get("stage_prev") or "UNKNOWN"
+        sym = str(r.get("symbol", "")).strip().upper()
+        stage_now  = _text_or_none(r.get("stage")) or "UNKNOWN"
+        stage_prev = _text_or_none(r.get("stage_prev")) or "UNKNOWN"
         p_now  = r.get("price")
         p_prev = r.get("price_prev")
         lp     = r.get("live_price")
+        live_or_current = lp if _f(lp) is not None else p_now
+        current_name = _text_or_none(r.get("company_name"))
+        previous_name = _text_or_none(r.get("company_name_prev"))
+        mapped_name = company_name_map.get(sym)
+        company_name = (
+            mapped_name
+            if mapped_name and (
+                not current_name
+                or current_name.upper() == sym
+                or (previous_name and previous_name.upper() == sym)
+            )
+            else current_name or previous_name or mapped_name or r.get("symbol", "")
+        )
 
         # Change type
         if stage_prev == "UNKNOWN" and stage_now == "STAGE_2":
@@ -924,16 +1301,16 @@ def _compute_changes(conn: sqlite3.Connection, date_new: str, date_old: str) -> 
         rows.append({
             "change_date":    date_new,
             "compare_date":   date_old,
-            "symbol":         r.get("symbol", ""),
-            "company_name":   r.get("company_name", ""),
+            "symbol":         sym or r.get("symbol", ""),
+            "company_name":   company_name,
             "stage_now":      stage_now,
             "stage_prev":     stage_prev,
             "stage_changed":  int(stage_now != stage_prev),
             "price_now":      _f(p_now),
             "price_prev":     _f(p_prev),
             "price_chg_pct":  pct(p_now, p_prev),
-            "live_price":     _f(lp),
-            "live_vs_prev_pct": pct(lp, p_prev),
+            "live_price":     _f(live_or_current),
+            "live_vs_prev_pct": pct(live_or_current, p_prev),
             "stage_score_now": _f(r.get("stage_score")),
             "stage_score_prev": _f(r.get("stage_score_prev")),
             "trading_signal": r.get("trading_signal", ""),
@@ -986,10 +1363,12 @@ def build_change_report(
     result: dict = {"snap_date": today_snap, "prev_date": prev_snap}
 
     # Stage 2 current
-    s2_now = pd.read_sql_query(
-        "SELECT * FROM stage_snapshots WHERE snapshot_date=? AND stage='STAGE_2' ORDER BY stage_score DESC",
-        conn, params=(today_snap,)
-    )
+    s2_now = _pg_stage_snapshots(today_snap, "STAGE_2")
+    if s2_now.empty:
+        s2_now = pd.read_sql_query(
+            "SELECT * FROM stage_snapshots WHERE snapshot_date=? AND stage='STAGE_2' ORDER BY stage_score DESC",
+            conn, params=(today_snap,)
+        )
     result["stage2_now"] = s2_now.to_dict("records")
 
     if prev_snap:
@@ -1033,10 +1412,12 @@ def build_change_report(
                 # For "price changes this week": join stage_snapshots (full data) with
                 # week price from stage_changes so we get all columns for rendering
                 s2_week_syms = chg_w.loc[chg_w.stage_now == "STAGE_2", ["symbol", "price_prev", "price_chg_pct", "live_vs_prev_pct"]]
-                s2_snap = pd.read_sql_query(
-                    "SELECT * FROM stage_snapshots WHERE snapshot_date=? AND stage='STAGE_2'",
-                    conn, params=(today_snap,)
-                )
+                s2_snap = _pg_stage_snapshots(today_snap, "STAGE_2")
+                if s2_snap.empty:
+                    s2_snap = pd.read_sql_query(
+                        "SELECT * FROM stage_snapshots WHERE snapshot_date=? AND stage='STAGE_2'",
+                        conn, params=(today_snap,)
+                    )
                 # Merge: snapshot provides all rich columns; chg_w provides week price_prev + week chg%
                 merged = s2_snap.merge(
                     s2_week_syms.rename(columns={
@@ -1057,19 +1438,21 @@ def build_change_report(
         "total_stage2": len(s2_now),
         "available_dates": dates[:10],
     }
-    hist_rows = pd.read_sql_query(
-        """
-        SELECT
-            snapshot_date,
-            COUNT(*) AS total_stocks,
-            SUM(CASE WHEN stage='STAGE_2' THEN 1 ELSE 0 END) AS stage2_count
-        FROM stage_snapshots
-        GROUP BY snapshot_date
-        ORDER BY snapshot_date DESC
-        LIMIT 30
-        """,
-        conn,
-    )
+    hist_rows = _pg_snapshot_history(30)
+    if hist_rows.empty:
+        hist_rows = pd.read_sql_query(
+            """
+            SELECT
+                snapshot_date,
+                COUNT(*) AS total_stocks,
+                SUM(CASE WHEN stage='STAGE_2' THEN 1 ELSE 0 END) AS stage2_count
+            FROM stage_snapshots
+            GROUP BY snapshot_date
+            ORDER BY snapshot_date DESC
+            LIMIT 30
+            """,
+            conn,
+        )
     hist_records = hist_rows.to_dict("records")
     for idx, row in enumerate(hist_records):
         try:
@@ -1117,7 +1500,7 @@ def build_change_report(
             "stage_changes_day":  len(result.get("all_changes", [])),
         })
 
-    result["summary"]["stage_counts"] = {
+    result["summary"]["stage_counts"] = _pg_stage_counts(today_snap) or {
         "STAGE_1": int(conn.execute("SELECT COUNT(*) FROM stage_snapshots WHERE snapshot_date=? AND stage='STAGE_1'", (today_snap,)).fetchone()[0]),
         "STAGE_2": int(conn.execute("SELECT COUNT(*) FROM stage_snapshots WHERE snapshot_date=? AND stage='STAGE_2'", (today_snap,)).fetchone()[0]),
         "STAGE_3": int(conn.execute("SELECT COUNT(*) FROM stage_snapshots WHERE snapshot_date=? AND stage='STAGE_3'", (today_snap,)).fetchone()[0]),
@@ -1557,9 +1940,9 @@ def build_html_report(report: dict) -> str:
                 {"key": "company",    "label": "Company",  "toggleable": True, "default": True},
                 {"key": "stage_now",  "label": "Stage →",  "toggleable": True, "default": True},
                 {"key": "stage_prev", "label": "Stage ←",  "toggleable": True, "default": True},
-                {"key": "price_prev", "label": "CSV Price","toggleable": True, "default": True},
-                {"key": "live_price", "label": "Live ₹",   "toggleable": True, "default": True},
-                {"key": "live_pct",   "label": "Chg%",     "toggleable": True, "default": True},
+                {"key": "price_now",  "label": "Current ₹","toggleable": True, "default": True},
+                {"key": "price_prev", "label": "Prev ₹",   "toggleable": True, "default": True},
+                {"key": "price_pct",  "label": "Chg%",     "toggleable": True, "default": True},
             ]
         else:
             col_defs = [
@@ -1657,9 +2040,9 @@ def build_html_report(report: dict) -> str:
                     f'<td{td_style(2)} class="cname">{_H(str(r.get("company_name",""))[:35])}</td>',
                     f'<td{td_style(3)}>{_badge(r.get("stage_now","UNKNOWN"))}</td>',
                     f'<td{td_style(4)}>{_badge(r.get("stage_prev","UNKNOWN"))}</td>',
-                    _price_cell(r.get("price_prev")).replace("<td", f'<td{td_style(5)}', 1),
-                    _price_cell(r.get("live_price")).replace("<td", f'<td{td_style(6)}', 1),
-                    _pct_cell(r.get("live_vs_prev_pct")).replace("<td", f'<td{td_style(7)}', 1),
+                    _price_cell(r.get("price_now")).replace("<td", f'<td{td_style(5)}', 1),
+                    _price_cell(r.get("price_prev")).replace("<td", f'<td{td_style(6)}', 1),
+                    _pct_cell(r.get("price_chg_pct")).replace("<td", f'<td{td_style(7)}', 1),
                 ]
             else:
                 rs_val = r.get("relative_strength")

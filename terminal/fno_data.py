@@ -4,7 +4,7 @@ terminal/fno_data.py
 F&O Data Layer for Agent Adda.
 
 Provides:
-  • EOD F&O Bhavcopy download + PostgreSQL/SQLite persistence
+  • EOD F&O Bhavcopy download + PostgreSQL persistence
   • Live NSE option-chain scraper (requires browser-like session)
   • Live futures chain fetcher
   • Utility helpers: lot sizes, expiry calendar, rollover dates
@@ -15,6 +15,7 @@ from __future__ import annotations
 import io
 import json
 import logging
+import os
 import sqlite3
 import time
 import warnings
@@ -87,6 +88,10 @@ def _get_nse_session(force_refresh: bool = False) -> requests.Session:
 # ─────────────────────────────────────────────────────────────────────────────
 def _db_conn() -> sqlite3.Connection:
     return sqlite3.connect(FNO_DB)
+
+
+def _legacy_sqlite_fallbacks_enabled() -> bool:
+    return os.environ.get("AGENT_ADDA_ENABLE_SQLITE_FALLBACKS", "").strip().lower() in {"1", "true", "yes"}
 
 
 def _pg_conn():
@@ -237,7 +242,7 @@ def _normalise_bhavcopy(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def store_fno_bhavcopy(df: pd.DataFrame) -> int:
-    """Persist normalised bhavcopy DataFrame to SQLite. Returns rows inserted."""
+    """Persist normalised bhavcopy DataFrame to optional legacy SQLite cache."""
     conn = _db_conn()
     _ensure_schema(conn)
 
@@ -335,12 +340,12 @@ def _store_fno_bhavcopy_pg(df: pd.DataFrame) -> int:
 
 
 def load_and_store_latest() -> dict:
-    """Download latest bhavcopy and store in PostgreSQL + SQLite cache."""
+    """Download latest bhavcopy and store in PostgreSQL."""
     df = download_fno_bhavcopy()
     if df is None:
         return {"status": "error", "message": "Could not download F&O bhavcopy"}
 
-    n = store_fno_bhavcopy(df)
+    n = store_fno_bhavcopy(df) if _legacy_sqlite_fallbacks_enabled() else 0
     pg_n = _store_fno_bhavcopy_pg(df)
     td = df["trade_date"].iloc[0] if not df.empty else "unknown"
     return {
@@ -365,7 +370,7 @@ def get_available_dates() -> list[str]:
     if not pg_df.empty:
         return pg_df["trade_date"].astype(str).tolist()
 
-    if not FNO_DB.exists():
+    if not _legacy_sqlite_fallbacks_enabled() or not FNO_DB.exists():
         return []
     conn = _db_conn()
     rows = conn.execute(
@@ -380,7 +385,8 @@ def get_eod_option_chain(symbol: str, trade_date: str | None = None,
     """
     Fetch EOD option chain from PostgreSQL for a symbol.
     Returns CE + PE rows for the given expiry (nearest if not specified).
-    Falls back to legacy SQLite if PostgreSQL is unavailable.
+    Legacy SQLite fallback is disabled by default; set
+    AGENT_ADDA_ENABLE_SQLITE_FALLBACKS=1 to opt in.
     """
     sym = symbol.upper()
     pg_params: list[Any] = [sym]
@@ -433,7 +439,7 @@ def get_eod_option_chain(symbol: str, trade_date: str | None = None,
     if not pg_df.empty:
         return pg_df
 
-    if not FNO_DB.exists():
+    if not _legacy_sqlite_fallbacks_enabled() or not FNO_DB.exists():
         return pd.DataFrame()
 
     conn = _db_conn()
@@ -507,7 +513,7 @@ def get_eod_futures(symbol: str, trade_date: str | None = None) -> pd.DataFrame:
     if not pg_df.empty:
         return pg_df
 
-    if not FNO_DB.exists():
+    if not _legacy_sqlite_fallbacks_enabled() or not FNO_DB.exists():
         return pd.DataFrame()
 
     conn = _db_conn()
@@ -550,7 +556,7 @@ def get_oi_history(symbol: str, expiry_date: str, option_type: str = "CE",
     if not pg_df.empty:
         return pg_df
 
-    if not FNO_DB.exists():
+    if not _legacy_sqlite_fallbacks_enabled() or not FNO_DB.exists():
         return pd.DataFrame()
 
     conn = _db_conn()
@@ -663,7 +669,7 @@ def fetch_live_option_chain(symbol: str, expiry: str | None = None,
 
 
 def _live_chain_from_eod(symbol: str, expiry: str | None) -> dict:
-    """Fallback: build option-chain-like structure from EOD SQLite data."""
+    """Fallback: build option-chain-like structure from PostgreSQL EOD data."""
     df = get_eod_option_chain(symbol, expiry_date=expiry)
     if df.empty:
         return {"error": f"No EOD data found for {symbol}", "symbol": symbol, "source": "eod-fallback"}
@@ -795,8 +801,19 @@ def get_lot_size(symbol: str) -> int | None:
     sym = symbol.upper().strip()
     if sym in _LOT_SIZES:
         return _LOT_SIZES[sym]
-    # Try to get from DB
-    if FNO_DB.exists():
+    pg_df = _pg_read_sql(
+        """
+        SELECT lot_size
+        FROM derivatives.fno_eod
+        WHERE symbol=%s AND lot_size IS NOT NULL
+        ORDER BY trade_date DESC
+        LIMIT 1
+        """,
+        (sym,),
+    )
+    if not pg_df.empty and pd.notna(pg_df["lot_size"].iloc[0]):
+        return int(pg_df["lot_size"].iloc[0])
+    if _legacy_sqlite_fallbacks_enabled() and FNO_DB.exists():
         conn = _db_conn()
         row = conn.execute(
             "SELECT NewBrdLotQty FROM fno_eod WHERE symbol=? LIMIT 1",
@@ -812,8 +829,19 @@ def get_lot_size(symbol: str) -> int | None:
 # Expiry Calendar
 # ─────────────────────────────────────────────────────────────────────────────
 def get_expiry_dates(symbol: str) -> list[str]:
-    """Return sorted list of available expiry dates from DB."""
-    if not FNO_DB.exists():
+    """Return sorted list of available expiry dates from PostgreSQL."""
+    pg_df = _pg_read_sql(
+        """
+        SELECT DISTINCT expiry_date::text AS expiry_date
+        FROM derivatives.fno_eod
+        WHERE symbol=%s
+        ORDER BY expiry_date
+        """,
+        (symbol.upper(),),
+    )
+    if not pg_df.empty:
+        return pg_df["expiry_date"].astype(str).tolist()
+    if not _legacy_sqlite_fallbacks_enabled() or not FNO_DB.exists():
         return []
     conn = _db_conn()
     rows = conn.execute(

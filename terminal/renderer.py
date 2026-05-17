@@ -808,7 +808,7 @@ def _has_intraday_data_gap(answer: str, trace: list[dict]) -> bool:
     text = (answer or "").lower()
     gap_markers = (
         "intraday data",
-        "sqlite intraday",
+        "postgresql intraday",
         "intraday source unavailable",
         "intraday unavailable",
         "pre-market",
@@ -840,9 +840,32 @@ def _has_intraday_data_gap(answer: str, trace: list[dict]) -> bool:
     return False
 
 
+def _is_placeholder_metric(metric: dict) -> bool:
+    value = str((metric or {}).get("value") or "").strip()
+    if not value:
+        return True
+    compact = re.sub(r"[\s,._-]+", "", value).upper()
+    return bool(re.fullmatch(r"(?:₹|RS\.?|INR|\$)?[WXYZABC]", compact))
+
+
+def _has_placeholder_text(text: str) -> bool:
+    compact = re.sub(r"[\s,._-]+", "", text or "").upper()
+    return bool(re.search(r"(?:₹|RS\.?|INR|\$)?[WXYZABC](?:CRORES?|CR|BN|M|LAKH|L)?\b", compact))
+
+
 def sanitize_render_plan(plan: dict, answer: str, trace: list[dict]) -> dict:
     """Apply deterministic safety guards after the optional LLM render planner."""
     guarded = dict(_SENTINEL_PLAN) | dict(plan or {})
+    guarded["key_metrics"] = [
+        metric
+        for metric in (guarded.get("key_metrics") or [])
+        if isinstance(metric, dict) and not _is_placeholder_metric(metric)
+    ]
+    if _has_placeholder_text(guarded.get("summary_line") or ""):
+        guarded["summary_line"] = ""
+    if guarded.get("show_summary_strip") and not guarded.get("summary_line") and not guarded.get("key_metrics"):
+        guarded["show_summary_strip"] = False
+
     if _has_intraday_data_gap(answer, trace):
         guarded["show_summary_strip"] = False
         guarded["summary_line"] = ""

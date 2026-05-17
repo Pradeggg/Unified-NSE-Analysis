@@ -76,7 +76,7 @@ class StrengthValidationTests(unittest.TestCase):
         self.assertIn("enhanced_fund_score", bbb["missing_evidence"])
         self.assertIn("forensic", bbb["missing_evidence"])
         self.assertEqual(bbb["evidence_coverage"], "partial")
-        self.assertIn("missing", bbb["verdict"].lower())
+        self.assertEqual(bbb["verdict"], "Insufficient evidence to rank")
 
     def test_keyword_router_uses_strength_validator_for_multi_factor_strength_question(self):
         routed = _keyword_intent(

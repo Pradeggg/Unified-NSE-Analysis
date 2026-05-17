@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Agent Adda — Intraday Capture launchd template.
+     Runs the in-process capture daemon as a stand-alone always-on service so
+     intraday.quote_snapshots stays fresh even when the agent REPL isn't open.
+     Placeholders __VENV__ and __ROOT__ are substituted by setup_wizard.py.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key><string>com.agentadda.intraday_capture</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>__VENV__/bin/python3</string>
+        <string>-c</string>
+        <string>import time
+from terminal.intraday_capture import start_background_capture
+start_background_capture()
+while True: time.sleep(3600)
+</string>
+    </array>
+    <key>WorkingDirectory</key><string>__ROOT__</string>
+    <key>RunAtLoad</key><true/>
+    <key>KeepAlive</key><true/>
+    <key>StandardOutPath</key><string>/tmp/agentadda_capture.log</string>
+    <key>StandardErrorPath</key><string>/tmp/agentadda_capture.err</string>
+</dict>
+</plist>

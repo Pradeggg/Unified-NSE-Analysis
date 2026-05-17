@@ -41,6 +41,33 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+# ─────────────────────────────────────────────────────────────────────────────
+# venv self-bootstrap — re-exec inside ./.venv/bin/python if launched with the
+# system interpreter. Prevents `[Errno 2] No such file or directory` style
+# failures when /model switches the LLM backend (those happen because the
+# system Python lacks `openai`, `dotenv`, etc.).
+# Set AGENT_ADDA_SKIP_VENV_CHECK=1 to opt out.
+# ─────────────────────────────────────────────────────────────────────────────
+def _ensure_project_venv() -> None:
+    if os.getenv("AGENT_ADDA_SKIP_VENV_CHECK"):
+        return
+    project_venv = Path(__file__).resolve().parent / ".venv" / "bin" / "python"
+    # Already inside the project's venv? (sys.prefix differs from base_prefix)
+    in_a_venv = sys.prefix != getattr(sys, "base_prefix", sys.prefix)
+    try:
+        same_python = in_a_venv and Path(sys.executable).resolve() == project_venv.resolve()
+    except OSError:
+        same_python = False
+    if same_python:
+        return
+    if not project_venv.exists():
+        # No venv to re-exec into; let the user see the failure naturally.
+        return
+    # Re-exec inside the project venv, preserving argv.
+    os.execv(str(project_venv), [str(project_venv), str(Path(__file__).resolve()), *sys.argv[1:]])
+
+_ensure_project_venv()
+
 import colorama
 import pandas as pd
 from colorama import Fore, Style
@@ -148,7 +175,151 @@ def _parse_alert_with_llm(raw: str) -> dict | None:
 # ── Global chat state ─────────────────────────────────────────────────────────
 _mode             = "auto"   # "auto" | "intraday" | "historical"
 _followups: list[str] = []   # current follow-up suggestions (up to 3)
+_last_generated_report: Path | None = None
 _market_toolbar_cache: dict = {"ts": 0.0, "data": None}
+
+
+def _remember_generated_report(output: str) -> Path | None:
+    """Remember the latest generated report path printed by a command."""
+    global _last_generated_report
+    match = re.search(r"(?m)^Report:\s*(.+?)\s*$", output or "")
+    if not match:
+        return None
+    path = Path(match.group(1)).expanduser()
+    _last_generated_report = path
+    return path
+
+
+def _is_open_last_report_request(text: str) -> bool:
+    q = " ".join((text or "").strip().lower().split())
+    return q in {
+        "open report",
+        "open the report",
+        "open last report",
+        "open the last report",
+        "show report",
+        "show the report",
+        "show last report",
+        "show the last report",
+    }
+
+
+def _open_last_generated_report() -> str:
+    report = _last_generated_report
+    if report is None:
+        return "No report has been generated in this session yet."
+    if not report.exists():
+        return f"Last report path is no longer available: {report}"
+    import subprocess
+
+    subprocess.Popen(["open", str(report)])
+    return f"Opening report: {report}"
+
+
+def _canonical_search_symbol(raw_symbol: str) -> str:
+    """Resolve /search symbol aliases before building the LLM prompt."""
+    from terminal.tools import resolve_symbol
+
+    raw = str(raw_symbol or "").strip()
+    if not raw:
+        return "RELIANCE"
+    resolved = resolve_symbol(raw)
+    return str(resolved.get("symbol") or raw).strip().upper()
+
+
+def _assess_search_command(text: str) -> tuple[str, str, str]:
+    """Return canonical symbol, topic/context, and optional output format."""
+    from terminal.situation_assessment import assess_entity_topic_request
+
+    assessment = assess_entity_topic_request(text)
+    if assessment.applies and assessment.decision == "route_with_entity_topic":
+        return (
+            assessment.canonical_symbol,
+            assessment.topic,
+            assessment.output_format,
+        )
+
+    parts = text.split()
+    raw_sym = parts[1] if len(parts) > 1 else "RELIANCE"
+    remaining = parts[2:]
+    output_format = ""
+    if remaining and remaining[-1].lower() in ("html", "pdf", "md"):
+        output_format = remaining[-1].lower()
+        remaining = remaining[:-1]
+    return _canonical_search_symbol(raw_sym), " ".join(remaining), output_format
+
+
+def _resolve_search_symbol(raw_text: str) -> str:
+    """Resolve the entity portion of a /search command or search argument."""
+    symbol, _context, _output_format = _assess_search_command(f"/search {raw_text}".strip())
+    return symbol
+
+
+def _remember_terminal_interaction(
+    agent,
+    user_input: str,
+    answer: str,
+    *,
+    intent: str = "direct_terminal_command",
+    source_label: str = "terminal direct command",
+    symbols: list[str] | None = None,
+    result_type: str | None = None,
+) -> None:
+    """Persist direct-rendered terminal command output into Agent context."""
+    try:
+        from terminal.situation_assessment import TurnContext
+
+        clean_symbols = [
+            s.upper()
+            for s in (symbols or re.findall(r"\b[A-Z][A-Z0-9&-]{1,12}\b", answer or ""))
+            if re.fullmatch(r"[A-Z0-9&-]{2,12}", s.upper())
+        ]
+        summary = " ".join((answer or "").split())[:240]
+        ctx = TurnContext(
+            user_input=user_input,
+            intent=intent,
+            mode=_mode,
+            tools=[],
+            source_label=source_label,
+            result_type=result_type or intent,
+            result_summary=summary,
+            symbols=list(dict.fromkeys(clean_symbols))[:10],
+            result_items=list(dict.fromkeys(clean_symbols))[:20],
+        )
+        agent._remember_interaction(user_input, answer, [], turn_context=ctx)
+    except Exception:
+        pass
+
+
+def _normalise_interactive_input(raw_text: str, followups: list[str] | None = None) -> tuple[str, str]:
+    """Expand prompt shortcuts and numbered follow-ups before command routing."""
+    text = (raw_text or "").strip()
+    followups = followups or []
+
+    m_prompt = re.fullmatch(r"p(\d{1,3})", text.lower())
+    if m_prompt:
+        pnum = int(m_prompt.group(1))
+        if pnum in _PROMPT_INDEX:
+            cat, title, query = _PROMPT_INDEX[pnum]
+            return query, f"{title}  ({cat})"
+        return text, ""
+
+    if text in ("1", "2", "3") and followups:
+        idx = int(text) - 1
+        if idx < len(followups):
+            followup = followups[idx]
+            m_cmd = re.match(r"`(/\S+[^`]*)`\s*[-–—]\s*(.+)", followup)
+            if m_cmd:
+                slash_cmd = m_cmd.group(1).strip()
+                description = m_cmd.group(2).strip()
+                return slash_cmd, f"{slash_cmd}  —  {description}"
+            m_nl = re.match(r"`([^`]+)`\s*[-–—]\s*(.+)", followup)
+            if m_nl:
+                expanded = m_nl.group(1).strip() + " — " + m_nl.group(2).strip()
+                return expanded, expanded
+            return followup, followup
+
+    return text, ""
 
 # ── Background monitor (lazy import to avoid startup cost) ────────────────────
 from terminal.monitor import get_monitor, STRATEGIES as MONITOR_STRATEGIES
@@ -417,7 +588,7 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/scan vwap",        "VWAP Reclaim — price reclaiming/losing VWAP proxy"),
     ("/scan vcp",         "VCP — Volatility Contraction Pattern intraday"),
     ("/scan momentum",    "Momentum — MACD + RSI + Supertrend aligned"),
-    ("/dashboard",        "Auto-refreshing current-market dashboard + narrative"),
+    ("/dashboard",        "Auto-refreshing stock-market-TV dashboard + ticker, heatmap, news"),
     ("/dash",             "Alias: current-market dashboard + narrative"),
     # EOD screener shortcuts
     ("/screen stage2",    "Stage 2 uptrend stocks (Weinstein)"),
@@ -489,6 +660,7 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     # ── Deep Search commands ────────────────────────────────────────────────
     ("/search",                           "Deep search — 11 parallel verticals (NSE+BSE+web)"),
     ("/search RELIANCE",                  "Full deep search on RELIANCE"),
+    ("/results RELIANCE",                 "Latest quarterly results, filings, concalls, and catalysts"),
     ("/search RELIANCE announcements",    "NSE corporate announcements for RELIANCE"),
     ("/search RELIANCE dividend",         "Dividend / corporate actions for RELIANCE"),
     ("/search RELIANCE insider",          "Insider trade disclosures for RELIANCE"),
@@ -582,6 +754,9 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/report RELIANCE",                  "Quick research report (default type: research, format: html)"),
     ("/backtest list",    "List EOD Strategy Lab strategies"),
     ("/strategy-lab validate", "Validate EOD backtesting data readiness"),
+    ("/strategy-council DMART", "Iterative strategist + critic EOD simulation with train/validation/test discipline"),
+    ("/strategy-council DMART --iterations 3 --horizon 1w,2w,4w", "Run Strategy Council with explicit horizons"),
+    ("/strategy-council DMART --llm", "Use configured LLM strategist and critics, with deterministic fallback if unavailable"),
     ("/pnl",              "💼 Live portfolio P&L — unrealised gains/losses from holdings.csv"),
     ("/live",             "Switch to LIVE mode (real-time NSE API)"),
     ("/eod",              "Switch to EOD mode (historical CSV/DB)"),
@@ -629,6 +804,9 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/refresh analysis", "Analysis + snapshot (skips aux data fetch)"),
     ("/refresh status",   "Check if refresh is running"),
     ("/refresh stop",     "Stop a running refresh"),
+    ("/data-status",      "Check technical/fundamental DB readiness"),
+    ("/refresh-data",     "Run readiness refresh if DB is stale or partial"),
+    ("/refresh-data --check", "Show the refresh plan without running it"),
     # ── Command discovery ──────────────────────────────────────────────────
     ("/commands",         "Browse all slash commands by category"),
     ("/commands alert",   "Filter commands by keyword, e.g. /commands pdf"),
@@ -655,6 +833,7 @@ _CMD_CATEGORIES: dict[str, tuple[str, str]] = {
     "/strategy": ("F&O / Options",       "📊"),
     "/chart":    ("Charts",              "📈"),
     "/search":   ("Deep Search",         "🌐"),
+    "/results":  ("Latest Results",      "🧾"),
     "/learn":    ("Market Knowledge",    "📚"),
     "/define":   ("Market Knowledge",    "📚"),
     "/compare":  ("Market Knowledge",    "📚"),
@@ -666,6 +845,7 @@ _CMD_CATEGORIES: dict[str, tuple[str, str]] = {
     "/report":   ("Report Generation",   "📝"),
     "/backtest": ("Strategy Lab",         "🧪"),
     "/strategy-lab": ("Strategy Lab",     "🧪"),
+    "/strategy-council": ("Strategy Council", "🧠"),
     "/forensic": ("Forensic",            "🧪"),
     "/voice-mode": ("Voice Briefing",    "🎙️"),
     "/events":   ("Events Calendar",     "📅"),
@@ -690,6 +870,8 @@ _CMD_CATEGORIES: dict[str, tuple[str, str]] = {
     "/theme":    ("Settings & Data",     "⚙️"),
     "/scale":    ("Settings & Data",     "⚙️"),
     "/refresh":  ("Settings & Data",     "⚙️"),
+    "/data-status": ("Settings & Data",  "⚙️"),
+    "/refresh-data": ("Settings & Data", "⚙️"),
     "/commands": ("Help",                "❓"),
 }
 
@@ -1062,6 +1244,58 @@ def _looks_like_index_arg(arg: str) -> bool:
     )
 
 
+def _summarise_report_for_terminal(content: str, fpath: str) -> None:
+    """Print a compact 'Report Details' panel summarising what was saved.
+
+    Shows file size, line count, section list (## headers), table count and the
+    Top 5 Key Insights extracted from the Executive Summary if present.
+    """
+    import os, re
+    try:
+        size_kb = round(os.path.getsize(fpath) / 1024, 1) if os.path.isfile(fpath) else 0.0
+    except Exception:
+        size_kb = 0.0
+    lines = content.splitlines()
+    line_count = len(lines)
+    word_count = sum(len(ln.split()) for ln in lines)
+    sections = [ln.lstrip("# ").strip() for ln in lines if ln.startswith("## ")]
+    table_count = sum(1 for ln in lines if re.match(r"^\s*\|.*\|\s*$", ln) and "---" not in ln)
+
+    # Pull the Top N Key Insights block (numbered list under "Top 5 Key Insights")
+    insights: list[str] = []
+    for i, ln in enumerate(lines):
+        if re.match(r"^\s*\**Top \d+ Key Insights", ln, re.I):
+            for follow in lines[i + 1 : i + 60]:
+                m = re.match(r"^\s*\d+\.\s+(.*)$", follow)
+                if m:
+                    txt = re.sub(r"\*+", "", m.group(1)).strip()
+                    if txt:
+                        insights.append(txt)
+                if follow.startswith("##") or re.match(r"^\s*\**Three Things", follow, re.I):
+                    break
+            if insights:
+                break
+
+    console.print()
+    console.print(f"  [bold cyan]📋 Report Details[/bold cyan]")
+    console.print(f"  [dim]──────────────────────────────────────────────────────────────[/dim]")
+    console.print(f"  [bold]File:[/bold]      [cyan]{fpath}[/cyan]")
+    console.print(f"  [bold]Size:[/bold]      {size_kb} KB  ·  {line_count} lines  ·  {word_count} words")
+    console.print(f"  [bold]Tables:[/bold]    {table_count} rendered")
+    if sections:
+        console.print(f"  [bold]Sections:[/bold] {len(sections)}")
+        for s in sections[:12]:
+            console.print(f"     • {s}")
+        if len(sections) > 12:
+            console.print(f"     [dim]… and {len(sections) - 12} more[/dim]")
+    if insights:
+        console.print(f"  [bold]Top Insights:[/bold]")
+        for ins in insights[:5]:
+            ins_short = (ins[:140] + "…") if len(ins) > 140 else ins
+            console.print(f"     [green]›[/green] {ins_short}")
+    console.print(f"  [dim]──────────────────────────────────────────────────────────────[/dim]")
+
+
 def _auto_export_report(content: str, report_type: str, symbol: str, fmt: str) -> None:
     """Save agent response content as a styled report file and open it."""
     try:
@@ -1073,6 +1307,10 @@ def _auto_export_report(content: str, report_type: str, symbol: str, fmt: str) -
         console.print(f"\n  [bold green]📄 Report saved ({actual}):[/bold green] [cyan]{fpath}[/cyan]")
         if note:
             console.print(f"  [dim]{note}[/dim]")
+        try:
+            _summarise_report_for_terminal(content, fpath)
+        except Exception:
+            pass
         try:
             import subprocess as _sp
             _sp.run(["open", fpath], check=False)
@@ -1430,17 +1668,21 @@ def _dashboard_pct_style(value) -> str:
     return "bold green" if fv > 0 else ("bold red" if fv < 0 else "bold yellow")
 
 
-def _fetch_market_dashboard_snapshot(focus: str = "") -> dict:
+def _fetch_market_dashboard_snapshot(focus: str = "", llm_backend=None) -> dict:
     """Fetch one live dashboard snapshot from existing tools."""
     from terminal.tools import call_tool
 
     plan = [
         ("get_live_market_overview", {}),
+        ("get_intraday_market_recap", {"minutes": 15}),
         ("get_market_breadth", {}),
-        ("get_top_gainers_losers", {"index": "NIFTY 500", "top_n": 5, "direction": "both"}),
+        ("get_top_gainers_losers", {"index": "NIFTY 500", "top_n": 8, "direction": "both"}),
         ("get_fii_dii_activity", {}),
         ("get_global_market_assessment", {}),
         ("search_latest_catalysts", {"symbol": "NIFTY India market today"}),
+        ("get_options_chain", {"symbol": "NIFTY", "expiry_index": 0}),
+        ("get_futures_analysis", {"symbol": "NIFTY"}),
+        ("run_screener_query", {"screen_type": "high_rs", "top_n": 5}),
     ]
     out: dict[str, dict] = {"focus": focus, "fetched_at": datetime.now(_IST).strftime("%Y-%m-%d %H:%M:%S")}
     for name, args in plan:
@@ -1448,6 +1690,10 @@ def _fetch_market_dashboard_snapshot(focus: str = "") -> dict:
             out[name] = call_tool(name, args)
         except Exception as exc:
             out[name] = {"error": str(exc)}
+    if llm_backend is not None:
+        narrative = _generate_dashboard_llm_narrative(out, llm_backend)
+        if narrative:
+            out["llm_narrative"] = narrative
     return out
 
 
@@ -1473,6 +1719,308 @@ def _compact_dashboard_narrative(snapshot: dict) -> str:
     else:
         stance = "mixed and confirmation-led"
     return f"{stance}: NIFTY tape {tape_bias}, breadth {breadth_bias}, global regime {regime}. Confirm sector leadership and invalidation before acting."
+
+
+def _dashboard_llm_narrative(snapshot: dict) -> str:
+    explicit = str(snapshot.get("llm_narrative") or "").strip()
+    if explicit:
+        return explicit[:240]
+    recap = _dashboard_intraday_line(snapshot)
+    narrative = _compact_dashboard_narrative(snapshot)
+    return f"LLM Narrative | {narrative} Intraday read: {recap}"[:240]
+
+
+_DASHBOARD_SECTOR_NAMES = (
+    "NIFTY AUTO", "NIFTY BANK", "NIFTY FMCG", "NIFTY IT", "NIFTY MEDIA",
+    "NIFTY METAL", "NIFTY PHARMA", "NIFTY PSU BANK", "NIFTY REALTY",
+    "NIFTY OIL & GAS", "NIFTY HEALTHCARE INDEX", "NIFTY CONSUMER DURABLES",
+)
+
+
+def _dashboard_sector_heatmap(indices: dict, limit: int = 8) -> str:
+    cells = []
+    rows = []
+    for name in _DASHBOARD_SECTOR_NAMES:
+        row = indices.get(name)
+        pct = (row or {}).get("pct_change", (row or {}).get("chg_pct"))
+        if isinstance(pct, (int, float)):
+            rows.append((name.replace("NIFTY ", "").replace(" INDEX", ""), pct))
+    for name, pct in sorted(rows, key=lambda item: item[1], reverse=True)[:limit]:
+        colour = "green" if pct > 0 else ("red" if pct < 0 else "yellow")
+        cells.append(f"[{colour}]{name} {_dashboard_fmt_pct(pct)}[/{colour}]")
+    return "  ".join(cells) or "sector heat unavailable"
+
+
+def _dashboard_alert_presets(snapshot: dict) -> str:
+    live = snapshot.get("get_live_market_overview") or {}
+    brd = snapshot.get("get_market_breadth") or {}
+    indices = live.get("indices") or {}
+    adv_dec = live.get("adv_dec") or {}
+    alerts = []
+    adv, dec = adv_dec.get("advances"), adv_dec.get("declines")
+    if isinstance(adv, (int, float)) and isinstance(dec, (int, float)) and dec > adv * 2:
+        alerts.append("[red]Breadth washout[/red]")
+    vix_pct = (indices.get("INDIA VIX") or {}).get("pct_change")
+    if isinstance(vix_pct, (int, float)) and vix_pct > 1:
+        alerts.append("[yellow]VIX rising[/yellow]")
+    n50_pct = (indices.get("NIFTY 50") or {}).get("pct_change")
+    if isinstance(n50_pct, (int, float)) and n50_pct < -0.75:
+        alerts.append("[red]NIFTY weak[/red]")
+    stage2 = (brd.get("stage_distribution") or {}).get("STAGE_2")
+    if isinstance(stage2, (int, float)) and stage2 < 250:
+        alerts.append("[yellow]Thin Stage-2 pool[/yellow]")
+    alerts.append("[cyan]/scan momentum[/cyan]")
+    alerts.append("[cyan]/monitor vcp[/cyan]")
+    alerts.append("[cyan]/fno NIFTY[/cyan]")
+    return "  |  ".join(alerts)
+
+
+def _dashboard_news_tape(snapshot: dict, limit: int = 3) -> str:
+    cat = snapshot.get("search_latest_catalysts") or {}
+    titles = [str(r.get("title", "")).strip() for r in (cat.get("results") or []) if r.get("title")]
+    return "  •  ".join(t[:90] for t in titles[:limit]) or "news tape unavailable"
+
+
+def _generate_dashboard_llm_narrative(snapshot: dict, llm_backend) -> str:
+    try:
+        live = snapshot.get("get_live_market_overview") or {}
+        indices = live.get("indices") or {}
+        n50 = indices.get("NIFTY 50") or {}
+        bank = indices.get("NIFTY BANK") or {}
+        adv_dec = live.get("adv_dec") or {}
+        prompt = (
+            "Write a concise stock-market-TV style NSE dashboard narrative in 2 sentences. "
+            "Mention tape bias, breadth, sharp moves, sector leadership, and what to watch. "
+            "Do not give investment advice.\n\n"
+            f"NIFTY 50: {_dashboard_fmt_num(n50.get('last', n50.get('close')), 0)} "
+            f"{_dashboard_fmt_pct(n50.get('pct_change', n50.get('chg_pct')))}\n"
+            f"NIFTY BANK: {_dashboard_fmt_num(bank.get('last', bank.get('close')), 0)} "
+            f"{_dashboard_fmt_pct(bank.get('pct_change', bank.get('chg_pct')))}\n"
+            f"Breadth: {adv_dec.get('advances', '—')} advances / {adv_dec.get('declines', '—')} declines\n"
+            f"Sharp moves: {_dashboard_sharp_moves(snapshot, limit=5)}\n"
+            f"Sector heat: {_dashboard_sector_heatmap(indices, limit=6)}\n"
+            f"News: {_dashboard_news_tape(snapshot, limit=2)}\n"
+        )
+        response = llm_backend.chat(
+            [
+                {"role": "system", "content": "You are Agent Adda, a concise NSE market dashboard narrator."},
+                {"role": "user", "content": prompt},
+            ],
+            tools=None,
+        )
+        content = str((response or {}).get("content") or "").strip()
+        return content[:260]
+    except Exception:
+        return ""
+
+
+def _dashboard_sharp_moves(snapshot: dict, limit: int = 4) -> str:
+    live = snapshot.get("get_live_market_overview") or {}
+    movers = snapshot.get("get_top_gainers_losers") or {}
+    indices = live.get("indices") or {}
+    alerts: list[str] = []
+    for name, row in indices.items():
+        if name.upper() == "INDIA VIX":
+            continue
+        pct = row.get("pct_change", row.get("chg_pct"))
+        if isinstance(pct, (int, float)) and abs(pct) >= 1.0:
+            arrow = "▲" if pct > 0 else "▼"
+            alerts.append(f"{arrow} {name} {_dashboard_fmt_pct(pct)}")
+    for row in (movers.get("gainers") or [])[:3]:
+        pct = row.get("pct_change")
+        if isinstance(pct, (int, float)) and pct >= 5:
+            alerts.append(f"▲ {row.get('symbol', '—')} {_dashboard_fmt_pct(pct)}")
+    for row in (movers.get("losers") or [])[:3]:
+        pct = row.get("pct_change")
+        if isinstance(pct, (int, float)) and pct <= -5:
+            alerts.append(f"▼ {row.get('symbol', '—')} {_dashboard_fmt_pct(pct)}")
+    return " | ".join(alerts[:limit]) or "No steep rise/fall alerts"
+
+
+def _dashboard_intraday_line(snapshot: dict) -> str:
+    recap = snapshot.get("get_intraday_market_recap") or {}
+    if recap and not recap.get("error"):
+        narrative = str(recap.get("narrative") or "").strip()
+        if narrative:
+            return narrative[:180]
+        rows = recap.get("rows") or []
+        bits = []
+        for row in rows[:3]:
+            if row.get("symbol") and isinstance(row.get("current_pct_change"), (int, float)):
+                bits.append(f"{row.get('symbol')} {_dashboard_fmt_pct(row.get('current_pct_change'))}")
+        if bits:
+            return " | ".join(bits)
+    return "intraday recap pending; watching live tape, breadth, sector heat, and mover confirmation"
+
+
+def _dashboard_fno_bias(options: dict, futures: dict) -> str:
+    pcr = options.get("pcr")
+    try:
+        pcr_value = float(pcr)
+    except (TypeError, ValueError):
+        pcr_value = None
+
+    basis_pct = None
+    fut = (futures.get("futures") or [{}])[0] if isinstance(futures.get("futures"), list) else {}
+    try:
+        basis_pct = float(fut.get("basis_pct"))
+    except (TypeError, ValueError):
+        basis_pct = None
+
+    if pcr_value is not None and pcr_value >= 1.2 and (basis_pct is None or basis_pct >= 0):
+        return "constructive"
+    if pcr_value is not None and pcr_value <= 0.8 and (basis_pct is None or basis_pct <= 0):
+        return "defensive"
+    if basis_pct is not None and basis_pct > 0.15:
+        return "mildly bullish"
+    if basis_pct is not None and basis_pct < -0.15:
+        return "mildly bearish"
+    return "neutral"
+
+
+def _dashboard_fno_line(snapshot: dict) -> str:
+    options = snapshot.get("get_options_chain") or {}
+    futures = snapshot.get("get_futures_analysis") or {}
+    parts = []
+    if options and not options.get("error"):
+        calls = sorted(options.get("calls") or [], key=lambda row: row.get("oi") or 0, reverse=True)
+        puts = sorted(options.get("puts") or [], key=lambda row: row.get("oi") or 0, reverse=True)
+        ce = calls[0].get("strike") if calls else "—"
+        pe = puts[0].get("strike") if puts else "—"
+        bias = _dashboard_fno_bias(options, futures)
+        parts.append(
+            f"Options Bias {bias} | PCR {options.get('pcr', '—')} | "
+            f"MaxPain {_dashboard_fmt_num(options.get('max_pain'), 0)} | "
+            f"Resistance {_dashboard_fmt_num(ce, 0)} | Support {_dashboard_fmt_num(pe, 0)}"
+        )
+    elif options.get("error"):
+        parts.append(f"Options unavailable: {options.get('error')}")
+    if futures and not futures.get("error"):
+        fut = (futures.get("futures") or [{}])[0]
+        rollover = futures.get("rollover") or {}
+        fut_bits = []
+        if fut:
+            fut_bits.append(f"Basis {_dashboard_fmt_num(fut.get('basis'), 0)} ({_dashboard_fmt_num(fut.get('basis_pct'), 2)}%)")
+            if fut.get("cost_of_carry_annualised_pct") is not None:
+                fut_bits.append(f"CoC {_dashboard_fmt_num(fut.get('cost_of_carry_annualised_pct'), 1)}%")
+        if rollover:
+            fut_bits.append(f"Rollover {rollover.get('rollover_pct', '—')}%")
+        if fut_bits:
+            parts.append("Futures " + " | ".join(fut_bits))
+    elif futures.get("error"):
+        parts.append(f"Futures unavailable: {futures.get('error')}")
+    return " || ".join(parts) or "F&O data pending"
+
+
+def _dashboard_recommendations_line(snapshot: dict) -> str:
+    live = snapshot.get("get_live_market_overview") or {}
+    glob = snapshot.get("get_global_market_assessment") or {}
+    indices = live.get("indices") or {}
+    adv_dec = live.get("adv_dec") or {}
+    n50 = indices.get("NIFTY 50") or {}
+    vix = indices.get("INDIA VIX") or {}
+    n50_pct = n50.get("pct_change", n50.get("chg_pct"))
+    vix_pct = vix.get("pct_change", vix.get("chg_pct"))
+    adv, dec = adv_dec.get("advances"), adv_dec.get("declines")
+
+    breadth = "mixed breadth"
+    if isinstance(adv, (int, float)) and isinstance(dec, (int, float)):
+        breadth = "positive breadth" if adv > dec else ("negative breadth" if dec > adv else "flat breadth")
+
+    if isinstance(n50_pct, (int, float)) and n50_pct > 0.3 and breadth == "positive breadth":
+        stance = "constructive, study pullbacks/confirmed breakouts only"
+    elif isinstance(n50_pct, (int, float)) and n50_pct < -0.3 and breadth == "negative breadth":
+        stance = "defensive, reduce chase risk and wait for breadth repair"
+    else:
+        stance = "range-bound, trade smaller and wait for confirmation"
+
+    if isinstance(vix_pct, (int, float)) and vix_pct > 1.0:
+        stance += "; volatility rising"
+
+    derivatives = _dashboard_fno_line(snapshot)
+    regime = glob.get("risk_regime") or "mixed"
+    return (
+        f"Research stance: {stance}. "
+        f"Derivatives: {derivatives}. "
+        f"Global regime: {regime}. Not investment advice."
+    )
+
+
+def _dashboard_recommendations_table(snapshot: dict):
+    rec = Table(box=box.SIMPLE, expand=True, padding=(0, 1), show_header=False)
+    rec.add_column("Section", style="bold cyan", no_wrap=True, width=16)
+    rec.add_column("Readout", overflow="fold")
+    rec.add_row("Research stance", _dashboard_recommendations_line(snapshot))
+    rec.add_row("Derivatives", _dashboard_fno_line(snapshot))
+    rec.add_row("Next checks", "Confirm sector leadership, VWAP/ORB follow-through, and invalidation before acting.")
+    return rec
+
+
+def _dashboard_rs_screener_line(snapshot: dict, limit: int = 5) -> str:
+    screen = snapshot.get("run_screener_query") or {}
+    if screen.get("error"):
+        return f"RS screener unavailable: {screen.get('error')}"
+    rows = screen.get("results") or []
+    bits = []
+    for row in rows[:limit]:
+        sym = row.get("symbol") or "—"
+        rs = row.get("rs_pct")
+        chg = row.get("change")
+        if isinstance(rs, (int, float)):
+            bits.append(f"{sym} RS{rs:.0f}%")
+        elif isinstance(chg, (int, float)):
+            bits.append(f"{sym} {_dashboard_fmt_pct(chg)}")
+        else:
+            bits.append(sym)
+    return " | ".join(bits) or "RS screener pending"
+
+
+def _dashboard_ticker(snapshot: dict, width: int) -> str:
+    live = snapshot.get("get_live_market_overview") or {}
+    movers = snapshot.get("get_top_gainers_losers") or {}
+    indices = live.get("indices") or {}
+    parts = []
+    for name in ("NIFTY 50", "NIFTY BANK", "NIFTY IT", "NIFTY METAL"):
+        row = indices.get(name) or {}
+        if row:
+            parts.append(f"{name} {_dashboard_fmt_num(row.get('last', row.get('close')), 0)} {_dashboard_fmt_pct(row.get('pct_change', row.get('chg_pct')))}")
+    for row in (movers.get("gainers") or [])[:2]:
+        parts.append(f"▲ {row.get('symbol')} {_dashboard_fmt_pct(row.get('pct_change'))}")
+    for row in (movers.get("losers") or [])[:2]:
+        parts.append(f"▼ {row.get('symbol')} {_dashboard_fmt_pct(row.get('pct_change'))}")
+    tape = "  •  ".join(parts) or "waiting for live tape"
+    if len(tape) <= max(20, width - 20):
+        return tape
+    offset = int(time.time() / 2) % len(tape)
+    rolled = (tape + "  •  " + tape)[offset: offset + max(20, width - 20)]
+    return rolled
+
+
+def _dashboard_breadth_flow_line(snapshot: dict, flows: list[str], *, compact: bool = False) -> str:
+    live = snapshot.get("get_live_market_overview") or {}
+    brd = snapshot.get("get_market_breadth") or {}
+    glob = snapshot.get("get_global_market_assessment") or {}
+    adv_dec = live.get("adv_dec") or {}
+    pieces = [
+        f"Live {adv_dec.get('advances', '—')}A/{adv_dec.get('declines', '—')}D",
+        f"DB {brd.get('advances', '—')}A/{brd.get('declines', '—')}D",
+    ]
+    if compact:
+        pieces.append(" | ".join(flows) or "Flows n/a")
+        pieces.append(str(glob.get("risk_regime", "mixed")))
+        return " | ".join(pieces)
+    if brd.get("ad_ratio") is not None:
+        pieces.append(f"A/D {brd.get('ad_ratio')}")
+    if brd.get("avg_rs_pct") is not None:
+        pieces.append(f"Avg RS {brd.get('avg_rs_pct'):+.1f}%")
+    stages = brd.get("stage_distribution") or {}
+    if stages:
+        pieces.append("Stages " + "/".join(
+            f"S{i}:{int(stages.get(f'STAGE_{i}', stages.get(f'stage_{i}', 0)) or 0)}" for i in range(1, 5)
+        ))
+    pieces.append(" | ".join(flows) or "Flows n/a")
+    pieces.append(str(glob.get("risk_regime", "mixed")))
+    return " | ".join(pieces)
 
 
 def _market_dashboard_renderable(snapshot: dict, *, width: int | None = None, height: int | None = None):
@@ -1526,6 +2074,172 @@ def _market_dashboard_renderable(snapshot: dict, *, width: int | None = None, he
             index_rows.append((name, pct))
     leaders = sorted(index_rows, key=lambda item: item[1], reverse=True)[:row_limit]
     laggards = sorted(index_rows, key=lambda item: item[1])[:row_limit]
+
+    pulse_style = "bold green" if int(time.time()) % 2 == 0 else "bold yellow"
+    tv = Table(box=box.SIMPLE_HEAD, expand=True, padding=(0, 1))
+    tv.add_column("Screen", style="bold cyan", no_wrap=True, width=24)
+    tv.add_column("Live Market TV", overflow="ellipsis", no_wrap=True)
+    n50 = indices.get("NIFTY 50") or {}
+    bank = indices.get("NIFTY BANK") or {}
+    vix = indices.get("INDIA VIX") or {}
+    gainers = movers.get("gainers") or []
+    losers = movers.get("losers") or []
+    flows = []
+    for row in (fii.get("data") or [])[:2]:
+        net = row.get("net_crore")
+        net_txt = f"{net:+,.0f}Cr" if isinstance(net, (int, float)) else "n/a"
+        flows.append(f"{row.get('category', 'Flow')} {net_txt}")
+
+    def _idx_line(label: str, row: dict) -> str:
+        return f"{label} {_dashboard_fmt_num(row.get('last', row.get('close')), 0)} {_dashboard_fmt_pct(row.get('pct_change', row.get('chg_pct')))}"
+
+    if width >= 130 and height >= 32:
+        large_compact = height < 40
+        panel_row_limit = 3 if large_compact else min(row_limit, 5)
+        ticker_panel = Panel(
+            f"[{pulse_style}]● LIVE[/] LIVE Ticker | {_dashboard_ticker(snapshot, width)}",
+            border_style="bright_blue",
+            height=3,
+        )
+
+        market_tape = Table(box=box.SIMPLE_HEAD, expand=True, padding=(0, 1))
+        market_tape.add_column("Metric", style="bold cyan", no_wrap=True)
+        market_tape.add_column("Last", justify="right")
+        market_tape.add_column("Chg%", justify="right")
+        tape_items = [
+            ("NIFTY 50", n50),
+            ("NIFTY BANK", bank),
+        ]
+        if not large_compact:
+            tape_items.extend([
+                ("MIDCAP", indices.get("NIFTY MIDCAP SELECT") or indices.get("NIFTY MIDCAP 50") or indices.get("NIFTY MIDCAP 100") or {}),
+                ("SMALLCAP", indices.get("NIFTY SMALLCAP 100") or indices.get("NIFTY SMALLCAP 250") or {}),
+            ])
+        tape_items.extend([
+            ("INDIA VIX", vix),
+            ("Live Breadth", {"last": f"{adv_dec.get('advances', '—')}A", "pct_change": None}),
+        ])
+        for label, row in tape_items:
+            if label == "Live Breadth":
+                market_tape.add_row(label, str(row.get("last")), f"{adv_dec.get('declines', '—')}D")
+                continue
+            pct = row.get("pct_change", row.get("chg_pct"))
+            market_tape.add_row(label, _dashboard_fmt_num(row.get("last", row.get("close"))), f"[{_dashboard_pct_style(pct)}]{_dashboard_fmt_pct(pct)}[/]")
+
+        leadership = Table(box=box.SIMPLE_HEAD, expand=True, padding=(0, 1))
+        leadership.add_column("Leaders", style="green")
+        leadership.add_column("Laggards", style="red")
+        for i in range(max(min(len(leaders), panel_row_limit), min(len(laggards), panel_row_limit), 1)):
+            l = f"{leaders[i][0]} {_dashboard_fmt_pct(leaders[i][1])}" if i < len(leaders) else ""
+            r = f"{laggards[i][0]} {_dashboard_fmt_pct(laggards[i][1])}" if i < len(laggards) else ""
+            leadership.add_row(l, r)
+
+        top = Table.grid(expand=True)
+        top.add_column(ratio=1)
+        top.add_column(ratio=1)
+        top.add_row(
+            Panel(market_tape, title="Market Tape", border_style="cyan", height=8 if large_compact else 10),
+            Panel(leadership, title="Index Leadership", border_style="green", height=8 if large_compact else 10),
+        )
+
+        heatmap = Panel(
+            _dashboard_sector_heatmap(indices, limit=8 if large_compact else 12),
+            title="Sectoral Heatmap",
+            border_style="bright_magenta",
+            height=8 if large_compact else 7,
+        )
+        intraday_alerts = Table(box=box.SIMPLE, expand=True, padding=(0, 1), show_header=False)
+        intraday_alerts.add_column("Section", style="bold cyan", no_wrap=True, width=16)
+        intraday_alerts.add_column("Readout", overflow="fold")
+        intraday_alerts.add_row("Classic View", _dashboard_breadth_flow_line(snapshot, flows, compact=True))
+        intraday_alerts.add_row("Intraday View", _dashboard_intraday_line(snapshot))
+        intraday_alerts.add_row("Preset Alerts", _dashboard_alert_presets(snapshot))
+
+        middle = Table.grid(expand=True)
+        middle.add_column(ratio=1)
+        middle.add_column(ratio=1)
+        middle.add_row(heatmap, Panel(intraday_alerts, title="Breadth / Flows / Global / Intraday / Preset Alerts", border_style="yellow", height=8 if large_compact else 7))
+
+        movers_table = Table(box=box.SIMPLE_HEAD, expand=True, padding=(0, 1))
+        movers_table.add_column("Top Gainers", style="green")
+        movers_table.add_column("Top Losers", style="red")
+        for i in range(panel_row_limit):
+            g = gainers[i] if i < len(gainers) else {}
+            lo = losers[i] if i < len(losers) else {}
+            movers_table.add_row(
+                f"{g.get('symbol', '')} {_dashboard_fmt_pct(g.get('pct_change'))}" if g else "",
+                f"{lo.get('symbol', '')} {_dashboard_fmt_pct(lo.get('pct_change'))}" if lo else "",
+            )
+
+        fno_rs_news = Table(box=box.SIMPLE, expand=True, padding=(0, 1), show_header=False)
+        fno_rs_news.add_column("Section", style="bold cyan", no_wrap=True, width=12)
+        fno_rs_news.add_column("Readout", overflow="fold")
+        fno_rs_news.add_row("Sharp Moves", f"Sharp Moves | {_dashboard_sharp_moves(snapshot, limit=3 if large_compact else 4)}")
+        fno_rs_news.add_row("F&O", f"F&O | {_dashboard_fno_line(snapshot)}")
+        fno_rs_news.add_row("Recs", _dashboard_recommendations_line(snapshot))
+        fno_rs_news.add_row("RS Screener", f"RS Screener | {_dashboard_rs_screener_line(snapshot, limit=3 if large_compact else 5)}")
+        fno_rs_news.add_row("News Now", _dashboard_news_tape(snapshot, limit=1 if large_compact else 2))
+        fno_rs_news_panel = Panel(fno_rs_news, title="Sharp Moves / F&O / Recommendations / News Now", border_style="blue", height=7 if large_compact else 8)
+
+        lower = Table.grid(expand=True)
+        lower.add_column(ratio=1)
+        lower.add_column(ratio=1)
+        lower.add_row(Panel(movers_table, title="Top Gainers / Top Losers", border_style="magenta", height=7 if large_compact else 8), fno_rs_news_panel)
+
+        llm_narrative = _dashboard_llm_narrative(snapshot)
+        if large_compact and len(llm_narrative) > 150:
+            llm_narrative = llm_narrative[:149].rsplit(" ", 1)[0] + "…"
+
+        return Panel(
+            Group(
+                ticker_panel,
+                top,
+                middle,
+                Panel(_dashboard_recommendations_table(snapshot), title="Recommendations", border_style="bright_green"),
+                lower,
+                Panel(llm_narrative, title="LLM Narrative", border_style="yellow"),
+            ),
+            title=f"📺 Stock Market TV / Market Dashboard · {fetched_at} · focus: {focus} · refresh: 60s · Ctrl+C to exit"[: max(40, width - 4)],
+            subtitle="LIVE Ticker • Market Tape • Recommendations • F&O • Sectoral Heatmap • News Now • Ctrl+C to exit",
+            border_style="bold white",
+            expand=True,
+        )
+
+    tv.add_row(f"[{pulse_style}]● LIVE[/{pulse_style}]", f"LIVE Ticker | {_dashboard_ticker(snapshot, width)}")
+    tv.add_row("Market Tape", " | ".join([_idx_line("N50", n50), _idx_line("BANK", bank), _idx_line("INDIA VIX", vix)]))
+    tv.add_row("Sectoral Heatmap", _dashboard_sector_heatmap(indices, limit=6 if ultra_compact else 10))
+    tv.add_row(
+        "Breadth / Flows / Global",
+        f"Breadth / Flows / Global | {_dashboard_breadth_flow_line(snapshot, flows)}",
+    )
+    tv.add_row(
+        "Index Leadership",
+        (f"Lead {leaders[0][0]} {_dashboard_fmt_pct(leaders[0][1])}" if leaders else "Lead n/a")
+        + " | "
+        + (f"Weak {laggards[0][0]} {_dashboard_fmt_pct(laggards[0][1])}" if laggards else "Weak n/a"),
+    )
+    tv.add_row(
+        "Top Gainers / Top Losers",
+        (f"Top Gainers {gainers[0].get('symbol', '—')} {_dashboard_fmt_pct(gainers[0].get('pct_change'))}" if gainers else "Top Gainers n/a")
+        + " | "
+        + (f"Top Losers {losers[0].get('symbol', '—')} {_dashboard_fmt_pct(losers[0].get('pct_change'))}" if losers else "Top Losers n/a"),
+    )
+    tv.add_row("Recommendations", _dashboard_recommendations_line(snapshot))
+    tv.add_row("Sharp Moves", f"Sharp Moves | {_dashboard_sharp_moves(snapshot, limit=3)}")
+    tv.add_row("F&O", f"F&O | {_dashboard_fno_line(snapshot)}")
+    tv.add_row("RS Screener", f"RS Screener | {_dashboard_rs_screener_line(snapshot, limit=3)}")
+    tv.add_row("Intraday View", f"Intraday View | {_dashboard_intraday_line(snapshot)}")
+    tv.add_row("Preset Alerts / Screens", f"Preset Alerts | {_dashboard_alert_presets(snapshot)}")
+    tv.add_row("News Now", _dashboard_news_tape(snapshot, limit=1 if ultra_compact else 2))
+    tv.add_row("LLM Narrative", _dashboard_llm_narrative(snapshot))
+    tv.add_row("Exit", "Ctrl+C to exit | data refresh 60s | ticker animates every UI refresh")
+    return Panel(
+        tv,
+        title=f"📺 Stock Market TV / Market Dashboard · {fetched_at} · focus: {focus}"[: max(40, width - 4)],
+        subtitle="Recommendations • Sharp Moves • Sectoral Heatmap • F&O • RS Screener • Top Gainers • Top Losers",
+        border_style="bold white",
+        expand=True,
+    )
 
     if ultra_compact:
         def _idx_line(label: str, row: dict) -> str:
@@ -1589,6 +2303,7 @@ def _market_dashboard_renderable(snapshot: dict, *, width: int | None = None, he
         return Panel(
             rows,
             title=f"📊 Market Dashboard · {fetched_at} · focus: {focus}"[: max(40, width - 4)],
+            subtitle="Breadth / Flows / Global",
             border_style="bold white",
             expand=True,
         )
@@ -1659,10 +2374,13 @@ def _market_dashboard_renderable(snapshot: dict, *, width: int | None = None, he
     )
 
 
-def _run_market_dashboard_live(focus: str = "", *, refresh_secs: int = 60, max_cycles: int | None = None) -> None:
+def _run_market_dashboard_live(focus: str = "", *, refresh_secs: int = 60, max_cycles: int | None = None, llm_backend=None) -> None:
     """Run the auto-refreshing compact dashboard until Ctrl+C."""
     con = _mcon()
-    snapshot = _fetch_market_dashboard_snapshot(focus)
+    if llm_backend is None:
+        snapshot = _fetch_market_dashboard_snapshot(focus)
+    else:
+        snapshot = _fetch_market_dashboard_snapshot(focus, llm_backend=llm_backend)
     cycles = 0
     with Live(
         _market_dashboard_renderable(snapshot),
@@ -1671,14 +2389,20 @@ def _run_market_dashboard_live(focus: str = "", *, refresh_secs: int = 60, max_c
         auto_refresh=False,
         transient=False,
     ) as live:
+        next_fetch = time.time() + refresh_secs
         while True:
             live.update(_market_dashboard_renderable(snapshot), refresh=True)
             cycles += 1
             if max_cycles is not None and cycles >= max_cycles:
                 return
             try:
-                time.sleep(refresh_secs)
-                snapshot = _fetch_market_dashboard_snapshot(focus)
+                time.sleep(1)
+                if time.time() >= next_fetch:
+                    if llm_backend is None:
+                        snapshot = _fetch_market_dashboard_snapshot(focus)
+                    else:
+                        snapshot = _fetch_market_dashboard_snapshot(focus, llm_backend=llm_backend)
+                    next_fetch = time.time() + refresh_secs
             except KeyboardInterrupt:
                 return
 
@@ -2849,7 +3573,7 @@ def _start_alert_autodisplay() -> threading.Thread:
 
     def _loop():
         while not _alert_autodisplay_stop.is_set():
-            _alert_autodisplay_stop.wait(timeout=3)
+            _alert_autodisplay_stop.wait(timeout=0.5)
             if _alert_autodisplay_stop.is_set():
                 break
             try:
@@ -3122,6 +3846,21 @@ _SCAN_ALIASES = {
 
 def _rewrite_scan_command(text: str) -> tuple[str, str]:
     """Return the agent query and status label for a `/scan` shortcut."""
+    status, tool_name, args = _scan_command_tool_call(text)
+    if tool_name == "run_intraday_screener":
+        return (
+            f"Run intraday screener {args['screen_type']} on NIFTY 500 on 15m charts",
+            status,
+        )
+    index = args.get("index", "NIFTY 50")
+    return (
+        f"Scan {index} for intraday research setups using all strategies on 15m charts",
+        status,
+    )
+
+
+def _scan_command_tool_call(text: str) -> tuple[str, str, dict]:
+    """Return deterministic tool call metadata for a `/scan` shortcut."""
     parts = text.split(maxsplit=1)
     arg = parts[1].strip() if len(parts) > 1 else ""
     alias_key = arg.lower()
@@ -3129,15 +3868,90 @@ def _rewrite_scan_command(text: str) -> tuple[str, str]:
     if alias_key in _SCAN_ALIASES:
         screen_type, label = _SCAN_ALIASES[alias_key]
         return (
-            f"Run intraday screener {screen_type} on NIFTY 500 on 15m charts",
             f"Intraday screener: {label}",
+            "run_intraday_screener",
+            {"screen_type": screen_type},
         )
 
     index = arg.upper() if arg else "NIFTY 50"
     return (
-        f"Scan {index} for intraday research setups using all strategies on 15m charts",
         f"Intraday scan: {index}",
+        "scan_intraday_market",
+        {
+            "index": index,
+            "interval": "15m",
+            "strategies": None,
+            "direction_filter": "all",
+            "min_rr": 1.3,
+            "top_n": 10,
+        },
     )
+
+
+def _print_intraday_scan_result(status: str, result: dict) -> None:
+    """Render direct /scan results without invoking the LLM backend."""
+    if result.get("error"):
+        console.print(f"[bold red]  ❌  {result['error']}[/bold red]")
+        return
+
+    console.print()
+    console.rule(f"[bold cyan]{status}[/bold cyan]", style="dim cyan")
+
+    if result.get("index") or result.get("top_buy") is not None or result.get("top_sell") is not None:
+        buy = result.get("top_buy") or result.get("buy_signals") or []
+        sell = result.get("top_sell") or result.get("sell_signals") or []
+        console.print(
+            f"[dim]Index: {result.get('index', '—')}  |  Timeframe: "
+            f"{result.get('interval') or result.get('timeframe') or '15m'}  |  "
+            f"{len(buy)} long / {len(sell)} short research setups[/dim]"
+        )
+
+        def add_rows(table: Table, label: str, rows: list[dict]) -> None:
+            for sig in rows[:10]:
+                table.add_row(
+                    label,
+                    str(sig.get("symbol", "—")),
+                    str(sig.get("strategy") or sig.get("setup_label") or "—"),
+                    str(sig.get("entry", "—")),
+                    str(sig.get("target", "—")),
+                    str(sig.get("stoploss", sig.get("invalidation_level", "—"))),
+                    str(sig.get("rr", "—")),
+                )
+
+        table = Table(box=box.SIMPLE_HEAD, header_style="bold cyan")
+        table.add_column("Side")
+        table.add_column("Symbol", style="bold")
+        table.add_column("Setup")
+        table.add_column("Entry", justify="right")
+        table.add_column("Target", justify="right")
+        table.add_column("Invalidation", justify="right")
+        table.add_column("R:R", justify="right")
+        add_rows(table, "Long", buy)
+        add_rows(table, "Short", sell)
+        console.print(table if table.row_count else "[yellow]  No qualifying intraday setups right now.[/yellow]")
+    else:
+        rows = result.get("results") or []
+        console.print(f"[dim]Screener: {result.get('screen_type', '—')}  |  Results: {len(rows)}[/dim]")
+        table = Table(box=box.SIMPLE_HEAD, header_style="bold cyan")
+        table.add_column("Symbol", style="bold")
+        table.add_column("Setup")
+        table.add_column("Score", justify="right")
+        table.add_column("Price", justify="right")
+        table.add_column("Support", justify="right")
+        table.add_column("Resistance", justify="right")
+        for row in rows[:15]:
+            table.add_row(
+                str(row.get("symbol", "—")),
+                str(row.get("setup_label") or row.get("screen_type") or "—"),
+                str(row.get("score", "—")),
+                str(row.get("price", "—")),
+                str(row.get("support", "—")),
+                str(row.get("resistance", "—")),
+            )
+        console.print(table if table.row_count else "[yellow]  No qualifying intraday setups right now.[/yellow]")
+
+    console.print("[dim]  Framing: Research-only intraday scan; not buy/sell recommendations.[/dim]")
+    console.print()
 
 
 def _print_help() -> None:
@@ -3485,6 +4299,13 @@ def _run_voice_briefing_panel() -> None:
         console.print()
 
 
+def _run_optional_startup_briefing(agent, args) -> None:
+    """Run the text startup briefing when enabled; voice briefing stays manual."""
+    if args.no_briefing:
+        return
+    _run_startup_briefing(agent, args.trace)
+
+
 def _print_briefing_response(result: dict) -> None:
     """Print startup briefing with special styling (wider rule, no 'Agent Adda' header)."""
     global _followups
@@ -3540,10 +4361,36 @@ def _print_briefing_response(result: dict) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _single_query(agent, query: str, show_trace: bool) -> None:
+    if query.strip().lower().startswith("/scan"):
+        status, tool_name, args = _scan_command_tool_call(query)
+        _print_user(query)
+        console.print(f"[dim]  → {status}[/dim]")
+        from terminal.tools import run_intraday_screener, scan_intraday_market
+        result = (
+            run_intraday_screener(**args)
+            if tool_name == "run_intraday_screener"
+            else scan_intraday_market(**args)
+        )
+        _print_intraday_scan_result(status, result)
+        return
+
+    if query.strip().lower().startswith("/strategy-council"):
+        from terminal.strategy_council import handle_strategy_council_command
+        _print_user(query)
+        output = handle_strategy_council_command(query, data_mode=_mode)
+        _remember_generated_report(output)
+        console.print(Markdown(output))
+        return
+
     if query.strip().lower().startswith(("/backtest", "/strategy-lab")):
         from terminal.backtest import handle_backtest_command
         _print_user(query)
         console.print(Markdown(handle_backtest_command(query)))
+        return
+
+    if _is_open_last_report_request(query):
+        _print_user(query)
+        console.print(Markdown(_open_last_generated_report()))
         return
 
     if query.strip().lower().startswith("/strength"):
@@ -3660,11 +4507,20 @@ def _chat_loop(agent, show_trace: bool) -> None:
 
         try:
             with _pt_patch_stdout(raw=True):
-                raw = session.prompt(
-                    _build_prompt(agent),
-                    bottom_toolbar=_bottom_toolbar_text,
-                    refresh_interval=1,
-                )
+                try:
+                    raw = session.prompt(
+                        _build_prompt(agent),
+                        bottom_toolbar=_bottom_toolbar_text,
+                        refresh_interval=1,
+                    )
+                finally:
+                    # Stop the background thread while patch_stdout is still active.
+                    # Without this, the thread may write through the proxy after it
+                    # tears down, producing "write to closed file" in the event loop.
+                    _alert_autodisplay_stop.set()
+                    _t = _alert_autodisplay_thread
+                    if _t and _t.is_alive():
+                        _t.join(timeout=0.3)
         except KeyboardInterrupt:
             console.print()
             continue
@@ -3674,9 +4530,20 @@ def _chat_loop(agent, show_trace: bool) -> None:
         text = raw.strip()
         if not text:
             continue
-
-        # Stop auto-display thread while processing (avoids interleaved output)
-        _alert_autodisplay_stop.set()
+        text, _normalise_note = _normalise_interactive_input(text, _followups)
+        if _normalise_note:
+            console.print(f"[dim]  → {_normalise_note}[/dim]")
+        try:
+            from terminal.situation_assessment import assess_entity_topic_request as _assess_entity_topic_request
+            _entity_assessment = _assess_entity_topic_request(text)
+            if (
+                _entity_assessment.applies
+                and _entity_assessment.decision == "route_with_entity_topic"
+                and _entity_assessment.rewritten_input
+            ):
+                text = _entity_assessment.rewritten_input
+        except Exception:
+            pass
 
         # ── Exit ──────────────────────────────────────────────────────
         if text.lower() in ("exit", "quit", "q", ":q"):
@@ -3735,6 +4602,23 @@ def _chat_loop(agent, show_trace: bool) -> None:
             _separator()
             continue
 
+        if text.lower().startswith("/strategy-council"):
+            from terminal.strategy_council import handle_strategy_council_command
+            _print_user(text)
+            output = handle_strategy_council_command(text, data_mode=_mode)
+            _remember_generated_report(output)
+            _remember_terminal_interaction(
+                agent,
+                text,
+                output,
+                intent="strategy_council",
+                source_label="Strategy Council report",
+                result_type="report",
+            )
+            console.print(Markdown(output))
+            _separator()
+            continue
+
         if text.lower().startswith(("/backtest", "/strategy-lab")):
             from terminal.backtest import handle_backtest_command
             _print_user(text)
@@ -3762,7 +4646,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
         if text.lower() in ("/dashboard", "/dash") or text.lower().startswith(("/dashboard ", "/dash ")):
             topic = text.split(maxsplit=1)[1].strip() if len(text.split(maxsplit=1)) > 1 else ""
             try:
-                _run_market_dashboard_live(topic)
+                _run_market_dashboard_live(topic, llm_backend=getattr(agent, "backend", None))
             finally:
                 console.print("[dim]  Dashboard closed.[/dim]")
             continue
@@ -4107,6 +4991,17 @@ def _chat_loop(agent, show_trace: bool) -> None:
             text = f"global {topic}"
             console.print(f"[dim]  → Global assessment: {topic}[/dim]")
 
+        # ── /data-status and /refresh-data — startup data readiness ─────────
+        if text.lower().startswith("/data-status") or text.lower().startswith("/refresh-data"):
+            try:
+                from terminal.data_readiness import handle_data_readiness_command
+
+                output = handle_data_readiness_command(text)
+                console.print(output)
+            except Exception as exc:
+                console.print(f"[bold red]  ❌ Data readiness failed: {exc}[/bold red]")
+            continue
+
         # ── /prompts library ───────────────────────────────────────────
         if text.lower().startswith("/prompts") or text.lower() == "/p":
             parts = text.split(maxsplit=1)
@@ -4116,8 +5011,19 @@ def _chat_loop(agent, show_trace: bool) -> None:
 
         # ── /scan shortcut: run intraday screener ──────────────────────
         if text.lower().startswith("/scan"):
-            text, status = _rewrite_scan_command(text)
+            status, tool_name, args = _scan_command_tool_call(text)
             console.print(f"[dim]  → {status}[/dim]")
+            try:
+                from terminal.tools import run_intraday_screener, scan_intraday_market
+                result = (
+                    run_intraday_screener(**args)
+                    if tool_name == "run_intraday_screener"
+                    else scan_intraday_market(**args)
+                )
+                _print_intraday_scan_result(status, result)
+            except Exception as exc:
+                console.print(f"[bold red]  ❌  Scan failed: {exc}[/bold red]")
+            continue
 
         # ── /screen shortcut: run EOD screener ────────────────────────
         if text.lower().startswith("/screen"):
@@ -4129,6 +5035,9 @@ def _chat_loop(agent, show_trace: bool) -> None:
                 "supertrend": ("supertrend_buy",  "Supertrend BUY"),
                 "strong":     ("strong_buy",      "Strong Buy"),
                 "new":        ("new_entrants",    "New Stage 2 Entrants"),
+                "newhigh":    ("new_highs",       "Companies Creating New Highs"),
+                "newhighs":   ("new_highs",       "Companies Creating New Highs"),
+                "52w":        ("new_highs",       "Companies Creating New Highs"),
                 "momentum":   ("momentum_52w",    "52W High Momentum Leaders"),
                 "highrs":     ("high_rs",         "High RS Leaders"),
                 "turnaround": ("turnaround",      "Turnaround Recovery"),
@@ -4257,16 +5166,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
 
         # ── /search <symbol> [vertical/context] [pdf|html|md] — deep search engine ──────
         if text.lower().startswith("/search"):
-            parts   = text.split()
-            sym     = parts[1].upper() if len(parts) > 1 else "RELIANCE"
-
-            # Parse optional trailing format: /search RELIANCE pdf
-            _search_fmt = ""
-            _remaining_parts = parts[2:]
-            if _remaining_parts and _remaining_parts[-1].lower() in ("html", "pdf", "md"):
-                _search_fmt = _remaining_parts[-1].lower()
-                _remaining_parts = _remaining_parts[:-1]
-            context = " ".join(_remaining_parts) if _remaining_parts else ""
+            sym, context, _search_fmt = _assess_search_command(text)
 
             # Map shorthand tokens to readable context for the LLM
             _CTX_MAP = {
@@ -4468,23 +5368,183 @@ def _chat_loop(agent, show_trace: bool) -> None:
             if _is_url or _is_file or _has_path:
                 # ── Document analysis mode ────────────────────────────────
                 source_label = arg if len(arg) < 60 else arg[:57] + "..."
-                _doc_export_note = f" → saving {_analyze_fmt.upper()} report" if _analyze_fmt else ""
-                console.print(f"[dim]  → Document Analysis: [bold]{source_label}[/bold]{_doc_export_note}[/dim]")
+                _doc_export_note = f" → saving {_analyze_fmt.upper()} report" if _analyze_fmt else " → saving MD report"
+                console.print(f"[dim]  → Document Analysis (POT + TOT, 2-step): [bold]{source_label}[/bold]{_doc_export_note}[/dim]")
                 _analyze_sym = Path(arg).stem.split(".")[0][:20] if not _is_url else "document"
                 text = (
-                    f"Use the analyze_document tool with source='{arg}'. "
-                    f"Read the full document and provide:\n"
-                    f"1. **Document Summary** — what is this document about? Key topics covered.\n"
-                    f"2. **Key Findings** — the most important data points, numbers, and conclusions.\n"
-                    f"3. **Critical Details** — any financial figures, dates, targets, risks, or action items.\n"
-                    f"4. **Analysis & Opinion** — your expert interpretation of the document's implications.\n"
-                    f"If this is a financial document (annual report, concall transcript, results), "
-                    f"also evaluate: revenue/profit trends, management commentary, guidance changes, "
-                    f"risk factors, and investment implications.\n"
-                    f"Present the analysis in a well-structured format with clear section headers."
+                    f"You are a senior buy-side analyst. Use the analyze_document tool with "
+                    f"source='{arg}', max_pages=60, vision_fallback=true to read the FULL "
+                    f"document. The tool emits each page as `--- Page N (text|vision) ---` so "
+                    f"you can walk it page by page. Pages marked `(vision)` were transcribed "
+                    f"by image-to-text OCR — trust the numbers but cross-check spelling.\n\n"
+                    f"You MUST work through EVERY page (do not skip any), and produce a "
+                    f"comprehensive report using a strict 2-step Plan-of-Thought (POT) + "
+                    f"Tree-of-Thought (TOT) reasoning process.\n\n"
+                    f"═══════════════════════════════════════════════════════════════════════\n"
+                    f"STEP 0 — EXECUTIVE SUMMARY (RENDER FIRST, WRITE LAST)\n"
+                    f"═══════════════════════════════════════════════════════════════════════\n"
+                    f"At the very top of the report, render a `## Executive Summary` section. "
+                    f"Write this AFTER completing all analysis below, then place it at the "
+                    f"top so a busy reader gets the punchline first. It must contain:\n\n"
+                    f"  • **TL;DR** — 3–4 sentences capturing the headline result, the "
+                    f"    direction of travel YoY, the single biggest event of the period, "
+                    f"    and the analyst stance (bull / bear / neutral + conviction).\n"
+                    f"  • **Headline Numbers Strip** — a compact one-row Markdown table:\n"
+                    f"    | Revenue | YoY % | EBITDA / EBITDA % | PAT | YoY % | EPS | Net Debt | Key Event |\n"
+                    f"    |---|---|---|---|---|---|---|---|\n"
+                    f"  • **Top 5 Key Insights** — numbered list of the 5 most actionable "
+                    f"    takeaways the reader MUST know. Each insight must (a) cite a "
+                    f"    number with units, (b) cite the page, and (c) state the SO-WHAT "
+                    f"    implication in one clause.\n"
+                    f"  • **Three Things to Watch Next** — short bullets on catalysts, "
+                    f"    risks, or numbers that will move the thesis.\n\n"
+                    f"Keep the Executive Summary tight (≤ 35 lines). It is the most "
+                    f"important section — everything below is supporting evidence.\n\n"
+                    f"═══════════════════════════════════════════════════════════════════════\n"
+                    f"STEP 1 — PLAN OF THOUGHT (POT)\n"
+                    f"═══════════════════════════════════════════════════════════════════════\n"
+                    f"After the tool returns, render a `## Step 1 — Plan of Thought` section "
+                    f"that explicitly states:\n"
+                    f"  1.1 Document type & scope (annual report / quarterly result / outcome / "
+                    f"      filing / news / other), issuer, period covered, page count\n"
+                    f"  1.2 The 5–8 analytical questions a buy-side reader needs answered\n"
+                    f"  1.3 The data points to extract from the document to answer each question\n"
+                    f"  1.4 The decomposition plan: which page-ranges feed which conclusions.\n"
+                    f"Keep Step 1 concise (≤ 30 lines).\n\n"
+                    f"═══════════════════════════════════════════════════════════════════════\n"
+                    f"STEP 1.5 — PAGE-BY-PAGE INVENTORY (MANDATORY)\n"
+                    f"═══════════════════════════════════════════════════════════════════════\n"
+                    f"Render a `## Step 1.5 — Page-by-Page Inventory` section as a Markdown "
+                    f"table with one row per page actually read:\n\n"
+                    f"   | Page | Section | Extraction | Key content captured |\n"
+                    f"   |---:|---|---|---|\n\n"
+                    f"`Extraction` is `text` or `vision`. `Key content captured` is a one-line "
+                    f"summary of what THAT page contains (e.g. 'Consolidated P&L Q4+FY26 vs "
+                    f"FY25', 'Auditor opinion paras', 'Note 7 — Ecom Express PPA'). This forces "
+                    f"page-level coverage and exposes any page you skipped.\n\n"
+                    f"═══════════════════════════════════════════════════════════════════════\n"
+                    f"STEP 2 — TREE OF THOUGHT (TOT) → COMPREHENSIVE REPORT\n"
+                    f"═══════════════════════════════════════════════════════════════════════\n"
+                    f"Render a `## Step 2 — Tree of Thought Analysis` section. For EACH major "
+                    f"question from Step 1, branch into 2–3 candidate interpretations, weigh "
+                    f"the evidence from the document, prune the weaker branches, and lock in "
+                    f"the winning conclusion. Be explicit: write `Branch A: ...`, `Branch B: "
+                    f"...`, `Verdict: ...` for at least the 3 most important questions.\n\n"
+                    f"Then render the final `## Comprehensive Report` with these sections IN "
+                    f"ORDER (the Executive Summary from Step 0 already appears at the very "
+                    f"top of the document):\n\n"
+                    f"### 1. Document Summary\n"
+                    f"   3–5 lines: what the document is, issuer, period covered, key topics.\n\n"
+                    f"### 2. Key Findings (Top 6–10 bullets)\n"
+                    f"   The most consequential facts/numbers/decisions — each bullet MUST cite "
+                    f"   the figure with units AND the page number from which it was sourced "
+                    f"   (e.g. `Revenue ₹1,05,083 M (+17.6% YoY) — p.8`).\n\n"
+                    f"### 3. Financial Snapshot — MANDATORY TABLES\n"
+                    f"   Render Markdown tables with the data extracted from the document. "
+                    f"   Quote actual numbers — no placeholders, no fabrication. Use `n/d` if "
+                    f"   the value is genuinely not disclosed.\n\n"
+                    f"   **Table A — Profit & Loss (₹ M unless stated otherwise):**\n"
+                    f"   | Metric | Current Qtr | Prior Qtr (QoQ) | Year-Ago Qtr (YoY) | Current FY | Prior FY | YoY % |\n"
+                    f"   |---|---:|---:|---:|---:|---:|---:|\n"
+                    f"   Rows: Revenue from operations, Other income, Total income, "
+                    f"   Cost of materials/services, Employee benefits, Finance costs, "
+                    f"   Depreciation & amortisation, Other expenses, Total expenses, "
+                    f"   EBITDA, EBITDA margin %, PBT (pre-exceptional), Exceptional items, "
+                    f"   PBT, Tax expense, PAT, EPS basic, EPS diluted.\n"
+                    f"   For quarterly results, populate ALL FIVE numeric columns (Q current, "
+                    f"   Q prev, Q YoY, FY current, FY prior). For annual-only docs, leave the "
+                    f"   quarterly columns as `n/d`.\n\n"
+                    f"   **Table B — Balance Sheet (₹ M):**\n"
+                    f"   | Item | Current period | Prior period | Δ | Δ % |\n"
+                    f"   Rows: Property/plant/equipment, Right-of-use assets, Goodwill, Other "
+                    f"   intangibles, Non-current investments, Total non-current assets, "
+                    f"   Inventories, Trade receivables, Cash & equivalents, Current "
+                    f"   investments, Total current assets, Total assets, Equity share "
+                    f"   capital, Other equity, Total equity, Non-current borrowings, "
+                    f"   Non-current lease liabilities, Current borrowings, Current lease "
+                    f"   liabilities, Trade payables, Total liabilities, Net debt.\n\n"
+                    f"   **Table C — Cash Flow Statement (₹ M):**\n"
+                    f"   | Line | Current FY | Prior FY |\n"
+                    f"   Rows: Net cash from operating activities, Net cash used in investing "
+                    f"   activities, Net cash from/used in financing activities, Net change "
+                    f"   in cash, Opening cash, Closing cash, plus the LARGEST 3 line items "
+                    f"   inside each section (e.g. Capex, Acquisitions, Lease principal "
+                    f"   payments).\n\n"
+                    f"   **Table D — Derived KPIs & Ratios (compute from above):**\n"
+                    f"   | KPI | Current | Prior | Δ |\n"
+                    f"   Rows: Revenue YoY %, Gross margin % (1 − COGS/Revenue), EBITDA "
+                    f"   margin %, PAT margin %, Current ratio (CA/CL), Net debt / Equity, "
+                    f"   Working capital (CA − CL), Capex / Revenue %, FCF (CFO − Capex), "
+                    f"   Goodwill / Total assets %, Effective tax rate %.\n"
+                    f"   Show the formula on the first occurrence; if a denominator is zero "
+                    f"   or missing, write `n/a`.\n\n"
+                    f"   **Table E — Segment / Operating KPIs (only what the doc discloses):**\n"
+                    f"   | KPI | Current | Prior | YoY % |\n"
+                    f"   Rows depend on the business (shipments, AUM, premium, subscribers, "
+                    f"   ARPU, store count, capacity utilisation, etc.). If single-segment, "
+                    f"   write one row explaining that.\n\n"
+                    f"   **Table F — Guidance / Outlook:**\n"
+                    f"   | Metric | Prior Guidance | New Guidance | Change |\n"
+                    f"   ANTI-FABRICATION RULE: if the document contains NO forward-looking "
+                    f"   numeric guidance, write a single row `No explicit guidance disclosed` "
+                    f"   and DO NOT invent qualitative aspirations as guidance.\n\n"
+                    f"### 4. Material Notes & Events (extract from notes section)\n"
+                    f"   Sub-bullets, each citing the note number / page:\n"
+                    f"   • **M&A / Schemes of Arrangement** — name, consideration, goodwill "
+                    f"     created, intangibles + useful life, completion date.\n"
+                    f"   • **Exceptional items** — itemised with amount and accounting "
+                    f"     rationale (e.g. Labour Codes, impairment, FV losses).\n"
+                    f"   • **Capital actions** — ESOP grants/exercises, IPO/QIP proceeds "
+                    f"     utilisation (render as a table when present), buybacks, dividends.\n"
+                    f"   • **Group structure** — list ALL subsidiaries and associates as a "
+                    f"     table (S.No | Entity | Relationship | Effective date). Flag "
+                    f"     entities added or wound up during the period.\n"
+                    f"   • **Segment reporting** — segments disclosed and their revenue/PBT.\n"
+                    f"   • **Related-party transactions** — material RPTs if disclosed.\n"
+                    f"   • **Restatement / Ind AS impact** — note any restated comparatives.\n\n"
+                    f"### 5. Auditor's Report Summary\n"
+                    f"   Firm name, partner, FRN, UDIN, opinion type (unmodified / qualified / "
+                    f"   adverse / disclaimer), key audit matters if any, list of subsidiaries "
+                    f"   audited by other auditors with their financial footprint.\n\n"
+                    f"### 6. Management Commentary\n"
+                    f"   Direct quotes (in italics) with attribution if available, plus a "
+                    f"   2-line interpretation of tone (constructive / cautious / defensive). "
+                    f"   If no commentary is present in the document, write so explicitly.\n\n"
+                    f"### 7. Risks & Red Flags\n"
+                    f"   Top 4–6 risks — operational, financial, regulatory, accounting, "
+                    f"   governance, integration. Flag every one-off, exceptional item, "
+                    f"   related-party transaction, contingent liability, or accounting policy "
+                    f"   change you found.\n\n"
+                    f"### 8. Critical Details & Action Items\n"
+                    f"   Dates, deadlines, board approvals, record/ex dates, regulatory "
+                    f"   filings, compliance-officer / company-secretary names, board-meeting "
+                    f"   start/end times — anything time-sensitive or attributable.\n\n"
+                    f"### 9. Analyst Verdict\n"
+                    f"   5–7 lines synthesising the TOT branches into a bull / bear / neutral "
+                    f"   stance with conviction (HIGH / MEDIUM / LOW), the 2–3 catalysts to "
+                    f"   watch next, and the key metric that would change the view.\n\n"
+                    f"═══════════════════════════════════════════════════════════════════════\n"
+                    f"OUTPUT RULES (NON-NEGOTIABLE)\n"
+                    f"═══════════════════════════════════════════════════════════════════════\n"
+                    f"• Walk EVERY page in the page list — the Step 1.5 inventory must cover "
+                    f"  all `pages_read` returned by the tool.\n"
+                    f"• Render the entire response in valid GitHub-flavored Markdown.\n"
+                    f"• Use `##` for top-level sections and `###` for sub-sections so the "
+                    f"  report parses cleanly when saved to a .md file.\n"
+                    f"• Quote actual numbers from the document with units (₹ M, ₹ Cr, %). "
+                    f"  Cite page numbers for every figure in Key Findings.\n"
+                    f"• Never invent guidance, never invent KPIs. Use `n/d` (not disclosed) or "
+                    f"  `n/a` (not applicable) when the document is silent.\n"
+                    f"• If the document is non-financial, replace Tables A–E with the most "
+                    f"  appropriate quantitative tables you can extract (schedule, milestones, "
+                    f"  KPI deltas) and explain the substitution in one line.\n"
+                    f"• Do not skip Step 0, Step 1, Step 1.5 or Step 2 — all four must be "
+                    f"  visible. The Executive Summary (Step 0) MUST be the first section "
+                    f"  of the rendered report."
                 )
-                # Documents: export only if explicit format given
-                _analyze_report_after = (_analyze_sym, "research", _analyze_fmt) if _analyze_fmt else None
+                # Always export to Markdown unless the user specified a different format.
+                _doc_export_fmt = _analyze_fmt or "md"
+                _analyze_report_after = (_analyze_sym, "research", _doc_export_fmt)
             else:
                 # ── Stock deep 360° analysis mode ─────────────────────────
                 _analyze_sym = arg.upper().split()[0]
@@ -5459,6 +6519,21 @@ def _chat_loop(agent, show_trace: bool) -> None:
                     console.print(f"[dim]  → {text}[/dim]")
 
         # ── Apply mode prefix ──────────────────────────────────────────
+        if _is_open_last_report_request(text):
+            _print_user(text)
+            output = _open_last_generated_report()
+            _remember_terminal_interaction(
+                agent,
+                text,
+                output,
+                intent="open_report",
+                source_label="local generated report",
+                result_type="report",
+            )
+            console.print(Markdown(output))
+            _separator()
+            continue
+
         if _mode == "intraday":
             query = f"/intraday {text}"
         elif _mode == "historical":
@@ -5525,6 +6600,10 @@ def main() -> None:
                         help="Color theme: dark, dracula, solarized, high-contrast, nord")
     parser.add_argument("--scale", default=None,
                         help="Layout scale: compact, normal, large")
+    parser.add_argument("--skip-readiness", action="store_true",
+                        help="Skip startup technical/fundamental DB readiness checks")
+    parser.add_argument("--readiness-no-refresh", action="store_true",
+                        help="Check readiness at startup but do not run refresh")
     args = parser.parse_args()
 
     global _mode
@@ -5541,6 +6620,32 @@ def main() -> None:
 
     sys.stdout.write("\x1b[36m  Loading Agent Adda…\x1b[0m\r")
     sys.stdout.flush()
+
+    try:
+        from terminal.data_readiness import (
+            execute_refresh_plan,
+            inspect_data_readiness,
+            plan_refresh,
+            readiness_enabled,
+            render_readiness_panel,
+        )
+
+        if readiness_enabled(args.skip_readiness):
+            readiness = inspect_data_readiness()
+            refresh_plan = plan_refresh(readiness)
+            console.print(render_readiness_panel(readiness, refresh_plan))
+            if refresh_plan.action == "run_refresh" and not args.readiness_no_refresh:
+                console.print("[dim]  │  running readiness refresh before startup[/dim]")
+                refresh_result = execute_refresh_plan(refresh_plan)
+                console.print(
+                    render_readiness_panel(
+                        refresh_result.status,
+                        plan_refresh(refresh_result.status),
+                    )
+                )
+    except Exception as exc:
+        console.print(f"[dim red]  │  data readiness check skipped ({exc})[/dim red]")
+
     from terminal.agent import Agent
     agent = Agent()
     console.print(f"[bold green]  ✓ Agent Adda ready[/bold green]"
@@ -5562,6 +6667,28 @@ def main() -> None:
             )
     except Exception as _e:
         console.print(f"[dim red]  │  intraday capture disabled ({_e})[/dim red]")
+    try:
+        from terminal.intraday_ohlcv_loader import (
+            start_background_ohlcv_loader, LOAD_INTERVAL_SEC, TOP_N_SYMBOLS, TIMEFRAMES,
+        )
+        if start_background_ohlcv_loader():
+            console.print(
+                f"[dim]  │  intraday OHLCV loader: every {LOAD_INTERVAL_SEC}s · "
+                f"{TOP_N_SYMBOLS} symbols · {','.join(TIMEFRAMES)}[/dim]"
+            )
+    except Exception as _e:
+        console.print(f"[dim red]  │  intraday OHLCV loader disabled ({_e})[/dim red]")
+    try:
+        from terminal.fno_intraday_loader import (
+            start_background_fno_loader, LOAD_INTERVAL_SEC as FNO_LOAD_INTERVAL_SEC, INDEX_FUTURE_SYMBOLS,
+        )
+        if start_background_fno_loader():
+            console.print(
+                f"[dim]  │  index futures loader: every {FNO_LOAD_INTERVAL_SEC}s · "
+                f"{','.join(INDEX_FUTURE_SYMBOLS)}[/dim]"
+            )
+    except Exception as _e:
+        console.print(f"[dim red]  │  index futures loader disabled ({_e})[/dim red]")
     console.print()
 
     if args.query:
@@ -5569,9 +6696,7 @@ def main() -> None:
         return
 
     # ── Startup briefing (skip with --no-briefing or -nb) ─────────────────
-    if not args.no_briefing:
-        _run_startup_briefing(agent, args.trace)
-        _run_voice_briefing_panel()
+    _run_optional_startup_briefing(agent, args)
 
     _chat_loop(agent, args.trace)
 

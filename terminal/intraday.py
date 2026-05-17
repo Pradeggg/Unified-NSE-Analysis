@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import math
 import os
+import sys
 import threading
 import warnings
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
@@ -35,6 +36,20 @@ _SCAN_TIMEOUT     = 300
 _YF_DOWNLOAD_LOCK = threading.Lock()
 
 
+def _can_redirect_python_stdio() -> bool:
+    """Only swap sys stdout/stderr when it cannot race with prompt_toolkit.
+
+    prompt_toolkit's patch_stdout installs proxy objects while the interactive
+    prompt is active. Replacing those globals from a background download thread
+    can leave the renderer writing to a closed temporary file.
+    """
+    if threading.current_thread() is not threading.main_thread():
+        return False
+    stdout_mod = type(sys.stdout).__module__
+    stderr_mod = type(sys.stderr).__module__
+    return "prompt_toolkit" not in stdout_mod and "prompt_toolkit" not in stderr_mod
+
+
 # PG: Thread-safe stdout/stderr suppression using OS-level fd redirection.
 #     contextlib.redirect_stdout/redirect_stderr mutate global sys.stdout/stderr
 #     which races with the main thread's console output and causes
@@ -43,19 +58,26 @@ _YF_DOWNLOAD_LOCK = threading.Lock()
 def _suppress_fds():
     """Redirect OS-level stdout (fd 1) and stderr (fd 2) to /dev/null.
 
-    This is thread-safe because it operates on file descriptors, not on
-    the Python sys.stdout/sys.stderr objects.  The GIL + _YF_DOWNLOAD_LOCK
-    ensure only one thread mutates the fds at a time.
+    Skip fd-level redirection from background threads — os.dup2 operates
+    process-wide and will silence the main thread's console, spinner, and
+    prompt_toolkit output.  progress=False + logger silencing (done by the
+    caller) are sufficient to keep background downloads quiet.
     """
+    if threading.current_thread() is not threading.main_thread():
+        yield
+        return
     devnull_fd = os.open(os.devnull, os.O_WRONLY)
     saved_stdout_fd = os.dup(1)
     saved_stderr_fd = os.dup(2)
     try:
         os.dup2(devnull_fd, 1)
         os.dup2(devnull_fd, 2)
-        with os.fdopen(os.dup(devnull_fd), "w") as devnull_out, os.fdopen(os.dup(devnull_fd), "w") as devnull_err:
-            with redirect_stdout(devnull_out), redirect_stderr(devnull_err):
-                yield
+        if _can_redirect_python_stdio():
+            with os.fdopen(os.dup(devnull_fd), "w") as devnull_out, os.fdopen(os.dup(devnull_fd), "w") as devnull_err:
+                with redirect_stdout(devnull_out), redirect_stderr(devnull_err):
+                    yield
+        else:
+            yield
     finally:
         os.dup2(saved_stdout_fd, 1)
         os.dup2(saved_stderr_fd, 2)
@@ -105,6 +127,34 @@ _INTERVAL_FALLBACK: dict[str, str] = {
     "5m": "15m", "15m": "30m", "30m": "1h", "1h": "1h",
 }
 
+_YAHOO_INDEX_TICKERS: dict[str, tuple[str, ...]] = {
+    "NIFTY": ("^NSEI",),
+    "NIFTY50": ("^NSEI",),
+    "NIFTY 50": ("^NSEI",),
+    "BANKNIFTY": ("^NSEBANK",),
+    "BANK NIFTY": ("^NSEBANK",),
+    "NIFTY BANK": ("^NSEBANK",),
+    "MIDCPNIFTY": ("NIFTY_MID_SELECT.NS",),
+    "MIDC NIFTY": ("NIFTY_MID_SELECT.NS",),
+    "MIDCAP NIFTY": ("NIFTY_MID_SELECT.NS",),
+    "NIFTY MIDCAP SELECT": ("NIFTY_MID_SELECT.NS",),
+    "NIFTY MID SELECT": ("NIFTY_MID_SELECT.NS",),
+}
+
+
+def _yahoo_ticker_candidates(symbol: str) -> list[str]:
+    """Return Yahoo Finance tickers for NSE equities and supported indices."""
+    sym = " ".join(symbol.strip().upper().replace("_", " ").split())
+    if not sym:
+        return []
+    if sym in _YAHOO_INDEX_TICKERS:
+        return list(_YAHOO_INDEX_TICKERS[sym])
+    raw = symbol.strip().upper()
+    if raw.startswith("^") or raw.endswith((".NS", ".BO")):
+        return [raw]
+    return [f"{raw}.NS", f"{raw}.BO"]
+
+
 def _market_context() -> dict:
     """Return current IST time and whether NSE market is open."""
     status = market_session_status()
@@ -131,7 +181,7 @@ def get_intraday_candles(
     interval: str = "15m",
     period: str | None = None,
 ) -> pd.DataFrame:
-    """Fetch OHLCV candles from Yahoo Finance for an NSE stock.
+    """Fetch OHLCV candles from Yahoo Finance for an NSE stock or supported index.
 
     Tries NSE (.NS) first, then BSE (.BO) if NSE returns too few candles.
     If the requested interval is too granular, auto-upgrades to the next
@@ -169,24 +219,26 @@ def get_intraday_candles(
         except Exception:
             return pd.DataFrame()
 
-    # Try NSE first
-    df = _fetch(f"{sym}.NS", interval, per)
+    candidates = _yahoo_ticker_candidates(sym)
+    df = pd.DataFrame()
 
-    # BSE fallback if NSE thin
-    if df.empty or len(df) < min_c:
-        df_bse = _fetch(f"{sym}.BO", interval, per)
-        if len(df_bse) > len(df):
-            df = df_bse
+    for ticker in candidates:
+        candidate_df = _fetch(ticker, interval, per)
+        if len(candidate_df) > len(df):
+            df = candidate_df
+        if len(df) >= min_c:
+            break
 
     # Auto-upgrade interval if still insufficient
     fallback_ivl = _INTERVAL_FALLBACK.get(interval)
     if (df.empty or len(df) < min_c) and fallback_ivl:
         fallback_per = _INTERVAL_PERIOD.get(fallback_ivl, "60d")
-        df2 = _fetch(f"{sym}.NS", fallback_ivl, fallback_per)
-        if df2.empty or len(df2) < _MIN_CANDLES.get(fallback_ivl, 8):
-            df2 = _fetch(f"{sym}.BO", fallback_ivl, fallback_per)
-        if len(df2) >= _MIN_CANDLES.get(fallback_ivl, 8):
-            df = df2  # return with upgraded interval noted in caller
+        for ticker in candidates:
+            df2 = _fetch(ticker, fallback_ivl, fallback_per)
+            if len(df2) > len(df):
+                df = df2
+            if len(df) >= _MIN_CANDLES.get(fallback_ivl, 8):
+                break
 
     return df
 

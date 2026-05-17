@@ -379,6 +379,14 @@ class NSEAgentScanRewriteTests(unittest.TestCase):
         )
         self.assertEqual(status, "Intraday scan: NIFTY BANK")
 
+    def test_scan_command_uses_direct_tool_call_not_llm_query(self):
+        status, tool_name, args = nse_agent._scan_command_tool_call("/scan")
+
+        self.assertEqual(status, "Intraday scan: NIFTY 50")
+        self.assertEqual(tool_name, "scan_intraday_market")
+        self.assertEqual(args["index"], "NIFTY 50")
+        self.assertEqual(args["interval"], "15m")
+
     def test_rewrite_scan_aliases_to_intraday_screener_types(self):
         cases = {
             "orb": ("opening_range_breakout", "Opening Range Breakout"),
@@ -399,6 +407,11 @@ class NSEAgentScanRewriteTests(unittest.TestCase):
                     f"Run intraday screener {screen_type} on NIFTY 500 on 15m charts",
                 )
                 self.assertEqual(status, f"Intraday screener: {label}")
+
+                direct_status, tool_name, args = nse_agent._scan_command_tool_call(f"/scan {alias}")
+                self.assertEqual(direct_status, f"Intraday screener: {label}")
+                self.assertEqual(tool_name, "run_intraday_screener")
+                self.assertEqual(args, {"screen_type": screen_type})
 
 
 class MarketDashboardLiveTests(unittest.TestCase):
@@ -425,6 +438,7 @@ class MarketDashboardLiveTests(unittest.TestCase):
                 "avg_rs_pct": -1.2,
                 "stage_distribution": {"STAGE_1": 10, "STAGE_2": 20, "STAGE_3": 30, "STAGE_4": 40},
             },
+            "get_intraday_market_recap": {"narrative": "Last 15m: NIFTY soft, breadth weak, metals holding."},
             "get_top_gainers_losers": {
                 "gainers": [{"symbol": "AAA", "pct_change": 5.0}],
                 "losers": [{"symbol": "ZZZ", "pct_change": -4.0}],
@@ -432,6 +446,19 @@ class MarketDashboardLiveTests(unittest.TestCase):
             "get_fii_dii_activity": {"data": [{"category": "FII", "net_crore": -1000.0}]},
             "get_global_market_assessment": {"risk_regime": "RISK_OFF"},
             "search_latest_catalysts": {"results": [{"title": "Market headline"}]},
+            "get_options_chain": {
+                "symbol": "NIFTY",
+                "pcr": 0.9,
+                "max_pain": 23600,
+                "calls": [{"strike": 23700, "oi": 1000}],
+                "puts": [{"strike": 23500, "oi": 1200}],
+            },
+            "get_futures_analysis": {
+                "symbol": "NIFTY",
+                "futures": [{"basis": 20, "basis_pct": 0.08, "cost_of_carry_annualised_pct": 5.5}],
+                "rollover": {"rollover_pct": 30.0},
+            },
+            "run_screener_query": {"results": [{"symbol": "AAA", "rs_pct": 88.0}]},
         }
 
     def test_market_dashboard_renderable_is_compact_and_excludes_vix_from_leaders(self):
@@ -446,6 +473,16 @@ class MarketDashboardLiveTests(unittest.TestCase):
         self.assertIn("INDIA VIX", output)
         self.assertIn("NIFTY METAL", output)
         self.assertIn("NIFTY IT", output)
+        self.assertIn("Sectoral Heatmap", output)
+        self.assertIn("F&O", output)
+        self.assertIn("PCR", output)
+        self.assertIn("RS Screener", output)
+        self.assertIn("Top Gainers", output)
+        self.assertIn("Top Losers", output)
+        self.assertIn("Sharp Moves", output)
+        self.assertIn("LLM Narrative", output)
+        self.assertIn("Preset Alerts", output)
+        self.assertIn("News Now", output)
         self.assertIn("defensive / risk-off", output)
         self.assertEqual(output.count("INDIA VIX"), 1)
 
@@ -470,6 +507,43 @@ class MarketDashboardLiveTests(unittest.TestCase):
 
         fetch.assert_called_once_with("banks")
 
+    def test_live_dashboard_refreshes_snapshot_after_interval(self):
+        class FakeLive:
+            instances = []
+
+            def __init__(self, renderable, **kwargs):
+                self.renderables = [renderable]
+                FakeLive.instances.append(self)
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+            def update(self, renderable, refresh=False):
+                self.renderables.append(renderable)
+
+        first = self._sample_snapshot()
+        second = self._sample_snapshot()
+        second["fetched_at"] = "2026-05-12 11:31:00"
+
+        with patch.object(nse_agent, "_fetch_market_dashboard_snapshot", side_effect=[first, second]) as fetch, patch.object(
+            nse_agent, "Live", FakeLive
+        ), patch.object(nse_agent.time, "sleep", return_value=None):
+            nse_agent._run_market_dashboard_live("banks", refresh_secs=0, max_cycles=2)
+
+        self.assertEqual(fetch.call_count, 2)
+        fetch.assert_any_call("banks")
+        rendered = []
+        from rich.console import Console as RichConsole
+        for renderable in FakeLive.instances[0].renderables:
+            capture = io.StringIO()
+            RichConsole(file=capture, force_terminal=False, width=120, height=34).print(renderable)
+            rendered.append(capture.getvalue())
+        self.assertIn("2026-05-12 11:30:00", rendered[0])
+        self.assertIn("2026-05-12 11:31:00", rendered[-1])
+
     def test_fetch_market_dashboard_snapshot_calls_expected_tools(self):
         calls = []
 
@@ -486,13 +560,44 @@ class MarketDashboardLiveTests(unittest.TestCase):
             [name for name, _ in calls],
             [
                 "get_live_market_overview",
+                "get_intraday_market_recap",
                 "get_market_breadth",
                 "get_top_gainers_losers",
                 "get_fii_dii_activity",
                 "get_global_market_assessment",
                 "search_latest_catalysts",
+                "get_options_chain",
+                "get_futures_analysis",
+                "run_screener_query",
             ],
         )
+
+    def test_fetch_market_dashboard_snapshot_can_add_llm_narrative(self):
+        class FakeBackend:
+            def chat(self, messages, tools=None):
+                self.messages = messages
+                return {"content": "LLM says: risk-off tape; watch breadth and IT weakness."}
+
+        backend = FakeBackend()
+
+        def fake_call_tool(name, args):
+            if name == "get_live_market_overview":
+                return {
+                    "indices": {
+                        "NIFTY 50": {"last": 23600.0, "pct_change": -1.2},
+                        "NIFTY BANK": {"last": 54000.0, "pct_change": -0.4},
+                    },
+                    "adv_dec": {"advances": 80, "declines": 420},
+                }
+            if name == "get_top_gainers_losers":
+                return {"gainers": [{"symbol": "AAA", "pct_change": 5.0}], "losers": [{"symbol": "ZZZ", "pct_change": -6.0}]}
+            return {}
+
+        with patch("terminal.tools.call_tool", side_effect=fake_call_tool):
+            snapshot = nse_agent._fetch_market_dashboard_snapshot("banks", llm_backend=backend)
+
+        self.assertIn("LLM says", snapshot["llm_narrative"])
+        self.assertIn("Sharp moves", backend.messages[-1]["content"])
 
 
 class FakeWorker:
@@ -686,7 +791,6 @@ class IntradayScreenerToolTests(unittest.TestCase):
             result["source_priority"],
             [
                 "PostgreSQL intraday.ohlcv_bars",
-                "SQLite intraday_ohlcv",
                 "NSE website live constituents",
                 "yfinance candles",
             ],
@@ -703,7 +807,7 @@ class IntradayScreenerToolTests(unittest.TestCase):
         self.assertEqual(scan.call_args.kwargs["interval"], "15m")
         self.assertEqual(scan.call_args.kwargs["strategies"], ["ema", "rsi"])
 
-    def test_run_intraday_screener_sqlite_path_filters_and_sorts_results(self):
+    def test_run_intraday_screener_postgres_path_filters_and_sorts_results(self):
         setups = {
             "AAA": {
                 "symbol": "AAA",
@@ -755,13 +859,134 @@ class IntradayScreenerToolTests(unittest.TestCase):
             )
 
         self.assertEqual(result["data_mode"], "intraday")
-        self.assertEqual(result["source"], "SQLite intraday_ohlcv")
+        self.assertEqual(result["source"], "PostgreSQL intraday.ohlcv_bars")
         self.assertEqual(result["scanned"], 3)
         self.assertEqual(result["count"], 2)
         self.assertEqual([row["symbol"] for row in result["results"]], ["AAA", "BBB"])
         self.assertEqual(result["results"][0]["support"], 99.0)
         self.assertEqual(result["results"][0]["resistance"], 106.0)
         self.assertIn("Not investment advice", result["disclaimer"])
+
+    def test_explain_intraday_setup_returns_plain_float_levels(self):
+        import numpy as np
+        import pandas as pd
+
+        df = pd.DataFrame(
+            {
+                "Open": [100.0 + i for i in range(30)],
+                "High": [101.0 + i for i in range(30)],
+                "Low": [99.0 + i for i in range(30)],
+                "Close": [100.5 + i for i in range(30)],
+                "Volume": [1000 + i for i in range(30)],
+            },
+            index=pd.date_range("2026-05-15 09:15:00", periods=30, freq="15min"),
+        )
+        bars = [
+            {
+                "timestamp": str(idx),
+                "open": row["Open"],
+                "high": row["High"],
+                "low": row["Low"],
+                "close": row["Close"],
+                "volume": row["Volume"],
+            }
+            for idx, row in df.iterrows()
+        ]
+
+        with patch.object(
+            tools,
+            "compute_intraday_indicators",
+            return_value={
+                "symbol": "NIFTY50",
+                "timeframe": "15m",
+                "source": "PostgreSQL intraday.ohlcv_bars",
+                "latest_timestamp": "2026-05-15 13:15:00",
+                "latest_close": 129.5,
+                "score": 85,
+                "indicators": {
+                    "rsi": 57.1,
+                    "macd_hist": 1.2,
+                    "supertrend_dir": 1,
+                    "atr": np.float64(8.12),
+                    "ema21": 125.0,
+                    "ema50": 120.0,
+                },
+            },
+        ), patch.object(tools, "get_intraday_bars", return_value={"bars": bars}), patch.object(
+            tools, "_compute_intraday_all", return_value=df
+        ), patch.object(
+            tools, "_run_intraday_all_signals", return_value=[]
+        ), patch.object(
+            tools,
+            "get_intraday_levels",
+            return_value={
+                "supports": [np.float64(126.25)],
+                "resistances": [np.float64(132.75), np.float64(135.5)],
+            },
+        ):
+            result = tools.explain_intraday_setup("NIFTY50")
+
+        self.assertEqual(result["technical_target_zones"], [132.75, 135.5])
+        self.assertIs(type(result["technical_target_zones"][0]), float)
+        self.assertEqual(result["invalidation_level"], 126.25)
+        self.assertIs(type(result["invalidation_level"]), float)
+
+    def test_get_intraday_levels_returns_plain_float_values(self):
+        import numpy as np
+        import pandas as pd
+
+        bars = [
+            {
+                "timestamp": f"2026-05-15 09:{15 + i:02d}:00",
+                "open": 100 + i,
+                "high": 101 + i,
+                "low": 99 + i,
+                "close": 100.5 + i,
+                "volume": 1000 + i,
+            }
+            for i in range(12)
+        ]
+        df = pd.DataFrame(
+            {
+                "Open": [100 + i for i in range(12)],
+                "High": [101 + i for i in range(12)],
+                "Low": [99 + i for i in range(12)],
+                "Close": [100.5 + i for i in range(12)],
+                "Volume": [1000 + i for i in range(12)],
+            },
+            index=pd.date_range("2026-05-15 09:15:00", periods=12, freq="15min"),
+        )
+
+        with patch.object(
+            tools,
+            "get_intraday_bars",
+            return_value={
+                "source": "PostgreSQL intraday.ohlcv_bars",
+                "latest_timestamp": "2026-05-15 12:00:00",
+                "bars": bars,
+            },
+        ), patch.object(tools, "_compute_intraday_all", return_value=df), patch.object(
+            tools,
+            "_intraday_key_levels",
+            return_value={
+                "pivot": np.float64(128.4),
+                "supports": [np.float64(126.25)],
+                "resistances": [np.float64(132.75), np.float64(135.5)],
+                "ema9": np.float64(127.1),
+                "ema21": np.float64(124.8),
+                "ema50": np.float64(119.2),
+                "ema200": np.float64(110.0),
+                "pivot_levels": {"r1": np.float64(132.75), "s1": np.float64(126.25)},
+            },
+        ):
+            result = tools.get_intraday_levels("TMPV")
+
+        self.assertIs(type(result["pivot"]), float)
+        self.assertIs(type(result["supports"][0]), float)
+        self.assertIs(type(result["resistances"][0]), float)
+        self.assertIs(type(result["ema_levels"]["ema9"]), float)
+        self.assertIs(type(result["pivot_levels"]["r1"]), float)
+        self.assertNotIn("np.float64", str(result))
 
 
 if __name__ == "__main__":

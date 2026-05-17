@@ -54,14 +54,67 @@ _SIGNAL_CLASSES = {
 }
 
 def _colorise_signals(text: str) -> str:
-    """Wrap known signal words in colored spans."""
-    for word, cls in sorted(_SIGNAL_CLASSES.items(), key=lambda x: -len(x[0])):
-        text = re.sub(
-            rf'\b({re.escape(word)})\b',
-            rf'<span class="{cls}">\1</span>',
-            text, flags=re.IGNORECASE
-        )
-    return text
+    """Wrap known signal words in colored spans.
+
+    Only colorises text segments that are OUTSIDE existing HTML tags, anchors,
+    and already-coloured spans. Without this guard the regex re-matches words
+    like "buy" / "hold" / "neutral" inside hrefs and existing sig-* spans,
+    producing broken nested markup such as
+    ``<span class="sig-<span class="sig-hold">hold</span>">neutral</span>``.
+    """
+    # Tokenise on HTML tags so we never substitute inside one.
+    parts = re.split(r'(<[^>]+>)', text)
+    depth_a = 0
+    depth_sig = 0
+    for idx, seg in enumerate(parts):
+        if seg.startswith('<'):
+            low = seg.lower()
+            if low.startswith('<a '):
+                depth_a += 1
+            elif low.startswith('</a>'):
+                depth_a = max(0, depth_a - 1)
+            elif re.match(r'<span\s+class="sig-', low):
+                depth_sig += 1
+            elif low.startswith('</span>') and depth_sig:
+                depth_sig -= 1
+            continue
+        if depth_a or depth_sig:
+            continue
+        for word, cls in sorted(_SIGNAL_CLASSES.items(), key=lambda x: -len(x[0])):
+            seg = re.sub(
+                rf'(?<![\w-])({re.escape(word)})(?![\w-])',
+                rf'<span class="{cls}">\1</span>',
+                seg, flags=re.IGNORECASE
+            )
+        parts[idx] = seg
+    return ''.join(parts)
+
+
+# Linkify bare URLs, including those wrapped in parentheses like (https://...)
+_URL_RE = re.compile(r'(?<!["\'>=])(https?://[^\s<>)\]]+)')
+
+def _linkify_urls(text: str) -> str:
+    """Convert bare ``https://...`` occurrences into clickable links.
+
+    Skips URLs already inside an ``href`` attribute. Strips trailing punctuation
+    so a trailing period or closing paren doesn't get absorbed into the link.
+    """
+    def _sub(match: re.Match) -> str:
+        url = match.group(1)
+        trail = ''
+        while url and url[-1] in '.,;:)':
+            trail = url[-1] + trail
+            url = url[:-1]
+        if not url:
+            return match.group(0)
+        return f'<a href="{url}" target="_blank" rel="noopener">{url}</a>{trail}'
+    # Process segment-by-segment to avoid touching href attributes.
+    parts = re.split(r'(<a [^>]*>.*?</a>)', text, flags=re.IGNORECASE | re.DOTALL)
+    for i, seg in enumerate(parts):
+        if seg.lower().startswith('<a '):
+            continue
+        parts[i] = _URL_RE.sub(_sub, seg)
+    return ''.join(parts)
 
 
 def _fmt_num(v, digits: int = 2, suffix: str = "") -> str:
@@ -109,6 +162,8 @@ def _build_postgres_research_context(symbol: str) -> str:
                             (SELECT close FROM px WHERE trade_date <= (SELECT trade_date FROM latest) - INTERVAL '1 month' ORDER BY trade_date DESC LIMIT 1) AS close_1m,
                             (SELECT close FROM px WHERE trade_date <= (SELECT trade_date FROM latest) - INTERVAL '3 months' ORDER BY trade_date DESC LIMIT 1) AS close_3m,
                             (SELECT close FROM px WHERE trade_date <= (SELECT trade_date FROM latest) - INTERVAL '6 months' ORDER BY trade_date DESC LIMIT 1) AS close_6m,
+                            (SELECT close FROM market.index_eod WHERE index_symbol IN ('Nifty 50', 'NIFTY 50') AND trade_date <= (SELECT trade_date FROM latest) ORDER BY trade_date DESC LIMIT 1) AS nifty_close,
+                            (SELECT close FROM market.index_eod WHERE index_symbol IN ('Nifty 50', 'NIFTY 50') AND trade_date <= (SELECT trade_date FROM latest) - INTERVAL '1 month' ORDER BY trade_date DESC LIMIT 1) AS nifty_close_1m,
                             (SELECT min(close) FROM px) AS all_time_low,
                             (SELECT max(close) FROM px) AS all_time_high,
                             (SELECT avg(volume) FROM (SELECT volume FROM px ORDER BY trade_date DESC LIMIT 20) v) AS avg_volume_20d,
@@ -171,6 +226,16 @@ def _build_postgres_research_context(symbol: str) -> str:
     ret_1m = ret(row.get("close_1m"))
     ret_3m = ret(row.get("close_3m"))
     ret_6m = ret(row.get("close_6m"))
+    nifty_ret_1m = None
+    try:
+        nifty_ret_1m = (float(row.get("nifty_close")) / float(row.get("nifty_close_1m")) - 1) * 100
+    except Exception:
+        pass
+    rs_value = row.get("relative_strength")
+    rs_source = "score snapshot"
+    if rs_value is None and ret_1m is not None and nifty_ret_1m is not None:
+        rs_value = ret_1m - nifty_ret_1m
+        rs_source = "derived: stock 1M return minus NIFTY 50 1M return"
     high = row.get("all_time_high")
     low = row.get("all_time_low")
     dd_high = None
@@ -179,10 +244,23 @@ def _build_postgres_research_context(symbol: str) -> str:
     except Exception:
         pass
 
+    overview_bits = [
+        f"{_fmt_text(row.get('company_name'))} is classified under {_fmt_text(row.get('sector'))}",
+        f"latest close ₹{_fmt_num(close)} as of {_fmt_text(row.get('latest_date'))}",
+        f"1M return {_fmt_num(ret_1m, 2, '%')}",
+        f"stage {_fmt_text(row.get('stage'))}",
+        f"RS {_fmt_num(rs_value, 2, '%')}",
+        f"drawdown from DB high {_fmt_num(dd_high, 2, '%')}",
+    ]
+
     lines = [
-        "## PostgreSQL Market Intelligence Snapshot",
+        "## Agent Adda Overview",
         "",
-        "> This section was auto-populated from the local PostgreSQL single source of truth before rendering the report.",
+        "> " + "; ".join(overview_bits) + ". Use this as the quick data-backed setup before reading the full research narrative.",
+        "",
+        "## Market Intelligence Snapshot",
+        "",
+        "> This section was auto-populated from the local market data store before rendering the report.",
         "",
         "| Field | Value |",
         "|---|---:|",
@@ -210,7 +288,8 @@ def _build_postgres_research_context(symbol: str) -> str:
         f"| RSI | {_fmt_num(row.get('rsi'))} |",
         f"| Trading signal | {_fmt_text(row.get('trading_signal'))} |",
         f"| Trend signal | {_fmt_text(row.get('trend_signal'))} |",
-        f"| Relative strength | {_fmt_num(row.get('relative_strength'))} |",
+        f"| Relative strength vs NIFTY 50 (1M) | {_fmt_num(rs_value, 2, '%')} |",
+        f"| Relative strength source | {_fmt_text(rs_source)} |",
         f"| CANSLIM score | {_fmt_num(row.get('can_slim_score'))} |",
         f"| Minervini score | {_fmt_num(row.get('minervini_score'))} |",
         f"| Fundamental score | {_fmt_num(row.get('fundamental_score'))} |",
@@ -232,7 +311,7 @@ def _build_postgres_research_context(symbol: str) -> str:
         lines.extend([
             "### Data gap note",
             "",
-            f"{sym} has EOD price history and reference/master data in PostgreSQL, but it is not present in the latest pre-computed score snapshot or screener summary. The report should therefore treat stage, CANSLIM, Minervini, and investment-score fields as unavailable rather than as weak signals.",
+            f"{sym} has EOD price history and reference/master data, but it is not present in the latest pre-computed score snapshot or screener summary. The report should therefore treat stage, CANSLIM, Minervini, and investment-score fields as unavailable rather than as weak signals.",
             "",
         ])
 
@@ -244,8 +323,25 @@ def _inline_md(text: str) -> str:
     text = re.sub(r'\*\*\*(.+?)\*\*\*', r'<strong><em>\1</em></strong>', text)
     text = re.sub(r'\*\*(.+?)\*\*',     r'<strong>\1</strong>', text)
     text = re.sub(r'\*(.+?)\*',         r'<em>\1</em>', text)
+    # Underscore italics (_text_) — only when both underscores are at word boundaries.
+    text = re.sub(r'(?<![\w_])_([^_\n]+?)_(?![\w_])', r'<em>\1</em>', text)
     text = re.sub(r'`(.+?)`',           r'<code>\1</code>', text)
-    text = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'<a href="\2" target="_blank">\1</a>', text)
+
+    def _md_link(match: re.Match) -> str:
+        label = _html.unescape(match.group(1)).strip()
+        href = _html.unescape(match.group(2)).strip()
+        if href.startswith("<") and href.endswith(">"):
+            href = href[1:-1].strip()
+        href = href.strip("\"'")
+        if ">" in label and "target=" in label.lower():
+            label = label.rsplit(">", 1)[-1].strip()
+        return (
+            f'<a href="{_html.escape(href, quote=True)}" target="_blank">'
+            f'{_html.escape(label)}</a>'
+        )
+
+    text = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', _md_link, text)
+    text = _linkify_urls(text)
     text = _colorise_signals(text)
     return text
 
@@ -274,6 +370,22 @@ def _md_to_html_basic(md_text: str) -> str:
             out.append('</ol>')
             in_ol = False
 
+    def _emit_plain_rows(rows: list[str]) -> None:
+        for row in rows:
+            if row.strip():
+                out.append(f'<p>{_inline_md(_html.escape(row))}</p>')
+
+    def _table_cells(line: str) -> list[str]:
+        stripped = line.strip()
+        if "|" not in stripped:
+            return []
+        if stripped.startswith("|"):
+            stripped = stripped[1:]
+        if stripped.endswith("|"):
+            stripped = stripped[:-1]
+        cells = [cell.strip() for cell in stripped.split("|")]
+        return cells if len(cells) >= 2 else []
+
     def _flush_table():
         nonlocal in_table, table_rows
         if not table_rows:
@@ -281,11 +393,14 @@ def _md_to_html_basic(md_text: str) -> str:
         in_table = False
         rows = table_rows[:]
         table_rows.clear()
+        if len(rows) < 2 or not _is_separator(rows[1]):
+            _emit_plain_rows(rows)
+            return
         header = rows[0]
         # rows[1] is the separator line — skip it
         body_rows = rows[2:] if len(rows) > 2 else []
 
-        cells = [c.strip() for c in header.strip('|').split('|')]
+        cells = _table_cells(header)
         th_html = ''.join(f'<th>{_inline_md(_html.escape(c))}</th>' for c in cells)
         out.append(
             '<div class="tbl-wrap">'
@@ -293,7 +408,7 @@ def _md_to_html_basic(md_text: str) -> str:
             f'<thead><tr>{th_html}</tr></thead><tbody>'
         )
         for row in body_rows:
-            tds = [c.strip() for c in row.strip('|').split('|')]
+            tds = _table_cells(row)
             td_html = ''.join(f'<td>{_inline_md(_html.escape(c))}</td>' for c in tds)
             out.append(f'<tr>{td_html}</tr>')
         out.append('</tbody></table></div>')
@@ -305,12 +420,20 @@ def _md_to_html_basic(md_text: str) -> str:
             in_bq = False
 
     def _is_table_row(line: str) -> bool:
-        return bool(re.match(r'^\s*\|.+\|\s*$', line))
+        return bool(_table_cells(line))
 
     def _is_separator(line: str) -> bool:
-        return bool(re.match(r'^\s*\|[\s\-:|]+\|\s*$', line))
+        cells = _table_cells(line)
+        return bool(cells) and all(re.fullmatch(r':?-{3,}:?', cell) for cell in cells)
 
     ol_counter = 0
+    in_kv = False  # whether we're inside an indented "Key: Value" definition list
+
+    def _flush_kv():
+        nonlocal in_kv
+        if in_kv:
+            out.append('</dl>')
+            in_kv = False
 
     for line in lines:
         raw = line
@@ -321,7 +444,7 @@ def _md_to_html_basic(md_text: str) -> str:
                 out.append('</code></pre>')
                 in_code = False
             else:
-                _flush_list(); _flush_table(); _flush_blockquote()
+                _flush_list(); _flush_table(); _flush_blockquote(); _flush_kv()
                 lang = raw.strip()[3:].strip()
                 out.append(f'<pre><code class="lang-{lang}">')
                 in_code = True
@@ -332,7 +455,7 @@ def _md_to_html_basic(md_text: str) -> str:
 
         # ── Table rows ────────────────────────────────────────────────────
         if _is_table_row(raw):
-            _flush_list(); _flush_blockquote()
+            _flush_list(); _flush_blockquote(); _flush_kv()
             if _is_separator(raw) and table_rows:
                 table_rows.append(raw)  # keep separator to detect header boundary
             else:
@@ -343,23 +466,55 @@ def _md_to_html_basic(md_text: str) -> str:
             if in_table:
                 _flush_table()
 
+        # ── ━━━ Part-style divider ━━━ ────────────────────────────────────
+        part_m = re.match(r'^\s*━{2,}\s*(.+?)\s*━{2,}\s*$', raw)
+        if part_m:
+            _flush_list(); _flush_blockquote(); _flush_kv()
+            label = _inline_md(_html.escape(part_m.group(1)))
+            out.append(f'<div class="part-divider"><span>{label}</span></div>')
+            continue
+
+        # ── ▶ Section header (e.g. "▶ SNAPSHOT") ──────────────────────────
+        arrow_m = re.match(r'^\s*▶\s+(.+?)\s*$', raw)
+        if arrow_m:
+            _flush_list(); _flush_blockquote(); _flush_kv()
+            label = _inline_md(_html.escape(arrow_m.group(1)))
+            out.append(f'<div class="arrow-header">{label}</div>')
+            continue
+
+        # ── Indented "Key: Value" lines → definition list (compact) ───────
+        kv_m = re.match(r'^( {2,}|\t+)([A-Za-z0-9 _/&()%+\-.\']{2,40}?):\s+(.*\S.*)$', raw)
+        if kv_m and not raw.lstrip().startswith(('-', '*', '•', '#', '|', '>')):
+            if not in_kv:
+                _flush_list(); _flush_blockquote()
+                out.append('<dl class="kv-list">')
+                in_kv = True
+            k = _inline_md(_html.escape(kv_m.group(2).strip()))
+            v = _inline_md(_html.escape(kv_m.group(3).strip()))
+            out.append(f'<dt>{k}</dt><dd>{v}</dd>')
+            continue
+        else:
+            if in_kv and raw.strip() != '':
+                _flush_kv()
+
         # ── Blank line ────────────────────────────────────────────────────
         if raw.strip() == '':
             _flush_list()
             _flush_blockquote()
+            _flush_kv()
             out.append('<div class="gap"></div>')
             continue
 
         # ── Horizontal rule ───────────────────────────────────────────────
         if re.match(r'^[-*_]{3,}\s*$', raw.strip()):
-            _flush_list(); _flush_blockquote()
+            _flush_list(); _flush_blockquote(); _flush_kv()
             out.append('<hr>')
             continue
 
         # ── Blockquote ────────────────────────────────────────────────────
         bq_m = re.match(r'^>\s?(.*)', raw)
         if bq_m:
-            _flush_list()
+            _flush_list(); _flush_kv()
             if not in_bq:
                 out.append('<blockquote>')
                 in_bq = True
@@ -371,7 +526,7 @@ def _md_to_html_basic(md_text: str) -> str:
         # ── Headers ───────────────────────────────────────────────────────
         h_m = re.match(r'^(#{1,6})\s+(.*)', raw)
         if h_m:
-            _flush_list()
+            _flush_list(); _flush_kv()
             level = len(h_m.group(1))
             text  = _inline_md(_html.escape(h_m.group(2)))
             slug  = re.sub(r'[^a-z0-9]+', '-', h_m.group(2).lower()).strip('-')
@@ -379,9 +534,9 @@ def _md_to_html_basic(md_text: str) -> str:
             continue
 
         # ── Ordered list ──────────────────────────────────────────────────
-        ol_m = re.match(r'^(\d+)\.\s+(.*)', raw)
+        ol_m = re.match(r'^\s*(\d+)\.\s+(.*)', raw)
         if ol_m:
-            _flush_blockquote()
+            _flush_blockquote(); _flush_kv()
             if not in_ol:
                 _flush_list()
                 out.append('<ol>')
@@ -391,9 +546,9 @@ def _md_to_html_basic(md_text: str) -> str:
             continue
 
         # ── Unordered list ────────────────────────────────────────────────
-        ul_m = re.match(r'^[-•*]\s+(.*)', raw)
+        ul_m = re.match(r'^\s*[-•*]\s+(.*)', raw)
         if ul_m:
-            _flush_blockquote()
+            _flush_blockquote(); _flush_kv()
             if not in_ul:
                 _flush_list()
                 out.append('<ul>')
@@ -402,13 +557,14 @@ def _md_to_html_basic(md_text: str) -> str:
             continue
 
         # ── Regular paragraph ─────────────────────────────────────────────
-        _flush_list()
+        _flush_list(); _flush_kv()
         out.append(f'<p>{_inline_md(_html.escape(raw))}</p>')
 
     # Flush any open structures
     _flush_list()
     _flush_table()
     _flush_blockquote()
+    _flush_kv()
     if in_code:
         out.append('</code></pre>')
 
@@ -746,7 +902,49 @@ mark.srch-hl {{
   padding:8px 14px; background:rgba(124,111,255,.06);
   border-radius:0 6px 6px 0; color:#a0a0c0;
 }}
-.gap {{ height:8px; }}
+.gap {{ height:6px; }}
+.gap + .gap, .gap + .part-divider, .part-divider + .gap {{ display:none; }}
+
+/* ── ━━━ Part-of-N dividers ─────────────────────────────────────────── */
+.part-divider {{
+  display:flex; align-items:center; gap:14px;
+  margin:22px 0 14px;
+  color: var(--accent2);
+  font-size:11px; font-weight:700; letter-spacing:.14em; text-transform:uppercase;
+}}
+.part-divider::before, .part-divider::after {{
+  content:""; flex:1; height:1px;
+  background: linear-gradient(90deg, transparent, var(--border) 30%, var(--border) 70%, transparent);
+}}
+.part-divider span {{ white-space:nowrap; }}
+
+/* ── ▶ Section sub-header (e.g. ▶ SNAPSHOT) ─────────────────────────── */
+.arrow-header {{
+  margin: 14px 0 4px;
+  padding: 6px 12px;
+  background: linear-gradient(90deg, rgba(124,111,255,.12), rgba(124,111,255,0));
+  border-left: 3px solid var(--accent);
+  color: var(--accent2);
+  font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase;
+  border-radius: 4px;
+}}
+.arrow-header::before {{ content: "▶ "; opacity:.7; }}
+
+/* ── Indented key:value blocks (rendered as <dl>) ───────────────────── */
+.kv-list {{
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  column-gap: 18px; row-gap: 2px;
+  margin: 6px 0 10px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 7px;
+  font-size: 13px;
+  font-family: 'JetBrains Mono', 'SF Mono', 'Menlo', 'Consolas', monospace;
+}}
+.kv-list dt {{ color: var(--dim); font-weight: 600; white-space: nowrap; }}
+.kv-list dd {{ color: var(--text); margin: 0; }}
 
 /* ── Signal colors ─────────────────────────────────────────────────── */
 .sig-buy  {{ color:var(--green);  font-weight:700; }}
@@ -920,6 +1118,21 @@ mark.srch-hl {{
   .sig-buy  {{ color:#16a34a !important; }}
   .sig-sell {{ color:#dc2626 !important; }}
   .sig-hold {{ color:#d97706 !important; }}
+
+  /* Light-mode versions of the new block styles */
+  .part-divider {{ color:#5856d6 !important; }}
+  .part-divider::before, .part-divider::after {{
+    background: linear-gradient(90deg, transparent, #c8c8e0 30%, #c8c8e0 70%, transparent) !important;
+  }}
+  .arrow-header {{
+    background: linear-gradient(90deg, rgba(88,86,214,.10), rgba(88,86,214,0)) !important;
+    border-left-color:#5856d6 !important; color:#5856d6 !important;
+  }}
+  .kv-list {{
+    background:#f4f4fb !important; border-color:#dcdcf0 !important;
+  }}
+  .kv-list dt {{ color:#555570 !important; }}
+  .kv-list dd {{ color:#1a1a2e !important; }}
 }}
 </style>
 </head>
@@ -1425,21 +1638,34 @@ def _build_sector_rotation_content() -> str:
 
     # ── Sector summary ──────────────────────────────────────────────────────
     sector_rows = conn.execute("""
-        SELECT sector,
+        WITH market AS (
+            SELECT AVG(CAST(change_1m_pct AS FLOAT)) AS avg_1m
+            FROM stage_snapshots
+            WHERE snapshot_date=?
+        )
+        SELECT COALESCE(NULLIF(TRIM(sector), ''), 'Other')              AS sector,
                COUNT(*)                                                AS total,
                SUM(CASE WHEN stage='STAGE_2' THEN 1 ELSE 0 END)       AS s2,
                SUM(CASE WHEN stage='STAGE_1' THEN 1 ELSE 0 END)       AS s1,
                SUM(CASE WHEN stage='STAGE_3' OR stage='STAGE_4'
-                          THEN 1 ELSE 0 END)                           AS s34,
-               ROUND(AVG(CAST(relative_strength AS FLOAT))*100,1)     AS avg_rs,
-               ROUND(AVG(CAST(change_1m_pct AS FLOAT)),1)             AS avg_1m,
-               ROUND(AVG(CAST(change_1w_pct AS FLOAT)),1)             AS avg_1w,
-               SUM(CASE WHEN trading_signal IN ('STRONG_BUY','BUY')
-                          THEN 1 ELSE 0 END)                           AS buys
-        FROM stage_snapshots WHERE snapshot_date=?
-        GROUP BY sector
+                           THEN 1 ELSE 0 END)                           AS s34,
+                ROUND(AVG(
+                    CASE
+                        WHEN relative_strength IS NOT NULL
+                             THEN CAST(relative_strength AS FLOAT) * 100
+                        WHEN change_1m_pct IS NOT NULL
+                             THEN CAST(change_1m_pct AS FLOAT) - market.avg_1m
+                    END
+                ),1)                                                     AS avg_rs,
+                ROUND(AVG(CAST(change_1m_pct AS FLOAT)),1)             AS avg_1m,
+                ROUND(AVG(CAST(change_1w_pct AS FLOAT)),1)             AS avg_1w,
+                SUM(CASE WHEN trading_signal IN ('STRONG_BUY','BUY')
+                           THEN 1 ELSE 0 END)                           AS buys
+        FROM stage_snapshots, market
+        WHERE snapshot_date=?
+        GROUP BY COALESCE(NULLIF(TRIM(sector), ''), 'Other')
         ORDER BY s2 DESC, avg_rs DESC
-    """, (snap,)).fetchall()
+    """, (snap, snap)).fetchall()
 
     # ── Market-wide breadth ─────────────────────────────────────────────────
     breadth = conn.execute("""
@@ -1468,13 +1694,22 @@ def _build_sector_rotation_content() -> str:
 
     # ── New Stage 2 entrants ────────────────────────────────────────────────
     new_s2 = conn.execute("""
+        WITH ranked_changes AS (
+            SELECT c.*,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY c.symbol
+                       ORDER BY c.change_date DESC, c.rowid DESC
+                   ) AS rn
+            FROM stage_changes c
+            WHERE c.stage_now='STAGE_2' AND c.stage_prev != 'STAGE_2'
+              AND c.change_date >= date(?, '-14 days')
+        )
         SELECT c.symbol, c.company_name, c.price_now, c.live_price,
                s.sector, s.rsi, s.investment_score, c.change_date
-        FROM stage_changes c
+        FROM ranked_changes c
         JOIN stage_snapshots s ON c.symbol=s.symbol AND s.snapshot_date=?
-        WHERE c.stage_now='STAGE_2' AND c.stage_prev != 'STAGE_2'
-          AND c.change_date >= date(?, '-14 days')
-        ORDER BY c.change_date DESC
+        WHERE c.rn=1
+        ORDER BY c.change_date DESC, s.investment_score DESC
     """, (snap, snap)).fetchall()
 
     # ── Top 15 Stage 2 leaders ──────────────────────────────────────────────
@@ -1609,36 +1844,54 @@ def _build_stage2_content() -> str:
 
     # ── Stage 2 by sector ───────────────────────────────────────────────────
     by_sector = conn.execute("""
-        SELECT sector,
+        SELECT COALESCE(NULLIF(TRIM(sector), ''), 'Other')              AS sector,
                COUNT(*)                                                 AS s2_count,
                ROUND(AVG(CAST(investment_score AS FLOAT)),1)           AS avg_inv,
                ROUND(AVG(CAST(change_1m_pct AS FLOAT)),1)              AS avg_1m,
                ROUND(AVG(CAST(rsi AS FLOAT)),1)                        AS avg_rsi
         FROM stage_snapshots
         WHERE snapshot_date=? AND stage='STAGE_2'
-        GROUP BY sector
+        GROUP BY COALESCE(NULLIF(TRIM(sector), ''), 'Other')
         ORDER BY s2_count DESC, avg_inv DESC
     """, (snap,)).fetchall()
 
     # ── New entrants (last 14d) ─────────────────────────────────────────────
     new_s2 = conn.execute("""
+        WITH ranked_changes AS (
+            SELECT c.*,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY c.symbol
+                       ORDER BY c.change_date DESC, c.rowid DESC
+                   ) AS rn
+            FROM stage_changes c
+            WHERE c.stage_now='STAGE_2' AND c.stage_prev != 'STAGE_2'
+              AND c.change_date >= date(?, '-14 days')
+        )
         SELECT c.symbol, c.company_name, s.sector, s.price, s.rsi,
                s.investment_score, s.trading_signal, s.change_1m_pct,
                s.supertrend_state, c.change_date
-        FROM stage_changes c
+        FROM ranked_changes c
         JOIN stage_snapshots s ON c.symbol=s.symbol AND s.snapshot_date=?
-        WHERE c.stage_now='STAGE_2' AND c.stage_prev != 'STAGE_2'
-          AND c.change_date >= date(?, '-14 days')
+        WHERE c.rn=1
         ORDER BY s.investment_score DESC
     """, (snap, snap)).fetchall()
 
     # ── Stage 2 exits (last 7d) ─────────────────────────────────────────────
     exits = conn.execute("""
+        WITH ranked_changes AS (
+            SELECT c.*,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY c.symbol
+                       ORDER BY c.change_date DESC, c.rowid DESC
+                   ) AS rn
+            FROM stage_changes c
+            WHERE c.stage_prev='STAGE_2' AND c.stage_now != 'STAGE_2'
+              AND c.change_date >= date(?, '-7 days')
+        )
         SELECT c.symbol, c.company_name, c.price_now, c.price_prev,
                c.price_chg_pct, c.stage_now, c.change_date
-        FROM stage_changes c
-        WHERE c.stage_prev='STAGE_2' AND c.stage_now != 'STAGE_2'
-          AND c.change_date >= date(?, '-7 days')
+        FROM ranked_changes c
+        WHERE c.rn=1
         ORDER BY c.change_date DESC
     """, (snap,)).fetchall()
 
@@ -1885,7 +2138,7 @@ def generate_report(
     content = _strip_ansi(content)
     content = _strip_rich_markup(content)
 
-    if report_type == "research" and symbol and "PostgreSQL Market Intelligence Snapshot" not in content:
+    if report_type == "research" and symbol and "Market Intelligence Snapshot" not in content:
         pg_context = _build_postgres_research_context(symbol)
         if pg_context:
             content = f"{pg_context}\n\n---\n\n{content}"
@@ -2172,7 +2425,10 @@ def get_report_prompt(report_type: str, symbol: str, output_format: str = "html"
             f"9.  search_latest_catalysts('{sym}')                    — recent news, events, triggers\n"
             f"10. get_sector_context('{sym}')                         — sector rotation, relative strength vs Nifty\n"
             f"11. deep_search('{sym}', verticals=['analyst_targets','broker_reports','credit_ratings','insider_trades'])\n\n"
-            f"Now synthesise ALL data into a **comprehensive research report** with ALL of these 16 sections:\n\n"
+            f"Now synthesise ALL data into a **comprehensive research report**. Start with a top section named "
+            f"**Agent Adda Overview**: a detailed LLM-written overview of the stock in 2-3 short paragraphs, "
+            f"covering business quality, current technical position, fundamental picture, relative strength, "
+            f"key risks, and what would change the view. Then include ALL of these 16 sections:\n\n"
             f"---\n\n"
             f"## 1. Executive Summary\n"
             f"- 3-line verdict: BUY / HOLD / AVOID with conviction level (HIGH / MEDIUM / LOW)\n"

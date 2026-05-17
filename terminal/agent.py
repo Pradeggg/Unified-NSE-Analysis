@@ -26,6 +26,16 @@ load_dotenv(Path(__file__).parent.parent / ".env")
 
 from .tools import call_tool, get_symbol_snapshot, openai_tool_schemas, resolve_symbol
 from .market_calendar import market_context_for_agent, market_session_status
+from .data_readiness import append_readiness_metadata
+from .situation_assessment import (
+    TurnContext,
+    assess_entity_topic_request,
+    assess_followup,
+    build_turn_context,
+    needs_situation_assessment,
+    render_assessment_block,
+    render_context_answer,
+)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Constants
@@ -44,7 +54,7 @@ You are Agent Adda, an expert NSE market research analyst and assistant.
 • NSE equity regular session is 09:15-15:30 IST; pre-open awareness starts 09:00 IST.
 • If the market is pre-open, post-close, weekend, or holiday, explicitly say the market is closed.
 • Do not describe fallback/EOD data as "current intraday" or "live" data.
-• If SQLite/live intraday data is unavailable, say so clearly and avoid directional claims from missing data.
+• If PostgreSQL/live intraday data is unavailable, say so clearly and avoid directional claims from missing data.
 • Only quote RSI, MACD, VWAP, support/resistance, target, or invalidation levels when they came from a tool result.
 • When using EOD fallback levels during a closed/pre-market session, label them as previous-session or EOD context.
 
@@ -79,7 +89,8 @@ You have access to these data tools (call them as needed):
 • get_sector_context(sector_or_symbol)→ Sector breadth, leaders, performance
 • run_screener_query(screen_type)     → EOD screeners — original: stage2/breakouts/supertrend_buy/
                                         strong_buy/new_entrants; NEW: momentum_52w (near-52W-high
-                                        leaders), high_rs (RS ≥ 1.15 market leaders), turnaround
+                                        leaders), new_highs (companies creating new highs),
+                                        high_rs (RS ≥ 1.15 market leaders), turnaround
                                         (recovery setups), stage1_base (basing/coiling stocks),
                                         tight_range (VCP-like weekly consolidation), oversold_bounce
                                         (RSI < 40 dip in Stage 2 uptrend)
@@ -91,14 +102,14 @@ You have access to these data tools (call them as needed):
                                         technical (stage, RSI, RS, scores, signals) AND
                                         fundamental (P/E, P/B, ROE, ROCE, div yield) metrics
 
-[Intraday screener tools — quote/index recap tape lives in PostgreSQL intraday.quote_snapshots (refreshed every 60s by the background capture daemon); SQLite intraday_ohlcv supplies bar/candle history; legacy yfinance tools remain available]
-• get_intraday_source_health()        → SQLite intraday table health and freshness
-• get_intraday_bars(symbol, timeframe)→ Raw SQLite intraday OHLCV bars
+[Intraday screener tools — live quote/index tape lives in PostgreSQL intraday.quote_snapshots; candle history lives in PostgreSQL intraday.ohlcv_bars and may be seeded from yfinance when PG has no bars]
+• get_intraday_source_health()        → PostgreSQL intraday table health and freshness
+• get_intraday_bars(symbol, timeframe)→ Raw PostgreSQL intraday OHLCV bars
 • get_intraday_levels(symbol,         → Support, resistance, pivots, EMA levels from
-    timeframe)                          SQLite intraday_ohlcv; no EOD/yfinance fallback
-• compute_intraday_indicators(symbol) → RSI, MACD, Supertrend, EMA, ATR, volume ratio from SQLite bars
+    timeframe)                          PostgreSQL intraday.ohlcv_bars
+• compute_intraday_indicators(symbol) → RSI, MACD, Supertrend, EMA, ATR, volume ratio from PostgreSQL bars
 • explain_intraday_setup(symbol)      → Research-only setup label, evidence, levels, target zones
-• run_intraday_screener(screen_type)  → Intraday screener (SQLite or yfinance fallback).
+• run_intraday_screener(screen_type)  → Intraday screener (PostgreSQL or yfinance fallback).
                                         Original: momentum/breakouts/vcp/supertrend/levels/all.
                                         NEW: opening_range_breakout (ORB — first 15-30min high/low
                                         break + volume), gap_and_go (gap continuation + MACD),
@@ -107,9 +118,9 @@ You have access to these data tools (call them as needed):
                                         bb_squeeze (Bollinger Band squeeze breakout),
                                         vwap_reclaim (short-EMA VWAP proxy reclaim or loss)
 • get_nse_intraday_snapshot(symbol)   → NSE website live quote/index snapshot. Always use this
-                                        before yfinance fallback when SQLite intraday bars are absent.
+                                        before yfinance fallback when PostgreSQL intraday bars are absent.
 • get_intraday_analysis(symbol,       → Legacy yfinance candle analysis of one stock only after
-    interval, strategies)               SQLite and NSE website snapshot have been attempted; keep output research-only.
+    interval, strategies)               PostgreSQL and NSE website snapshot have been attempted; keep output research-only.
                                         Returns EOD daily levels + session context when intraday unavailable.
 • scan_intraday_market(index,         → yfinance scan of ALL stocks in an NSE index.
     interval, strategies,
@@ -245,7 +256,19 @@ You have access to these data tools (call them as needed):
 • find_portfolio_overlap(screener)    → Holdings that match a screener
 
 ━━━ TOOL SELECTION RULES ━━━
-• For any stock-specific query, Always resolve the entity first with resolve_symbol.
+• ⚠️  HARD RULE — DO NOT call resolve_symbol on analytics tokens or screener
+  keywords. The following are NEVER stock tickers — treat them as concepts and
+  route to the screener / education tool instead:
+      RS, RSI, PE, PB, EPS, ROE, ROCE, EBITDA, CAGR, ATH, ATL, IV, OI, PCR,
+      VCP, ORB, BB, MACD, VWAP, FII, DII, MF, AMC, CAN SLIM, CANSLIM,
+      MOMENTUM, BREAKOUT, BREAKOUTS, LEADERS, BASING, TURNAROUND, GAINERS,
+      LOSERS, MOVERS, HIGH RS, TOP RS, RELATIVE STRENGTH.
+  If the user query contains any of these standalone words (e.g. "high RS
+  stocks", "top PE plays", "breakouts today"), call run_screener_query or
+  the matching scanner FIRST. Calling resolve_symbol with these tokens is a
+  known failure mode and wastes a turn.
+• For any stock-specific query (an actual company name or ticker like
+  RELIANCE / TCS / DATAPATTNS), Always resolve the entity first with resolve_symbol.
   Use the canonical NSE symbol returned by resolve_symbol for every downstream
   stock tool call. This prevents alias mistakes such as "DATAPATTERNS" vs
   NSE symbol "DATAPATTNS". If a downstream stock tool still returns no data,
@@ -275,11 +298,11 @@ You have access to these data tools (call them as needed):
 • "top F&O bullish/bearish names / F&O signals / derivatives analytics" → call get_fno_analytics(top_n=<N>)
 • "F&O data / download bhavcopy / update options data / refresh F&O" → call refresh_fno_eod_data()
 • "F&O data status / options DB / available expiries" → call get_fno_data_status()
-• "intraday setup / technical target zones / invalidation / trading setup" → call explain_intraday_setup(symbol); if SQLite tables are missing/stale or symbol bars are absent, call get_nse_intraday_snapshot(symbol) first, then get_intraday_analysis(symbol) only for candle history, and clearly label it as Yahoo Finance/EOD fallback context
-• "intraday levels / support resistance / pivots / VWAP levels" → call get_intraday_levels(symbol); if SQLite levels are unavailable, call get_nse_intraday_snapshot(symbol) first, then get_intraday_analysis(symbol) only for candle history, and clearly label fallback levels
-• "intraday data health / live table health / SQLite intraday" → call get_intraday_source_health
+• "intraday setup / technical target zones / invalidation / trading setup" → call explain_intraday_setup(symbol); if PostgreSQL bars are missing/stale or symbol bars are absent, call get_nse_intraday_snapshot(symbol) first, then get_intraday_analysis(symbol) only for candle history, and clearly label it as Yahoo Finance/EOD fallback context
+• "intraday levels / support resistance / pivots / VWAP levels" → call get_intraday_levels(symbol); if PostgreSQL levels are unavailable, call get_nse_intraday_snapshot(symbol) first, then get_intraday_analysis(symbol) only for candle history, and clearly label fallback levels
+• "intraday data health / live table health / PostgreSQL intraday" → call get_intraday_source_health
 • "breakout stocks / live breakouts / breakouts last N minutes / stocks breaking out now / volume breakouts" → call scan_intraday_market(index="NIFTY 500", interval="15m", strategies=["ema","volume","macd"], direction_filter="buy")
-• "intraday screener / scan / best intraday stocks / momentum plays" → call run_intraday_screener(screen_type="momentum") [auto-falls-back to yfinance if SQLite unavailable]
+• "intraday screener / scan / best intraday stocks / momentum plays" → call run_intraday_screener(screen_type="momentum") [auto-falls-back to yfinance if PostgreSQL bars are unavailable]
 • "intraday setup for [list of stocks] / check these intraday / scan my watchlist / small-cap intraday" → call scan_symbols_intraday(symbols=[...])
 • "scan [index] intraday / all NIFTY 50 signals / bank nifty buy signals" → call scan_intraday_market(index=...)
 • "MACD signal / MACD crossover / fresh MACD" → run_intraday_screener(screen_type="macd_crossover") OR compute_intraday_indicators
@@ -307,6 +330,7 @@ You have access to these data tools (call them as needed):
 • "market overview / breadth" → call get_live_market_overview + get_market_breadth
 • "global market / overnight cues / US market / Asian market / crude / DXY / USDINR / global risk" → call get_global_market_assessment
 • "screener / breakouts / stage 2 / buy signals" → call run_screener_query(screen_type="stage2")
+• "new highs / creating new high / companies creating new high / 52 week high" → run_screener_query(screen_type="new_highs")
 • "near 52W high / momentum leaders / strong stocks" → run_screener_query(screen_type="momentum_52w")
 • "top RS stocks / market leaders / high relative strength" → run_screener_query(screen_type="high_rs")
 • "turnaround / recovery stocks / dip recovery / comeback stocks" → run_screener_query(screen_type="turnaround")
@@ -511,7 +535,7 @@ class _OpenAIBackend:
         key = api_key if api_key is not None else os.getenv("OPENAI_API_KEY", OPENAI_API_KEY)
         if not key:
             raise RuntimeError("OPENAI_API_KEY not set")
-        self.client = OpenAI(api_key=key)
+        self.client = OpenAI(api_key=key, timeout=120.0)
         self.model  = model or os.getenv("OPENAI_MODEL", OPENAI_MODEL)
 
     def chat(self, messages: list[dict], tools: list[dict] | None = None) -> dict:
@@ -687,7 +711,7 @@ def _extract_intraday_scan_index(q: str) -> str:
         return "NIFTY MIDCAP SELECT"
     if "nifty smallcap 100" in q:
         return "NIFTY SMALLCAP 100"
-    if "nifty bank" in q or "bank nifty" in q:
+    if "nifty bank" in q or "bank nifty" in q or "banknifty" in q:
         return "NIFTY BANK"
     if "nifty 500" in q:
         return "NIFTY 500"
@@ -714,6 +738,14 @@ def _extract_intraday_scan_strategies(q: str) -> list[str] | None:
         if phrase in q and strategy not in strategies:
             strategies.append(strategy)
     return strategies or None
+
+
+def _intraday_scan_direction(q: str) -> str:
+    if any(w in q for w in (" buy", " long", " bullish", "breakout", "breakouts", "ready")):
+        return "buy"
+    if any(w in q for w in (" sell", " short", " bearish")):
+        return "sell"
+    return "all"
 
 
 def _looks_like_intraday_query(q: str) -> bool:
@@ -750,16 +782,427 @@ def _is_market_knowledge_query(query: str) -> bool:
     return has_market_term and (education_prefix or comparison_phrase)
 
 
-def _primary_symbol_query(candidates: list[str], symbol_candidates: list[str]) -> str:
+def _is_document_link_followup(q: str) -> bool:
+    return (
+        any(term in q for term in ("document link", "pdf link", "alternative link", "updated url", "updated link"))
+        and any(term in q for term in ("document", "pdf", "link", "url"))
+        and not re.search(r"https?://", q)
+    )
+
+
+def _primary_symbol_query(candidates: list[str], symbol_candidates: list[str], raw_query: str = "") -> str:
     """Choose the most explicit stock entity from a routed user query.
 
     Uppercase NSE-like ticker tokens are stronger evidence than prose labels
     such as "Earnings", "Teach", or "End-to-end". This keeps deterministic
     routes from handing common task words to resolve_symbol().
+
+    Added: when two or more adjacent uppercase tokens appear in the raw
+    query (e.g. "TATA MOTORS", "BAJAJ FINANCE", "BANK NIFTY"), join them
+    with a space and prefer that phrase. resolve_symbol's local matcher can
+    then map the multi-word company name to the canonical NSE ticker
+    (TATAMOTORS / BAJFINANCE / BANKNIFTY) instead of being handed just the
+    first word ("TATA" → fuzzy-matched to TATATECH).
     """
+    if raw_query:
+        phrase = _symbol_phrase_after_preposition(raw_query)
+        if phrase:
+            try:
+                resolved = resolve_symbol(phrase)
+                canonical = resolved.get("symbol") if isinstance(resolved, dict) else None
+                if canonical:
+                    return canonical
+            except Exception:
+                pass
+            return phrase
+        phrase = _leading_company_phrase(raw_query)
+        if phrase:
+            try:
+                resolved = resolve_symbol(phrase)
+                canonical = resolved.get("symbol") if isinstance(resolved, dict) else None
+                if canonical:
+                    return canonical
+            except Exception:
+                pass
+
+    if raw_query and symbol_candidates:
+        # Find adjacent uppercase runs of length ≥ 2 in the raw query.
+        runs = re.findall(
+            r"\b(?:[A-Z][A-Z0-9&-]{1,11}\s+){1,3}[A-Z][A-Z0-9&-]{1,11}\b",
+            raw_query,
+        )
+        if runs:
+            phrase = max(runs, key=len).strip()
+            # Only prefer the phrase if it contains a known symbol candidate.
+            if any(sc in phrase.split() for sc in symbol_candidates):
+                # Resolve the phrase to the canonical NSE symbol so downstream
+                # tools (get_symbol_snapshot, get_technical_setup, …) receive
+                # "TATAMOTORS" not "TATA MOTORS". If resolution fails, fall
+                # back to the spaced phrase (resolve_symbol will retry on it).
+                try:
+                    resolved = resolve_symbol(phrase)
+                    canonical = resolved.get("symbol") if isinstance(resolved, dict) else None
+                    if canonical:
+                        return canonical
+                except Exception:
+                    pass
+                return phrase
     if symbol_candidates:
         return symbol_candidates[0]
     return candidates[0] if candidates else ""
+
+
+def _leading_company_phrase(raw_query: str) -> str:
+    """Extract a leading multi-word company phrase before task words."""
+    stop_words = {
+        "intraday", "setup", "technical", "technicals", "fundamental", "fundamentals",
+        "analysis", "deep", "dive", "research", "forensic", "risk", "levels",
+        "support", "resistance", "target", "targets", "today", "now", "live",
+        "scan", "show", "tell", "give", "what", "is", "the", "of", "for",
+    }
+    words: list[str] = []
+    for token in re.findall(r"[A-Za-z][A-Za-z0-9&.-]*", raw_query):
+        if token.lower() in stop_words:
+            if words:
+                break
+            continue
+        words.append(token)
+        if len(words) >= 4:
+            break
+    return " ".join(words).strip() if len(words) >= 2 else ""
+
+
+def _symbol_phrase_after_preposition(raw_query: str) -> str:
+    """Extract a company-name phrase after stock-query prepositions."""
+    stop_words = {
+        "with", "including", "include", "after", "before", "using", "use",
+        "on", "in", "at",
+        "technical", "technicals", "fundamental", "fundamentals", "analysis",
+        "setup", "risk", "valuation", "news", "catalyst", "catalysts",
+        "forensic", "red", "flags", "flag", "and", "or", "stage", "rsi",
+        "adx", "macd", "supertrend", "recent", "announcements", "results",
+        "management", "commentary", "analyst", "views", "current", "price",
+        "support", "supports", "resistance", "resistances", "pivot", "pivots",
+        "level", "levels", "short", "breakdown", "breakdowns", "long", "buy",
+        "sell", "setups", "strategy", "strategies", "entry", "target", "stoploss",
+    }
+    for match in re.finditer(r"\b(?:for|of|about|on|into)\s+(.+)$", raw_query, flags=re.IGNORECASE):
+        subject = re.split(r"\s+[—–-]\s+|[,;:?]", match.group(1), maxsplit=1)[0]
+        if re.match(r"\s*\d+\s*(?:m|min|mins?|minutes?|h|hour|hours?)\b", subject, flags=re.IGNORECASE):
+            continue
+        words: list[str] = []
+        for token in re.findall(r"[A-Za-z][A-Za-z0-9&.-]*", subject):
+            if token.lower() in stop_words:
+                break
+            words.append(token)
+            if len(words) >= 4:
+                break
+        phrase = " ".join(words).strip()
+        if phrase and phrase.lower() not in {"it", "this", "that", "stock", "company"}:
+            return phrase
+    return ""
+
+
+_PLACEHOLDER_SYMBOLS: frozenset[str] = frozenset(
+    {"SYMBOL", "TICKER", "STOCK", "NAME", "COMPANY", "NSE_SYMBOL"}
+)
+
+
+def _contains_placeholder_symbol(query: str) -> bool:
+    text = query or ""
+    if re.search(r"[<{\\[]\s*(?:symbol|ticker|stock|name|company|nse_symbol)\s*[>}\\]]", text, flags=re.I):
+        return True
+
+    tokens = re.findall(r"\b[A-Za-z_][A-Za-z0-9_&-]*\b", text)
+    uppercase_placeholders = {
+        token.upper()
+        for token in tokens
+        if token == token.upper() or "_" in token
+    }
+    if uppercase_placeholders & _PLACEHOLDER_SYMBOLS:
+        return True
+
+    return bool(
+        text.strip().startswith("/")
+        and any(token.lower() in {"symbol", "ticker", "stock", "name", "company", "nse_symbol"} for token in tokens[1:])
+    )
+
+
+_SYMBOL_VALIDATION_SKIP: frozenset[str] = frozenset(
+    {
+        "NSE", "BSE", "NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY",
+        "RS", "RSI", "ADX", "ATR", "MA", "SMA", "EMA", "DMA", "PE", "PB",
+        "EPS", "ROE", "ROCE", "MACD", "VWAP", "VCP", "ORB", "BB", "OBV",
+        "FII", "DII", "FNO", "OI", "PCR", "CEO", "CFO", "FY", "QOQ", "YOY",
+        "PDF", "URL", "HTML", "EOD", "DB", "PG", "API", "LLM", "AI",
+        "BUY", "SELL", "HOLD", "LONG", "SHORT", "OPEN", "HIGH", "LOW",
+    }
+)
+
+
+_REQUIRED_TOOLS_BY_INTENT: dict[str, tuple[str, ...]] = {
+    "screener": ("run_screener_query",),
+    "intraday_screener": ("run_intraday_screener",),
+    "intraday_index_scan": ("scan_intraday_market",),
+    "intraday_setup": ("explain_intraday_setup", "get_nse_intraday_snapshot"),
+    "intraday_levels": ("get_intraday_levels", "get_nse_intraday_snapshot"),
+    "fno_overview": ("get_options_chain", "get_futures_analysis"),
+    "stock_comparison": ("compare_stocks",),
+    "strength_validation": ("validate_strength_watchlist",),
+    "stock_brief": ("resolve_symbol", "get_symbol_snapshot"),
+    "stock_results": (
+        "resolve_symbol",
+        "scrape_screener_in",
+        "search_nse_announcements",
+        "search_bse_filings",
+        "search_concall_transcripts",
+        "search_latest_catalysts",
+    ),
+}
+
+
+_DYNAMIC_EVIDENCE_REQUIRED_INTENTS: frozenset[str] = frozenset(
+    {
+        "stock_brief",
+        "stock_results",
+        "stock_comparison",
+        "strength_validation",
+        "portfolio_review",
+        "entity_topic_command",
+        "llm_driven",
+        "llm_driven_fallback",
+    }
+)
+
+
+def _explicit_requested_symbols(query: str) -> list[str]:
+    """Return explicit ticker-looking symbols from user text without fuzzy substitution."""
+    tokens = re.findall(r"\b[A-Z][A-Z0-9&-]{1,12}\b", query or "")
+    symbols: list[str] = []
+    for token in tokens:
+        clean = token.strip().upper()
+        if clean in _SYMBOL_VALIDATION_SKIP:
+            continue
+        if clean.endswith("-"):
+            continue
+        if re.fullmatch(r"[A-Z0-9&-]{2,12}", clean):
+            canonical = clean
+            try:
+                resolved = resolve_symbol(clean)
+                if isinstance(resolved, dict) and resolved.get("symbol") and resolved.get("confidence") in {"exact", "near-match"}:
+                    canonical = str(resolved["symbol"]).upper()
+            except Exception:
+                canonical = clean
+            symbols.append(canonical)
+    return list(dict.fromkeys(symbols))
+
+
+def _tool_symbols(tool_results: list[dict]) -> set[str]:
+    symbols: set[str] = set()
+    for tr in tool_results or []:
+        args = tr.get("args") if isinstance(tr.get("args"), dict) else {}
+        result = tr.get("result") if isinstance(tr.get("result"), dict) else {}
+        for key in ("symbol", "resolved_symbol"):
+            val = result.get(key) or args.get(key)
+            if isinstance(val, str) and re.fullmatch(r"[A-Z0-9&-]{2,12}", val.upper()):
+                symbols.add(val.upper())
+        for key in ("symbols", "input_symbols", "unresolved_symbols"):
+            vals = result.get(key) or args.get(key)
+            if isinstance(vals, list):
+                for val in vals:
+                    if isinstance(val, str) and re.fullmatch(r"[A-Z0-9&-]{2,12}", val.upper()):
+                        symbols.add(val.upper())
+    return symbols
+
+
+def _source_trail_lines(tool_results: list[dict]) -> list[str]:
+    lines: list[str] = []
+    for tr in tool_results or []:
+        result = tr.get("result") if isinstance(tr.get("result"), dict) else {}
+        err = result.get("error")
+        status = f"ERROR: {err}" if err else "ok"
+        lines.append(f"  {tr.get('tool')}: {status}")
+    return lines
+
+
+def _required_tools_for_query(intent: str, query: str) -> tuple[str, ...]:
+    required = list(_REQUIRED_TOOLS_BY_INTENT.get(intent) or ())
+    if intent not in _DYNAMIC_EVIDENCE_REQUIRED_INTENTS:
+        return tuple(dict.fromkeys(required))
+
+    q = (query or "").lower()
+    if any(term in q for term in ("news", "catalyst", "catalysts", "recent announcement")):
+        required.append("search_latest_catalysts")
+    if any(term in q for term in ("broker", "analyst target", "target price", "rating", "brokerage")):
+        required.append("search_broker_research")
+    if any(term in q for term in ("concall", "earnings call", "management commentary", "guidance")):
+        required.append("search_concall_transcripts")
+    if any(term in q for term in ("forensic", "red flag", "red flags", "manipulation", "earnings quality")):
+        required.append("run_forensic_analysis")
+    if any(term in q for term in (
+        "latest results", "quarterly results", "quarterly result",
+        "q1 results", "q2 results", "q3 results", "q4 results",
+        "annual results", "yearly results",
+        "earnings results", "earnings report",
+        "p&l statement", "profit and loss",
+        "balance sheet", "cash flow statement", "financial statements",
+        "fundamental analysis", "quarterly numbers", "quarterly financials",
+    )):
+        required.append("scrape_screener_in")
+    return tuple(dict.fromkeys(required))
+
+
+def _validate_required_tools(query: str, intent: str, tool_results: list[dict]) -> str | None:
+    required = _required_tools_for_query(intent, query)
+    if not required:
+        return None
+    executed = {str(tr.get("tool")) for tr in tool_results or []}
+    # If the user invoked /analyze on a document URL/file, the expanded prompt template
+    # references "concall transcript / management commentary / guidance" as generic
+    # interpretation hints. Those words must not coerce search_concall_transcripts /
+    # search_broker_research / search_latest_catalysts requirements — the user is
+    # analyzing a fixed document, not researching a stock.
+    if "analyze_document" in executed:
+        document_safe_skip = {
+            "search_concall_transcripts",
+            "search_broker_research",
+            "search_latest_catalysts",
+            "run_forensic_analysis",
+            "scrape_screener_in",
+        }
+        required = tuple(t for t in required if t not in document_safe_skip)
+        if not required:
+            return None
+    missing = [tool for tool in required if tool not in executed]
+    if not missing:
+        return None
+    lines = [
+        "▶ REQUIRED TOOL VALIDATION FAILED",
+        f"  Intent: {intent}",
+        f"  Missing required tool(s): {', '.join(missing)}",
+        "  No market conclusion was rendered because the mandatory evidence plan did not run.",
+        "",
+        "▶ SOURCE TRAIL",
+        *_source_trail_lines(tool_results),
+        "",
+        "━━━ Not investment advice. For research and learning only. ━━━",
+    ]
+    return "\n".join(lines)
+
+
+def _validate_symbol_grounding(
+    query: str,
+    intent: str,
+    tool_results: list[dict],
+) -> str | None:
+    requested = _explicit_requested_symbols(query)
+    if not requested:
+        return None
+    if intent not in {
+        "stock_brief", "stock_comparison", "strength_validation", "portfolio_review",
+        "intraday_setup", "intraday_levels", "intraday_symbol_scan",
+        "llm_driven", "llm_driven_fallback",
+    }:
+        return None
+    # Document-analysis runs may contain many uppercase tokens in the prompt
+    # (POT, TOT, EBITDA, PBT, KPI, ...) that are not stock tickers — they are
+    # report-format hints. Skip symbol grounding when analyze_document executed.
+    if any(str(tr.get("tool")) == "analyze_document" for tr in tool_results or []):
+        return None
+
+    tool_syms = _tool_symbols(tool_results)
+    missing = [sym for sym in requested if sym not in tool_syms]
+    substitutions: list[str] = []
+    for tr in tool_results or []:
+        if tr.get("tool") != "resolve_symbol":
+            continue
+        args = tr.get("args") if isinstance(tr.get("args"), dict) else {}
+        result = tr.get("result") if isinstance(tr.get("result"), dict) else {}
+        raw = str(args.get("query") or "").strip().upper()
+        resolved = str(result.get("symbol") or "").strip().upper()
+        if raw in requested and resolved and raw != resolved:
+            substitutions.append(f"{raw}->{resolved}")
+
+    unrequested = sorted(
+        sym
+        for sym in tool_syms
+        if sym not in requested and sym not in _SYMBOL_VALIDATION_SKIP
+    )
+    if not missing and not substitutions and not unrequested:
+        return None
+
+    lines = [
+        "▶ SYMBOL VALIDATION FAILED",
+        f"  Requested symbol(s): {', '.join(requested)}",
+    ]
+    if missing:
+        lines.append(f"  Missing from executed evidence: {', '.join(missing)}")
+    if substitutions:
+        lines.append(f"  Blocked substitution(s): {', '.join(substitutions)}")
+    if unrequested:
+        lines.append(f"  Unrequested symbol(s) in tool evidence: {', '.join(unrequested)}")
+    lines.extend([
+        "  No technical, fundamental, catalyst, or sector conclusion was inferred from mismatched symbol evidence.",
+        "",
+        "▶ SOURCE TRAIL",
+        *_source_trail_lines(tool_results),
+        "",
+        "━━━ Not investment advice. For research and learning only. ━━━",
+    ])
+    return "\n".join(lines)
+
+
+def _missing_evidence_summary(tool_results: list[dict]) -> list[str]:
+    missing: list[str] = []
+    for tr in tool_results or []:
+        result = tr.get("result") if isinstance(tr.get("result"), dict) else {}
+        tool = str(tr.get("tool") or "tool")
+        values = result.get("missing_evidence") or []
+        if isinstance(values, list):
+            missing.extend(f"{tool}.{item}" for item in values if item)
+        rows = result.get("results") or result.get("stock_details") or []
+        if isinstance(rows, list):
+            for row in rows:
+                if not isinstance(row, dict):
+                    continue
+                row_symbol = row.get("symbol") or row.get("input_symbol") or "row"
+                for item in row.get("missing_evidence") or []:
+                    missing.append(f"{tool}.{row_symbol}.{item}")
+    return list(dict.fromkeys(missing))
+
+
+def _append_missing_evidence_guard(answer: str, tool_results: list[dict]) -> str:
+    if "▶ MISSING EVIDENCE" in (answer or "").upper():
+        return answer
+    missing = _missing_evidence_summary(tool_results)
+    if not missing:
+        return answer
+    block = [
+        "▶ MISSING EVIDENCE",
+        f"  Missing evidence: {', '.join(missing[:12])}",
+        "  No unsupported technical, fundamental, catalyst, forensic, broker, or sector conclusion was inferred from missing data.",
+    ]
+    text = (answer or "").rstrip()
+    marker = "━━━ Not investment advice. For research and learning only. ━━━"
+    if marker in text:
+        before, after = text.rsplit(marker, 1)
+        return before.rstrip() + "\n\n" + "\n".join(block) + "\n\n" + marker + after
+    return text + "\n\n" + "\n".join(block)
+
+
+def _apply_response_guardrails(
+    query: str,
+    intent: str,
+    tool_results: list[dict],
+    answer: str,
+) -> str:
+    required_failure = _validate_required_tools(query, intent, tool_results)
+    if required_failure:
+        return required_failure
+    symbol_failure = _validate_symbol_grounding(query, intent, tool_results)
+    if symbol_failure:
+        return symbol_failure
+    return _append_missing_evidence_guard(answer, tool_results)
 
 
 def _planner_task(
@@ -799,6 +1242,65 @@ def _planner_execution_plan(tasks: list[dict]) -> list[tuple[str, dict]]:
     return plan
 
 
+def _entity_topic_execution_plan(assessment) -> list[tuple[str, dict]]:
+    """Translate direct entity/topic command assessment into deterministic tools."""
+    symbol = assessment.canonical_symbol
+    topic = assessment.topic or ""
+    command = assessment.command
+    if not symbol:
+        return []
+    if command == "/search":
+        return [("deep_search", {"symbol": symbol, "context": topic or "full overview"})]
+    if command == "/results":
+        return [
+            ("resolve_symbol", {"query": symbol}),
+            ("scrape_screener_in", {"symbol": symbol}),
+            ("search_nse_announcements", {"symbol": symbol}),
+            ("search_bse_filings", {"symbol": symbol}),
+            ("search_concall_transcripts", {"symbol": symbol}),
+            ("search_latest_catalysts", {"symbol": symbol}),
+        ]
+    if command in {"/fno", "/chain", "/oi", "/options"}:
+        plan = [
+            ("get_options_chain", {"symbol": symbol, "expiry_index": 0}),
+        ]
+        if command == "/fno":
+            plan.append(("get_futures_analysis", {"symbol": symbol}))
+            plan.append(("get_strategy_recommendations", {"symbol": symbol}))
+        return plan
+    if command == "/report":
+        report_type = (topic.split() or ["research"])[0]
+        return [
+            ("resolve_symbol", {"query": symbol}),
+            ("get_symbol_snapshot", {"symbol": symbol}),
+            ("get_technical_setup", {"symbol": symbol}),
+            ("get_sector_context", {"sector_or_symbol": symbol}),
+        ] + (
+            [("search_latest_catalysts", {"symbol": symbol})]
+            if report_type in {"research", "forensic", "fundamental"}
+            else []
+        )
+    if command == "/forensic":
+        return [
+            ("resolve_symbol", {"query": symbol}),
+            ("get_symbol_snapshot", {"symbol": symbol}),
+            ("run_forensic_analysis", {"symbol": symbol}),
+        ]
+    if command in {"/analyze", "/canslim", "/concall", "/chart", "/company-xray", "/company-index", "/strategy-council"}:
+        return [
+            ("resolve_symbol", {"query": symbol}),
+            ("get_symbol_snapshot", {"symbol": symbol}),
+            ("get_technical_setup", {"symbol": symbol}),
+            ("get_sector_context", {"sector_or_symbol": symbol}),
+        ]
+    if command == "/strategy":
+        return [
+            ("get_options_chain", {"symbol": symbol, "expiry_index": 0}),
+            ("get_strategy_recommendations", {"symbol": symbol}),
+        ]
+    return []
+
+
 def _build_market_situation_assessment_plan(query: str, data_mode: str = "historical") -> dict | None:
     q = _routing_query_text(query).lower()
     market_terms = ("market", "nifty", "indices", "index", "breadth", "advance", "decline")
@@ -813,6 +1315,14 @@ def _build_market_situation_assessment_plan(query: str, data_mode: str = "histor
     wants_breadth = "breadth" in q or "advance" in q or "decline" in q
     wants_flows = any(term in q for term in flow_terms)
     wants_news = any(term in q for term in news_terms)
+    wants_plan = any(
+        term in q
+        for term in (
+            "show plan", "show the plan", "include plan", "show steps",
+            "step by step", "break it down", "break down", "execution plan",
+            "tool plan", "which tools",
+        )
+    )
 
     if not wants_market or not (wants_status or wants_breadth or wants_movers or wants_flows):
         return None
@@ -883,6 +1393,7 @@ def _build_market_situation_assessment_plan(query: str, data_mode: str = "histor
         "tasks": tasks,
         "execution_order": [task["id"] for task in tasks],
         "mode": data_mode,
+        "show_plan": wants_plan,
     }
 
 
@@ -912,13 +1423,88 @@ def _extract_fno_symbol(query: str) -> str:
     return "NIFTY"
 
 
+# --- Compound-query splitter ------------------------------------------------
+# Splits a multi-question prompt into independent sub-queries. Conservative
+# by design: only splits on strong sentence/clause separators when each
+# resulting fragment looks substantive (>=3 words). Leaves single-question
+# prompts unchanged.
+_COMPOUND_SPLIT_RE = re.compile(
+    r"(?<=[?!.])\s+(?=[A-Za-z/])"          # sentence boundary followed by start-of-clause
+    r"|\s+(?:and also|also|then|next)\s+"    # explicit chaining adverbs
+    r"|\s*;\s*",                                # semicolons
+    flags=re.IGNORECASE,
+)
+
+
+def _split_compound_query(text: str) -> list[str]:
+    """Return cleaned list of sub-queries; single-element list when no split.
+
+    Heuristics:
+      * never split slash-commands (e.g. "/scan NIFTY 50 vwap")
+      * never split short prompts (<10 words) — likely a single question
+      * never split if any fragment is too short (<3 words) — false positive
+      * strip trailing whitespace / punctuation on each part
+    """
+    raw = (text or "").strip()
+    if not raw or raw.startswith("/"):
+        return [raw] if raw else []
+    # Skip internal/programmatic prompts: multi-line text (the morning
+    # briefing prompt, RIC recipes, etc.) and very long inputs are not
+    # natural conversational compound questions — they're templates.
+    # Changed: added newline + length guard to stop the morning briefing
+    # being shredded into 5 fake "parts".
+    if "\n" in raw or len(raw) > 400 or len(raw.split()) > 40:
+        return [raw]
+    if any(
+        term in raw.lower()
+        for term in (
+            "run_forensic_analysis",
+            "forensic analysis",
+            "beneish",
+            "piotroski",
+            "altman",
+            "earnings manipulation",
+        )
+    ):
+        return [raw]
+    # Cheap pre-filter: if there are no plausible separators, return early
+    # without paying for the regex split.
+    if not re.search(r"[?!.;]|\b(?:and also|also then|then|next)\b", raw, flags=re.IGNORECASE):
+        return [raw]
+    if len(raw.split()) < 6:
+        return [raw]
+    parts = [p.strip(" \t,.;") for p in _COMPOUND_SPLIT_RE.split(raw) if p and p.strip()]
+    if len(parts) <= 1:
+        return [raw]
+    # Reject the split if any fragment is too short — likely a false positive
+    # (e.g. "Mr. Smith said hi" should not become ["Mr", "Smith said hi"]).
+    # Threshold is intentionally tight (≥2 words) so single-word fragments
+    # like "Mr" / "Inc" don't pass, while legitimate 2-word commands like
+    # "show breakouts" / "top gainers" / "high RS" still allow the split.
+    if any(len(p.split()) < 2 for p in parts):
+        return [raw]
+    return parts
+
+
 def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
     """Detect intent and build a tool plan from keywords alone."""
     routing_text = _routing_query_text(query)
     q = routing_text.lower()
 
+    # Agent-generated tool-execution prompts (e.g. /analyze expansion) must go to the
+    # LLM path so the model can actually call analyze_document with the supplied source,
+    # rather than being mis-classified as a stock_brief or market_situation_assessment.
+    if "analyze_document tool with source=" in q or "use the analyze_document tool" in q:
+        return {"intent": "llm_driven", "plan": []}
+
     if _is_greeting_query(q):
         return {"intent": "greeting", "plan": []}
+
+    if _contains_placeholder_symbol(routing_text):
+        return {"intent": "placeholder_symbol_request", "plan": []}
+
+    if _is_document_link_followup(q):
+        return {"intent": "document_link_help", "plan": []}
 
     if _is_morning_briefing_query(q):
         return {
@@ -931,11 +1517,10 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
                 ("get_market_breadth", {}),
                 ("get_top_gainers_losers", {"index": "NIFTY 50", "top_n": 3, "direction": "both"}),
                 ("get_fii_dii_activity", {}),
-                ("search_latest_catalysts", {"symbol": "NIFTY India market global cues GIFT Nifty crude USDINR"}),
             ],
         }
 
-    if data_mode == "intraday" and "intraday" in q and re.search(r"\bnifty\s*50\b|\bnifty50\b|\bnifty\b", q):
+    if data_mode == "intraday" and "intraday" in q and not any(w in q for w in ("scan", "screener")) and re.search(r"\bnifty\s*50\b|\bnifty50\b|\bnifty\b", q):
         symbol = "BANKNIFTY" if ("bank nifty" in q or "nifty bank" in q or "banknifty" in q) else "NIFTY50"
         return {"intent": "intraday_setup", "plan": [
             ("resolve_symbol", {"query": symbol}),
@@ -960,19 +1545,12 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
             ],
         }
 
-    assessment_plan = _build_market_situation_assessment_plan(query, data_mode=data_mode)
-    if assessment_plan:
-        return {
-            "intent": "market_situation_assessment",
-            "plan": _planner_execution_plan(assessment_plan["tasks"]),
-            "assessment_plan": assessment_plan,
-        }
-
     fno_terms = (
         "f&o", "fno", "option chain", "options chain", "option data", "options data",
         "pcr", "put call", "put-call", "max pain", "open interest", " oi ",
         "top oi", "futures basis", "cost of carry", "rollover", "futures premium",
-        "futures discount",
+        "futures discount", "options strategy", "option strategy", "long straddle",
+        "short straddle", "straddle", "strangle", "iron condor", "butterfly",
     )
     if any(term in f" {q} " for term in fno_terms):
         symbol = _extract_fno_symbol(routing_text)
@@ -983,6 +1561,14 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
         if any(term in q for term in ("strategy", "recommend", "best options", "options play")):
             plan.append(("get_strategy_recommendations", {"symbol": symbol}))
         return {"intent": "fno_overview", "plan": plan}
+
+    assessment_plan = _build_market_situation_assessment_plan(query, data_mode=data_mode)
+    if assessment_plan:
+        return {
+            "intent": "market_situation_assessment",
+            "plan": _planner_execution_plan(assessment_plan["tasks"]),
+            "assessment_plan": assessment_plan,
+        }
 
     if _is_market_knowledge_query(query):
         return {
@@ -1017,6 +1603,25 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
             ("get_intraday_market_recap", {"minutes": _extract_minutes_window(q, 15)}),
             ("get_market_breadth", {}),
         ]}
+
+    # Added: "ROE/PE/EPS/ROCE/EBITDA for|of <SYMBOL>" → fundamentals lookup
+    # for the named symbol, not for the metric. Example: "ROE for HDFCBANK"
+    # used to extract ROE as the ticker (HDFCBANK was getting skipped).
+    _METRIC_RE = re.compile(
+        r"\b(ROE|ROCE|ROA|PE|P/E|PB|P/B|EPS|EBITDA|MARGIN|MARGINS|DEBT|DIVIDEND|DPS|BVPS|BOOK\s+VALUE|FUNDAMENTALS|RATIOS)\b",
+        re.IGNORECASE,
+    )
+    if _METRIC_RE.search(q) and (" for " in q or " of " in q):
+        # Extract the symbol after for/of
+        m = re.search(r"\b(?:for|of)\s+([A-Z][A-Z0-9&-]{1,11}(?:\s+[A-Z][A-Z0-9&-]{1,11}){0,2})\b", routing_text)
+        if m:
+            sym_q = m.group(1).strip()
+            return {"intent": "stock_brief", "plan": [
+                ("resolve_symbol",      {"query": sym_q}),
+                ("scrape_screener_in",  {"symbol": sym_q.upper().replace(" ", "")}),
+                ("get_symbol_snapshot", {"symbol": sym_q.upper().replace(" ", "")}),
+            ]}
+
     if any(w in q for w in breadth_words) or q.strip() in {"overview", "market"}:
         plan = [
             ("get_live_market_overview", {}),
@@ -1025,6 +1630,59 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
         if any(w in q for w in mover_words):
             plan.append(("get_top_gainers_losers", {"index": "NIFTY 500", "top_n": 5, "direction": "both"}))
         return {"intent": "market_overview", "plan": plan}
+
+    # Standalone movers query (e.g. "top gainers", "top losers", "biggest movers").
+    # Without this branch, "top gainers" used to fall through to the
+    # symbol-extractor and get parsed as ticker "TOP".
+    if any(w in q for w in mover_words):
+        direction = (
+            "gainers" if any(g in q for g in ["gainer", "gainers", "advancing"])
+            else "losers" if any(l in q for l in ["loser", "losers", "declining"])
+            else "both"
+        )
+        return {"intent": "market_overview", "plan": [
+            ("get_top_gainers_losers", {"index": "NIFTY 500", "top_n": 10, "direction": direction}),
+            ("get_market_breadth", {}),
+        ]}
+
+    eod_screener_aliases = {
+        "stage2": "stage2",
+        "stage_2": "stage2",
+        "breakouts": "breakouts",
+        "breakout": "breakouts",
+        "supertrend": "supertrend_buy",
+        "supertrend_buy": "supertrend_buy",
+        "strong": "strong_buy",
+        "strong_buy": "strong_buy",
+        "new": "new_entrants",
+        "new_entrants": "new_entrants",
+        "newhigh": "new_highs",
+        "newhighs": "new_highs",
+        "new_high": "new_highs",
+        "new_highs": "new_highs",
+        "52w": "new_highs",
+        "momentum": "momentum_52w",
+        "momentum_52w": "momentum_52w",
+        "highrs": "high_rs",
+        "high_rs": "high_rs",
+        "turnaround": "turnaround",
+        "base": "stage1_base",
+        "stage1_base": "stage1_base",
+        "tight": "tight_range",
+        "tight_range": "tight_range",
+        "dip": "oversold_bounce",
+        "oversold_bounce": "oversold_bounce",
+    }
+    if "screener" in q:
+        tail = q.split("screener", 1)[1].strip()
+        tail_tokens = re.findall(r"[a-z0-9_]+", tail)
+        if tail_tokens:
+            key = tail_tokens[0]
+            if key in eod_screener_aliases:
+                return {
+                    "intent": "screener",
+                    "plan": [("run_screener_query", {"screen_type": eod_screener_aliases[key]})],
+                }
 
     words = re.findall(r"[A-Za-z][A-Za-z0-9\-&\.]+", routing_text)
     skip  = {"show","me","the","latest","on","for","what","is","how","tell",
@@ -1037,7 +1695,8 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
               "happened","changed","change","last","minute","minutes","min","few",
               "compare","vs","versus","from","perspective","into","including","combine",
               "fundamental","fundamentals","forensic","red","flags","flag",
-              "own","portfolio","holding","holdings","monitor","should"}
+              "own","portfolio","holding","holdings","monitor","should",
+              "detailed","detail","complete","comprehensive"}
     candidates = [w for w in words if w.lower() not in skip and len(w) >= 2]
 
     symbol_candidates = [
@@ -1056,9 +1715,14 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
         "technical setup for" in q
         or re.search(r"\b(full|detailed|complete)\s+technical\b.*\bfor\b", q)
     )
+    is_strength_validation_query = (
+        sum(1 for term in ("canslim", "can slim", "rs", "relative strength", "fundamental", "piotroski", "petroski") if term in q) >= 2
+        and any(w in q for w in ("strength", "strong", "which", "rank", "out of"))
+    )
     if (
         not is_single_stock_technical_setup
-        and any(term in q for term in ("compare", " vs ", " versus "))
+        and not is_strength_validation_query
+        and any(term in q for term in ("compare", " vs ", " versus ", "which is better", "better", "rank", "between"))
         and len(symbol_candidates) >= 2
     ):
         aspects = ["both"]
@@ -1077,8 +1741,17 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
             "plan": [("generate_portfolio_narratives", {"symbols": symbol_candidates[:10], "top_n": min(len(symbol_candidates), 10)})],
         }
 
+    # Added: standalone "portfolio review / my portfolio / holdings overview"
+    # without explicit tickers — call get_portfolio_exposure to summarize the
+    # portfolio CSV. Was misrouting to "REVIEW (REVIEW) — Market Brief".
+    if any(term in q for term in ("portfolio review", "review my portfolio", "my portfolio", "portfolio summary", "holdings summary", "portfolio overview")):
+        return {
+            "intent": "portfolio_review",
+            "plan": [("get_portfolio_exposure", {})],
+        }
+
     strength_terms = ("canslim", "can slim", "rs", "relative strength", "fundamental", "piotroski", "petroski")
-    if sum(1 for term in strength_terms if term in q) >= 2 and any(w in q for w in ("strength", "strong", "which", "rank", "out of")):
+    if is_strength_validation_query:
         strength_skip = skip | {
             "out", "of", "which", "show", "shows", "strength", "strong", "based", "basis",
             "can", "slim", "canslim", "rs", "relative", "fundamental", "fundamentals",
@@ -1100,12 +1773,123 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
         if symbols:
             return {"intent": "strength_validation", "plan": [("validate_strength_watchlist", {"symbols": symbols})]}
 
-    # Intraday routing: SQLite first, NSE website live snapshot second,
+    if any(w in q for w in [
+        "source health", "live table", "postgre", "postgres", "postgresql",
+        "intraday data", "intra day data", "intraday table", "ohlcv table",
+    ]):
+        return {"intent": "intraday_health", "plan": [("get_intraday_source_health", {})]}
+
+    if any(w in q for w in ["bulk deal", "bulk deals", "block deal", "block deals", "large trades"]):
+        return {"intent": "market_overview", "plan": [("get_bulk_block_deals", {})]}
+    if any(w in q for w in ["most active", "highest volume", "most traded", "volume leaders"]):
+        return {"intent": "market_overview", "plan": [("get_most_active_stocks", {})]}
+
+    technical_stock_terms = (
+        "technical setup", "indicators", "rsi", "adx", "macd", "supertrend",
+        "moving average", "sma", "weinstein stage", "rs rank", "relative strength",
+        "technical analysis",
+    )
+    fundamental_stock_terms = (
+        "fundamental", "fundamentals", "fundamental analysis", "ratio", "ratios",
+        "valuation", "p/e", "pe", "roe", "roce", "book value",
+    )
+    forensic_stock_terms = (
+        "run_forensic_analysis", "forensic", "beneish", "piotroski", "altman",
+        "earnings manipulation", "manipulation risk", "financial health",
+        "red flag", "red flags", "earnings quality", "accounting risk",
+        "balance sheet quality",
+    )
+    # Queries that ask for actual reported numbers (P&L / Balance Sheet /
+    # Quarterly results / fundamentals) must pull screener.in data and the
+    # latest BSE/NSE filing — a snapshot-only response is incomplete.
+    # Keep keywords specific so we don't steal generic "news / results" intents.
+    results_stock_terms = (
+        "latest results", "quarterly results", "quarterly result",
+        "q1 results", "q2 results", "q3 results", "q4 results",
+        "annual results", "yearly results", "fy results",
+        "earnings results", "earnings report", "result update",
+        "profit and loss", "p&l statement", "p & l",
+        "balance sheet", "cash flow statement", "financial statements",
+        "fundamental analysis", "quarterly numbers", "quarterly financials",
+        "annual financials", "revenue and profit", "revenue & profit",
+    )
+    # Treat conversational mentions ("after results", "before earnings",
+    # "post results") as commentary, not data fetches.
+    conversational_results = (
+        "after results", "after the results", "before results", "before the results",
+        "post results", "post the results", "after earnings", "before earnings",
+        "post earnings", "after the earnings", "before the earnings",
+        "read on", "view on", "thoughts on", "opinion on",
+    )
+    # Match free-form "<symbol> results" / "latest <symbol> results" patterns
+    # where the user is clearly asking for the actual results data.
+    _results_freeform = (
+        re.search(r"\b(?:latest|recent|new|fresh|published)\b[^.?!]{0,60}\bresults?\b", q)
+        or re.search(r"\bresults?\b[^.?!]{0,40}\b(?:for|of)\b\s+[A-Z]", routing_text)
+        or re.search(r"\bshow\s+(?:me\s+)?[^.?!]{0,40}\bresults?\b", q)
+    ) and not any(c in q for c in conversational_results)
+    # If user is primarily asking for news/catalysts, defer to that branch.
+    news_priority_terms = ("news", "catalyst", "catalysts", "announcement", "announcements")
+    explicit_stock_subject = bool(symbol_candidates or _symbol_phrase_after_preposition(routing_text))
+
+    if (
+        candidates and explicit_stock_subject
+        and (any(term in q for term in results_stock_terms) or _results_freeform)
+        and not any(term in q for term in news_priority_terms)
+    ):
+        sym_q = _primary_symbol_query(candidates, symbol_candidates, routing_text)
+        return {"intent": "stock_results", "plan": [
+            ("resolve_symbol",           {"query": sym_q}),
+            ("scrape_screener_in",       {"symbol": sym_q.upper()}),
+            ("search_nse_announcements", {"symbol": sym_q.upper()}),
+            ("search_bse_filings",       {"symbol": sym_q.upper()}),
+            ("search_concall_transcripts", {"symbol": sym_q.upper()}),
+            ("search_latest_catalysts",  {"symbol": sym_q.upper()}),
+            ("get_symbol_snapshot",      {"symbol": sym_q.upper()}),
+        ]}
+
+    if candidates and explicit_stock_subject and any(term in q for term in forensic_stock_terms):
+        sym_q = _primary_symbol_query(candidates, symbol_candidates, routing_text)
+        return {"intent": "stock_brief", "plan": [
+            ("resolve_symbol",       {"query": sym_q}),
+            ("get_symbol_snapshot",  {"symbol": sym_q.upper()}),
+            ("get_technical_setup",  {"symbol": sym_q.upper()}),
+            ("get_sector_context",   {"sector_or_symbol": sym_q.upper()}),
+            ("run_forensic_analysis", {"symbol": sym_q.upper()}),
+        ]}
+
+    # Intraday routing: PostgreSQL bars first, NSE website live snapshot second,
     # yfinance candle analysis only as fallback for OHLCV history.
     if data_mode == "intraday":
+        if any(w in q for w in ["rsi divergence", "rsi reversal"]):
+            return {"intent": "intraday_screener", "plan": [("run_intraday_screener", {"screen_type": "rsi_divergence"})]}
+        if candidates and explicit_stock_subject and any(w in q for w in ["news", "catalyst", "catalysts", "recent"]):
+            sym_q = _primary_symbol_query(candidates, symbol_candidates, routing_text)
+            return {"intent": "stock_brief", "plan": [
+                ("resolve_symbol",       {"query": sym_q}),
+                ("get_symbol_snapshot",  {"symbol": sym_q.upper()}),
+                ("get_technical_setup",  {"symbol": sym_q.upper()}),
+                ("get_sector_context",   {"sector_or_symbol": sym_q.upper()}),
+                ("search_latest_catalysts", {"symbol": sym_q.upper()}),
+            ]}
+        if (
+            candidates
+            and explicit_stock_subject
+            and "scan" not in q
+            and "screener" not in q
+            and any(term in q for term in technical_stock_terms)
+        ):
+            sym_q = _primary_symbol_query(candidates, symbol_candidates, routing_text)
+            return {"intent": "intraday_setup", "plan": [
+                ("resolve_symbol", {"query": sym_q}),
+                ("explain_intraday_setup", {"symbol": sym_q}),
+                ("get_nse_intraday_snapshot", {"symbol": sym_q}),
+                ("get_intraday_analysis", {"symbol": sym_q}),
+            ]}
         if "scan" in q and (
             "nifty" in q
             or "bank nifty" in q
+            or "banknifty" in q
             or "midcap" in q
             or "smallcap" in q
         ):
@@ -1113,12 +1897,22 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
                 "index": _extract_intraday_scan_index(q),
                 "interval": _extract_intraday_timeframe(q),
                 "strategies": _extract_intraday_scan_strategies(q),
-                "direction_filter": "buy" if any(w in q for w in (" buy", " long", " bullish")) else (
-                    "sell" if any(w in q for w in (" sell", " short", " bearish")) else "all"
-                ),
+                "direction_filter": _intraday_scan_direction(q),
                 "min_rr": 1.3,
                 "top_n": 10,
             })]}
+        if any(w in q for w in ["gap up", "gap and go", "gap continuation", "gapping stocks"]):
+            return {"intent": "intraday_screener", "plan": [("run_intraday_screener", {"screen_type": "gap_and_go"})]}
+        if any(w in q for w in ["macd crossover", "macd signal", "fresh macd"]):
+            return {"intent": "intraday_screener", "plan": [("run_intraday_screener", {"screen_type": "macd_crossover"})]}
+        if any(w in q for w in ["vwap reclaim", "above vwap", "vwap bounce"]):
+            return {"intent": "intraday_screener", "plan": [("run_intraday_screener", {"screen_type": "vwap_reclaim"})]}
+        if any(w in q for w in ["bollinger squeeze", "bb squeeze", "volatility squeeze"]):
+            return {"intent": "intraday_screener", "plan": [("run_intraday_screener", {"screen_type": "bb_squeeze"})]}
+        if any(w in q for w in ["rsi divergence", "rsi reversal"]):
+            return {"intent": "intraday_screener", "plan": [("run_intraday_screener", {"screen_type": "rsi_divergence"})]}
+        if any(w in q for w in ["opening range breakout", "orb breakout", "orb breakouts", "first 15 minutes"]):
+            return {"intent": "intraday_screener", "plan": [("run_intraday_screener", {"screen_type": "opening_range_breakout"})]}
         if any(w in q for w in ["data health", "source health", "live table", "sqlite", "stale", "fresh"]):
             return {"intent": "intraday_health", "plan": [("get_intraday_source_health", {})]}
         if any(w in q for w in ["breakout", "breakouts"]):
@@ -1130,7 +1924,7 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
         if any(w in q for w in ["momentum", "movers", "leaders", "scan", "screener"]):
             return {"intent": "intraday_screener", "plan": [("run_intraday_screener", {"screen_type": "momentum"})]}
         if any(w in q for w in ["level", "levels", "support", "resistance", "pivot"]):
-            sym_q = _primary_symbol_query(candidates, symbol_candidates)
+            sym_q = _primary_symbol_query(candidates, symbol_candidates, routing_text)
             return {"intent": "intraday_levels", "plan": [
                 ("resolve_symbol", {"query": sym_q}),
                 ("get_intraday_levels", {"symbol": sym_q}),
@@ -1138,20 +1932,29 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
                 ("get_intraday_analysis", {"symbol": sym_q}),
             ]}
         if candidates:
-            sym_q = _primary_symbol_query(candidates, symbol_candidates)
+            sym_q = _primary_symbol_query(candidates, symbol_candidates, routing_text)
             return {"intent": "intraday_setup", "plan": [
                 ("resolve_symbol", {"query": sym_q}),
                 ("explain_intraday_setup", {"symbol": sym_q}),
                 ("get_nse_intraday_snapshot", {"symbol": sym_q}),
                 ("get_intraday_analysis", {"symbol": sym_q}),
             ]}
+    if (
+        candidates
+        and any(term in q for term in technical_stock_terms)
+        and any(term in q for term in fundamental_stock_terms)
+    ):
+        sym_q = _primary_symbol_query(candidates, symbol_candidates, routing_text)
+        return {"intent": "stock_brief", "plan": [
+            ("resolve_symbol",       {"query": sym_q}),
+            ("scrape_screener_in",   {"symbol": sym_q.upper()}),
+            ("get_symbol_snapshot",  {"symbol": sym_q.upper()}),
+            ("get_technical_setup",  {"symbol": sym_q.upper()}),
+            ("get_sector_context",   {"sector_or_symbol": sym_q.upper()}),
+        ]}
 
-    technical_stock_terms = (
-        "technical setup", "indicators", "rsi", "adx", "macd", "supertrend",
-        "moving average", "sma", "weinstein stage", "rs rank", "relative strength"
-    )
     if candidates and any(term in q for term in technical_stock_terms) and (" for " in f" {q} " or "setup" in q):
-        sym_q = _primary_symbol_query(candidates, symbol_candidates)
+        sym_q = _primary_symbol_query(candidates, symbol_candidates, routing_text)
         return {"intent": "stock_brief", "plan": [
             ("resolve_symbol",       {"query": sym_q}),
             ("get_symbol_snapshot",  {"symbol": sym_q.upper()}),
@@ -1168,14 +1971,72 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
     # Screener queries
     if any(w in q for w in ["strong buy", "top buy", "buy signals", "best stocks"]):
         return {"intent": "screener", "plan": [("run_screener_query", {"screen_type": "strong_buy"})]}
+    if (
+        any(term in q for term in [
+            "showing strength", "still strong", "strong stocks",
+            "market leaders", "relative strength",
+            # Added the "high rs" / "high relative strength" variants and
+            # standalone "rs stocks" — these used to fall through to
+            # stock_brief which then misrouted resolve_symbol("RS").
+            "top rs", "high rs", "highest rs", "best rs", "rs leaders",
+            "rs leadership", "rs ranked", "top relative strength",
+            "high relative strength",
+        ])
+        and any(term in q for term in ["stock", "stocks", "which", "leaders", "names"])
+    ):
+        return {"intent": "screener", "plan": [("run_screener_query", {"screen_type": "high_rs"})]}
     if any(w in q for w in ["stage 2", "stage2", "weinstein", "advancing stocks"]):
         return {"intent": "screener", "plan": [("run_screener_query", {"screen_type": "stage2"})]}
-    if any(w in q for w in ["breakout", "breakouts", "52w high", "52 week high", "20d high"]):
+    if any(w in q for w in ["companies creating new high", "creating new highs", "creating new high", "new highs", "new high", "52w high", "52 week high"]):
+        return {"intent": "screener", "plan": [("run_screener_query", {"screen_type": "new_highs"})]}
+    if any(w in q for w in ["breakout", "breakouts", "20d high"]):
         return {"intent": "screener", "plan": [("run_screener_query", {"screen_type": "breakouts"})]}
     if any(w in q for w in ["new entrant", "new stage 2", "recently upgraded"]):
         return {"intent": "screener", "plan": [("run_screener_query", {"screen_type": "new_entrants"})]}
+    # Added: turnaround / recovery / dip-recovery / comeback (matches the
+    # screener prompt mapping at the top of this file).
+    if any(w in q for w in ["turnaround", "turn around", "recovery stock", "comeback stock", "dip recovery"]):
+        return {"intent": "screener", "plan": [("run_screener_query", {"screen_type": "turnaround"})]}
     if any(w in q for w in ["supertrend", "super trend"]):
         return {"intent": "screener", "plan": [("run_screener_query", {"screen_type": "supertrend_buy"})]}
+    # Added: oversold-bounce / tight-range / basing  EOD screeners that used
+    # to fall through to the symbol extractor and become OVERSOLD / TIGHT /
+    # BASING "Market Briefs".
+    if any(w in q for w in ["oversold bounce", "oversold dip", "rsi dip", "dip buy", "stage 2 dip"]):
+        return {"intent": "screener", "plan": [("run_screener_query", {"screen_type": "oversold_bounce"})]}
+    if any(w in q for w in ["tight range", "vcp eod", "volatility contraction", "coiling stocks", "tight consolidation"]):
+        return {"intent": "screener", "plan": [("run_screener_query", {"screen_type": "tight_range"})]}
+    if any(w in q for w in ["basing stock", "basing stocks", "accumulation stock", "stage 1 base", "consolidating stock"]):
+        return {"intent": "screener", "plan": [("run_screener_query", {"screen_type": "stage1_base"})]}
+
+    # Added: live-tape utilities  bulk/block deals + most-active.
+    if any(w in q for w in ["bulk deal", "bulk deals", "block deal", "block deals", "large trades"]):
+        return {"intent": "market_overview", "plan": [("get_bulk_block_deals", {})]}
+    if any(w in q for w in ["most active", "highest volume", "most traded", "volume leaders"]):
+        return {"intent": "market_overview", "plan": [("get_most_active_stocks", {})]}
+
+    # Added: intraday screeners  gap-and-go / MACD / VWAP / Bollinger
+    # squeeze. Must come BEFORE the generic symbol extractor so they don't
+    # become GAP / MACD / VWAP / BOLLINGER "Market Briefs".
+    if any(w in q for w in ["gap up", "gap and go", "gap continuation", "gapping stocks"]):
+        return {"intent": "intraday_screener", "plan": [("run_intraday_screener", {"screen_type": "gap_and_go"})]}
+    if any(w in q for w in ["macd crossover", "macd signal", "fresh macd"]):
+        return {"intent": "intraday_screener", "plan": [("run_intraday_screener", {"screen_type": "macd_crossover"})]}
+    if any(w in q for w in ["vwap reclaim", "above vwap", "vwap bounce"]):
+        return {"intent": "intraday_screener", "plan": [("run_intraday_screener", {"screen_type": "vwap_reclaim"})]}
+    if any(w in q for w in ["bollinger squeeze", "bb squeeze", "volatility squeeze"]):
+        return {"intent": "intraday_screener", "plan": [("run_intraday_screener", {"screen_type": "bb_squeeze"})]}
+    if any(w in q for w in ["rsi divergence", "rsi reversal"]):
+        return {"intent": "intraday_screener", "plan": [("run_intraday_screener", {"screen_type": "rsi_divergence"})]}
+    if any(w in q for w in ["opening range breakout", "orb breakout", "orb breakouts", "first 15 minutes"]):
+        return {"intent": "intraday_screener", "plan": [("run_intraday_screener", {"screen_type": "opening_range_breakout"})]}
+
+    # Intraday / PostgreSQL data health — works in any mode
+    if any(w in q for w in [
+        "source health", "live table", "postgre", "postgres", "postgresql",
+        "intraday data", "intra day data", "intraday table", "ohlcv table",
+    ]):
+        return {"intent": "intraday_health", "plan": [("get_intraday_source_health", {})]}
 
     # Data health
     if any(w in q for w in ["data health", "data fresh", "stale", "last update", "when was"]):
@@ -1199,7 +2060,7 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
         return {"intent": "report_lookup", "plan": [("find_latest_report", {})]}
 
     if "sector context" in q and candidates:
-        sym_q = _primary_symbol_query(candidates, symbol_candidates)
+        sym_q = _primary_symbol_query(candidates, symbol_candidates, routing_text)
         return {"intent": "sector_scan", "plan": [("get_sector_context", {"sector_or_symbol": sym_q.upper()})]}
 
     # Sector queries
@@ -1212,12 +2073,14 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
 
     # Stock-specific query — extract likely symbol
     if candidates:
-        sym_q = _primary_symbol_query(candidates, symbol_candidates)
+        sym_q = _primary_symbol_query(candidates, symbol_candidates, routing_text)
         plan = [
             ("resolve_symbol",       {"query": sym_q}),
             ("get_symbol_snapshot",  {"symbol": sym_q.upper()}),
             ("get_technical_setup",  {"symbol": sym_q.upper()}),
             ("get_sector_context",   {"sector_or_symbol": sym_q.upper()}),
+            ("scrape_screener_in",   {"symbol": sym_q.upper()}),
+            ("search_nse_announcements", {"symbol": sym_q.upper()}),
         ]
         if any(w in q for w in ["news", "catalyst", "recent", "latest news"]):
             plan.append(("search_latest_catalysts", {"symbol": sym_q.upper()}))
@@ -1290,15 +2153,24 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
     fno_chain = _get("get_options_chain") or _get("get_option_chain")
     fno_futures = _get("get_futures_analysis")
     fno_strategy = _get("get_strategy_recommendations")
+    forensic = _get("run_forensic_analysis")
+    deep = _get("deep_search")
     intra_setup = _get("explain_intraday_setup")
     intra_screen = _get("run_intraday_screener")
     intra_index_scan = _get("scan_intraday_market")
+    intra_symbol_scan = _get("scan_symbols_intraday")
     intra_levels = _get("get_intraday_levels")
     intra_ind = _get("compute_intraday_indicators")
     nse_intraday = _get("get_nse_intraday_snapshot")
     intra_legacy = _get("get_intraday_analysis")
+    scr_fund = _get("scrape_screener_in")
+    nse_ann  = _get("search_nse_announcements")
+    bse_filings = _get("search_bse_filings")
+    concalls = _get("search_concall_transcripts")
 
     sym = (snap or {}).get("symbol") or (tech or {}).get("symbol") or ""
+    if not sym and forensic:
+        sym = forensic.get("symbol") or ""
     cname = (snap or {}).get("company_name") or sym
 
     def _render_assessment_plan(plan: dict | None) -> None:
@@ -1329,9 +2201,563 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
                 lines.append(f"     recovery/code plan: {task.get('recovery_plan')}")
         lines.append("")
 
+    def _first_nonempty_row(table: dict, labels: tuple[str, ...]) -> tuple[str, list] | None:
+        # Match each label loosely: ignores trailing "+" / "%" and is case-insensitive
+        def _norm(s: str) -> str:
+            return (s or "").replace("+", "").replace("%", "").strip().lower()
+        wanted = {_norm(label) for label in labels}
+        for key, values in (table or {}).items():
+            if key.startswith("_"):
+                continue
+            if _norm(key) in wanted and isinstance(values, list) and any(str(v).strip() for v in values):
+                return key, values
+        return None
+
+    def _render_stock_results(symbol: str) -> None:
+        q = (scr_fund or {}).get("quarterly") or {}
+        q_headers = q.get("_headers") if isinstance(q, dict) else []
+        annual = (scr_fund or {}).get("annual_pl") or {}
+        annual_headers = annual.get("_headers") if isinstance(annual, dict) else []
+        ratios = (scr_fund or {}).get("ratios") or {}
+
+        def _is_junk_url(url: str) -> bool:
+            if not url:
+                return False
+            u = url.lower()
+            return any(j in u for j in (
+                "duckduckgo.com/y.js",
+                "bing.com/aclick",
+                "investilo.ai",
+                "msclkid=",
+                "/y.js?ad_domain=",
+            ))
+
+        def _clean_title(t: str) -> str:
+            t = (t or "").strip()
+            for noise in (
+                "| BSE", "|BSE", " - BSE", " | NSE", "LIVE Stock/Share Market",
+                "Today's Stock Market News", "AI-Powered Stock Analysis",
+            ):
+                if noise in t:
+                    t = t.replace(noise, "").strip()
+            # Strip screener.in relative-time badge glued to title (e.g. "Acquisition1d", "Dividend23h")
+            t = re.sub(r"([A-Za-z\)])(\d+[dhm])(?=\s|-|$)", r"\1", t)
+            # Insert missing space between digits and lowercase word (e.g. "2025from bse")
+            t = re.sub(r"(\d)([a-z])", r"\1 \2", t)
+            return re.sub(r"\s{2,}", " ", t).rstrip(" |").strip()
+
+        lines.append(f"━━━ {symbol or (scr_fund or {}).get('symbol', 'Stock')} — Latest Results Evidence ━━━")
+        lines.append("")
+
+        # LATEST PERIOD SUMMARY — reconcile period from available sources
+        period_sources: list[str] = []
+        period_label = ""
+        if q_headers:
+            last_q = str(q_headers[-1])
+            period_label = f"Quarter ending {last_q}"
+            period_sources.append(f"screener {last_q}")
+        annual_hdrs_local = annual_headers or []
+        if annual_hdrs_local:
+            period_sources.append(f"annual {annual_hdrs_local[-1]}")
+        for item in (nse_ann or {}).get("bse_filings") or (nse_ann or {}).get("nse_filings") or []:
+            if not isinstance(item, dict):
+                continue
+            t_low = (item.get("title") or item.get("subject") or "").lower()
+            if any(k in t_low for k in (
+                "financial results", "outcome of board meeting",
+                "audited results", "unaudited results", "outcomeofbm",
+            )):
+                d = item.get("date") or item.get("published")
+                if d:
+                    period_sources.append(f"BSE filing {d}")
+                break
+        if period_label or period_sources:
+            lines.append("▶ LATEST PERIOD SUMMARY")
+            if period_label:
+                lines.append(f"  Period: {period_label}")
+            if period_sources:
+                lines.append(f"  Reconciled from: {' · '.join(period_sources[:4])}")
+            lines.append("")
+
+        lines.append("▶ FINANCIAL SNAPSHOT")
+        if ratios:
+            snap_keys = (
+                ("Market Cap", "₹ Cr"),
+                ("Current Price", "₹"),
+                ("Stock P/E", ""),
+                ("ROE", "%"),
+                ("ROCE", "%"),
+                ("Book Value", "₹"),
+                ("Dividend Yield", "%"),
+                ("Debt to equity", ""),
+                ("EPS", "₹"),
+                ("Promoter holding", "%"),
+            )
+            snap_rows: list[tuple[str, str]] = []
+            for k, unit in snap_keys:
+                v = ratios.get(k)
+                if v:
+                    snap_rows.append((k, f"{v}" + (f" {unit}" if unit and unit not in str(v) else "")))
+            if snap_rows:
+                lines.append("")
+                lines.append("  | Metric             | Value                |")
+                lines.append("  |--------------------|----------------------|")
+                for k, v in snap_rows:
+                    lines.append(f"  | {k[:18]:<18} | {str(v)[:20]:<20} |")
+                lines.append("")
+
+        # Quarterly P&L as a real markdown table
+        if q_headers:
+            quarterly_metrics = []
+            for labels in (
+                ("Sales", "Revenue", "Operating Revenue"),
+                ("Expenses",),
+                ("Operating Profit",),
+                ("OPM %",),
+                ("Net Profit", "Profit after tax", "PAT"),
+                ("EPS in Rs", "EPS"),
+            ):
+                row = _first_nonempty_row(q, labels)
+                if row:
+                    quarterly_metrics.append(row)
+            if quarterly_metrics:
+                lines.append("▶ QUARTERLY P&L (₹ Cr — last 6 quarters)")
+                lines.append("")
+                hdr_cells = [str(h) for h in q_headers[:6]]
+                lines.append("  | Metric              | " + " | ".join(f"{h:>10}" for h in hdr_cells) + " |")
+                lines.append("  |---------------------|" + ("------------|" * len(hdr_cells)))
+                for label, values in quarterly_metrics:
+                    padded = (values[:6] + [""] * (len(hdr_cells) - len(values[:6])))
+                    cells = " | ".join(f"{str(v or '—'):>10}" for v in padded)
+                    lines.append(f"  | {_clean_title(label)[:19]:<19} | {cells} |")
+                lines.append("")
+            elif scr_fund and scr_fund.get("error"):
+                lines.append(f"  Screener unavailable: {scr_fund.get('error')}")
+                lines.append("")
+
+        # Annual P&L as a real markdown table
+        if annual_headers and isinstance(annual, dict):
+            annual_metrics = []
+            for labels in (
+                ("Sales", "Revenue"),
+                ("Expenses",),
+                ("Operating Profit",),
+                ("OPM %",),
+                ("Net Profit", "Profit after tax", "PAT"),
+                ("EPS in Rs", "EPS"),
+                ("Dividend Payout %",),
+            ):
+                row = _first_nonempty_row(annual, labels)
+                if row:
+                    annual_metrics.append(row)
+            if annual_metrics:
+                lines.append("▶ ANNUAL P&L (₹ Cr — last 5 years)")
+                lines.append("")
+                hdr_cells = [str(h) for h in annual_headers[:5]]
+                lines.append("  | Metric              | " + " | ".join(f"{h:>10}" for h in hdr_cells) + " |")
+                lines.append("  |---------------------|" + ("------------|" * len(hdr_cells)))
+                for label, values in annual_metrics:
+                    padded = (values[:5] + [""] * (len(hdr_cells) - len(values[:5])))
+                    cells = " | ".join(f"{str(v or '—'):>10}" for v in padded)
+                    lines.append(f"  | {_clean_title(label)[:19]:<19} | {cells} |")
+                lines.append("")
+
+        # Pros / Cons from screener
+        pros = (scr_fund or {}).get("pros") or []
+        cons = (scr_fund or {}).get("cons") or []
+        if pros or cons:
+            lines.append("▶ SCREENER ANALYSIS")
+            if pros:
+                lines.append("  Pros:")
+                for p in pros[:4]:
+                    lines.append(f"    • {p}")
+            if cons:
+                lines.append("  Cons:")
+                for c in cons[:4]:
+                    lines.append(f"    • {c}")
+            lines.append("")
+
+        # Consolidated filings: dedupe across NSE/screener announcements / BSE filings
+        lines.append("▶ RESULT FILINGS & ANNOUNCEMENTS")
+        seen_urls: set[str] = set()
+        rendered_count = 0
+        max_filings = 8
+
+        def _emit_filing(title: str, url: str, date: str = "", category: str = "") -> bool:
+            nonlocal rendered_count
+            if rendered_count >= max_filings or _is_junk_url(url):
+                return False
+            key = (url or title).split("?")[0].rstrip("/")
+            if key in seen_urls:
+                return False
+            seen_urls.add(key)
+            t = _clean_title(title)[:100] or "Filing"
+            cat = f"[{category}] " if category else ""
+            dt = f"{date} — " if date else ""
+            url_part = f"\n      {url}" if url else ""
+            lines.append(f"  • {cat}{dt}{t}{url_part}")
+            rendered_count += 1
+            return True
+
+        # 1. NSE/BSE corporate announcements (highest signal — actual filings)
+        nse_payload = nse_ann or {}
+        if not nse_payload.get("error"):
+            for item in (nse_payload.get("results") or nse_payload.get("announcements") or
+                         nse_payload.get("bse_filings") or nse_payload.get("nse_filings") or []):
+                if not isinstance(item, dict):
+                    continue
+                _emit_filing(
+                    item.get("title") or item.get("subject") or item.get("desc") or "",
+                    item.get("url") or item.get("link") or item.get("pdf_url") or item.get("att_url") or "",
+                    item.get("date") or item.get("published") or "",
+                )
+        # 2. Screener.in announcements (often duplicates the above — dedupe handles it)
+        for item in (scr_fund or {}).get("announcements") or []:
+            if isinstance(item, dict):
+                _emit_filing(item.get("title", ""), item.get("url", ""))
+        # 3. BSE filings from DDG search (lower signal — only fill remaining slots,
+        # and only with deep filings/results URLs not generic company-quote pages)
+        bse_payload = bse_filings or {}
+        if not bse_payload.get("error"):
+            bse_results = bse_payload.get("results") or {}
+            if isinstance(bse_results, dict):
+                for cat_key, group in bse_results.items():
+                    if not isinstance(group, list):
+                        continue
+                    for entry in group:
+                        if not isinstance(entry, dict):
+                            continue
+                        url = entry.get("url") or ""
+                        # Only accept BSE filings/results/board-meeting pages
+                        if not any(s in url for s in (
+                            "/financials-results/", "/board-meetings/",
+                            "/financials-annual-reports/", "comp_results.aspx",
+                            "AttachLive", "AttachHis",
+                        )):
+                            continue
+                        _emit_filing(entry.get("title", ""), url, category=cat_key)
+        if rendered_count == 0:
+            lines.append("  No recent result filing links were returned.")
+        lines.append("")
+
+        # Concall transcripts — dedupe and prefer transcript > ppt > recording
+        lines.append("▶ CONCALL / MANAGEMENT COMMENTARY")
+        screener_concalls = (scr_fund or {}).get("concalls") or []
+        rendered_concalls = 0
+        for item in screener_concalls[:5]:
+            if not isinstance(item, dict):
+                continue
+            period = item.get("period") or "Period"
+            link_parts: list[str] = []
+            for key, label in (("transcript_url", "Transcript"), ("ppt_url", "PPT"), ("recording_url", "Recording")):
+                u = item.get(key)
+                if u and not _is_junk_url(u):
+                    link_parts.append(f"{label}: {u}")
+            if link_parts:
+                lines.append(f"  • {period}")
+                for lp in link_parts:
+                    lines.append(f"      {lp}")
+                rendered_concalls += 1
+        if rendered_concalls == 0:
+            concall_items = (concalls or {}).get("results") or (concalls or {}).get("items") or []
+            for item in concall_items[:3]:
+                if isinstance(item, dict):
+                    url = item.get("url") or item.get("link") or ""
+                    if _is_junk_url(url):
+                        continue
+                    title = _clean_title(item.get("title") or item.get("headline") or "")
+                    if title:
+                        lines.append(f"  • {title}" + (f"\n      {url}" if url else ""))
+                        rendered_concalls += 1
+        if rendered_concalls == 0:
+            lines.append("  No concall transcript or presentation link was returned.")
+        lines.append("")
+
+        # Latest catalysts — filter junk URLs
+        lines.append("▶ LATEST CATALYSTS")
+        catalyst_items = (cat or {}).get("results") or (cat or {}).get("items") or [] if isinstance(cat, dict) else []
+        rendered_catalysts = 0
+        for item in catalyst_items[:6]:
+            if not isinstance(item, dict):
+                continue
+            url = item.get("url") or item.get("link") or ""
+            if _is_junk_url(url):
+                continue
+            title = _clean_title(item.get("title") or item.get("headline") or "")
+            if not title:
+                continue
+            lines.append(f"  • {title}" + (f"\n      {url}" if url else ""))
+            rendered_catalysts += 1
+            if rendered_catalysts >= 5:
+                break
+        if rendered_catalysts == 0:
+            if isinstance(cat, dict) and cat.get("error"):
+                lines.append(f"  ERROR: {cat.get('error')}")
+            else:
+                lines.append("  No latest catalyst items were returned.")
+        lines.append("")
+
+        # ── DEEP-DIVE INSIGHTS: recursively /analyze top 2 PDFs for the latest period ──
+        def _classify_filing(title: str, url: str) -> tuple[str, int]:
+            t = (title or "").lower()
+            u = (url or "").lower()
+            if any(k in t for k in ("investor presentation", "investor update",
+                                    "earnings presentation", "results presentation")):
+                return ("investor_pres", 1)
+            if any(k in t for k in (
+                "outcome of board meeting", "outcomeofbm", "outcome of bm",
+                "financial results", "audited financial", "unaudited financial",
+                "quarterly results", "quarterly result", "earnings release",
+                "results - sebi", "results-sebi",
+            )):
+                return ("earnings_outcome", 2)
+            if any(k in t for k in ("transcript", "concall transcript", "earnings call")):
+                return ("transcript", 3)
+            if "annual report" in t or "annualreport" in u or "bseplus/annualreport" in u:
+                return ("annual_report", 4)
+            return ("other", 9)
+
+        def _is_analyzable_pdf(url: str) -> bool:
+            if not url:
+                return False
+            u = url.lower()
+            if u.endswith(".pdf"):
+                return True
+            return any(k in u for k in (
+                "annpdfopen", "attachlive", "attachhis",
+                "bseplus/annualreport", "/corpfiling/",
+            ))
+
+        deep_candidates: list[dict] = []
+        nse_payload = nse_ann or {}
+        if not nse_payload.get("error"):
+            for item in (nse_payload.get("results") or nse_payload.get("announcements")
+                         or nse_payload.get("bse_filings") or nse_payload.get("nse_filings") or []):
+                if not isinstance(item, dict):
+                    continue
+                title = item.get("title") or item.get("subject") or ""
+                url = (item.get("url") or item.get("link")
+                       or item.get("pdf_url") or item.get("att_url") or "")
+                if not _is_analyzable_pdf(url) or _is_junk_url(url):
+                    continue
+                kind, rank = _classify_filing(title, url)
+                if kind in ("investor_pres", "earnings_outcome"):
+                    deep_candidates.append({"title": title, "url": url,
+                                            "rank": rank, "kind": kind})
+        for item in (scr_fund or {}).get("announcements") or []:
+            if not isinstance(item, dict):
+                continue
+            title = item.get("title", "")
+            url = item.get("url", "")
+            if not _is_analyzable_pdf(url) or _is_junk_url(url):
+                continue
+            kind, rank = _classify_filing(title, url)
+            if kind in ("investor_pres", "earnings_outcome"):
+                deep_candidates.append({"title": title, "url": url,
+                                        "rank": rank, "kind": kind})
+
+        # Dedupe by URL stem, sort by rank, take top 2
+        _seen_urls: set[str] = set()
+        _uniq: list[dict] = []
+        for c in deep_candidates:
+            key = c["url"].split("?")[0].rstrip("/")
+            if key in _seen_urls:
+                continue
+            _seen_urls.add(key)
+            _uniq.append(c)
+        _uniq.sort(key=lambda x: x["rank"])
+        picks = _uniq[:2]
+
+        if picks:
+            lines.append("▶ DEEP-DIVE INSIGHTS (recursive /analyze on top filings)")
+            deadline = time.time() + 120
+            for pick in picks:
+                if time.time() > deadline:
+                    lines.append(f"  • Skipped remaining picks: 120s time budget exceeded")
+                    break
+                kind_label = pick["kind"].replace("_", " ").title()
+                lines.append("")
+                lines.append(f"  ◆ {kind_label}: {_clean_title(pick['title'])[:110]}")
+                lines.append(f"    Source: {pick['url']}")
+                try:
+                    analysis = call_tool("analyze_document", {
+                        "source": pick["url"], "max_pages": 40,
+                        "vision_fallback": True,
+                    })
+                except Exception as exc:
+                    lines.append(f"    Analysis error: {exc}")
+                    continue
+                # Append to tool_results so SOURCE TRAIL reflects recursive call
+                tool_results.append({
+                    "tool": "analyze_document",
+                    "args": {"source": pick["url"]},
+                    "result": analysis if isinstance(analysis, dict) else {"text": str(analysis)},
+                })
+                if not isinstance(analysis, dict):
+                    lines.append("    (no parsed content)")
+                    continue
+                if analysis.get("error"):
+                    lines.append(f"    Analysis error: {analysis.get('error')}")
+                    continue
+                # fetch_pdf_text returns {text, pages: [{page,text,...}], total_pages, ...}
+                # fetch_article_content returns {content, ...}
+                page_list = analysis.get("pages") or analysis.get("page_texts") or []
+                if not isinstance(page_list, list):
+                    page_list = []
+                page_count = analysis.get("total_pages") or analysis.get("page_count") or len(page_list)
+                text = (analysis.get("text") or analysis.get("content") or "").strip()
+                if not text and page_list:
+                    text = "\n\n".join(
+                        (pt.get("text") or "").strip()
+                        for pt in page_list if isinstance(pt, dict)
+                    ).strip()
+                if isinstance(page_count, int) and page_count > 0:
+                    lines.append(f"    Pages parsed: {page_count}")
+                if text:
+                    preview = text[:1500].strip()
+                    shown_lines = 0
+                    for raw in preview.splitlines():
+                        ln = raw.strip()
+                        if not ln:
+                            continue
+                        lines.append(f"    {ln[:140]}")
+                        shown_lines += 1
+                        if shown_lines >= 25:
+                            break
+                    if len(text) > 1500:
+                        lines.append(f"    … (preview truncated — full {len(text):,} chars in MD report)")
+                else:
+                    lines.append("    (no extractable text)")
+            lines.append("")
+
     if intent == "greeting":
         lines.append("Hello — Agent Adda is ready.")
         lines.append("Try `/live` for current market status, `/global` for global cues, `/heat` for breadth/sector heat, or ask about a specific NSE symbol.")
+        lines.append("\n━━━ Not investment advice. For research and learning only. ━━━")
+        return "\n".join(lines)
+
+    if intent == "placeholder_symbol_request":
+        lines.append("▶ NEED A REAL NSE SYMBOL")
+        lines.append("  Replace the placeholder with an actual NSE symbol or company name.")
+        lines.append("")
+        lines.append("▶ EXAMPLES")
+        lines.append("  /assess RELIANCE")
+        lines.append("  /assess TCS")
+        lines.append("  RELIANCE technical setup")
+        lines.append("")
+        lines.append("▶ WHY")
+        lines.append(
+            "  `SYMBOL`, `TICKER`, and similar placeholders are templates, not tradable NSE symbols. "
+            "No market, technical, sector, or catalyst conclusion was inferred from placeholder input."
+        )
+        lines.append("\n━━━ Not investment advice. For research and learning only. ━━━")
+        return "\n".join(lines)
+
+    if intent == "document_link_help":
+        lines.append("▶ DOCUMENT LINK FOLLOW-UP")
+        lines.append("  This looks like a document/PDF follow-up, not a stock-symbol query.")
+        lines.append("")
+        lines.append("▶ WHAT TO DO")
+        lines.append("  Re-run `/analyze <URL>` with the document URL. Wrapped/pasted URLs are normalized before PDF extraction.")
+        lines.append("  If the URL still fails, paste the source page URL or use a company/results search prompt with the company name and period.")
+        lines.append("")
+        lines.append("▶ EXAMPLES")
+        lines.append("  /analyze https://www.diageoindia.com/pdf-viewer.aspx?...src=...pdf")
+        lines.append("  find United Spirits FY26 audited results PDF")
+        lines.append("")
+        lines.append("▶ SOURCE TRAIL")
+        lines.append("  No equity symbol was resolved; no market conclusion was inferred.")
+        lines.append("\n━━━ Not investment advice. For research and learning only. ━━━")
+        return "\n".join(lines)
+
+    if intent == "stock_results":
+        _render_stock_results(sym or (scr_fund or {}).get("symbol", ""))
+        lines.append("▶ SOURCE TRAIL")
+        for trail_line in _source_trail_lines(tool_results):
+            lines.append(trail_line)
+        lines.append("\n━━━ Not investment advice. For research and learning only. ━━━")
+        body = "\n".join(lines)
+        # Save Markdown deep-dive report alongside the terminal output
+        try:
+            import os as _os
+            import datetime as _dt
+            symbol_out = (sym or (scr_fund or {}).get("symbol") or "RESULTS").upper()
+            ts = _dt.datetime.now().strftime("%Y%m%d_%H%M%S")
+            out_dir = _os.path.join(_os.getcwd(), "reports", "generated")
+            _os.makedirs(out_dir, exist_ok=True)
+            md_path = _os.path.join(out_dir, f"{symbol_out}_results_{ts}.md")
+            md_chunks = [f"# {symbol_out} — Latest Results Deep-Dive", "", body, ""]
+            doc_dumps = [tr for tr in tool_results if tr.get("tool") == "analyze_document"]
+            if doc_dumps:
+                md_chunks.append("\n---\n\n## Appendix: Full Document Text (recursive /analyze)\n")
+                for tr in doc_dumps:
+                    src = (tr.get("args") or {}).get("source", "")
+                    res = tr.get("result") if isinstance(tr.get("result"), dict) else {}
+                    md_chunks.append(f"### Source: {src}\n")
+                    if res.get("error"):
+                        md_chunks.append(f"_Error: {res.get('error')}_\n")
+                    else:
+                        full_text = res.get("text") or res.get("content") or ""
+                        if not full_text:
+                            pts = res.get("pages") or res.get("page_texts") or []
+                            if isinstance(pts, list) and pts:
+                                full_text = "\n\n".join(
+                                    f"### Page {pt.get('page', i+1)}\n\n{(pt.get('text') or '').strip()}"
+                                    for i, pt in enumerate(pts) if isinstance(pt, dict)
+                                )
+                        if full_text:
+                            if len(full_text) > 50000:
+                                md_chunks.append(full_text[:50000])
+                                md_chunks.append(
+                                    f"\n_(truncated at 50000 chars — original {len(full_text):,} chars)_"
+                                )
+                            else:
+                                md_chunks.append(full_text)
+                        else:
+                            md_chunks.append("_(no text extracted)_")
+                    md_chunks.append("")
+            with open(md_path, "w", encoding="utf-8") as _f:
+                _f.write("\n".join(md_chunks))
+            body += f"\n\n📄 Deep-dive report saved: {md_path}"
+        except Exception as _save_exc:
+            body += f"\n\n⚠ MD save failed: {_save_exc}"
+        return body
+
+    if intent == "entity_topic_command":
+        symbol = ""
+        for tr in tool_results:
+            result = tr.get("result") if isinstance(tr.get("result"), dict) else {}
+            args = tr.get("args") if isinstance(tr.get("args"), dict) else {}
+            symbol = str(result.get("symbol") or args.get("symbol") or symbol or "").upper()
+        lines.append(f"━━━ {symbol or 'Entity'} — Command Assessment Result ━━━")
+        if deep is not None:
+            lines.append("")
+            lines.append("▶ DEEP SEARCH")
+            if deep.get("error"):
+                lines.append(f"  Error: {deep.get('error')}")
+            else:
+                count = len(deep.get("results") or deep.get("items") or [])
+                lines.append(f"  Symbol: {symbol}")
+                lines.append(f"  Results: {count}")
+                lines.append("  Framing: Entity and topic were resolved before routing.")
+        if fno_chain is not None:
+            lines.append("")
+            lines.append("▶ OPTIONS")
+            if fno_chain.get("error"):
+                lines.append(f"  Error: {fno_chain.get('error')}")
+            else:
+                lines.append(f"  Symbol: {fno_chain.get('symbol', symbol)}")
+                lines.append(f"  PCR: {fno_chain.get('pcr', 'n/a')}")
+                lines.append(f"  Max pain: {fno_chain.get('max_pain', 'n/a')}")
+        if scr_fund is not None and (nse_ann is not None or bse_filings is not None or concalls is not None):
+            lines.append("")
+            _render_stock_results(symbol)
+        lines.append("")
+        lines.append("▶ SOURCE TRAIL")
+        for tr in tool_results:
+            result = tr.get("result") if isinstance(tr.get("result"), dict) else {}
+            status = f"ERROR: {result.get('error')}" if result.get("error") else "ok"
+            lines.append(f"  {tr.get('tool')}: {status}")
         lines.append("\n━━━ Not investment advice. For research and learning only. ━━━")
         return "\n".join(lines)
 
@@ -1486,7 +2912,8 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
         return "\n".join(l for l in lines if str(l).strip() != "")
 
     if intent == "market_situation_assessment":
-        _render_assessment_plan(assessment_plan)
+        if (assessment_plan or {}).get("show_plan"):
+            _render_assessment_plan(assessment_plan)
 
     if intent == "startup_morning_briefing":
         def _fmt_pct(value) -> str:
@@ -1728,6 +3155,63 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
         lines.append("\n━━━ Not investment advice. For research and learning only. ━━━")
         return "\n".join(l for l in lines if str(l).strip() != "")
 
+    if forensic:
+        fsym = forensic.get("symbol") or sym or "SYMBOL"
+        lines.append(f"━━━ {fsym} — FORENSIC ACCOUNTING ANALYSIS ━━━")
+        if forensic.get("error"):
+            lines.append(f"\n▶ ERROR\n  {forensic.get('error')}")
+        else:
+            beneish = forensic.get("beneish") or {}
+            piotroski = forensic.get("piotroski") or {}
+            altman = forensic.get("altman") or {}
+            lines.append(f"Overall forensic risk: {str(forensic.get('overall_risk', 'unknown')).upper()}")
+            if forensic.get("source_url"):
+                lines.append(f"Source: {forensic.get('source_url')}")
+
+            lines.append("\n▶ Beneish M-score")
+            lines.append(
+                f"  Score: {beneish.get('score', '—')} | "
+                f"Interpretation: {beneish.get('interpretation', '—')}"
+            )
+            risk_flags = beneish.get("risk_flags") or []
+            lines.append("  Flagged variables: " + (", ".join(map(str, risk_flags)) if risk_flags else "None reported"))
+            variables = beneish.get("variables") or beneish.get("components") or {}
+            for name, value in list(variables.items())[:10]:
+                lines.append(f"    - {name}: {value}")
+
+            lines.append("\n▶ Piotroski F-score")
+            max_possible = piotroski.get("max_possible", 9)
+            lines.append(
+                f"  Score: {piotroski.get('score', '—')}/{max_possible} | "
+                f"Financial health: {piotroski.get('strength') or piotroski.get('interpretation', '—')}"
+            )
+            signals = piotroski.get("signals") or piotroski.get("components") or {}
+            for name, value in list(signals.items())[:12]:
+                verdict = "pass" if value in {1, True, "pass", "PASS"} else "fail" if value in {0, False, "fail", "FAIL"} else value
+                lines.append(f"    - {name}: {verdict}")
+
+            lines.append("\n▶ Altman Z'-score")
+            lines.append(
+                f"  Score: {altman.get('score', '—')} | "
+                f"Zone: {altman.get('zone') or altman.get('interpretation', '—')}"
+            )
+            components = altman.get("components") or {}
+            for name, value in list(components.items())[:8]:
+                lines.append(f"    - {name}: {value}")
+
+            if forensic.get("summary"):
+                lines.append("\n▶ SUMMARY")
+                for line in str(forensic["summary"]).splitlines():
+                    lines.append(f"  {line}")
+
+        lines.append("\n▶ SOURCE TRAIL")
+        for tr in tool_results:
+            result = tr.get("result") if isinstance(tr.get("result"), dict) else {}
+            status = f"ERROR: {result.get('error')}" if result.get("error") else "ok"
+            lines.append(f"  {tr['tool']}: {status}")
+        lines.append("\n━━━ Not investment advice. For research and learning only. ━━━")
+        return "\n".join(l for l in lines if str(l).strip() != "")
+
     if sym:
         lines.append(f"━━━ {cname} ({sym}) — Market Brief ━━━")
         snap_date = (snap or {}).get("snapshot_date", "N/A")
@@ -1898,6 +3382,125 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
         if top5:
             lines.append("  Top peers:      " + ", ".join(s["symbol"] for s in top5[:5]))
 
+    # 3b. Screener.in Fundamentals — ratios, quarterly P&L, annual P&L, peers,
+    # latest BSE filings. Activated when scrape_screener_in / search_nse_announcements
+    # were run (results/financials/quarterly queries).
+    if scr_fund and not scr_fund.get("error"):
+        ratios = scr_fund.get("ratios") or {}
+        if ratios:
+            lines.append("\n▶ FUNDAMENTAL RATIOS (screener.in)")
+            key_order = [
+                "Market Cap", "Current Price", "High / Low", "Stock P/E",
+                "Book Value", "Dividend Yield", "ROCE", "ROE",
+                "Face Value", "Industry PE", "Debt to equity",
+                "PEG Ratio", "EPS", "Promoter holding",
+            ]
+            shown = 0
+            for k in key_order:
+                v = ratios.get(k)
+                if v:
+                    lines.append(f"  {k:<18} {v}")
+                    shown += 1
+            # Include any remaining ratios not in our preferred order
+            for k, v in ratios.items():
+                if k in key_order or not v:
+                    continue
+                lines.append(f"  {k:<18} {v}")
+                shown += 1
+                if shown >= 18:
+                    break
+
+        quarterly = scr_fund.get("quarterly") or {}
+        q_headers = quarterly.get("_headers") if isinstance(quarterly, dict) else None
+        q_rows = {k: v for k, v in (quarterly or {}).items() if k != "_headers"} if isinstance(quarterly, dict) else {}
+        if q_headers and q_rows:
+            lines.append("\n▶ QUARTERLY RESULTS (₹ Cr — last 6 quarters)")
+            lines.append("  | Metric              | " + " | ".join(f"{h:>10}" for h in q_headers) + " |")
+            lines.append("  |" + "-" * 22 + "|" + ("-" * 12 + "|") * len(q_headers))
+            priority = ("Sales", "Sales+", "Revenue", "Expenses", "Expenses+",
+                        "Operating Profit", "OPM %", "Net Profit", "Net Profit+", "EPS in Rs")
+            ordered = [k for k in priority if k in q_rows] + [k for k in q_rows if k not in priority]
+            for metric in ordered[:10]:
+                vals = q_rows.get(metric) or []
+                cells = " | ".join(f"{(v or '—'):>10}" for v in (vals[:len(q_headers)] + [""] * (len(q_headers) - len(vals))))
+                lines.append(f"  | {metric[:18]:<18} | {cells} |")
+
+        annual = scr_fund.get("annual_pl") or {}
+        a_headers = annual.get("_headers") if isinstance(annual, dict) else None
+        a_rows = {k: v for k, v in (annual or {}).items() if k != "_headers"} if isinstance(annual, dict) else {}
+        if a_headers and a_rows:
+            lines.append("\n▶ ANNUAL P&L (₹ Cr — last 5 years)")
+            lines.append("  | Metric              | " + " | ".join(f"{h:>10}" for h in a_headers) + " |")
+            lines.append("  |" + "-" * 22 + "|" + ("-" * 12 + "|") * len(a_headers))
+            priority = ("Sales", "Sales+", "Revenue", "Expenses", "Expenses+",
+                        "Operating Profit", "OPM %", "Net Profit", "Net Profit+", "EPS in Rs", "Dividend Payout %")
+            ordered = [k for k in priority if k in a_rows] + [k for k in a_rows if k not in priority]
+            for metric in ordered[:10]:
+                vals = a_rows.get(metric) or []
+                cells = " | ".join(f"{(v or '—'):>10}" for v in (vals[:len(a_headers)] + [""] * (len(a_headers) - len(vals))))
+                lines.append(f"  | {metric[:18]:<18} | {cells} |")
+
+        pros = scr_fund.get("pros") or []
+        cons = scr_fund.get("cons") or []
+        if pros or cons:
+            lines.append("\n▶ SCREENER ANALYSIS")
+            if pros:
+                lines.append("  Pros:")
+                for p in pros[:4]:
+                    lines.append(f"    • {p}")
+            if cons:
+                lines.append("  Cons:")
+                for c in cons[:4]:
+                    lines.append(f"    • {c}")
+
+        peers = scr_fund.get("peers") or []
+        if peers:
+            lines.append("\n▶ PEER COMPARISON")
+            for p in peers[:5]:
+                name = p.get("Name") or p.get("S.No.") or "—"
+                pe   = p.get("P/E") or p.get("PE") or "—"
+                mcap = p.get("Mar Cap Rs.Cr.") or p.get("Mar Cap") or "—"
+                roe  = p.get("ROCE %") or p.get("ROE") or "—"
+                lines.append(f"  - {str(name)[:24]:<24} | P/E {pe:>8} | M-Cap {mcap:>10} | ROCE {roe:>6}")
+
+        shp = scr_fund.get("shareholding") or {}
+        if shp:
+            promo = shp.get("Promoters") or shp.get("Promoter")
+            fii   = shp.get("FIIs") or shp.get("FII")
+            dii   = shp.get("DIIs") or shp.get("DII")
+            if any([promo, fii, dii]):
+                lines.append("\n▶ SHAREHOLDING (latest)")
+                if promo: lines.append(f"  Promoters: {promo}")
+                if fii:   lines.append(f"  FII:       {fii}")
+                if dii:   lines.append(f"  DII:       {dii}")
+
+        announcements = scr_fund.get("announcements") or []
+        if announcements:
+            lines.append("\n▶ RECENT FILINGS (BSE)")
+            for a in announcements[:5]:
+                title = (a.get("title") or "")[:80]
+                url = a.get("url") or ""
+                lines.append(f"  • {title}")
+                if url:
+                    lines.append(f"    {url}")
+
+        src = scr_fund.get("source_url")
+        if src:
+            lines.append(f"\n  Source: {src}")
+
+    # 3c. Latest NSE / BSE corporate announcements (when search_nse_announcements ran)
+    if nse_ann and not nse_ann.get("error"):
+        items = nse_ann.get("announcements") or nse_ann.get("results") or []
+        if items:
+            lines.append("\n▶ NSE/BSE ANNOUNCEMENTS")
+            for a in items[:5]:
+                title = (a.get("subject") or a.get("title") or "")[:90]
+                date  = a.get("date") or a.get("dt") or ""
+                url   = a.get("url") or a.get("link") or a.get("pdf") or ""
+                lines.append(f"  • [{date}] {title}")
+                if url:
+                    lines.append(f"    {url}")
+
     # 4. Live market overview / Index / breadth
     if live and not live.get("error"):
         lines.append("\n▶ LIVE MARKET")
@@ -2030,28 +3633,177 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
             lines.append(f"  {s['symbol']:<12}  ₹{s.get('price',0):>8,.0f}  "
                          f"{rs_str:<8}  {s.get('trading_signal','—')}")
 
-    # 5b. SQLite intraday setup and screeners
+    # 5b. PostgreSQL intraday setup and screeners
     if intra_setup and not intra_setup.get("error"):
+        _sym = intra_setup.get("symbol", "—")
+        _tf = intra_setup.get("timeframe", "—")
+        _label = intra_setup.get("setup_label", "—")
+        _score = intra_setup.get("score", "—")
+        _price = intra_setup.get("latest_close")
+        _ts = intra_setup.get("latest_timestamp", "—")
+        _ind = intra_setup.get("indicators") or {}
+        _levels = intra_setup.get("levels") or {}
+        _pivots = _levels.get("pivot_levels") or {}
+        _ema_lvl = _levels.get("ema_levels") or {}
+        _sups = _levels.get("supports") or []
+        _ress = _levels.get("resistances") or []
+        _inv = intra_setup.get("invalidation_level")
+        _targets = intra_setup.get("technical_target_zones") or []
+        _signals = intra_setup.get("signals") or []
+        _tp = intra_setup.get("trade_plan") or {}
+        _ps = intra_setup.get("position_sizing") or {}
+        _rr = intra_setup.get("risk_reward_frame") or {}
+
+        def _pct_from(ref, val):
+            if isinstance(ref, (int, float)) and isinstance(val, (int, float)) and ref > 0:
+                return f"({(val - ref) / ref * 100:+.2f}%)"
+            return ""
+
+        # -- Header
         lines.append("\n▶ INTRADAY SETUP")
-        lines.append(f"  Symbol:      {intra_setup.get('symbol', '—')}")
-        lines.append(f"  Timeframe:   {intra_setup.get('timeframe', '—')}")
-        lines.append(f"  Setup label: {intra_setup.get('setup_label', '—')}")
-        lines.append(f"  Score:       {intra_setup.get('score', '—')}")
-        lines.append(f"  Price:       ₹{intra_setup.get('latest_close', '—')}")
-        lines.append(f"  Freshness:   {intra_setup.get('latest_timestamp', '—')}")
-        ind = intra_setup.get("indicators") or {}
-        lines.append(
-            f"  Indicators:  RSI {ind.get('rsi', '—')} | MACD hist {ind.get('macd_hist', '—')} | "
-            f"Supertrend dir {ind.get('supertrend_dir', '—')}"
-        )
-        levels = intra_setup.get("levels") or {}
-        lines.append(
-            f"  Levels:      Support {(levels.get('supports') or ['—'])[0]} | "
-            f"Resistance {(levels.get('resistances') or ['—'])[0]}"
-        )
-        lines.append(f"  Invalidation level: {intra_setup.get('invalidation_level', '—')}")
-        lines.append(f"  Technical target zones: {intra_setup.get('technical_target_zones') or '—'}")
-        lines.append("  Framing:     Research setup only; not a buy/sell recommendation.")
+        price_str = f"₹{_price:,.2f}" if isinstance(_price, (int, float)) else "—"
+        lines.append(f"  Symbol:    {_sym}  |  Timeframe: {_tf}")
+        lines.append(f"  Setup:     {_label}  |  Score: {_score}")
+        lines.append(f"  Price:     {price_str}  |  As of: {_ts}")
+
+        # -- Key Levels
+        lines.append("  ── Key Levels ──")
+        if _pivots.get("PP") is not None:
+            lines.append(f"  Pivot (PP): ₹{_pivots['PP']:,.2f}")
+        for lvl in ["R1", "R2", "R3"]:
+            v = _pivots.get(lvl)
+            if v is not None:
+                lines.append(f"  {lvl}:        ₹{v:,.2f}  {_pct_from(_price, v)}")
+        for lvl in ["S1", "S2", "S3"]:
+            v = _pivots.get(lvl)
+            if v is not None:
+                lines.append(f"  {lvl}:        ₹{v:,.2f}  {_pct_from(_price, v)}")
+        if _sups:
+            lines.append("  Supports:   " + " | ".join(f"₹{s:,.2f}" if isinstance(s, (int, float)) else str(s) for s in _sups[:4]))
+        if _ress:
+            lines.append("  Resistances:" + " | ".join(f"₹{r:,.2f}" if isinstance(r, (int, float)) else str(r) for r in _ress[:4]))
+        ema_parts = []
+        for ek in ["ema9", "ema21", "ema50", "ema200"]:
+            ev = _ema_lvl.get(ek) or _ind.get(ek)
+            if isinstance(ev, (int, float)):
+                ema_parts.append(f"{ek.upper()}: ₹{ev:,.2f}")
+        if ema_parts:
+            lines.append("  EMAs:       " + " | ".join(ema_parts))
+
+        # -- Targets & Invalidation
+        lines.append("  ── Targets & Invalidation ──")
+        if len(_targets) > 0 and isinstance(_targets[0], (int, float)):
+            lines.append(f"  T1:         ₹{_targets[0]:,.2f}  {_pct_from(_price, _targets[0])}")
+        else:
+            lines.append("  T1:         —")
+        if len(_targets) > 1 and isinstance(_targets[1], (int, float)):
+            lines.append(f"  T2:         ₹{_targets[1]:,.2f}  {_pct_from(_price, _targets[1])}")
+        if isinstance(_inv, (int, float)):
+            lines.append(f"  Invalidation (SL): ₹{_inv:,.2f}  {_pct_from(_price, _inv)}")
+        else:
+            lines.append("  Invalidation (SL): —")
+
+        # -- Indicators Snapshot
+        lines.append("  ── Indicators ──")
+        rsi_str = f"{_ind['rsi']:.1f}" if isinstance(_ind.get("rsi"), (int, float)) else "—"
+        macd_str = f"{_ind['macd_hist']:.4f}" if isinstance(_ind.get("macd_hist"), (int, float)) else "—"
+        st_map = {1: "Bullish", -1: "Bearish"}
+        st_str = st_map.get(_ind.get("supertrend_dir"), "—")
+        lines.append(f"  RSI: {rsi_str} | MACD hist: {macd_str} | Supertrend: {st_str}")
+        ind_extra = []
+        if isinstance(_ind.get("volume_ratio"), (int, float)):
+            ind_extra.append(f"Vol ratio: {_ind['volume_ratio']:.1f}x")
+        if isinstance(_ind.get("atr"), (int, float)):
+            ind_extra.append(f"ATR: ₹{_ind['atr']:,.2f}")
+        if isinstance(_ind.get("bb_pct"), (int, float)):
+            ind_extra.append(f"BB%: {_ind['bb_pct']:.0f}%")
+        if ind_extra:
+            lines.append("  " + " | ".join(ind_extra))
+
+        # -- Strategy Signals
+        active_sigs = [s for s in _signals if s.get("entry") is not None]
+        if active_sigs:
+            lines.append("  ── Strategy Signals ──")
+            for sig in active_sigs[:5]:
+                s_name = sig.get("strategy", "—")
+                s_dir = sig.get("setup_label", sig.get("direction", "—"))
+                s_entry = sig.get("entry")
+                s_tgt = sig.get("target")
+                s_sl = sig.get("stoploss")
+                s_rr = sig.get("rr")
+                s_str = sig.get("strength", "")
+                parts = [f"{s_name} ({s_dir}):"]
+                if isinstance(s_entry, (int, float)):
+                    parts.append(f"entry ₹{s_entry:,.2f}")
+                if isinstance(s_tgt, (int, float)):
+                    parts.append(f"target ₹{s_tgt:,.2f}")
+                if isinstance(s_sl, (int, float)):
+                    parts.append(f"SL ₹{s_sl:,.2f}")
+                if isinstance(s_rr, (int, float)):
+                    parts.append(f"R:R {s_rr:.1f}")
+                if s_str:
+                    parts.append(f"[{s_str}]")
+                lines.append("  " + " | ".join(parts))
+                note = sig.get("note")
+                if note:
+                    lines.append(f"    {note}")
+
+        # -- Trade Plan (only for LONG/SHORT)
+        if _tp and _tp.get("direction"):
+            lines.append(f"  ── Trade Plan (Educational) — {_tp['direction']} ──")
+            lines.append("  Entry confirmations:")
+            for c in _tp.get("entry_confirmations", []):
+                lines.append(f"    • {c}")
+            so = _tp.get("scale_out", [])
+            if so:
+                lines.append("  Scale-out plan:")
+                for s in so:
+                    lines.append(f"    • {s}")
+            inv_act = _tp.get("invalidation_action")
+            if inv_act:
+                lines.append(f"  Invalidation: {inv_act}")
+
+        # -- Position Sizing
+        if _ps and not _ps.get("error"):
+            budget = _ps.get("risk_per_trade", 5000)
+            lines.append(f"  ── Position Sizing (Educational, ₹{budget:,.0f} risk budget) ──")
+            lines.append(f"  Risk/share:  ₹{_ps.get('risk_per_share', 0):,.2f}")
+            cash = _ps.get("cash") or {}
+            if cash.get("shares"):
+                lines.append(
+                    f"  Cash/Equity: {cash['shares']:,} shares "
+                    f"(capital ~₹{cash.get('capital_required', 0):,.0f})"
+                )
+            fut = _ps.get("futures")
+            if fut:
+                lines.append(
+                    f"  Futures:     {fut['lots']} lot(s) x {fut['lot_size']} = "
+                    f"{fut['units']} units "
+                    f"(risk ₹{fut['risk_per_lot']:,.0f}/lot, "
+                    f"margin ~₹{fut['approx_margin_per_lot']:,.0f}/lot)"
+                )
+            opt_note = _ps.get("options_note")
+            if opt_note:
+                lines.append(f"  Options:     {opt_note}")
+
+        # -- Risk-Reward Frame
+        if _rr and _rr.get("risk_per_share"):
+            lines.append("  ── Risk-Reward Frame ──")
+            lines.append(f"  Risk/share:  ₹{_rr['risk_per_share']:,.2f}")
+            if _rr.get("t1_rr") is not None:
+                lines.append(
+                    f"  T1 R:R       1:{_rr['t1_rr']:.1f}  "
+                    f"(₹{_rr.get('rupee_risk', 0):,.0f} risk → "
+                    f"₹{_rr.get('t1_rupee_reward', 0):,.0f} reward)"
+                )
+            if _rr.get("t2_rr") is not None:
+                lines.append(
+                    f"  T2 R:R       1:{_rr['t2_rr']:.1f}  "
+                    f"(₹{_rr.get('rupee_risk', 0):,.0f} risk → "
+                    f"₹{_rr.get('t2_rupee_reward', 0):,.0f} reward)"
+                )
+
+        lines.append("  ━━━ Research setup only; not a buy/sell recommendation. Not SEBI registered. ━━━")
 
     if intra_levels and not intra_levels.get("error"):
         lines.append("\n▶ INTRADAY LEVELS")
@@ -2094,13 +3846,13 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
             or not (intra_setup or intra_levels or intra_ind)
         )
     ):
-        sqlite_error = (
+        bars_error = (
             (intra_setup or {}).get("error")
             or (intra_levels or {}).get("error")
-            or "SQLite intraday source unavailable"
+            or "PostgreSQL intraday bars unavailable"
         )
         lines.append("\n▶ INTRADAY FALLBACK ANALYSIS")
-        lines.append(f"  SQLite intraday source unavailable: {sqlite_error}")
+        lines.append(f"  PostgreSQL intraday bars unavailable: {bars_error}")
         lines.append(
             f"  Fallback source: {intra_legacy.get('source') or intra_legacy.get('data_source') or 'legacy intraday engine'}"
         )
@@ -2188,6 +3940,35 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
                 if sig.get("rr") is not None:
                     bits.append(f"R:R {sig.get('rr')}")
                 lines.append("    - " + " | ".join(bits))
+
+    if intra_symbol_scan and not intra_symbol_scan.get("error"):
+        buy = intra_symbol_scan.get("top_buy") or intra_symbol_scan.get("buy_signals") or []
+        sell = intra_symbol_scan.get("top_sell") or intra_symbol_scan.get("sell_signals") or []
+        symbols_scanned = intra_symbol_scan.get("symbols_scanned") or []
+        lines.append("\n▶ INTRADAY SYMBOL SCAN")
+        lines.append(f"  Symbols:     {', '.join(symbols_scanned[:20]) if symbols_scanned else '—'}")
+        lines.append(f"  Timeframe:   {intra_symbol_scan.get('interval') or intra_symbol_scan.get('timeframe') or '—'}")
+        if intra_symbol_scan.get("data_source"):
+            lines.append(f"  Source:      {intra_symbol_scan.get('data_source')}")
+        lines.append(f"  Signals:     {len(buy)} long research setups | {len(sell)} short research setups")
+        for label, rows in (("Long", buy), ("Short", sell)):
+            if not rows:
+                continue
+            lines.append(f"  {label} setups:")
+            for sig in rows[:10]:
+                bits = [str(sig.get("symbol", "—"))]
+                if sig.get("strategy"):
+                    bits.append(str(sig.get("strategy")))
+                if sig.get("entry") is not None:
+                    bits.append(f"entry {sig.get('entry')}")
+                if sig.get("target") is not None:
+                    bits.append(f"target {sig.get('target')}")
+                invalidation = sig.get("stoploss", sig.get("invalidation_level"))
+                if invalidation is not None:
+                    bits.append(f"invalidation {invalidation}")
+                if sig.get("rr") is not None:
+                    bits.append(f"R:R {sig.get('rr')}")
+                lines.append("    - " + " | ".join(bits))
         lines.append("  Framing: Research-only intraday scan; not buy/sell recommendations.")
 
     # 6. Catalysts
@@ -2227,6 +4008,30 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
         lines.append("\n▶ MISSING EVIDENCE")
         lines.append("  Missing evidence: " + ", ".join(dict.fromkeys(missing_tools)))
         lines.append("  No unsupported technical, fundamental, catalyst, or sector conclusion was inferred from missing data.")
+
+    # Intraday / data health
+    intra_health = _get("get_intraday_source_health")
+    data_health = _get("get_data_health")
+    if intent in ("intraday_health", "data_health"):
+        src = intra_health or data_health or {}
+        if src and not src.get("error"):
+            lines.append(f"## Intraday Data Health  —  {src.get('source', 'PostgreSQL')}")
+            lines.append(f"Overall status: **{src.get('overall_status', '—')}**")
+            lines.append(f"Database: `{src.get('db_path', '—')}`")
+            tables = src.get("tables") or {}
+            if tables:
+                lines.append("\n| Table | Status | Rows | Latest | Age (min) |")
+                lines.append("|-------|--------|------|--------|-----------|")
+                for tname, tinfo in tables.items():
+                    if isinstance(tinfo, dict):
+                        lines.append(
+                            f"| {tname} | {tinfo.get('status', '—')} "
+                            f"| {tinfo.get('rows', '—'):,} "
+                            f"| {tinfo.get('latest_timestamp', '—')} "
+                            f"| {tinfo.get('age_minutes', '—')} |"
+                        )
+        elif src:
+            lines.append(f"## Data Health\n- Error: {src.get('error', 'unknown')}")
 
     # Source trail
     lines.append("\n▶ SOURCE TRAIL")
@@ -2268,6 +4073,43 @@ def _is_global_query(q: str) -> bool:
     return any(phrase in q for phrase in _GLOBAL_QUERY_PHRASES)
 
 
+def _has_tool_error(tool_results: list[dict], tool_name: str, needle: str = "") -> bool:
+    for trace in tool_results:
+        if trace.get("tool") != tool_name:
+            continue
+        result = trace.get("result") or {}
+        error = str(result.get("error") or "")
+        if error and (not needle or needle.lower() in error.lower()):
+            return True
+    return False
+
+
+def _has_successful_tool(tool_results: list[dict], tool_name: str) -> bool:
+    for trace in tool_results:
+        if trace.get("tool") != tool_name:
+            continue
+        result = trace.get("result") or {}
+        if isinstance(result, dict) and not result.get("error"):
+            return True
+    return False
+
+
+def _intraday_source_label(intent: str, tool_results: list[dict], default_label: str) -> str:
+    if intent not in {"intraday_setup", "intraday_levels"}:
+        return default_label
+    bars_missing = (
+        _has_tool_error(tool_results, "explain_intraday_setup", "intraday.ohlcv_bars")
+        or _has_tool_error(tool_results, "get_intraday_levels", "intraday.ohlcv_bars")
+    )
+    fallback_ok = _has_successful_tool(tool_results, "get_intraday_analysis")
+    nse_snapshot_ok = _has_successful_tool(tool_results, "get_nse_intraday_snapshot")
+    if bars_missing and fallback_ok and nse_snapshot_ok:
+        return "NSE live API snapshot + Yahoo Finance fallback candles"
+    if bars_missing and nse_snapshot_ok:
+        return "NSE live API snapshot; PostgreSQL intraday OHLCV unavailable"
+    return default_label
+
+
 class Agent:
     """Agent Adda NLP Query Agent."""
 
@@ -2285,6 +4127,7 @@ class Agent:
         # Only user + assistant turns (no system, no tool messages).
         self._history: list[dict] = []
         self._last_symbols: list[str] = []
+        self._last_turn_context: TurnContext | None = None
 
     def model_status(self) -> dict:
         """Return the active main chat backend status. Voice STT/TTS models are separate."""
@@ -2304,8 +4147,22 @@ class Agent:
         OPENAI_TTS_MODEL settings.
         """
         clean_provider = (provider or "").strip().lower()
-        if clean_provider in {"gpt-4o", "gpt4o", "got-40", "got-4o", "openai"}:
-            clean_model = model or ("gpt-4o" if clean_provider != "openai" else None)
+        # Accept any explicit OpenAI model name as the provider arg too
+        # (e.g. `/model gpt-4o-mini` → provider="gpt-4o-mini").  This avoids
+        # requiring users to type `/model gpt-4o gpt-4o-mini`.
+        # Changed: route any "gpt-*" / "o1*" / "o3*" / "o4*" string to OpenAI.
+        is_openai_alias = (
+            clean_provider in {"gpt-4o", "gpt4o", "got-40", "got-4o", "openai"}
+            or clean_provider.startswith(("gpt-", "gpt4", "o1", "o3", "o4"))
+        )
+        if is_openai_alias:
+            if clean_provider in {"openai"}:
+                clean_model = model
+            elif clean_provider in {"gpt-4o", "gpt4o", "got-40", "got-4o"}:
+                clean_model = model or "gpt-4o"
+            else:
+                # provider arg is itself a model name (e.g. "gpt-4o-mini")
+                clean_model = model or clean_provider
             try:
                 self.backend = _OpenAIBackend(model=clean_model)
             except Exception as exc:
@@ -2330,7 +4187,7 @@ class Agent:
         else:
             return {
                 "status": "error",
-                "error": "Usage: /model status | /model gpt-4o | /model ollama [model-name] | /model keyword",
+                "error": "Usage: /model status | /model gpt-4o | /model gpt-4o-mini | /model ollama [model-name] | /model keyword",
             }
 
         self.backend_name = _backend_name(self.backend)
@@ -2345,6 +4202,7 @@ class Agent:
         """Clear conversation history — start a fresh session."""
         self._history = []
         self._last_symbols = []
+        self._last_turn_context = None
 
     def _contextualize_pronouns(self, user_input: str) -> str:
         """Replace stock pronouns with the last resolved symbol for routing."""
@@ -2358,7 +4216,13 @@ class Agent:
         text = re.sub(r"\bit\b", symbol, text, flags=re.I)
         return text
 
-    def _remember_interaction(self, user_input: str, answer: str, tool_results: list[dict]) -> None:
+    def _remember_interaction(
+        self,
+        user_input: str,
+        answer: str,
+        tool_results: list[dict],
+        turn_context: TurnContext | None = None,
+    ) -> None:
         """Persist compact chat state plus the latest resolved symbols."""
         symbols: list[str] = []
         for tr in tool_results:
@@ -2376,9 +4240,36 @@ class Agent:
         ]
         if clean_symbols:
             self._last_symbols = clean_symbols[:5]
+        if turn_context is not None:
+            self._last_turn_context = turn_context
 
         self._history.append({"role": "user", "content": user_input})
         self._history.append({"role": "assistant", "content": answer})
+
+    def _conversation_fallback_context(self, *, mode: str, source_label: str) -> TurnContext | None:
+        """Build minimal context from rolling history when structured context is absent."""
+        if not self._history:
+            return None
+        recent = "\n".join(str(m.get("content") or "") for m in self._history[-6:])
+        symbols = list(dict.fromkeys(re.findall(r"\b[A-Z][A-Z0-9&-]{1,12}\b", recent)))
+        if not recent.strip() and not symbols:
+            return None
+        summary = "Previous conversation is available."
+        if "Report:" in recent or "Opening report:" in recent:
+            summary = "Previous conversation referenced a generated report."
+        elif symbols:
+            summary = f"Previous conversation referenced symbols: {', '.join(symbols[:5])}."
+        return TurnContext(
+            user_input="previous conversation",
+            intent="conversation_history",
+            mode=mode,
+            tools=[],
+            source_label=source_label,
+            result_type="conversation_history",
+            result_summary=summary,
+            symbols=symbols[:10],
+            result_items=symbols[:20],
+        )
 
     def _trim_history(self) -> list[dict]:
         """Return a trimmed copy of history that fits within the char budget."""
@@ -2539,6 +4430,39 @@ class Agent:
     def query(self, user_input: str, show_trace: bool = False) -> dict:
         """Process a user query. Returns {"answer": str, "trace": list, "backend": str}.
 
+        Compound query support: if the user packs multiple distinct questions
+        into one prompt (separated by ". ", " and also ", " ; ", "?" boundaries,
+        etc.), split them and run each through `_query_single`, then merge the
+        answers. Single-question queries are dispatched unchanged.
+        """
+        parts = _split_compound_query(user_input)
+        if len(parts) <= 1:
+            return self._query_single(user_input, show_trace=show_trace)
+
+        # Multi-part compound query: dispatch each part sequentially.
+        merged_answers: list[str] = []
+        merged_trace: list[dict] = []
+        last_backend = self.backend_name
+        for idx, part in enumerate(parts, start=1):
+            res = self._query_single(part, show_trace=show_trace)
+            merged_answers.append(
+                f"━━━ Part {idx} of {len(parts)}: {part} ━━━\n\n"
+                + (res.get("answer") or "")
+            )
+            merged_trace.append({"step": f"compound_part_{idx}", "query": part,
+                                 "intent": res.get("intent"),
+                                 "trace": res.get("trace", [])})
+            last_backend = res.get("backend") or last_backend
+        return {
+            "answer": "\n\n".join(merged_answers),
+            "trace": merged_trace,
+            "backend": last_backend,
+            "intent": "compound",
+        }
+
+    def _query_single(self, user_input: str, show_trace: bool = False) -> dict:
+        """Process a single user query. Returns {"answer": str, "trace": list, "backend": str}.
+
         Supports optional prefixes:
           /historical <query>  — force EOD / CSV mode
           /intraday <query>    — force live API mode
@@ -2568,14 +4492,14 @@ class Agent:
                 "correlation context, and India read-through."
                 if mode == "global"
                 else (
-               "Use get_intraday_source_health first for calculations, then SQLite-backed "
+               "Use get_intraday_source_health first for calculations, then PostgreSQL-backed "
                "get_intraday_bars, compute_intraday_indicators, get_intraday_levels, "
-               "explain_intraday_setup, and run_intraday_screener. If SQLite intraday "
+               "explain_intraday_setup, and run_intraday_screener. If PostgreSQL intraday "
                "tables are missing or stale for a single-stock/index deep dive, call "
                "get_nse_intraday_snapshot first from the NSE website, then call "
                "get_intraday_analysis only when OHLCV candle history is required. Label "
                "yfinance/EOD fallback clearly, and do not present fallback levels as "
-               "SQLite/NSE live-table data."
+               "PostgreSQL/NSE live-table data."
                     if mode == "intraday"
                     else "Use EOD CSV and DB snapshot tools for historical/technical analysis."
                 )
@@ -2584,35 +4508,128 @@ class Agent:
         )
         mode_sources = {
             "global": "cached global indices + correlations",
-            # PG-source-label: intraday quote tape now lives in PostgreSQL
-            # (intraday.quote_snapshots, populated by the always-on capture
-            # daemon). SQLite intraday_ohlcv is still the bar/candle source.
-            "intraday": "PG intraday.quote_snapshots + SQLite intraday OHLCV",
+            "intraday": "PG intraday.quote_snapshots + PG intraday.ohlcv_bars",
             "historical": "EOD CSV + DB snapshot",
         }
+        source_label = mode_sources.get(mode, "EOD CSV + DB snapshot")
         market_status = market_session_status()
         mode_suffix = (
             f"\n\n_Mode: {mode.title()} | Sources: "
-            f"{mode_sources.get(mode, 'EOD CSV + DB snapshot')} | "
+            f"{source_label} | "
             f"Market: {market_status.compact_label} | "
             f"Clock: {market_status.clock_label}_"
         )
 
+        def _with_readiness_metadata(answer: str) -> str:
+            if mode != "historical":
+                return answer
+            try:
+                return append_readiness_metadata(
+                    answer,
+                    project_root=Path(__file__).resolve().parent.parent,
+                )
+            except Exception:
+                return answer
+
         trace: list[dict] = []
+        entity_assessment = assess_entity_topic_request(clean_input)
+        if entity_assessment.applies and entity_assessment.decision == "route_with_entity_topic":
+            trace.append({"step": "entity_topic_assessment", "result": entity_assessment.__dict__})
+            entity_plan = _entity_topic_execution_plan(entity_assessment)
+            if entity_plan:
+                tool_results = _execute_plan(entity_plan)
+                trace.extend(tool_results)
+                answer_body = _synthesize_no_llm(
+                    "entity_topic_command",
+                    tool_results,
+                )
+                answer_body = _apply_response_guardrails(clean_input, "entity_topic_command", tool_results, answer_body)
+                answer = answer_body + mode_suffix
+                answer = _with_readiness_metadata(answer)
+                turn_context = build_turn_context(
+                    user_input=clean_input,
+                    intent="entity_topic_command",
+                    mode=mode,
+                    source_label=source_label,
+                    tool_results=tool_results,
+                    answer=answer,
+                )
+                self._remember_interaction(clean_input, answer, tool_results, turn_context=turn_context)
+                return {
+                    "answer": answer,
+                    "trace": trace,
+                    "backend": self.backend_name,
+                    "intent": "entity_topic_command",
+                }
+
+        if needs_situation_assessment(clean_input):
+            previous_context = self._last_turn_context or self._conversation_fallback_context(
+                mode=mode,
+                source_label=source_label,
+            )
+            assessment = assess_followup(clean_input, previous_context)
+            trace.append({"step": "situation_assessment", "result": assessment.__dict__})
+
+            if assessment.applies and assessment.decision in {"answer_from_context", "ask_clarification"}:
+                previous_context = previous_context or TurnContext(
+                    user_input="",
+                    intent="unknown",
+                    mode=mode,
+                    tools=[],
+                    source_label=source_label,
+                )
+                answer = render_context_answer(clean_input, assessment, previous_context)
+                self._remember_interaction(clean_input, answer, [])
+                return {
+                    "answer": answer,
+                    "trace": trace,
+                    "backend": self.backend_name,
+                    "intent": "situation_assessment",
+                }
+
+            if assessment.applies and assessment.decision == "run_tool_plan":
+                tool_results = _execute_plan(assessment.tool_plan)
+                trace.extend(tool_results)
+                answer_body = (
+                    render_assessment_block(assessment)
+                    + "\n\n"
+                    + _synthesize_no_llm("intraday_symbol_scan", tool_results)
+                )
+                answer_body = _apply_response_guardrails(clean_input, "intraday_symbol_scan", tool_results, answer_body)
+                answer = answer_body + mode_suffix
+                turn_context = build_turn_context(
+                    user_input=clean_input,
+                    intent="contextual_tool_plan",
+                    mode=mode,
+                    source_label=source_label,
+                    tool_results=tool_results,
+                    answer=answer,
+                )
+                self._remember_interaction(clean_input, answer, tool_results, turn_context=turn_context)
+                return {
+                    "answer": answer,
+                    "trace": trace,
+                    "backend": self.backend_name,
+                    "intent": "contextual_tool_plan",
+                }
+
         intent_plan = _keyword_intent(clean_input, data_mode=mode)
         if intent_plan.get("intent") == "market_overview":
+            source_label = "NSE live API + DB breadth"
             mode_suffix = (
                 f"\n\n_Mode: {mode.title()} | Sources: NSE live API + DB breadth | "
                 f"Market: {market_status.compact_label} | "
                 f"Clock: {market_status.clock_label}_"
             )
         if intent_plan.get("intent") == "market_situation_assessment":
+            source_label = "situation planner + NSE live API + DB breadth"
             mode_suffix = (
                 f"\n\n_Mode: {mode.title()} | Sources: situation planner + NSE live API + DB breadth | "
                 f"Market: {market_status.compact_label} | "
                 f"Clock: {market_status.clock_label}_"
             )
         if intent_plan.get("intent") == "market_dashboard":
+            source_label = "dashboard planner + NSE live API + DB breadth + FII/DII + global context"
             mode_suffix = (
                 f"\n\n_Mode: Intraday | Sources: dashboard planner + NSE live API + DB breadth + FII/DII + global context | "
                 f"Market: {market_status.compact_label} | "
@@ -2622,12 +4639,14 @@ class Agent:
             # PG-source-label: be explicit that the recap reads from PG
             # intraday.quote_snapshots, not SQLite — these snapshots are
             # captured every 60 s by terminal/intraday_capture.py.
+            source_label = "NSE live API + PG intraday.quote_snapshots + DB breadth"
             mode_suffix = (
                 f"\n\n_Mode: Intraday | Sources: NSE live API + PG intraday.quote_snapshots + DB breadth | "
                 f"Market: {market_status.compact_label} | "
                 f"Clock: {market_status.clock_label}_"
             )
         if intent_plan.get("intent") == "fno_overview":
+            source_label = "NSE options/futures API + F&O EOD fallback"
             mode_suffix = (
                 f"\n\n_Mode: Intraday | Sources: NSE options/futures API + F&O EOD fallback | "
                 f"Market: {market_status.compact_label} | "
@@ -2635,23 +4654,53 @@ class Agent:
             )
         if intent_plan.get("intent") in {
             "greeting", "startup_morning_briefing", "global_market_assessment",
-            "market_situation_assessment",
+            "market_situation_assessment", "placeholder_symbol_request",
+            "document_link_help",
             "strength_validation", "market_knowledge", "stock_brief",
+            "stock_results",
             "stock_comparison", "portfolio_review",
             "event_calendar",
-            "fno_overview", "market_dashboard",
+            "fno_overview", "market_dashboard", "screener",
             "market_overview", "intraday_index_scan", "intraday_screener",
-            "intraday_market_recap",
+            "intraday_market_recap", "intraday_setup", "intraday_levels",
+            "data_health", "intraday_health",
         }:
             trace.append({"step": "intent", "result": intent_plan})
             tool_results = _execute_plan(intent_plan["plan"])
             trace.extend(tool_results)
-            answer = _synthesize_no_llm(
+            if mode == "intraday":
+                source_label = _intraday_source_label(
+                    intent_plan["intent"],
+                    tool_results,
+                    mode_sources["intraday"],
+                )
+                mode_suffix = (
+                    f"\n\n_Mode: Intraday | Sources: {source_label} | "
+                    f"Market: {market_status.compact_label} | "
+                    f"Clock: {market_status.clock_label}_"
+                )
+            answer_body = _synthesize_no_llm(
                 intent_plan["intent"],
                 tool_results,
                 intent_plan.get("assessment_plan"),
-            ) + mode_suffix
-            self._remember_interaction(clean_input, answer, tool_results)
+            )
+            answer_body = _apply_response_guardrails(
+                clean_input,
+                intent_plan["intent"],
+                tool_results,
+                answer_body,
+            )
+            answer = answer_body + mode_suffix
+            answer = _with_readiness_metadata(answer)
+            turn_context = build_turn_context(
+                user_input=clean_input,
+                intent=intent_plan["intent"],
+                mode=mode,
+                source_label=source_label,
+                tool_results=tool_results,
+                answer=answer,
+            )
+            self._remember_interaction(clean_input, answer, tool_results, turn_context=turn_context)
             return {"answer": answer, "trace": trace, "backend": self.backend_name,
                     "intent": intent_plan["intent"]}
 
@@ -2661,6 +4710,7 @@ class Agent:
             # Only append mode suffix if the LLM didn't include a Source Trail
             if "Mode:" not in result.get("answer", "")[-600:]:
                 result["answer"] = result.get("answer", "") + mode_suffix
+            result["answer"] = _with_readiness_metadata(result.get("answer", ""))
             return result
 
         # ── Keyword fallback path ──────────────────────────────────────────────
@@ -2668,17 +4718,44 @@ class Agent:
 
         tool_results = _execute_plan(intent_plan["plan"])
         trace.extend(tool_results)
+        if mode == "intraday":
+            source_label = _intraday_source_label(
+                intent_plan["intent"],
+                tool_results,
+                mode_sources["intraday"],
+            )
+            mode_suffix = (
+                f"\n\n_Mode: Intraday | Sources: {source_label} | "
+                f"Market: {market_status.compact_label} | "
+                f"Clock: {market_status.clock_label}_"
+            )
 
-        answer = _synthesize_no_llm(
+        answer_body = _synthesize_no_llm(
             intent_plan["intent"],
             tool_results,
             intent_plan.get("assessment_plan"),
-        ) + mode_suffix
+        )
+        answer_body = _apply_response_guardrails(
+            clean_input,
+            intent_plan["intent"],
+            tool_results,
+            answer_body,
+        )
+        answer = answer_body + mode_suffix
         # PG-self-check: same degraded-response guard for keyword fallback.
         answer = self._quality_check(
             user_input, intent_plan["intent"], tool_results, answer, mode_suffix,
         )
-        self._remember_interaction(clean_input, answer, tool_results)
+        answer = _with_readiness_metadata(answer)
+        turn_context = build_turn_context(
+            user_input=clean_input,
+            intent=intent_plan["intent"],
+            mode=mode,
+            source_label=source_label,
+            tool_results=tool_results,
+            answer=answer,
+        )
+        self._remember_interaction(clean_input, answer, tool_results, turn_context=turn_context)
         return {"answer": answer, "trace": trace, "backend": self.backend_name,
                 "intent": intent_plan["intent"]}
 
@@ -2717,6 +4794,7 @@ class Agent:
                 # Only append disclaimer if LLM didn't include it (check last 400 chars)
                 if "research and learning only" not in answer[-400:]:
                     answer += "\n\n━━━ Not investment advice. For research and learning only. ━━━"
+                answer = _apply_response_guardrails(user_input, "llm_driven", tool_results, answer)
 
                 # ── Persist compact conversation and resolved entity state ──
                 self._remember_interaction(user_input, answer, tool_results)
@@ -2758,6 +4836,7 @@ class Agent:
 
         # If we exhausted rounds without a text response, synthesize from tool results
         answer = _synthesize_no_llm("stock_brief", tool_results)
+        answer = _apply_response_guardrails(user_input, "llm_driven_fallback", tool_results, answer)
         # Still save the turn so context is preserved
         self._remember_interaction(user_input, answer, tool_results)
         return {"answer": answer, "trace": tool_results, "backend": self.backend_name,

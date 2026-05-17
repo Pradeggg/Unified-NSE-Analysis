@@ -8,6 +8,8 @@ from sector_rotation_tracker import (
     _backfill_snapshot_dates,
     _history_as_of,
     _latest_eod_close_date,
+    _load_fundamental_score_lookup,
+    _should_skip_unknown_snapshot_overwrite,
     _text_or_none,
     build_html_report,
 )
@@ -90,6 +92,42 @@ class SectorRotationTrackerTests(unittest.TestCase):
         self.assertIn("2026-05-06", html)
         self.assertNotIn(">nan<", html)
         self.assertNotIn("sb-num\">nan", html)
+
+    def test_fundamental_score_lookup_fills_missing_pg_subscores_from_csv(self):
+        import tempfile
+        from pathlib import Path
+
+        pg_scores = pd.DataFrame(
+            [
+                {
+                    "symbol": "TEST",
+                    "ENHANCED_FUND_SCORE": 72.0,
+                    "EARNINGS_QUALITY": None,
+                    "SALES_GROWTH": None,
+                }
+            ]
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            csv_path = Path(tmp) / "fundamental_scores_database.csv"
+            pd.DataFrame(
+                [
+                    {
+                        "symbol": "TEST",
+                        "ENHANCED_FUND_SCORE": 65.0,
+                        "EARNINGS_QUALITY": 81.0,
+                        "SALES_GROWTH": 77.0,
+                        "FINANCIAL_STRENGTH": 69.0,
+                        "INSTITUTIONAL_BACKING": 55.0,
+                    }
+                ]
+            ).to_csv(csv_path, index=False)
+
+            lookup = _load_fundamental_score_lookup(pg_scores, [csv_path])
+
+        self.assertEqual(float(lookup["TEST"]["ENHANCED_FUND_SCORE"]), 72.0)
+        self.assertEqual(float(lookup["TEST"]["EARNINGS_QUALITY"]), 81.0)
+        self.assertEqual(float(lookup["TEST"]["SALES_GROWTH"]), 77.0)
 
     def test_daily_snapshots_show_stage_transition_context(self):
         html = build_html_report(
@@ -203,6 +241,29 @@ class SectorRotationTrackerTests(unittest.TestCase):
 
         self.assertEqual(filtered["TIMESTAMP"].max().date().isoformat(), "2026-05-05")
         self.assertEqual(len(filtered), 2)
+
+    def test_forced_backfill_does_not_replace_classified_snapshot_with_all_unknown(self):
+        self.assertTrue(
+            _should_skip_unknown_snapshot_overwrite(
+                existing_classified_count=10,
+                rows=[{"stage": "UNKNOWN"}, {"stage": "UNKNOWN"}],
+                force=True,
+            )
+        )
+        self.assertFalse(
+            _should_skip_unknown_snapshot_overwrite(
+                existing_classified_count=10,
+                rows=[{"stage": "UNKNOWN"}, {"stage": "STAGE_2"}],
+                force=True,
+            )
+        )
+        self.assertFalse(
+            _should_skip_unknown_snapshot_overwrite(
+                existing_classified_count=0,
+                rows=[{"stage": "UNKNOWN"}],
+                force=True,
+            )
+        )
 
 
 if __name__ == "__main__":

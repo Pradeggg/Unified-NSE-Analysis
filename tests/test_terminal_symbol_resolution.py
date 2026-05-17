@@ -30,6 +30,31 @@ class TerminalSymbolResolutionTests(unittest.TestCase):
         self.assertIn("No exact NSE symbol found", result["error"])
         live_session.assert_not_called()
 
+    def test_resolve_symbol_handles_usl_alias_locally(self):
+        with patch("terminal.tools._get_live_session") as live_session:
+            usl = resolve_symbol("USL")
+            united_spirits = resolve_symbol("United Spirits")
+
+        self.assertEqual(usl["symbol"], "UNITDSPR")
+        self.assertEqual(united_spirits["symbol"], "UNITDSPR")
+        live_session.assert_not_called()
+
+    def test_resolve_symbol_does_not_resolve_search_context_as_stock(self):
+        with patch(
+            "terminal.tools._all_symbols_map",
+            return_value={
+                "UNITDSPR": "UNITDSPR",
+                "UNITED SPIRITS LIMITED": "UNITDSPR",
+                "AURIGROW": "AURIGROW",
+                "AURI GROW INDIA LIMITED": "AURIGROW",
+            },
+        ), patch("terminal.tools._get_live_session") as live_session:
+            result = resolve_symbol("growth strategy")
+
+        self.assertIsNone(result["symbol"])
+        self.assertEqual(result["confidence"], "none")
+        live_session.assert_not_called()
+
     def test_get_technical_setup_uses_resolved_local_symbol_for_price_history(self):
         with patch(
             "terminal.tools._all_symbols_map",

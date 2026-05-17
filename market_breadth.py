@@ -16,19 +16,129 @@ BREADTH_HISTORY_CSV = ROOT / "data" / "breadth_history.csv"
 INDEX_MAPPING_CSV = ROOT / "data" / "index_stock_mapping.csv"
 SECTOR_BREADTH_CSV = ROOT / "data" / "sector_breadth.csv"
 
+PG_DSN = "dbname=nse_market user=nse_admin host=/tmp"
+
+
+def _load_eod_from_postgres(lookback_days: int = 420) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Load stock + index EOD history from PostgreSQL.
+
+    Returns (stock_df, index_df) with columns matching the legacy CSV schema
+    (SYMBOL, TIMESTAMP, CLOSE, PREVCLOSE, TOTTRDQTY for stocks; SYMBOL, TIMESTAMP,
+    CLOSE for indices). Returns empty DataFrames on any failure so callers can
+    fall back to the CSV path.
+    """
+    try:
+        import psycopg2  # type: ignore
+        import warnings
+
+        conn = psycopg2.connect(PG_DSN)
+        try:
+            stock_query = """
+                SELECT symbol AS "SYMBOL",
+                       trade_date AS "TIMESTAMP",
+                       close AS "CLOSE",
+                       prev_close AS "PREVCLOSE",
+                       volume AS "TOTTRDQTY"
+                FROM market.equity_eod
+                WHERE close IS NOT NULL
+                  AND trade_date >= (
+                      SELECT MAX(trade_date) - (%s || ' days')::INTERVAL
+                      FROM market.equity_eod
+                  )
+                ORDER BY symbol, trade_date
+            """
+            index_query = """
+                SELECT index_symbol AS "SYMBOL",
+                       trade_date AS "TIMESTAMP",
+                       close AS "CLOSE"
+                FROM market.index_eod
+                WHERE close IS NOT NULL
+                  AND trade_date >= (
+                      SELECT MAX(trade_date) - (%s || ' days')::INTERVAL
+                      FROM market.index_eod
+                  )
+                ORDER BY index_symbol, trade_date
+            """
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", UserWarning)
+                stock_df = pd.read_sql_query(stock_query, conn, params=(str(lookback_days),))
+                index_df = pd.read_sql_query(index_query, conn, params=(str(lookback_days),))
+        finally:
+            conn.close()
+    except Exception as exc:
+        print(f"  market_breadth: PostgreSQL EOD load skipped ({exc}); falling back to CSV.")
+        return pd.DataFrame(), pd.DataFrame()
+
+    if not stock_df.empty:
+        stock_df["TIMESTAMP"] = pd.to_datetime(stock_df["TIMESTAMP"], errors="coerce")
+    if not index_df.empty:
+        index_df["TIMESTAMP"] = pd.to_datetime(index_df["TIMESTAMP"], errors="coerce")
+    return stock_df, index_df
+
 # Sector indices to track in C3 — maps index symbol (uppercase) → display name
 SECTOR_BREADTH_INDICES: dict[str, str] = {
     "NIFTY AUTO":       "Auto",
     "NIFTY BANK":       "Banking",
+    "NIFTY CAPITAL MKT": "Capital Markets",
+    "NIFTY CHEMICALS":  "Chemicals & Specialty",
+    "NIFTY COMMODITIES": "Commodities",
+    "NIFTY CONSR DURBL": "Consumer Durables",
+    "NIFTY CONSUMPTION": "Consumption & Discretionary",
+    "NIFTY CPSE":       "PSU / CPSE",
+    "NIFTY EV":         "EV & Auto Ancillaries",
     "NIFTY FMCG":       "FMCG",
+    "NIFTY FIN SERVICE": "Financial Services",
+    "NIFTY FINSEREXBNK": "Financial Services",
+    "NIFTY HEALTHCARE": "Pharma & Healthcare",
+    "NIFTY HOUSING":    "Housing & Building Materials",
+    "NIFTY IND DEFENCE": "Defence & Aerospace",
     "NIFTY IT":         "IT",
     "NIFTY METAL":      "Metal",
+    "NIFTY OIL AND GAS": "Energy - Oil & Gas",
     "NIFTY PHARMA":     "Pharma",
+    "NIFTY PSE":        "PSU / CPSE",
+    "NIFTY PSU BANK":   "Banking - PSU",
+    "NIFTY PVT BANK":   "Banking - Private",
     "NIFTY REALTY":     "Realty",
     "NIFTY ENERGY":     "Energy",
     "NIFTY INFRA":      "Infrastructure",
     "NIFTY MIDCAP 150": "Midcap",
+    "NIFTY TRANS LOGIS": "Logistics & Transport",
 }
+
+_INDEX_CONSTITUENT_ALIASES: dict[str, str] = {
+    "NIFTY CAPITAL MKT": "NIFTY CAPITAL MARKETS",
+    "NIFTY CONSR DURBL": "NIFTY CONSUMER DURABLES",
+    "NIFTY CONSUMPTION": "NIFTY INDIA CONSUMPTION",
+    "NIFTY EV": "NIFTY EV & NEW AGE AUTOMOTIVE",
+    "NIFTY FIN SERVICE": "NIFTY FINANCIAL SERVICES",
+    "NIFTY FINSEREXBNK": "NIFTY FINANCIAL SERVICES EX-BANK",
+    "NIFTY HEALTHCARE": "NIFTY HEALTHCARE INDEX",
+    "NIFTY IND DEFENCE": "NIFTY INDIA DEFENCE",
+    "NIFTY INFRA": "NIFTY INFRASTRUCTURE",
+    "NIFTY OIL AND GAS": "NIFTY OIL & GAS",
+    "NIFTY PVT BANK": "NIFTY PRIVATE BANK",
+    "NIFTY TRANS LOGIS": "NIFTY TRANSPORTATION & LOGISTICS",
+}
+
+
+def _constituents_for_index(index_key: str, constituents: dict[str, list[str]]) -> list[str]:
+    normed_consts = {k.upper(): v for k, v in constituents.items()}
+    key = index_key.upper()
+    symbols = normed_consts.get(key, [])
+    if symbols:
+        return symbols
+    alias = _INDEX_CONSTITUENT_ALIASES.get(key)
+    if alias:
+        symbols = normed_consts.get(alias, [])
+        if symbols:
+            return symbols
+    compact_key = key.replace(" ", "").replace("-", "").replace("&", "AND")
+    for k, v in normed_consts.items():
+        compact = k.replace(" ", "").replace("-", "").replace("&", "AND")
+        if compact == compact_key:
+            return v
+    return []
 
 
 def _date_column(df: pd.DataFrame) -> str:
@@ -251,20 +361,23 @@ def generate_breadth_history(
     output_csv: Path = BREADTH_HISTORY_CSV,
     lookback_days: int = 420,
 ) -> pd.DataFrame:
-    """Load local NSE data, compute breadth history, persist to CSV, and return it."""
-    usecols = ["SYMBOL", "TIMESTAMP", "CLOSE", "PREVCLOSE", "TOTTRDQTY"]
-    stock_data = pd.read_csv(stock_csv, usecols=lambda col: col in usecols)
-    stock_data["TIMESTAMP"] = pd.to_datetime(stock_data["TIMESTAMP"], errors="coerce")
-    max_date = stock_data["TIMESTAMP"].max()
-    if pd.notna(max_date) and lookback_days:
-        stock_data = stock_data[stock_data["TIMESTAMP"] >= max_date - pd.Timedelta(days=lookback_days)]
+    """Load NSE EOD data (PostgreSQL preferred, CSV fallback), compute breadth history."""
+    stock_data, index_data = _load_eod_from_postgres(lookback_days=lookback_days)
 
-    index_data = pd.DataFrame()
-    if index_csv.exists():
-        index_data = pd.read_csv(index_csv, usecols=lambda col: col in {"SYMBOL", "TIMESTAMP", "CLOSE"})
-        index_data["TIMESTAMP"] = pd.to_datetime(index_data["TIMESTAMP"], errors="coerce")
+    if stock_data.empty:
+        usecols = ["SYMBOL", "TIMESTAMP", "CLOSE", "PREVCLOSE", "TOTTRDQTY"]
+        stock_data = pd.read_csv(stock_csv, usecols=lambda col: col in usecols)
+        stock_data["TIMESTAMP"] = pd.to_datetime(stock_data["TIMESTAMP"], errors="coerce")
+        max_date = stock_data["TIMESTAMP"].max()
         if pd.notna(max_date) and lookback_days:
-            index_data = index_data[index_data["TIMESTAMP"] >= max_date - pd.Timedelta(days=lookback_days)]
+            stock_data = stock_data[stock_data["TIMESTAMP"] >= max_date - pd.Timedelta(days=lookback_days)]
+
+        index_data = pd.DataFrame()
+        if index_csv.exists():
+            index_data = pd.read_csv(index_csv, usecols=lambda col: col in {"SYMBOL", "TIMESTAMP", "CLOSE"})
+            index_data["TIMESTAMP"] = pd.to_datetime(index_data["TIMESTAMP"], errors="coerce")
+            if pd.notna(max_date) and lookback_days:
+                index_data = index_data[index_data["TIMESTAMP"] >= max_date - pd.Timedelta(days=lookback_days)]
 
     history = build_breadth_history(stock_data, index_data)
     output_csv.parent.mkdir(parents=True, exist_ok=True)
@@ -362,8 +475,6 @@ def compute_sector_breadth(
         pct_above_50dma, pct_above_200dma, breadth_signal.
     """
     tracked = {k.upper(): v for k, v in (sector_indices or SECTOR_BREADTH_INDICES).items()}
-    normed_consts = {k.upper(): v for k, v in constituents.items()}
-
     metrics = stock_metrics.copy()
     metrics["SYMBOL"] = metrics["SYMBOL"].astype(str).str.strip().str.upper()
     for col in ("CLOSE", "SMA_50", "SMA_200"):
@@ -373,13 +484,7 @@ def compute_sector_breadth(
 
     rows = []
     for index_key, sector_name in tracked.items():
-        symbols = normed_consts.get(index_key, [])
-        # Try common capitalisation variants if exact key missing
-        if not symbols:
-            for k, v in normed_consts.items():
-                if k.replace(" ", "").replace("-", "") == index_key.replace(" ", "").replace("-", ""):
-                    symbols = v
-                    break
+        symbols = _constituents_for_index(index_key, constituents)
         available = [s for s in symbols if s in metrics.index]
         if not available:
             rows.append({
@@ -393,8 +498,16 @@ def compute_sector_breadth(
             continue
         sub = metrics.loc[available]
         n = len(sub)
-        pct50 = float((sub["CLOSE"] > sub["SMA_50"]).mean() * 100) if "SMA_50" in sub.columns else float("nan")
-        pct200 = float((sub["CLOSE"] > sub["SMA_200"]).mean() * 100) if "SMA_200" in sub.columns else float("nan")
+        if "SMA_50" in sub.columns:
+            valid50 = sub.dropna(subset=["CLOSE", "SMA_50"])
+            pct50 = float((valid50["CLOSE"] > valid50["SMA_50"]).mean() * 100) if not valid50.empty else float("nan")
+        else:
+            pct50 = float("nan")
+        if "SMA_200" in sub.columns:
+            valid200 = sub.dropna(subset=["CLOSE", "SMA_200"])
+            pct200 = float((valid200["CLOSE"] > valid200["SMA_200"]).mean() * 100) if not valid200.empty else float("nan")
+        else:
+            pct200 = float("nan")
         if pd.isna(pct50):
             sig = "NO_DATA"
         elif pct50 > 60:
@@ -466,19 +579,21 @@ def sector_breadth_divergence(
                 sector_index_closes[ix_key.upper()] = sub.set_index("DATE")["CLOSE"].sort_index()
 
     trading_dates = sorted(df["DATE"].unique())
-    normed_consts = {k.upper(): v for k, v in constituents.items()}
-
     history_rows: list[dict] = []
     for date in trading_dates:
         day_df = df[df["DATE"] == date]
         day_df = day_df.drop_duplicates("SYMBOL").set_index("SYMBOL")
         for ix_key, sector_name in tracked.items():
-            syms = normed_consts.get(ix_key.upper(), [])
+            syms = _constituents_for_index(ix_key, constituents)
             available = [s for s in syms if s in day_df.index]
             if not available:
                 continue
             sub = day_df.loc[available]
-            pct50 = float((sub["CLOSE"] > sub["SMA_50"]).mean() * 100) if "SMA_50" in sub.columns else float("nan")
+            if "SMA_50" in sub.columns:
+                valid50 = sub.dropna(subset=["CLOSE", "SMA_50"])
+                pct50 = float((valid50["CLOSE"] > valid50["SMA_50"]).mean() * 100) if not valid50.empty else float("nan")
+            else:
+                pct50 = float("nan")
             history_rows.append({
                 "date": date,
                 "sector": sector_name,
@@ -546,20 +661,28 @@ def generate_sector_breadth(
     lookback_days: int = 5,
     history_window: int = 300,
 ) -> pd.DataFrame:
-    """Load data, compute sector breadth divergence, persist to CSV, and return result."""
-    usecols_stock = ["SYMBOL", "TIMESTAMP", "CLOSE", "PREVCLOSE"]
-    stock_data = pd.read_csv(stock_csv, usecols=lambda c: c in usecols_stock)
-    stock_data["TIMESTAMP"] = pd.to_datetime(stock_data["TIMESTAMP"], errors="coerce")
-    max_date = stock_data["TIMESTAMP"].max()
-    if pd.notna(max_date) and history_window:
-        stock_data = stock_data[stock_data["TIMESTAMP"] >= max_date - pd.Timedelta(days=history_window)]
+    """Load data, compute sector breadth divergence, persist to CSV, and return result.
 
-    index_data = pd.DataFrame()
-    if index_csv.exists():
-        index_data = pd.read_csv(index_csv, usecols=lambda c: c in {"SYMBOL", "TIMESTAMP", "CLOSE"})
-        index_data["TIMESTAMP"] = pd.to_datetime(index_data["TIMESTAMP"], errors="coerce")
+    Prefers PostgreSQL (market.equity_eod / market.index_eod) for the underlying
+    history because the CSV is overwritten daily and may only contain a few days
+    of bars — too short to compute a 50-day SMA.
+    """
+    stock_data, index_data = _load_eod_from_postgres(lookback_days=history_window or 420)
+
+    if stock_data.empty:
+        usecols_stock = ["SYMBOL", "TIMESTAMP", "CLOSE", "PREVCLOSE"]
+        stock_data = pd.read_csv(stock_csv, usecols=lambda c: c in usecols_stock)
+        stock_data["TIMESTAMP"] = pd.to_datetime(stock_data["TIMESTAMP"], errors="coerce")
+        max_date = stock_data["TIMESTAMP"].max()
         if pd.notna(max_date) and history_window:
-            index_data = index_data[index_data["TIMESTAMP"] >= max_date - pd.Timedelta(days=history_window)]
+            stock_data = stock_data[stock_data["TIMESTAMP"] >= max_date - pd.Timedelta(days=history_window)]
+
+        index_data = pd.DataFrame()
+        if index_csv.exists():
+            index_data = pd.read_csv(index_csv, usecols=lambda c: c in {"SYMBOL", "TIMESTAMP", "CLOSE"})
+            index_data["TIMESTAMP"] = pd.to_datetime(index_data["TIMESTAMP"], errors="coerce")
+            if pd.notna(max_date) and history_window:
+                index_data = index_data[index_data["TIMESTAMP"] >= max_date - pd.Timedelta(days=history_window)]
 
     constituents = _load_index_constituents(mapping_csv)
     result = sector_breadth_divergence(stock_data, index_data, constituents, lookback_days=lookback_days)

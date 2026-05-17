@@ -10,12 +10,14 @@ from pathlib import Path
 import html as html_mod
 import json
 import math
+import os
 import re
 import socket
 import struct
 import subprocess
 import tempfile
 import time
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -24,8 +26,14 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parent
 REPORTS_DIR = ROOT / "reports"
 INDEX_DATA_CSV = ROOT / "data" / "nse_index_data.csv"
+INDEX_HISTORY_FALLBACK_CSVS = [
+    INDEX_DATA_CSV,
+    ROOT / "data" / "nse-raw" / "nse_index_data.csv",
+    ROOT / "data" / "data" / "nse-raw" / "nse_index_data.csv",
+]
 STOCK_CACHE_RDATA = ROOT / "data" / "nse_stock_cache.RData"
 AGENT_LOGO_PATH = ROOT / "docs" / "Agent-adda-logo.jpg"
+PG_DSN = "dbname=nse_market user=nse_admin host=/tmp"
 AGENT_BRAND = "Agent Adda - Market Intelligence Agent"
 REPORT_DISCLAIMER = (
     "This report is not investment advice. It is a learning journey demonstrating how AI "
@@ -58,6 +66,8 @@ FULL_LEGAL_DISCLAIMER = (
 FUNDAMENTAL_FALLBACK_CSVS = [
     ROOT / "data" / "fundamental_scores_database.csv",
     ROOT / "organized" / "data" / "fundamental_scores_database.csv",
+    ROOT / "archive" / "repo-cleanup-20260511" / "organized" / "data" / "fundamental_scores_database.csv",
+    ROOT / "archive" / "fundamental_scores_database.csv",
 ]
 
 TECHNICAL_VIEW_INDEX_BASKET = [
@@ -496,8 +506,8 @@ def _vcp_flag(hist: pd.DataFrame) -> str:
 def _rule_based_technical_view_narrative(metrics: pd.DataFrame, missing_indices: list[str]) -> str:
     if metrics.empty:
         return (
-            "Short-term technical view is unavailable because no approved index history was found. "
-            "Add local EOD index history to data/nse_index_data.csv and regenerate the report."
+            "Short-term technical view is unavailable because no approved PostgreSQL index history was found. "
+            "Run the PostgreSQL loader so market.index_eod has EOD index OHLC history, then regenerate the report."
         )
     trend_counts = metrics["TREND"].value_counts().to_dict()
     bullish_count = int(metrics["TREND"].isin(["BULLISH", "CONSTRUCTIVE"]).sum())
@@ -715,6 +725,17 @@ def rank_rotating_sectors(index_metrics: pd.DataFrame, benchmark_symbol: str = "
     )
     df = df[df["SYMBOL"] != benchmark_symbol].sort_values("ROTATION_SCORE", ascending=False)
     return df.reset_index(drop=True)
+
+
+def dedupe_sector_rank_by_display_name(sector_rank: pd.DataFrame) -> pd.DataFrame:
+    """Keep one row per displayed sector, preferring the strongest rotation row."""
+    if sector_rank is None or sector_rank.empty or "SECTOR_NAME" not in sector_rank.columns:
+        return sector_rank
+    sort_cols = [c for c in ("ROTATION_SCORE", "RS_1M", "RET_1M") if c in sector_rank.columns]
+    ranked = sector_rank.copy()
+    if sort_cols:
+        ranked = ranked.sort_values(sort_cols, ascending=[False] * len(sort_cols), na_position="last")
+    return ranked.drop_duplicates("SECTOR_NAME", keep="first").reset_index(drop=True)
 
 
 def compute_supertrend(price_data: pd.DataFrame, period: int = 10, multiplier: float = 3.0) -> pd.DataFrame:
@@ -984,8 +1005,17 @@ def assign_action_buckets(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
-def rank_stock_candidates(stocks: pd.DataFrame) -> pd.DataFrame:
+def rank_stock_candidates(stocks: pd.DataFrame, enforce_stage2: bool = False) -> pd.DataFrame:
+    # PG-funnel: optional hard Stage 2 gate — when True and STAGE column exists,
+    # filter to Stage 2 only BEFORE scoring so non-Stage-2 stocks cannot leak into final picks
+    # via high tech/fund scores. Off by default to preserve back-compat with the
+    # preliminary ranking call inside build_sector_stock_table (which runs pre-stage-enrichment).
     df = stocks.copy()
+    if enforce_stage2 and "STAGE" in df.columns and not df.empty:
+        s2_mask = df["STAGE"].astype(str).str.upper() == "STAGE_2"
+        if s2_mask.any():
+            df = df[s2_mask].copy()
+        # If no Stage 2 stocks at all, fall through with empty df rather than relax the gate.
     tech = pd.to_numeric(df["TECHNICAL_SCORE"], errors="coerce").clip(0, 100).fillna(50)
     rs = _series_0_100(df["RELATIVE_STRENGTH"])
     fund = pd.to_numeric(_column_or_default(df, "ENHANCED_FUND_SCORE", 50), errors="coerce").clip(0, 100).fillna(50)
@@ -1008,6 +1038,51 @@ def rank_stock_candidates(stocks: pd.DataFrame) -> pd.DataFrame:
     df = _compute_entry_levels(df)
     df = assign_action_buckets(df)
     return df.sort_values(["INVESTMENT_SCORE", "TECHNICAL_SCORE", "RELATIVE_STRENGTH"], ascending=False).reset_index(drop=True)
+
+
+# PG-funnel: position sizing — closes the final step of the capital-efficiency funnel
+# documented in docs/Sector_Rotation_and_Stage2_Methodology.html. Converts the ranked
+# candidate list into a deployable, conviction-weighted, capped portfolio allocation.
+def compute_position_sizes(
+    candidates: pd.DataFrame,
+    max_positions: int = 10,
+    max_weight_pct: float = 15.0,
+    min_score: float = 50.0,
+) -> pd.DataFrame:
+    """Assign portfolio weights to top-ranked candidates.
+
+    Strategy: conviction-weighted equal-cap.
+        - Take top `max_positions` by INVESTMENT_SCORE (already sorted upstream).
+        - Raw weight ∝ max(INVESTMENT_SCORE - min_score, 1) — higher score, larger size.
+        - Cap each position at `max_weight_pct` (default 15%) for diversification.
+        - Normalize so weights sum to 100%.
+
+    Adds two columns: PORTFOLIO_RANK (1..N), POSITION_SIZE_PCT (float, 0..max_weight_pct).
+    Stocks outside the top-N receive PORTFOLIO_RANK=0, POSITION_SIZE_PCT=0.0.
+    """
+    df = candidates.copy()
+    df["PORTFOLIO_RANK"] = 0
+    df["POSITION_SIZE_PCT"] = 0.0
+    if df.empty or "INVESTMENT_SCORE" not in df.columns:
+        return df
+
+    n = min(max_positions, len(df))
+    if n <= 0:
+        return df
+
+    top = df.head(n).copy()
+    raw = pd.to_numeric(top["INVESTMENT_SCORE"], errors="coerce").fillna(min_score)
+    raw = (raw - min_score).clip(lower=1.0)
+    weights = raw / raw.sum()
+    weights = (weights * 100.0).clip(upper=max_weight_pct)
+    # Re-normalize after capping so the portfolio always sums to ~100%.
+    if weights.sum() > 0:
+        weights = weights * (100.0 / weights.sum())
+    weights = weights.round(2)
+
+    df.loc[top.index, "POSITION_SIZE_PCT"] = weights.values
+    df.loc[top.index, "PORTFOLIO_RANK"] = list(range(1, n + 1))
+    return df
 
 
 def rank_peak_resilience_stocks(stocks: pd.DataFrame, max_drawdown_pct: float = 20.0) -> pd.DataFrame:
@@ -1052,12 +1127,95 @@ def assign_sector(symbol: str, company_name: str = "") -> str | None:
 
 
 def load_comprehensive_analysis() -> tuple[pd.DataFrame, Path]:
+    pg_df = load_comprehensive_analysis_from_postgres()
+    if pg_df is not None and not pg_df.empty:
+        fallback = load_fundamental_fallback()
+        if fallback is not None:
+            pg_df = merge_fundamental_scores(pg_df, fallback)
+        return pg_df, Path("PostgreSQL") / "scores.mv_latest_snapshot"
+
     path = _latest_file("comprehensive_nse_enhanced_*.csv")
     df = pd.read_csv(path)
     fallback = load_fundamental_fallback()
     if fallback is not None:
         df = merge_fundamental_scores(df, fallback)
     return df, path
+
+
+def load_comprehensive_analysis_from_postgres() -> pd.DataFrame | None:
+    """Load the comprehensive universe from PostgreSQL as the primary source."""
+    try:
+        import psycopg2
+        conn = psycopg2.connect(PG_DSN)
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", UserWarning)
+                return pd.read_sql_query(
+                    """
+                    WITH latest_snapshot AS (
+                        SELECT MAX(snapshot_date) AS snapshot_date FROM scores.stage_snapshots
+                    ),
+                    bench AS (
+                        WITH latest_idx AS (
+                            SELECT trade_date, close
+                            FROM market.index_eod
+                            WHERE UPPER(index_symbol)=UPPER('Nifty 500')
+                              AND trade_date <= (SELECT snapshot_date FROM latest_snapshot)
+                              AND close IS NOT NULL
+                            ORDER BY trade_date DESC
+                            LIMIT 1
+                        ),
+                        prev_idx AS (
+                            SELECT close
+                            FROM market.index_eod
+                            WHERE UPPER(index_symbol)=UPPER('Nifty 500')
+                              AND trade_date <= (SELECT trade_date FROM latest_idx) - INTERVAL '1 month'
+                              AND close IS NOT NULL
+                            ORDER BY trade_date DESC
+                            LIMIT 1
+                        )
+                        SELECT CASE
+                            WHEN latest_idx.close IS NOT NULL AND prev_idx.close IS NOT NULL AND prev_idx.close <> 0
+                            THEN (latest_idx.close / prev_idx.close - 1) * 100
+                        END AS bench_1m
+                        FROM latest_idx, prev_idx
+                    )
+                    SELECT
+                        symbol AS "SYMBOL",
+                        company_name AS "COMPANY_NAME",
+                        market_cap_cat AS "MARKET_CAP_CATEGORY",
+                        COALESCE(live_price, price) AS "CURRENT_PRICE",
+                        change_1d_pct AS "CHANGE_1D",
+                        change_1w_pct AS "CHANGE_1W",
+                        change_1m_pct AS "CHANGE_1M",
+                        technical_score AS "TECHNICAL_SCORE",
+                        rsi AS "RSI",
+                        COALESCE(relative_strength, change_1m_pct - bench.bench_1m) AS "RELATIVE_STRENGTH",
+                        can_slim_score AS "CAN_SLIM_SCORE",
+                        minervini_score AS "MINERVINI_SCORE",
+                        enhanced_fund_score AS "ENHANCED_FUND_SCORE",
+                        trend_signal AS "TREND_SIGNAL",
+                        trading_signal AS "TRADING_SIGNAL",
+                        sector AS "SECTOR",
+                        stage AS "STAGE",
+                        stage_score AS "STAGE_SCORE",
+                        investment_score AS "INVESTMENT_SCORE",
+                        fundamental_score AS "FUNDAMENTAL_SCORE",
+                        earnings_quality AS "EARNINGS_QUALITY",
+                        sales_growth AS "SALES_GROWTH",
+                        financial_strength AS "FINANCIAL_STRENGTH",
+                        institutional_backing AS "INSTITUTIONAL_BACKING"
+                    FROM scores.stage_snapshots
+                    CROSS JOIN bench
+                    WHERE snapshot_date = (SELECT snapshot_date FROM latest_snapshot)
+                    ORDER BY symbol
+                    """,
+                    conn,
+                )
+        finally:
+            conn.close()
+    except Exception:
+        return None
 
 
 def load_fundamental_fallback() -> pd.DataFrame | None:
@@ -1114,20 +1272,24 @@ def merge_fundamental_scores(analysis: pd.DataFrame, fallback: pd.DataFrame) -> 
 
 
 def load_index_rotation() -> pd.DataFrame:
-    index_data = pd.read_csv(INDEX_DATA_CSV, usecols=["SYMBOL", "CLOSE", "TIMESTAMP"])
+    index_data = load_index_eod_from_postgres(["SYMBOL", "CLOSE", "TIMESTAMP"])
+    if index_data is None or index_data.empty:
+        index_data = pd.read_csv(INDEX_DATA_CSV, usecols=["SYMBOL", "CLOSE", "TIMESTAMP"])
     symbols = ["Nifty 500", *ROTATING_INDEXES.keys()]
     metrics = build_index_metrics(index_data, symbols)
     ranked = rank_rotating_sectors(metrics, benchmark_symbol="Nifty 500")
     ranked["SECTOR_NAME"] = ranked["SYMBOL"].map(ROTATING_INDEXES)
-    return ranked.dropna(subset=["SECTOR_NAME"])
+    return dedupe_sector_rank_by_display_name(ranked.dropna(subset=["SECTOR_NAME"]))
 
 
 def load_all_index_metrics() -> pd.DataFrame:
     """Load performance metrics + 52W range for all available NSE indices."""
-    index_data = pd.read_csv(
-        INDEX_DATA_CSV,
-        usecols=["SYMBOL", "CLOSE", "TIMESTAMP", "HI_52_WK", "LO_52_WK"],
-    )
+    index_data = load_index_eod_from_postgres(["SYMBOL", "CLOSE", "TIMESTAMP", "HI_52_WK", "LO_52_WK"])
+    if index_data is None or index_data.empty:
+        index_data = pd.read_csv(
+            INDEX_DATA_CSV,
+            usecols=["SYMBOL", "CLOSE", "TIMESTAMP", "HI_52_WK", "LO_52_WK"],
+        )
     all_syms = index_data["SYMBOL"].unique().tolist()
     metrics = build_index_metrics(index_data, ["Nifty 500", *all_syms])
 
@@ -1162,6 +1324,78 @@ def load_all_index_metrics() -> pd.DataFrame:
     return metrics.sort_values("RET_1M", ascending=False).reset_index(drop=True)
 
 
+def load_index_eod_from_postgres(cols: list[str]) -> pd.DataFrame | None:
+    """Load index EOD history from PostgreSQL, shaped like nse_index_data.csv."""
+    col_map = {
+        "SYMBOL": "index_symbol AS \"SYMBOL\"",
+        "OPEN": "open AS \"OPEN\"",
+        "HIGH": "high AS \"HIGH\"",
+        "LOW": "low AS \"LOW\"",
+        "CLOSE": "close AS \"CLOSE\"",
+        "TIMESTAMP": "trade_date AS \"TIMESTAMP\"",
+        "TOTTRDQTY": "traded_qty AS \"TOTTRDQTY\"",
+        "HI_52_WK": "week52_high AS \"HI_52_WK\"",
+        "LO_52_WK": "week52_low AS \"LO_52_WK\"",
+    }
+    selected = [col_map[c] for c in cols if c in col_map]
+    if not selected:
+        return None
+    try:
+        import psycopg2
+        conn = psycopg2.connect(PG_DSN)
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", UserWarning)
+                return pd.read_sql_query(
+                    f"SELECT {', '.join(selected)} FROM market.index_eod ORDER BY index_symbol, trade_date",
+                    conn,
+                )
+        finally:
+            conn.close()
+    except Exception:
+        return None
+
+
+def load_index_history_for_technical_view(cols: list[str] | None = None) -> pd.DataFrame:
+    """Load enough index OHLC history for the short-term technical-view tab.
+
+    The live index EOD CSV is intentionally compact and may only contain the latest
+    refresh dates. For technical indicators, merge it with the retained historical
+    NSE index archive so RSI, MACD, SMA, support/resistance and RS can be computed.
+    """
+    wanted = cols or ["SYMBOL", "OPEN", "HIGH", "LOW", "CLOSE", "TIMESTAMP", "TOTTRDQTY"]
+    frames: list[pd.DataFrame] = []
+
+    pg_df = load_index_eod_from_postgres(wanted)
+    if pg_df is not None and not pg_df.empty:
+        frames.append(pg_df)
+
+    for path in INDEX_HISTORY_FALLBACK_CSVS:
+        if not path.exists():
+            continue
+        try:
+            df = pd.read_csv(path, usecols=lambda c, wanted=set(wanted): c in wanted)
+        except Exception:
+            continue
+        if not df.empty:
+            frames.append(df)
+
+    if not frames:
+        return pd.DataFrame(columns=wanted)
+
+    history = pd.concat(frames, ignore_index=True)
+    for col in wanted:
+        if col not in history.columns:
+            history[col] = np.nan
+    history = history[wanted].copy()
+    history["SYMBOL"] = history["SYMBOL"].astype(str).str.strip()
+    history["TIMESTAMP"] = pd.to_datetime(history["TIMESTAMP"], errors="coerce")
+    history = history.dropna(subset=["SYMBOL", "TIMESTAMP", "CLOSE"])
+    history = history.sort_values(["SYMBOL", "TIMESTAMP"])
+    history = history.drop_duplicates(["SYMBOL", "TIMESTAMP"], keep="last")
+    return history.reset_index(drop=True)
+
+
 def export_stock_cache(symbols: list[str], output_csv: Path) -> bool:
     if not STOCK_CACHE_RDATA.exists():
         return False
@@ -1178,6 +1412,45 @@ write.csv(stock_data, {str(output_csv)!r}, row.names = FALSE)
         print(result.stderr.strip())
         return False
     return output_csv.exists()
+
+
+def load_stock_history_from_postgres(symbols: list[str]) -> pd.DataFrame | None:
+    """Load candidate OHLCV history from PostgreSQL for report technical enrichment."""
+    clean_symbols = sorted({str(s).strip().upper() for s in symbols if str(s).strip()})
+    if not clean_symbols:
+        return None
+    try:
+        import psycopg2
+        conn = psycopg2.connect(PG_DSN)
+        try:
+            query = """
+                SELECT symbol AS "SYMBOL",
+                       trade_date AS "TIMESTAMP",
+                       open AS "OPEN",
+                       high AS "HIGH",
+                       low AS "LOW",
+                       close AS "CLOSE",
+                       volume AS "TOTTRDQTY"
+                FROM market.equity_eod
+                WHERE symbol = ANY(%s)
+                  AND close IS NOT NULL
+                  AND trade_date >= (
+                      SELECT MAX(trade_date) - INTERVAL '370 days'
+                      FROM market.equity_eod
+                  )
+                ORDER BY symbol, trade_date
+            """
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", UserWarning)
+                history = pd.read_sql_query(query, conn, params=(clean_symbols,))
+        finally:
+            conn.close()
+    except Exception as exc:
+        print(f"  PostgreSQL stock history fallback skipped ({exc}).")
+        return None
+    if history.empty:
+        return None
+    return history
 
 
 def enrich_with_patterns(stocks: pd.DataFrame, stock_history: pd.DataFrame | None) -> pd.DataFrame:
@@ -1432,6 +1705,75 @@ def _load_fundamental_details(symbols: list[str]) -> dict:
     fund_cols = ["SYMBOL", "pnl_summary", "quarterly_summary", "balance_sheet_summary", "ratios_summary"]
     CACHE = ROOT / "data" / "_sector_rotation_fund_cache.csv"
 
+    def _read_pg_latest():
+        try:
+            import psycopg2
+            conn = psycopg2.connect(PG_DSN)
+            try:
+                query = """
+                    SELECT symbol AS "SYMBOL", pnl_summary, quarterly_summary,
+                           balance_sheet_summary, ratios_summary
+                    FROM scores.v_latest_fundamentals
+                """
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", UserWarning)
+                    return pd.read_sql_query(query, conn)
+            finally:
+                conn.close()
+        except Exception:
+            return None
+
+    def _write_pg_snapshot(df: pd.DataFrame):
+        if df is None or df.empty:
+            return
+        try:
+            import psycopg2
+            from psycopg2.extras import execute_values
+            snap_date = datetime.now().date().isoformat()
+            rows = []
+            for _, rr in df.iterrows():
+                sym = str(rr.get("SYMBOL", "")).strip().upper()
+                if not sym:
+                    continue
+                row = (
+                    snap_date,
+                    sym,
+                    str(rr.get("pnl_summary", "") or "").strip() or None,
+                    str(rr.get("quarterly_summary", "") or "").strip() or None,
+                    str(rr.get("balance_sheet_summary", "") or "").strip() or None,
+                    str(rr.get("ratios_summary", "") or "").strip() or None,
+                    "data/_sector_rotation_fund_cache.csv",
+                )
+                if any(row[2:6]):
+                    rows.append(row)
+            if not rows:
+                return
+            conn = psycopg2.connect(PG_DSN)
+            try:
+                with conn, conn.cursor() as cur:
+                    execute_values(
+                        cur,
+                        """
+                        INSERT INTO scores.fundamental_snapshots
+                            (snapshot_date, symbol, pnl_summary, quarterly_summary,
+                             balance_sheet_summary, ratios_summary, source_file)
+                        VALUES %s
+                        ON CONFLICT (snapshot_date, symbol) DO UPDATE SET
+                            pnl_summary = EXCLUDED.pnl_summary,
+                            quarterly_summary = EXCLUDED.quarterly_summary,
+                            balance_sheet_summary = EXCLUDED.balance_sheet_summary,
+                            ratios_summary = EXCLUDED.ratios_summary,
+                            source_file = EXCLUDED.source_file,
+                            loaded_at = now()
+                        """,
+                        rows,
+                        page_size=500,
+                    )
+            finally:
+                conn.close()
+        except Exception:
+            pass
+
     def _read_src(path):
         try:
             df = pd.read_csv(path)
@@ -1448,6 +1790,9 @@ def _load_fundamental_details(symbols: list[str]) -> dict:
     # Legacy sources were: reports/Apex_Resilience_screener_fundamentals_*.csv,
     #   working-sector/output/fundamental_details.csv
     frames = []
+    pg_df = _read_pg_latest()
+    if pg_df is not None and not pg_df.empty:
+        frames.append(pg_df[[c for c in fund_cols if c in pg_df.columns]])
     if CACHE.exists():
         f = _read_src(CACHE)
         if f is not None:
@@ -1481,6 +1826,7 @@ def _load_fundamental_details(symbols: list[str]) -> dict:
                             cache_df = pd.DataFrame(columns=fund_cols)
                         merged = pd.concat([cache_df, fetched]).drop_duplicates("SYMBOL", keep="first")
                         merged.to_csv(CACHE, index=False)
+                        _write_pg_snapshot(fetched)
                         print(f"  Fetched {len(fetched)} symbols; cache now has {len(merged)} rows.")
                         # P0-4: clean up tmp file after successful merge into cache
                         if out_csv.exists():
@@ -2068,8 +2414,8 @@ def _generate_rule_based_narratives(sector_rank: pd.DataFrame, candidates: pd.Da
         canslim = row.get("CAN_SLIM_SCORE", "")
         price = row.get("CURRENT_PRICE", math.nan)
 
-        res_str = f"₹{float(res):.2f}" if res and not (isinstance(res, float) and math.isnan(res)) else "resistance"
-        sup_str = f"₹{float(sup):.2f}" if sup and not (isinstance(sup, float) and math.isnan(sup)) else "support"
+        res_str = f"₹{float(res):.2f}" if res and not (isinstance(res, float) and math.isnan(res)) else "not available"
+        sup_str = f"₹{float(sup):.2f}" if sup and not (isinstance(sup, float) and math.isnan(sup)) else "not available"
         st_str = f"₹{float(st_val):.2f}" if st_val and not (isinstance(st_val, float) and math.isnan(st_val)) else "the dynamic level"
         price_str = f"₹{float(price):.2f}" if price and not (isinstance(price, float) and math.isnan(price)) else "current price"
 
@@ -2108,8 +2454,13 @@ def _generate_rule_based_narratives(sector_rank: pd.DataFrame, candidates: pd.Da
                 f"would upgrade this to a breakout setup. Technical score: {tech:.1f}/100."
             )
         else:
+            phase = (
+                "setup with insufficient local OHLC history for pattern classification"
+                if pattern == "INSUFFICIENT_HISTORY"
+                else f"{pattern.replace('_', ' ').lower()} phase"
+            )
             tech_para = (
-                f"{co} ({sym}) at {price_str} is in a {pattern.replace('_', ' ').lower()} phase. "
+                f"{co} ({sym}) at {price_str} is in a {phase}. "
                 f"RSI at {rsi:.1f} reflects {rsi_desc}. "
                 f"Supertrend is {st_state.lower()} at {st_str}, with {vol_desc}. "
                 f"Key levels: resistance {res_str}, support {sup_str}. Technical score: {tech:.1f}/100."
@@ -2973,6 +3324,21 @@ tr:hover td{background:#f0f7ff}
 .bdiv-bull{background:#bbf7d0;color:#14532d}
 .bdiv-bear{background:#fecaca;color:#7f1d1d}
 .bdiv-int{background:#fef3c7;color:#78350f}
+.rotation-insight-grid{display:grid;grid-template-columns:1.05fr 1.4fr;gap:14px;margin:12px 0 16px}
+.market-breadth-card,.rotation-heatmap-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px}
+.breadth-title,.rot-hm-title{font-size:13px;font-weight:800;color:var(--primary);margin-bottom:4px}
+.breadth-sub,.rot-hm-sub{font-size:11px;color:var(--muted);margin-bottom:10px}
+.breadth-kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.breadth-kpi{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px}
+.breadth-kpi-label{font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#64748b;font-weight:800}
+.breadth-kpi-value{font-size:15px;font-weight:900;color:#0f172a;margin-top:2px}
+.breadth-kpi-note{font-size:10px;color:#64748b;margin-top:2px}
+.rot-hm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.rot-hm-cell{border-radius:10px;padding:10px;color:#fff;min-height:76px;box-shadow:inset 0 -24px 36px rgba(0,0,0,.14)}
+.rot-hm-sector{font-size:12px;font-weight:900;line-height:1.15}
+.rot-hm-meta{font-size:10px;opacity:.92;margin-top:5px;display:flex;gap:6px;flex-wrap:wrap}
+.rot-hm-breadth{font-size:9px;display:inline-block;margin-top:7px;padding:2px 6px;border-radius:8px;background:rgba(255,255,255,.18);font-weight:800}
+@media(max-width:900px){.rotation-insight-grid{grid-template-columns:1fr}.breadth-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
 /* ---- ALL INDICES TAB (B3+) ---- */
 .idx-filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
@@ -3451,7 +3817,7 @@ _JS = r"""
   }
 
   // Restore persisted state on load (P1-5)
-  var savedTab=_ls('nse_tab')||location.hash.slice(1)||'overview';
+  var savedTab=location.hash.slice(1)||_ls('nse_tab')||'overview';
   showTab(savedTab);
   var savedSec=_ls('nse_sector');
   if(savedSec){var pill=document.querySelector('[data-spill="'+savedSec+'"]');if(pill)selectSector(savedSec,pill);}
@@ -3713,11 +4079,11 @@ def build_technical_view_tab_html(technical_view: dict | None) -> str:
         missing = view.get("missing_indices") or TECHNICAL_VIEW_INDEX_BASKET
         return (
             '<div class="sec-title">Short-Term Technical View</div>'
-            '<div class="sec-sub">Broader market and index technical assessment from local EOD index history.</div>'
+            '<div class="sec-sub">Broader market and index technical assessment from PostgreSQL index EOD history.</div>'
             '<div class="tech-narr"><h3>Broader Market Technical Narrative</h3>'
             f'{_technical_narrative_html(narrative)}</div>'
-            '<div class="card"><p>Technical-view metrics are not available. Check '
-            '<code>data/nse_index_data.csv</code> for EOD index OHLC data.</p>'
+            '<div class="card"><p>Technical-view metrics are not available. Run '
+            '<code>postgres/loader.py --eod-only</code> and confirm <code>market.index_eod</code> has EOD index OHLC data.</p>'
             f'<p style="font-size:12px;color:#64748b;margin-top:8px">Missing basket: {html_mod.escape(", ".join(map(str, missing)))}</p></div>'
         )
 
@@ -3785,7 +4151,7 @@ def build_technical_view_tab_html(technical_view: dict | None) -> str:
     )
     return (
         '<div class="sec-title">Short-Term Technical View</div>'
-        f'<div class="sec-sub">Broader market and selected index view from local EOD index history. Latest data: {html_mod.escape(latest_date)}.</div>'
+        f'<div class="sec-sub">Broader market and selected index view from PostgreSQL index EOD history. Latest data: {html_mod.escape(latest_date)}.</div>'
         '<div class="tech-narr"><h3>Broader Market Technical Narrative</h3>'
         f'{_technical_narrative_html(narrative)}</div>'
         + note_html
@@ -3815,6 +4181,7 @@ def render_html_interactive(
     darvas_df: "pd.DataFrame | None" = None,
     global_us_context_html: str = "",
 ) -> str:
+    sector_rank = dedupe_sector_rank_by_display_name(sector_rank)
     gen_date = generated_at.strftime("%Y-%m-%d")
     data_date = (
         candidates["ANALYSIS_DATE"].dropna().iloc[0]
@@ -4043,6 +4410,93 @@ def render_html_interactive(
         f'</tr></thead><tbody>{rot_rows}</tbody></table></div>'
     )
 
+    def _safe_float(v, default: float = 0.0) -> float:
+        try:
+            f = float(v)
+            return default if math.isnan(f) else f
+        except Exception:
+            return default
+
+    def _breadth_kpi(label: str, value: str, note: str = "") -> str:
+        return (
+            '<div class="breadth-kpi">'
+            f'<div class="breadth-kpi-label">{html_mod.escape(label)}</div>'
+            f'<div class="breadth-kpi-value">{html_mod.escape(value)}</div>'
+            f'<div class="breadth-kpi-note">{html_mod.escape(note)}</div>'
+            '</div>'
+        )
+
+    latest_breadth: dict = {}
+    try:
+        from market_breadth import load_breadth_history
+        latest_breadth = _latest_breadth_row(load_breadth_history())
+    except Exception:
+        latest_breadth = {}
+
+    advances = int(_safe_float(latest_breadth.get("advances"), 0))
+    declines = int(_safe_float(latest_breadth.get("declines"), 0))
+    ad_ratio = advances / declines if declines else 0
+    osc = _safe_float(latest_breadth.get("oscillator"), 0)
+    breadth_signal = str(latest_breadth.get("signal", "NO_DATA") or "NO_DATA")
+    trin = _safe_float(latest_breadth.get("trin"), 0)
+    trin_signal = str(latest_breadth.get("trin_signal", "NO_DATA") or "NO_DATA")
+    breadth_date = str(latest_breadth.get("date", data_date) or data_date)
+
+    pct50 = pd.to_numeric(sector_rank.get("BREADTH_PCT50", pd.Series(dtype=float)), errors="coerce")
+    valid_pct50 = pct50.dropna()
+    healthy_count = int(sector_rank.get("BREADTH_SIGNAL", pd.Series(dtype=str)).isin(["STRONG", "HEALTHY"]).sum()) if "BREADTH_SIGNAL" in sector_rank.columns else 0
+    weak_count = int(sector_rank.get("BREADTH_SIGNAL", pd.Series(dtype=str)).isin(["WEAK", "BEARISH"]).sum()) if "BREADTH_SIGNAL" in sector_rank.columns else 0
+    avg_sector_breadth = f"{valid_pct50.mean():.0f}%" if not valid_pct50.empty else "N/A"
+
+    breadth_card = (
+        '<div class="market-breadth-card">'
+        '<div class="breadth-title">Market Breadth</div>'
+        f'<div class="breadth-sub">Latest internal participation snapshot · {html_mod.escape(breadth_date)}</div>'
+        '<div class="breadth-kpis">'
+        + _breadth_kpi("Adv / Decl", f"{advances:,} / {declines:,}" if advances or declines else "N/A", f"A/D ratio {ad_ratio:.2f}" if ad_ratio else "No breadth tape")
+        + _breadth_kpi("McClellan", f"{osc:+.1f}", breadth_signal)
+        + _breadth_kpi("TRIN", f"{trin:.2f}" if trin else "N/A", trin_signal)
+        + _breadth_kpi("Sector >50DMA", avg_sector_breadth, f"{healthy_count} healthy · {weak_count} weak")
+        + '</div></div>'
+    )
+
+    hm_scores = [_safe_float(v, 0) for v in sector_rank.get("ROTATION_SCORE", pd.Series(dtype=float)).tolist()]
+    max_abs_score = max([abs(v) for v in hm_scores] + [1])
+    rot_hm_cells = ""
+    for _, row in sector_rank.iterrows():
+        score = _safe_float(row.get("ROTATION_SCORE"), 0)
+        rs_1m = _safe_float(row.get("RS_1M"), 0)
+        ret_1m = _safe_float(row.get("RET_1M"), 0)
+        intensity = min(1.0, abs(score) / max_abs_score)
+        if score >= 8:
+            bg = f"linear-gradient(135deg, #14532d, rgba(34,197,94,{0.72 + 0.28 * intensity:.2f}))"
+        elif score >= 3:
+            bg = f"linear-gradient(135deg, #1e40af, rgba(59,130,246,{0.68 + 0.25 * intensity:.2f}))"
+        elif score >= 0:
+            bg = "linear-gradient(135deg, #64748b, #94a3b8)"
+        else:
+            bg = f"linear-gradient(135deg, #7f1d1d, rgba(239,68,68,{0.68 + 0.25 * intensity:.2f}))"
+        bpct = row.get("BREADTH_PCT50")
+        bpct_label = f"{_safe_float(bpct):.0f}% >50DMA" if bpct is not None and str(bpct) not in ("nan", "") else "Breadth not tracked"
+        rot_hm_cells += (
+            f'<div class="rot-hm-cell" style="background:{bg}">'
+            f'<div class="rot-hm-sector">{_h(row.get("SECTOR_NAME", ""))}</div>'
+            f'<div class="rot-hm-meta"><span>Score {score:.1f}</span><span>RS {rs_1m:+.1f}%</span><span>1M {ret_1m:+.1f}%</span></div>'
+            f'<div class="rot-hm-breadth">{html_mod.escape(bpct_label)}</div>'
+            f'</div>'
+        )
+    if not rot_hm_cells:
+        rot_hm_cells = '<div class="rot-hm-cell" style="background:#64748b"><div class="rot-hm-sector">No rotation data</div></div>'
+    rotation_heatmap = (
+        '<div class="rotation-heatmap-card">'
+        '<div class="rot-hm-title">Sector Rotation Heatmap</div>'
+        '<div class="rot-hm-sub">Color intensity follows rotation score; each tile shows RS, 1M return, and sector breadth.</div>'
+        f'<div class="rot-hm-grid">{rot_hm_cells}</div>'
+        '</div>'
+    )
+
+    rotation_insights = f'<div class="rotation-insight-grid">{breadth_card}{rotation_heatmap}</div>'
+
     # Sector narratives below table
     sec_narr_html = '<h3 style="margin:20px 0 12px;font-size:14px;color:var(--primary)">Sector Analysis Narratives</h3>'
     for _, row in sector_rank.iterrows():
@@ -4069,6 +4523,7 @@ def render_html_interactive(
     rotation_html = (
         f'<div class="sec-title">Sector Rotation Rankings</div>'
         f'<div class="sec-sub">Ranked by composite rotation score vs Nifty 500. Click column headers to sort.</div>'
+        + rotation_insights
         + rotation_table
         + (f'<div class="card" style="margin:12px 0">{seasonal_calendar_html}</div>' if seasonal_calendar_html else "")
         + (f'<div class="card" style="margin:12px 0">{global_corr_table_html}</div>' if global_corr_table_html else "")
@@ -5279,15 +5734,24 @@ def generate_report(top_n_sectors: int = 6, top_n_per_sector: int = 8) -> Report
 
     with tempfile.TemporaryDirectory() as tmp:
         stock_csv = Path(tmp) / "stock_history.csv"
-        history = None
         export_symbols = sorted(set(candidates["SYMBOL"].tolist()) | set(rotating_universe["SYMBOL"].tolist()))
-        if export_symbols and export_stock_cache(export_symbols, stock_csv):
-            history = pd.read_csv(stock_csv)
+        history = load_stock_history_from_postgres(export_symbols)
+        if history is None or history.empty:
+            print("  PostgreSQL stock history unavailable; falling back to local RData cache.")
+            if export_symbols and export_stock_cache(export_symbols, stock_csv):
+                history = pd.read_csv(stock_csv)
+        if history is not None and not history.empty and "TIMESTAMP" in history.columns:
+            history["TIMESTAMP"] = pd.to_datetime(history["TIMESTAMP"])
         candidates = enrich_with_patterns(candidates, history)
         # A1: Stage analysis enrichment (must run before rank_stock_candidates)
         try:
             from screeners import enrich_with_stage, compute_max_drawdown_column
+            existing_stage = candidates["STAGE"].copy() if "STAGE" in candidates.columns else None
             candidates = enrich_with_stage(candidates, history)
+            if existing_stage is not None:
+                stage_unknown = candidates["STAGE"].astype(str).str.upper().eq("UNKNOWN")
+                existing_known = existing_stage.astype(str).str.upper().ne("UNKNOWN")
+                candidates.loc[stage_unknown & existing_known, "STAGE"] = existing_stage[stage_unknown & existing_known]
             candidates = compute_max_drawdown_column(candidates, history)
             _stage_counts = candidates["STAGE"].value_counts().to_dict()
             print(f"  Stage analysis: S2={_stage_counts.get('STAGE_2',0)} S1={_stage_counts.get('STAGE_1',0)} S3={_stage_counts.get('STAGE_3',0)} S4={_stage_counts.get('STAGE_4',0)}")
@@ -5297,7 +5761,14 @@ def generate_report(top_n_sectors: int = 6, top_n_per_sector: int = 8) -> Report
             for _sc in ["SMA_50", "SMA_200", "SMA_50_SLOPE", "SMA_200_SLOPE", "DIST_FROM_52W_HIGH_PCT", "VOL_RATIO"]:
                 candidates[_sc] = None
             candidates["MAX_DRAWDOWN_PCT"] = float("nan")
-        candidates = rank_stock_candidates(candidates)
+        # PG-funnel: hard Stage 2 gate (env-controlled, default ON).
+        # Set STAGE2_GATE=0 to disable and revert to the prior soft +4 bonus behavior.
+        _stage2_gate = str(os.environ.get("STAGE2_GATE", "1")).strip().lower() not in ("0", "false", "off", "no")
+        candidates = rank_stock_candidates(candidates, enforce_stage2=_stage2_gate)
+        if _stage2_gate:
+            print(f"  Stage 2 gate ENFORCED: {len(candidates)} candidates remain after hard filter.")
+        # PG-funnel: assign portfolio weights to the final picks (top 10, capped 15%, conviction-weighted).
+        candidates = compute_position_sizes(candidates, max_positions=10, max_weight_pct=15.0)
         peak_resilience = enrich_with_peak_resilience(rotating_universe, history)
         peak_resilience = rank_peak_resilience_stocks(peak_resilience)
 
@@ -5391,7 +5862,7 @@ def generate_report(top_n_sectors: int = 6, top_n_per_sector: int = 8) -> Report
     md = render_markdown(sector_rank, candidates, peak_resilience, source_file, generated_at, narratives=narratives)
     try:
         _idx_cols = ["SYMBOL", "OPEN", "HIGH", "LOW", "CLOSE", "TIMESTAMP", "TOTTRDQTY"]
-        _idx_history = pd.read_csv(INDEX_DATA_CSV, usecols=lambda c: c in _idx_cols)
+        _idx_history = load_index_history_for_technical_view(_idx_cols)
         technical_view = build_short_term_technical_view(_idx_history, use_llm=True)
     except Exception as exc:
         print(f"  Short-term technical view skipped ({exc}).")

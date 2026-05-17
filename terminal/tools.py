@@ -27,6 +27,7 @@ from terminal.fno_data import (
     get_available_dates as _fno_available_dates,
     days_to_expiry,
     get_expiry_dates,
+    get_lot_size,
 )
 from terminal.options_analysis import (
     analyze_option_chain,
@@ -87,7 +88,7 @@ from terminal.intraday import (
     _quiet_yf_download,
     run_all_signals as _run_intraday_all_signals,
 )
-from terminal.intraday_storage import persist_intraday_snapshot
+from terminal.intraday_storage import persist_intraday_bars, persist_intraday_snapshot
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 ROOT      = Path(__file__).parent.parent
@@ -99,6 +100,7 @@ GLOBAL_CORR_CSV  = ROOT / "data" / "global_correlations.csv"
 REPORTS   = ROOT / "reports"
 PG_DSN    = os.environ.get("AGENT_ADDA_PG_DSN") or os.environ.get("PG_DSN") or "dbname=nse_market user=nse_admin host=/tmp"
 _INDEX_REFERENCE_ALIAS_CACHE: dict[str, str] | None = None
+IST_TZ = "Asia/Kolkata"
 
 try:
     from dotenv import load_dotenv  # type: ignore
@@ -113,6 +115,10 @@ except Exception:
 
 def _db_conn():
     return sqlite3.connect(DB_PATH, check_same_thread=False)
+
+
+def _legacy_sqlite_fallbacks_enabled() -> bool:
+    return os.environ.get("AGENT_ADDA_ENABLE_SQLITE_FALLBACKS", "").strip().lower() in {"1", "true", "yes"}
 
 
 def _pg_conn():
@@ -147,7 +153,7 @@ def _latest_snapshot_date() -> str:
             return rows[0][0]
     except Exception:
         pass
-    if not DB_PATH.exists():
+    if not _legacy_sqlite_fallbacks_enabled() or not DB_PATH.exists():
         return "N/A"
     conn = _db_conn()
     row = conn.execute("SELECT MAX(snapshot_date) FROM stage_snapshots").fetchone()
@@ -459,11 +465,53 @@ _FO_INDEX_ALIASES: dict[str, str] = {
     "NIFTYNXT50":              "NIFTYNXT50",
 }
 
+_COMMON_STOCK_ALIASES: dict[str, str] = {
+    "BAJAJ FINANCE": "BAJFINANCE",
+    "BAJAJ FIN": "BAJFINANCE",
+    "BAJAJ FINSERV": "BAJAJFINSV",
+    "HDFC BANK": "HDFCBANK",
+    "ICICI BANK": "ICICIBANK",
+    "KOTAK BANK": "KOTAKBANK",
+    "TATA STEEL": "TATASTEEL",
+    "TATA MOTORS": "TATAMOTORS",
+    "USL": "UNITDSPR",
+    "UNITED SPIRITS": "UNITDSPR",
+    "UNITED SPIRITS LIMITED": "UNITDSPR",
+    "DIAGEO INDIA": "UNITDSPR",
+}
+
+_SYMBOL_CONTEXT_TOKENS: set[str] = {
+    "ANALYSIS",
+    "ASSESSMENT",
+    "BSE",
+    "CATALYST",
+    "CATALYSTS",
+    "CONCALL",
+    "CONCALLS",
+    "CONTEXT",
+    "DIVIDEND",
+    "GROWTH",
+    "HOLDING",
+    "HOLDINGS",
+    "INSIDER",
+    "NEWS",
+    "OUTLOOK",
+    "REPORT",
+    "RESULT",
+    "RESULTS",
+    "SEARCH",
+    "SHAREHOLDING",
+    "SOCIAL",
+    "STRATEGY",
+    "STRATEGIES",
+}
+
 
 def _all_symbols_map() -> dict[str, str]:
     """Return {normalized_name: symbol, symbol: symbol} for fuzzy resolution."""
     # Start with F&O index aliases — always available
     mapping: dict[str, str] = dict(_FO_INDEX_ALIASES)
+    mapping.update(_COMMON_STOCK_ALIASES)
 
     try:
         rows = _pg_fetchall(
@@ -489,7 +537,7 @@ def _all_symbols_map() -> dict[str, str]:
     except Exception:
         pass
 
-    if not DB_PATH.exists():
+    if not _legacy_sqlite_fallbacks_enabled() or not DB_PATH.exists():
         return mapping
     conn = _db_conn()
     rows = conn.execute(
@@ -536,6 +584,10 @@ def _resolve_local_symbol(query: str) -> dict:
         key, sym = normalized[q_key]
         return {"symbol": sym, "confidence": "exact", "query": query, "matched": key}
 
+    q_tokens = re.sub(r"[^A-Z0-9 ]", " ", q).split()
+    if len(q_tokens) > 1 and any(tok in _SYMBOL_CONTEXT_TOKENS for tok in q_tokens):
+        return {"symbol": None, "confidence": "none", "query": query}
+
     contains_hits: list[tuple[int, str, str]] = []
     for key_norm, (key, sym) in normalized.items():
         if q_key in key_norm or key_norm in q_key:
@@ -555,7 +607,20 @@ def _resolve_local_symbol(query: str) -> dict:
         if len(key_norm) < 4 or q_key[:4] != key_norm[:4]:
             continue
         ratio = SequenceMatcher(None, q_key, key_norm).ratio()
-        if ratio >= 0.84:
+        if not strict_exact_ticker and ratio >= 0.84:
+            near_hits.append((ratio, key, sym))
+            continue
+        # NSE occasionally truncates long official symbols (e.g.
+        # DATAPATTERNS -> DATAPATTNS). Allow only high-confidence prefix
+        # contractions for exact-looking inputs; do not fuzzy-substitute
+        # arbitrary ticker typos.
+        if (
+            strict_exact_ticker
+            and len(q_key) > len(key_norm)
+            and len(key_norm) >= 8
+            and q_key[:8] == key_norm[:8]
+            and ratio >= 0.90
+        ):
             near_hits.append((ratio, key, sym))
     if near_hits:
         near_hits.sort(key=lambda x: x[0], reverse=True)
@@ -595,6 +660,12 @@ def resolve_symbol(query: str) -> dict:
         "VWAP", "FII", "DII", "MF", "AMC", "CANSLIM", "CAN-SLIM",
         "MOMENTUM", "BREAKOUT", "BREAKOUTS", "LEADERS", "BASING",
         "TURNAROUND", "GAINERS", "LOSERS", "MOVERS",
+        # Added more tokens that the symbol extractor used to mistake for
+        # tickers when the keyword router missed the screener intent.
+        "OVERSOLD", "TIGHT", "BULK", "MOST", "GAP", "BOLLINGER",
+        "REVIEW", "TOP", "HIGH", "LOW", "NEW", "BEST", "WORST",
+        "STRONG", "WEAK", "BUY", "SELL", "HOLD",
+        "GROWTH", "STRATEGY", "STRATEGIES", "OUTLOOK", "REPORT", "RESULTS",
     }
     if q in _CONCEPT_TOKENS:
         return {
@@ -610,6 +681,14 @@ def resolve_symbol(query: str) -> dict:
     local = _resolve_local_symbol(q)
     if local.get("symbol"):
         return local
+    q_tokens = re.sub(r"[^A-Z0-9 ]", " ", q).split()
+    if len(q_tokens) > 1 and any(tok in _SYMBOL_CONTEXT_TOKENS for tok in q_tokens):
+        return {
+            "symbol": None,
+            "confidence": "none",
+            "query": query,
+            "error": f"'{query}' contains search/report context, not a resolvable NSE symbol.",
+        }
     if re.fullmatch(r"[A-Z0-9&-]{2,12}", query.strip()):
         return {
             "symbol": None,
@@ -697,7 +776,7 @@ def _read_stage_snapshot_row(sym: str, snapshot_date: str) -> dict[str, Any] | N
     except Exception:
         pass
 
-    if not DB_PATH.exists():
+    if not _legacy_sqlite_fallbacks_enabled() or not DB_PATH.exists():
         return None
     conn = _db_conn()
     row = conn.execute(
@@ -853,7 +932,7 @@ def _backfill_on_demand_stage_snapshot(sym: str, snapshot_date: str) -> dict[str
     except Exception:
         pass
 
-    if DB_PATH.exists():
+    if _legacy_sqlite_fallbacks_enabled() and DB_PATH.exists():
         conn = _db_conn()
         conn.execute(
             """INSERT OR REPLACE INTO stage_snapshots
@@ -1071,8 +1150,8 @@ def get_sector_context(sector_or_symbol: str) -> dict:
     except Exception:
         pass
 
-    if not DB_PATH.exists():
-        return {"error": "DB not available"}
+    if not _legacy_sqlite_fallbacks_enabled() or not DB_PATH.exists():
+        return {"error": "PostgreSQL scores.stage_snapshots unavailable"}
 
     conn = _db_conn()
 
@@ -1139,7 +1218,7 @@ def run_screener_query(screen_type: str = "stage2", top_n: int = 10) -> dict:
 
     screen_type options:
       Original  : stage2, breakouts, supertrend_buy, strong_buy, new_entrants
-      New EOD   : momentum_52w, high_rs, turnaround, stage1_base, tight_range, oversold_bounce
+      New EOD   : new_highs, momentum_52w, high_rs, turnaround, stage1_base, tight_range, oversold_bounce
     """
     snap_date = _latest_snapshot_date()
     screen_key = screen_type.lower()
@@ -1150,6 +1229,7 @@ def run_screener_query(screen_type: str = "stage2", top_n: int = 10) -> dict:
         "supertrend_buy":   "Supertrend BUY state stocks",
         "strong_buy":       "STRONG_BUY signal stocks",
         "new_entrants":     "Stage 2 new entrants in the last 14 days",
+        "new_highs":        "Companies creating new highs — latest close within 5% of computed 52-week high",
         "momentum_52w":     "Near 52W high momentum leaders — RS ≥ 1.0, 1M chg > 2%",
         "high_rs":          "Top relative strength leaders — RS ≥ 1.15",
         "turnaround":       "Recovery setups — dip + rising momentum + RS improving",
@@ -1170,6 +1250,52 @@ def run_screener_query(screen_type: str = "stage2", top_n: int = 10) -> dict:
         "supertrend_buy": f"SELECT symbol, company_name, stage, stage_score, investment_score, technical_score, price, COALESCE(relative_strength, change_1d_pct) AS relative_strength, change_1d_pct, rsi, trading_signal, sector {_pg_base_from} AND supertrend_state='BULLISH' AND stage IN ('STAGE_1','STAGE_2') ORDER BY investment_score DESC NULLS LAST, rsi DESC NULLS LAST",
         "strong_buy": f"SELECT {_pg_base_cols} {_pg_base_from} AND trading_signal='STRONG_BUY' AND stage='STAGE_2' AND supertrend_state='BULLISH' ORDER BY investment_score DESC NULLS LAST",
         "new_entrants": "SELECT s.symbol, s.company_name, s.stage, s.stage_score, s.investment_score, s.technical_score, s.price, COALESCE(s.relative_strength, s.change_1m_pct) AS relative_strength, s.change_1m_pct, s.rsi, s.trading_signal, s.sector FROM scores.stage_snapshots s LEFT JOIN scores.stage_changes c ON s.symbol=c.symbol AND c.stage_now='STAGE_2' AND c.stage_prev!='STAGE_2' WHERE s.snapshot_date=%s AND s.stage='STAGE_2' AND (c.change_date >= (%s::date - interval '14 days') OR c.change_date IS NULL) ORDER BY s.investment_score DESC NULLS LAST",
+        "new_highs": """
+            WITH latest_date AS (
+                SELECT MAX(trade_date) AS trade_date FROM market.equity_eod
+            ),
+            latest AS (
+                SELECT e.*
+                FROM market.equity_eod e
+                JOIN latest_date d ON e.trade_date=d.trade_date
+                WHERE e.series='EQ' AND e.close IS NOT NULL AND e.close > 0
+            ),
+            highs AS (
+                SELECT symbol, MAX(high) AS high_52w
+                FROM market.equity_eod
+                WHERE trade_date >= (SELECT trade_date FROM latest_date) - INTERVAL '370 days'
+                  AND series='EQ'
+                  AND high IS NOT NULL
+                GROUP BY symbol
+            ),
+            snap AS (
+                SELECT *
+                FROM scores.stage_snapshots
+                WHERE snapshot_date=%s
+            )
+            SELECT l.symbol,
+                   COALESCE(s.company_name, i.company_name, l.symbol) AS company_name,
+                   COALESCE(s.stage, 'UNKNOWN') AS stage,
+                   s.stage_score,
+                   s.investment_score,
+                   s.technical_score,
+                   l.close AS price,
+                   ROUND((l.close / NULLIF(h.high_52w, 0) * 100)::numeric, 2) AS relative_strength,
+                   l.change_pct AS change_1d_pct,
+                   s.rsi,
+                   s.trading_signal,
+                   s.sector
+            FROM latest l
+            JOIN highs h ON h.symbol=l.symbol
+            LEFT JOIN snap s ON s.symbol=l.symbol
+            LEFT JOIN ref.instruments i ON i.symbol=l.symbol
+            WHERE h.high_52w > 0
+              AND l.close >= h.high_52w * 0.95
+              AND l.symbol !~* '(ETF|LIQUID|LIQID|BEES|GILT|BOND|MON100|MAFANG|MASPTOP|CASHIETF|MONQ)'
+              AND COALESCE(s.company_name, i.company_name, l.symbol) !~* '(ETF|LIQUID|LIQID|BOND|GILT)'
+            ORDER BY (l.close / NULLIF(h.high_52w, 0)) DESC NULLS LAST,
+                     s.investment_score DESC NULLS LAST
+        """,
         "momentum_52w": f"SELECT {_pg_base_cols} {_pg_base_from} AND stage='STAGE_2' AND COALESCE(change_1m_pct,0)>5.0 AND COALESCE(rsi,0) BETWEEN 50 AND 85 AND supertrend_state='BULLISH' ORDER BY change_1m_pct DESC NULLS LAST, investment_score DESC NULLS LAST",
         "high_rs": f"SELECT {_pg_base_cols} {_pg_base_from} AND stage IN ('STAGE_2','STAGE_1') AND COALESCE(change_1m_pct,0)>8.0 AND COALESCE(rsi,0)>=55 ORDER BY change_1m_pct DESC NULLS LAST, investment_score DESC NULLS LAST",
         "turnaround": f"SELECT {_pg_base_cols} {_pg_base_from} AND stage IN ('STAGE_1','STAGE_2') AND COALESCE(change_1m_pct,0)>5.0 AND COALESCE(rsi,0) BETWEEN 40 AND 65 AND COALESCE(investment_score,0)<60 ORDER BY change_1m_pct DESC NULLS LAST, investment_score DESC NULLS LAST",
@@ -1198,13 +1324,15 @@ def run_screener_query(screen_type: str = "stage2", top_n: int = 10) -> dict:
             "snapshot_date":  snap_date,
             "count":          len(stocks),
             "results":        stocks,
-            "data_source":    "PostgreSQL scores.stage_snapshots",
+            "data_source":    "PostgreSQL market.equity_eod + scores.stage_snapshots"
+                               if screen_key == "new_highs"
+                               else "PostgreSQL scores.stage_snapshots",
         }
     except Exception:
         pass
 
-    if not DB_PATH.exists():
-        return {"error": "DB not available"}
+    if not _legacy_sqlite_fallbacks_enabled() or not DB_PATH.exists():
+        return {"error": "PostgreSQL screener snapshot unavailable"}
 
     conn = _db_conn()
 
@@ -1256,6 +1384,12 @@ def run_screener_query(screen_type: str = "stage2", top_n: int = 10) -> dict:
 
         # Stocks within 5% of their 52-week high with positive RS and upward momentum.
         # Classic "buy strength" — trend-following stocks leading the market.
+        "new_highs": (
+            f"SELECT {_base_cols} {_base_from} AND stage='STAGE_2' "
+            "AND COALESCE(change_1m_pct, 0) > 5.0 "
+            "ORDER BY change_1m_pct DESC, investment_score DESC"
+        ),
+
         "momentum_52w": (
             f"SELECT {_base_cols} {_base_from} AND stage='STAGE_2' "
             "AND COALESCE(change_1m_pct, 0) > 5.0 "
@@ -1385,7 +1519,7 @@ def _fetch_strength_snapshot_rows(symbols: list[str]) -> dict[str, dict]:
         except Exception:
             pass
 
-    if not DB_PATH.exists() or not symbols:
+    if not _legacy_sqlite_fallbacks_enabled() or not DB_PATH.exists() or not symbols:
         return {}
     conn = _db_conn()
     snap_date = _latest_snapshot_date()
@@ -1463,7 +1597,7 @@ def validate_strength_watchlist(symbols: list[str], top_n: int = 20) -> dict:
             )
 
         if missing:
-            verdict = "Missing evidence: " + ", ".join(missing)
+            verdict = "Insufficient evidence to rank"
         elif risk == "high":
             verdict = "Caution: forensic risk overrides apparent strength"
         elif piot_score is not None and piot_score >= 7:
@@ -1693,8 +1827,8 @@ def get_market_breadth() -> dict:
         ))
         data_source = "PostgreSQL scores.stage_snapshots"
     except Exception:
-        if not DB_PATH.exists():
-            return {"error": "DB not available"}
+        if not _legacy_sqlite_fallbacks_enabled() or not DB_PATH.exists():
+            return {"error": "PostgreSQL scores.stage_snapshots unavailable"}
         conn = _db_conn()
         rows = conn.execute(
             "SELECT symbol, change_1d_pct, change_1w_pct, relative_strength "
@@ -1909,7 +2043,7 @@ def _pg_table_exists(schema: str, table_name: str) -> bool:
 
 
 def get_intraday_source_health(max_age_minutes: int = 30) -> dict:
-    """Report health of PostgreSQL intraday source tables, with SQLite fallback."""
+    """Report health of PostgreSQL intraday source tables."""
     pg_tables = {
         "quote_snapshots": "captured_at",
         "ohlcv_bars": "timestamp",
@@ -1954,83 +2088,26 @@ def get_intraday_source_health(max_age_minutes: int = 30) -> dict:
                 "age_minutes": age_minutes,
             }
             statuses.append(status)
-        if result["tables"].get("intraday.ohlcv_bars", {}).get("status") == "FRESH":
-            result["overall_status"] = "FRESH"
-            return result
-        if any(s in {"PRESENT", "STALE", "FRESH"} for s in statuses):
-            result["overall_status"] = result["tables"].get("intraday.ohlcv_bars", {}).get("status", "PRESENT")
-            return result
-    except Exception:
-        pass
-
-    table_names = [
-        "intraday_quotes",
-        "intraday_ohlcv",
-        "intraday_indicators",
-        "intraday_signals",
-        "intraday_levels",
-        "intraday_agent_runs",
-    ]
-    result: dict[str, Any] = {
-        "data_mode": "intraday",
-        "db_path": str(DB_PATH.relative_to(ROOT)) if DB_PATH.is_relative_to(ROOT) else str(DB_PATH),
-        "max_age_minutes": max_age_minutes,
-        "tables": {},
-    }
-    if not DB_PATH.exists():
-        result["overall_status"] = "MISSING"
-        result["error"] = "Intraday SQLite database not found"
+        ohlcv_status = result["tables"].get("intraday.ohlcv_bars", {}).get("status")
+        if ohlcv_status:
+            result["overall_status"] = ohlcv_status
+        elif "MISSING" in statuses:
+            result["overall_status"] = "MISSING"
+        else:
+            result["overall_status"] = "UNKNOWN"
         return result
-
-    now = datetime.now()
-    conn = _db_conn()
-    statuses: list[str] = []
-    for table in table_names:
-        exists = conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
-            (table,),
-        ).fetchone()
-        if not exists:
-            result["tables"][table] = {"exists": False, "status": "MISSING"}
-            statuses.append("MISSING")
-            continue
-
-        row_count = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
-        cols = [r[1] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()]
-        timestamp_col = next((c for c in cols if c.lower() in ("timestamp", "datetime", "time", "as_of")), None)
-        latest_ts = None
-        age_minutes = None
-        status = "EMPTY" if row_count == 0 else "UNKNOWN"
-        if row_count and timestamp_col:
-            raw_ts = conn.execute(f"SELECT MAX({timestamp_col}) FROM {table}").fetchone()[0]
-            parsed = pd.to_datetime(raw_ts, errors="coerce")
-            if pd.notna(parsed):
-                latest_dt = parsed.to_pydatetime()
-                latest_ts = latest_dt.strftime("%Y-%m-%d %H:%M:%S")
-                age_minutes = round((now - latest_dt).total_seconds() / 60, 1)
-                status = "FRESH" if age_minutes <= max_age_minutes else "STALE"
-        elif row_count:
-            status = "PRESENT"
-
-        result["tables"][table] = {
-            "exists": True,
-            "status": status,
-            "rows": row_count,
-            "latest_timestamp": latest_ts,
-            "age_minutes": age_minutes,
+    except Exception as exc:
+        result = {
+            "data_mode": "intraday",
+            "db_path": PG_DSN,
+            "max_age_minutes": max_age_minutes,
+            "tables": {},
+            "source": "PostgreSQL intraday schema",
+            "overall_status": "MISSING",
+            "error": f"PostgreSQL intraday schema unavailable: {exc}",
         }
-        statuses.append(status)
-    conn.close()
-
-    if result["tables"].get("intraday_ohlcv", {}).get("status") == "FRESH":
-        result["overall_status"] = "FRESH"
-    elif result["tables"].get("intraday_ohlcv", {}).get("exists"):
-        result["overall_status"] = result["tables"]["intraday_ohlcv"]["status"]
-    elif "MISSING" in statuses:
         result["overall_status"] = "MISSING"
-    else:
-        result["overall_status"] = "UNKNOWN"
-    return result
+        return result
 
 
 def get_intraday_bars(
@@ -2038,8 +2115,45 @@ def get_intraday_bars(
     timeframe: str = "15m",
     lookback: int = 120,
 ) -> dict:
-    """Read intraday OHLCV bars from PostgreSQL, falling back to SQLite."""
+    """Read intraday OHLCV bars from PostgreSQL, seeding PG from yfinance if needed."""
     sym = symbol.strip().upper()
+
+    def _fmt_bar_timestamp(value: Any) -> str:
+        ts = pd.to_datetime(value)
+        if getattr(ts, "tzinfo", None) is not None:
+            ts = ts.tz_convert(IST_TZ).tz_localize(None)
+        return ts.strftime("%Y-%m-%d %H:%M:%S")
+
+    def _bars_from_df(df: pd.DataFrame, *, source: str, persisted: dict | None = None) -> dict:
+        df_out = df.copy()
+        if not isinstance(df_out.index, pd.DatetimeIndex):
+            df_out.index = pd.to_datetime(df_out.index, errors="coerce")
+        df_out = df_out.dropna().sort_index().tail(lookback)
+        bars = [
+            {
+                "timestamp": _fmt_bar_timestamp(idx),
+                "open": round(float(row["Open"]), 2),
+                "high": round(float(row["High"]), 2),
+                "low": round(float(row["Low"]), 2),
+                "close": round(float(row["Close"]), 2),
+                "volume": int(row["Volume"]) if pd.notna(row["Volume"]) else None,
+            }
+            for idx, row in df_out.iterrows()
+        ]
+        result = {
+            "symbol": sym,
+            "timeframe": timeframe,
+            "lookback": lookback,
+            "data_mode": "intraday",
+            "source": source,
+            "count": len(bars),
+            "latest_timestamp": bars[-1]["timestamp"] if bars else None,
+            "bars": bars,
+        }
+        if persisted:
+            result["postgres_persist"] = persisted
+        return result
+
     try:
         df = _pg_read_df(
             """
@@ -2055,7 +2169,7 @@ def get_intraday_bars(
             df = df.sort_values("timestamp")
             bars = [
                 {
-                    "timestamp": pd.to_datetime(row["timestamp"]).strftime("%Y-%m-%d %H:%M:%S"),
+                    "timestamp": _fmt_bar_timestamp(row["timestamp"]),
                     "open": round(float(row["open"]), 2),
                     "high": round(float(row["high"]), 2),
                     "low": round(float(row["low"]), 2),
@@ -2077,65 +2191,42 @@ def get_intraday_bars(
     except Exception:
         pass
 
-    if not DB_PATH.exists():
-        return {"symbol": sym, "data_mode": "intraday", "error": "Intraday SQLite database not found"}
-    if not _sqlite_table_exists("intraday_ohlcv"):
-        return {"symbol": sym, "data_mode": "intraday", "error": "intraday_ohlcv table not found"}
+    try:
+        yf_df = get_intraday_candles(sym, timeframe)
+        if not yf_df.empty:
+            seed_bars = [
+                {
+                    "timestamp": _fmt_bar_timestamp(idx),
+                    "open": row["Open"],
+                    "high": row["High"],
+                    "low": row["Low"],
+                    "close": row["Close"],
+                    "volume": row["Volume"],
+                }
+                for idx, row in yf_df.iterrows()
+            ]
+            persisted = persist_intraday_bars(
+                sym,
+                seed_bars,
+                timeframe=timeframe,
+                source="Yahoo Finance (yfinance)",
+            )
+            return _bars_from_df(
+                yf_df,
+                source="PostgreSQL intraday.ohlcv_bars seeded from Yahoo Finance (yfinance)",
+                persisted=persisted,
+            )
+    except Exception as exc:
+        seed_error = str(exc)
+    else:
+        seed_error = "No yfinance candles available to seed PostgreSQL intraday.ohlcv_bars"
 
-    conn = _db_conn()
-    df = pd.read_sql_query(
-        "SELECT * FROM intraday_ohlcv WHERE UPPER(symbol)=? AND timeframe=?",
-        conn,
-        params=(sym, timeframe),
-    )
-    conn.close()
-    if df.empty:
-        return {
-            "symbol": sym,
-            "timeframe": timeframe,
-            "data_mode": "intraday",
-            "source": "SQLite intraday_ohlcv",
-            "bars": [],
-            "error": f"No intraday bars for {sym} at {timeframe}",
-        }
-
-    df.columns = [str(c).lower() for c in df.columns]
-    required = ["timestamp", "open", "high", "low", "close", "volume"]
-    missing = [c for c in required if c not in df.columns]
-    if missing:
-        return {
-            "symbol": sym,
-            "timeframe": timeframe,
-            "data_mode": "intraday",
-            "source": "SQLite intraday_ohlcv",
-            "error": f"intraday_ohlcv missing columns: {', '.join(missing)}",
-        }
-
-    df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
-    df = df.dropna(subset=["timestamp"]).sort_values("timestamp").tail(lookback)
-    for col in ["open", "high", "low", "close", "volume"]:
-        df[col] = pd.to_numeric(df[col], errors="coerce")
-    df = df.dropna(subset=["open", "high", "low", "close"])
-    bars = [
-        {
-            "timestamp": row["timestamp"].strftime("%Y-%m-%d %H:%M:%S"),
-            "open": round(float(row["open"]), 2),
-            "high": round(float(row["high"]), 2),
-            "low": round(float(row["low"]), 2),
-            "close": round(float(row["close"]), 2),
-            "volume": int(row["volume"]) if pd.notna(row["volume"]) else None,
-        }
-        for _, row in df.iterrows()
-    ]
     return {
         "symbol": sym,
         "timeframe": timeframe,
-        "lookback": lookback,
         "data_mode": "intraday",
-        "source": "SQLite intraday_ohlcv",
-        "count": len(bars),
-        "latest_timestamp": bars[-1]["timestamp"] if bars else None,
-        "bars": bars,
+        "source": "PostgreSQL intraday.ohlcv_bars",
+        "error": f"No PostgreSQL intraday.ohlcv_bars for {sym} at {timeframe}; {seed_error}",
     }
 
 
@@ -2157,7 +2248,7 @@ def _bars_to_intraday_df(bars: list[dict]) -> pd.DataFrame:
 
 
 def get_intraday_levels(symbol: str, timeframe: str = "15m") -> dict:
-    """Compute support/resistance levels from SQLite intraday OHLCV bars."""
+    """Compute support/resistance levels from PostgreSQL intraday OHLCV bars."""
     sym = symbol.strip().upper()
     bars_result = get_intraday_bars(sym, timeframe=timeframe, lookback=240)
     if bars_result.get("error"):
@@ -2170,12 +2261,16 @@ def get_intraday_levels(symbol: str, timeframe: str = "15m") -> dict:
             "timeframe": timeframe,
             "data_mode": "intraday",
             "source": bars_result.get("source", "intraday bars"),
-            "error": "Insufficient SQLite intraday bars for level analysis",
+            "error": "Insufficient PostgreSQL intraday bars for level analysis",
         }
 
     df_ind = _compute_intraday_all(df)
     levels = _intraday_key_levels(df_ind)
     latest_close = float(df_ind["Close"].iloc[-1])
+    pivot_levels = {
+        str(k): _safe_float(v)
+        for k, v in (levels.get("pivot_levels") or {}).items()
+    }
     return {
         "symbol": sym,
         "timeframe": timeframe,
@@ -2183,16 +2278,16 @@ def get_intraday_levels(symbol: str, timeframe: str = "15m") -> dict:
         "source": bars_result.get("source", "intraday bars"),
         "latest_timestamp": bars_result.get("latest_timestamp"),
         "latest_close": round(latest_close, 2),
-        "pivot": levels.get("pivot"),
-        "supports": levels.get("supports", []),
-        "resistances": levels.get("resistances", []),
+        "pivot": _safe_float(levels.get("pivot")),
+        "supports": [_safe_float(v) for v in levels.get("supports", []) if _safe_float(v) is not None],
+        "resistances": [_safe_float(v) for v in levels.get("resistances", []) if _safe_float(v) is not None],
         "ema_levels": {
-            "ema9": levels.get("ema9"),
-            "ema21": levels.get("ema21"),
-            "ema50": levels.get("ema50"),
-            "ema200": levels.get("ema200"),
+            "ema9": _safe_float(levels.get("ema9")),
+            "ema21": _safe_float(levels.get("ema21")),
+            "ema50": _safe_float(levels.get("ema50")),
+            "ema200": _safe_float(levels.get("ema200")),
         },
-        "pivot_levels": levels.get("pivot_levels", {}),
+        "pivot_levels": pivot_levels,
         "copy_rule": "Technical levels only. Not investment advice or a trade recommendation.",
     }
 
@@ -2209,7 +2304,7 @@ def _normalise_signal_direction(direction: str | None) -> str:
 
 
 def compute_intraday_indicators(symbol: str, timeframe: str = "15m") -> dict:
-    """Compute latest intraday indicators from SQLite intraday_ohlcv bars."""
+    """Compute latest intraday indicators from PostgreSQL intraday OHLCV bars."""
     sym = symbol.strip().upper()
     bars_result = get_intraday_bars(sym, timeframe=timeframe, lookback=240)
     if bars_result.get("error"):
@@ -2222,7 +2317,7 @@ def compute_intraday_indicators(symbol: str, timeframe: str = "15m") -> dict:
             "timeframe": timeframe,
             "data_mode": "intraday",
             "source": bars_result.get("source", "intraday bars"),
-            "error": "Insufficient SQLite intraday bars for indicator calculation",
+            "error": "Insufficient PostgreSQL intraday bars for indicator calculation",
         }
 
     df_ind = _compute_intraday_all(df)
@@ -2275,8 +2370,115 @@ def compute_intraday_indicators(symbol: str, timeframe: str = "15m") -> dict:
     }
 
 
+def _compute_intraday_position_sizing(
+    symbol: str,
+    entry_price: float,
+    stoploss_price: float,
+    risk_per_trade: float = 5000.0,
+) -> dict:
+    """Position sizing for intraday setups based on a fixed risk budget."""
+    risk_per_share = abs(entry_price - stoploss_price)
+    if risk_per_share < 0.01:
+        return {"error": "Risk per share is effectively zero; cannot size position"}
+
+    shares = int(risk_per_trade / risk_per_share)
+    capital = round(shares * entry_price, 2)
+
+    lot_size = get_lot_size(symbol)
+    futures = None
+    if lot_size and lot_size > 0:
+        risk_per_lot = round(risk_per_share * lot_size, 2)
+        lots = max(1, int(risk_per_trade / risk_per_lot)) if risk_per_lot > 0 else 1
+        margin_approx = round(entry_price * lot_size * 0.12, 2)
+        futures = {
+            "lots": lots,
+            "lot_size": lot_size,
+            "units": lots * lot_size,
+            "risk_per_lot": risk_per_lot,
+            "approx_margin_per_lot": margin_approx,
+        }
+        options_note = (
+            f"With lot size {lot_size}, {lots} lot(s) keeps risk near "
+            f"\u20b9{risk_per_trade:,.0f}. Actual premium-based sizing "
+            f"requires live option chain data."
+        )
+    else:
+        options_note = "Not an F&O symbol; options/futures not available."
+
+    return {
+        "risk_per_trade": risk_per_trade,
+        "risk_per_share": round(risk_per_share, 2),
+        "lot_size": lot_size,
+        "cash": {"shares": shares, "capital_required": capital},
+        "futures": futures,
+        "options_note": options_note,
+    }
+
+
+def _build_trade_plan(
+    setup_label: str,
+    entry_price: float | None,
+    invalidation: float | None,
+    target_zones: list[float],
+    indicators: dict,
+) -> dict:
+    """Build a direction-aware trade plan from setup data."""
+    if setup_label not in ("LONG_SETUP", "SHORT_SETUP"):
+        return {}
+    if not isinstance(entry_price, (int, float)) or not isinstance(invalidation, (int, float)):
+        return {}
+
+    is_long = setup_label == "LONG_SETUP"
+    direction = "LONG" if is_long else "SHORT"
+
+    confirmations: list[str] = []
+    if is_long:
+        confirmations.append(f"Price holds above \u20b9{invalidation:,.2f} on retest")
+    else:
+        confirmations.append(f"Price stays below \u20b9{invalidation:,.2f} on retest")
+
+    st_dir = indicators.get("supertrend_dir")
+    if st_dir == (1 if is_long else -1):
+        confirmations.append("Supertrend confirms " + ("bullish" if is_long else "bearish"))
+
+    rsi = indicators.get("rsi")
+    if isinstance(rsi, (int, float)):
+        if is_long and rsi > 50:
+            confirmations.append(f"RSI {rsi:.0f} supports momentum (above 50)")
+        elif not is_long and rsi < 50:
+            confirmations.append(f"RSI {rsi:.0f} confirms weakness (below 50)")
+
+    macd_hist = indicators.get("macd_hist")
+    if isinstance(macd_hist, (int, float)):
+        if (is_long and macd_hist > 0) or (not is_long and macd_hist < 0):
+            confirmations.append("MACD histogram aligned with direction")
+
+    scale_out: list[str] = []
+    t1 = target_zones[0] if len(target_zones) > 0 else None
+    t2 = target_zones[1] if len(target_zones) > 1 else None
+    if t1:
+        scale_out.append(f"Book 50% at T1 (\u20b9{t1:,.2f}), trail SL to entry for remainder")
+    if t2:
+        scale_out.append(f"Book remaining at T2 (\u20b9{t2:,.2f}) or trail with Supertrend")
+    elif t1:
+        scale_out.append("Trail remainder with Supertrend or EMA21")
+
+    word = "below" if is_long else "above"
+    inv_action = (
+        f"Exit full position if price closes {word} \u20b9{invalidation:,.2f}. "
+        f"Do not average into a losing setup."
+    )
+
+    return {
+        "direction": direction,
+        "entry_confirmations": confirmations,
+        "scale_out": scale_out,
+        "invalidation_action": inv_action,
+    }
+
+
 def explain_intraday_setup(symbol: str, timeframe: str = "15m") -> dict:
-    """Explain an intraday setup from SQLite bars with research-only labels."""
+    """Explain an intraday setup from PostgreSQL intraday bars with research-only labels."""
     sym = symbol.strip().upper()
     ind = compute_intraday_indicators(sym, timeframe=timeframe)
     if ind.get("error"):
@@ -2358,6 +2560,11 @@ def explain_intraday_setup(symbol: str, timeframe: str = "15m") -> dict:
         invalidation = resistances[0] if resistances else (round(latest_close + atr, 2) if latest_close and atr else None)
         target_zones = supports[:2] or ([round(latest_close - atr, 2)] if latest_close and atr else [])
 
+    supports = [v for v in (_safe_float(v) for v in supports) if v is not None]
+    resistances = [v for v in (_safe_float(v) for v in resistances) if v is not None]
+    invalidation = _safe_float(invalidation)
+    target_zones = [v for v in (_safe_float(v) for v in target_zones) if v is not None]
+
     analyzers = {
         "TrendAgent": long_evidence[:2] if long_evidence else short_evidence[:2],
         "MomentumAgent": [e for e in long_evidence + short_evidence + watch_evidence if "RSI" in e or "MACD" in e],
@@ -2373,11 +2580,42 @@ def explain_intraday_setup(symbol: str, timeframe: str = "15m") -> dict:
         ],
     }
 
+    position_sizing: dict = {}
+    rr_frame: dict = {}
+    trade_plan: dict = {}
+    if (
+        isinstance(latest_close, (int, float))
+        and isinstance(invalidation, (int, float))
+        and latest_close > 0
+    ):
+        position_sizing = _compute_intraday_position_sizing(
+            sym, latest_close, invalidation
+        )
+        if not position_sizing.get("error"):
+            rps = position_sizing["risk_per_share"]
+            shares = position_sizing["cash"]["shares"]
+            rupee_risk = round(rps * shares, 2)
+            t1_val = target_zones[0] if target_zones else None
+            t2_val = target_zones[1] if len(target_zones) > 1 else None
+            rr_frame = {"risk_per_share": rps, "rupee_risk": rupee_risk}
+            if isinstance(t1_val, (int, float)):
+                t1_reward_per_share = abs(t1_val - latest_close)
+                rr_frame["t1_rr"] = round(t1_reward_per_share / rps, 2) if rps > 0 else 0
+                rr_frame["t1_rupee_reward"] = round(t1_reward_per_share * shares, 2)
+            if isinstance(t2_val, (int, float)):
+                t2_reward_per_share = abs(t2_val - latest_close)
+                rr_frame["t2_rr"] = round(t2_reward_per_share / rps, 2) if rps > 0 else 0
+                rr_frame["t2_rupee_reward"] = round(t2_reward_per_share * shares, 2)
+
+        trade_plan = _build_trade_plan(
+            setup_label, latest_close, invalidation, target_zones, indicators
+        )
+
     return {
         "symbol": sym,
         "timeframe": timeframe,
         "data_mode": "intraday",
-        "source": "SQLite intraday_ohlcv",
+        "source": ind.get("source", "PostgreSQL intraday.ohlcv_bars"),
         "latest_timestamp": ind.get("latest_timestamp"),
         "latest_close": latest_close,
         "setup_label": setup_label,
@@ -2396,6 +2634,9 @@ def explain_intraday_setup(symbol: str, timeframe: str = "15m") -> dict:
         "levels": levels,
         "invalidation_level": invalidation,
         "technical_target_zones": target_zones,
+        "position_sizing": position_sizing,
+        "risk_reward_frame": rr_frame,
+        "trade_plan": trade_plan,
         "disclaimer": (
             "Research and learning only. Not investment advice. Not a recommendation to buy, "
             "sell, trade, copy, or replicate. Users are responsible for their own risk, "
@@ -2411,7 +2652,7 @@ def run_intraday_screener(
     top_n: int = 10,
     symbols: list[str] | None = None,
 ) -> dict:
-    """Run an intraday screener (SQLite-backed or live yfinance fallback).
+    """Run an intraday screener (PostgreSQL-backed or live yfinance fallback).
 
     Screen types:
       Original : momentum, breakouts, vcp, supertrend, levels, all
@@ -2439,10 +2680,14 @@ def run_intraday_screener(
             pg_has_intraday = bool(pg_rows and pg_rows[0][0])
         except Exception:
             pg_has_intraday = False
-    sqlite_has_intraday = DB_PATH.exists() and _sqlite_table_exists("intraday_ohlcv")
-
+        if symbols is not None:
+            # Explicit symbol scans should use the per-symbol intraday path even
+            # when the table is currently empty. explain_intraday_setup can
+            # seed/report each requested symbol; the broad yfinance fallback is
+            # only for universe scans with no explicit symbol list.
+            pg_has_intraday = True
     # ── Intraday store unavailable → live yfinance fallback ─────────────────
-    if not pg_has_intraday and not sqlite_has_intraday:
+    if not pg_has_intraday:
         strategy_map = {
             # original
             "breakouts":              ["ema", "volume", "macd"],
@@ -2488,9 +2733,9 @@ def run_intraday_screener(
         result["description"]    = _descriptions.get(screen_key, "")
         result["data_mode"]      = "live-yfinance-fallback"
         result["data_source"]    = "NSE website constituents + yfinance candles"
-        result["source_priority"] = ["PostgreSQL intraday.ohlcv_bars", "SQLite intraday_ohlcv", "NSE website live constituents", "yfinance candles"]
+        result["source_priority"] = ["PostgreSQL intraday.ohlcv_bars", "NSE website live constituents", "yfinance candles"]
         result["fallback_note"]  = (
-            "PostgreSQL/SQLite intraday bars not available; fetched NSE website constituents first, "
+            "PostgreSQL intraday bars not available; fetched NSE website constituents first, "
             "then used yfinance only for intraday candle history."
         )
         return result
@@ -2505,14 +2750,6 @@ def run_intraday_screener(
                 symbols = [r[0] for r in rows]
             except Exception:
                 symbols = []
-        if not symbols and sqlite_has_intraday:
-            conn = _db_conn()
-            rows = conn.execute(
-                "SELECT DISTINCT UPPER(symbol) FROM intraday_ohlcv WHERE timeframe=? ORDER BY UPPER(symbol)",
-                (timeframe,),
-            ).fetchall()
-            conn.close()
-            symbols = [r[0] for r in rows]
 
     results: list[dict[str, Any]] = []
     errors: list[dict[str, str]] = []
@@ -2557,7 +2794,7 @@ def run_intraday_screener(
         "screen_type": screen_key,
         "timeframe": timeframe,
         "data_mode": "intraday",
-        "source": "PostgreSQL intraday.ohlcv_bars" if pg_has_intraday else "SQLite intraday_ohlcv",
+        "source": "PostgreSQL intraday.ohlcv_bars",
         "min_score": min_score,
         "scanned": len(symbols),
         "count": len(results[:top_n]),
@@ -2597,13 +2834,18 @@ def get_data_health() -> dict:
 
 def find_latest_report(report_type: str = "any") -> dict:
     """List available generated reports."""
-    report_dirs = [REPORTS / "latest", REPORTS / "generated_csv"]
+    report_dirs = [
+        REPORTS / "latest",
+        REPORTS / "generated",
+        REPORTS / "generated_csv",
+        REPORTS / "strategy_council",
+    ]
     files: list[dict] = []
     for d in report_dirs:
         if not d.exists():
             continue
         for f in sorted(d.iterdir(), reverse=True):
-            if f.is_file() and f.suffix in (".html", ".csv", ".json"):
+            if f.is_file() and f.suffix in (".html", ".csv", ".json", ".md", ".pdf"):
                 keyword = report_type.lower()
                 if keyword == "any" or keyword in f.name.lower():
                     files.append({
@@ -3129,17 +3371,70 @@ def _market_knowledge_investopedia_url(query: str) -> str:
     return ""
 
 
-def fetch_pdf_text(url: str, max_pages: int = 15) -> dict:
+def _vision_transcribe_page(page, page_no: int, dpi: int = 180) -> str:
+    """Render a PDF page to PNG and ask the OpenAI vision model to transcribe it.
+
+    Used as a fallback for image-heavy / scanned pages where PyMuPDF text
+    extraction yields little or no usable text. Returns the transcribed text
+    or an empty string if the call fails or the API key is missing.
+    """
+    import os, io, base64
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if not api_key:
+        return ""
+    try:
+        from openai import OpenAI
+        zoom = dpi / 72.0
+        import fitz  # PyMuPDF
+        pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
+        png_bytes = pix.tobytes("png")
+        b64 = base64.b64encode(png_bytes).decode("ascii")
+        client = OpenAI(api_key=api_key, timeout=120.0)
+        model = os.environ.get("OPENAI_VISION_MODEL") or os.environ.get("OPENAI_MODEL") or "gpt-4o"
+        resp = client.chat.completions.create(
+            model=model,
+            messages=[{
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": (
+                        f"Transcribe page {page_no} VERBATIM. Preserve every number, "
+                        f"row label and column header. Render tables as pipe-separated "
+                        f"Markdown (| col | col |). Do NOT summarise, do NOT add commentary. "
+                        f"If the page contains a Profit & Loss, Balance Sheet, Cash Flow or "
+                        f"notes table, reproduce ALL rows and columns exactly as printed."
+                    )},
+                    {"type": "image_url",
+                     "image_url": {"url": f"data:image/png;base64,{b64}", "detail": "high"}},
+                ],
+            }],
+            max_tokens=4096,
+            temperature=0,
+        )
+        return (resp.choices[0].message.content or "").strip()
+    except Exception:
+        return ""
+
+
+def fetch_pdf_text(url: str, max_pages: int = 15, vision_fallback: bool = True,
+                   vision_threshold: int = 200) -> dict:
     """Download a PDF from any URL and extract its text content using PyMuPDF.
 
     Handles BSE results PDFs, NSE circulars, concall transcripts, annual reports.
     Returns structured dict with per-page text, page count, and metadata.
+
+    If ``vision_fallback`` is True, any page whose extracted text is shorter
+    than ``vision_threshold`` characters is re-extracted via the OpenAI vision
+    model (image → text), which captures scanned pages and image-only tables
+    that PyMuPDF cannot read.
     """
     import io
     import requests
+    original_url = url
+    url = _normalise_http_url(url)
     try:
+        resolved_url = _resolve_embedded_pdf_url(url) or url
         resp = requests.get(
-            url,
+            resolved_url,
             headers={
                 "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
                 "Accept": "application/pdf,*/*",
@@ -3148,10 +3443,13 @@ def fetch_pdf_text(url: str, max_pages: int = 15) -> dict:
             allow_redirects=True,
         )
         if resp.status_code != 200:
-            return {"url": url, "error": f"HTTP {resp.status_code}"}
+            result = {"url": original_url, "error": f"HTTP {resp.status_code}"}
+            if resolved_url != url:
+                result["resolved_url"] = resolved_url
+            return result
 
         content_type = resp.headers.get("Content-Type", "")
-        if "pdf" not in content_type.lower() and not url.lower().endswith(".pdf"):
+        if "pdf" not in content_type.lower() and not resolved_url.lower().endswith(".pdf"):
             # Try to proceed anyway — some BSE URLs don't set content-type correctly
             pass
 
@@ -3166,23 +3464,66 @@ def fetch_pdf_text(url: str, max_pages: int = 15) -> dict:
         for i in range(pages_to_read):
             page = doc[i]
             text = page.get_text("text").strip()
+            method = "text"
+            if vision_fallback and len(text) < vision_threshold:
+                vision_text = _vision_transcribe_page(page, i + 1)
+                if vision_text and len(vision_text) > len(text):
+                    text = vision_text
+                    method = "vision"
             if text:
-                pages_text.append({"page": i + 1, "text": text})
-                full_text_parts.append(f"--- Page {i + 1} ---\n{text}")
+                pages_text.append({"page": i + 1, "text": text, "extraction_method": method})
+                full_text_parts.append(f"--- Page {i + 1} ({method}) ---\n{text}")
 
         doc.close()
 
         full_text = "\n\n".join(full_text_parts)
-        return {
-            "url":          url,
+        result = {
+            "url":          original_url,
+            "source_type":  "pdf",
             "total_pages":  total_pages,
             "pages_read":   pages_to_read,
             "truncated":    total_pages > max_pages,
             "text":         full_text,
             "pages":        pages_text,
         }
+        if resolved_url != url:
+            result["resolved_url"] = resolved_url
+        return result
     except Exception as e:
-        return {"url": url, "error": str(e)}
+        result = {"url": original_url, "error": str(e)}
+        resolved_url = _resolve_embedded_pdf_url(url) or url
+        if resolved_url != url:
+            result["resolved_url"] = resolved_url
+        return result
+
+
+def _normalise_http_url(url: str) -> str:
+    """Remove paste/wrap whitespace from HTTP URLs."""
+    text = (url or "").strip()
+    if text.lower().startswith(("http://", "https://")):
+        return re.sub(r"\s+", "", text)
+    return text
+
+
+def _resolve_embedded_pdf_url(url: str) -> str | None:
+    """Resolve corporate PDF-viewer URLs that carry the real PDF in query params."""
+    from urllib.parse import parse_qs, unquote, urljoin, urlparse
+
+    url = _normalise_http_url(url)
+    parsed = urlparse(url or "")
+    if parsed.scheme not in {"http", "https"}:
+        return None
+
+    for key, values in parse_qs(parsed.query, keep_blank_values=True).items():
+        if key.lower() not in {"src", "file", "url", "pdf", "path", "document"}:
+            continue
+        for value in values:
+            candidate = unquote(value or "").strip()
+            candidate = re.sub(r"\s+", "", candidate)
+            if not candidate or ".pdf" not in candidate.lower():
+                continue
+            return urljoin(url, candidate)
+    return None
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -3209,7 +3550,7 @@ def get_portfolio_exposure(sector: str = None) -> dict:
         )
         symbols = df[sym_col].str.upper().tolist()
 
-        # Sector mapping from PostgreSQL stage snapshot, with SQLite fallback.
+        # Sector mapping from PostgreSQL stage snapshot.
         sector_counts: dict[str, int] = {}
         sym_sector: dict[str, str] = {}
         try:
@@ -3226,7 +3567,7 @@ def get_portfolio_exposure(sector: str = None) -> dict:
             sym_sector = {r[0]: (r[1] or "Unknown") for r in rows}
         except Exception:
             pass
-        if not sym_sector and DB_PATH.exists():
+        if not sym_sector and _legacy_sqlite_fallbacks_enabled() and DB_PATH.exists():
             conn = _db_conn()
             placeholders = ",".join("?" * len(symbols))
             rows = conn.execute(
@@ -3299,8 +3640,8 @@ def find_portfolio_overlap(screener: str = "stage2") -> dict:
                     "WHERE snapshot_date=(SELECT MAX(snapshot_date) FROM scores.stage_snapshots)"
                 )
         except Exception:
-            if not DB_PATH.exists():
-                return {"error": "Stage snapshots DB not found"}
+            if not _legacy_sqlite_fallbacks_enabled() or not DB_PATH.exists():
+                return {"error": "PostgreSQL stage snapshots unavailable"}
             conn = _db_conn()
             if screener == "stage2":
                 rows = conn.execute(
@@ -3949,29 +4290,6 @@ def get_top_gainers_losers(
     """
     try:
         s = _get_live_session()
-        # Use the NSE built-in variations endpoint for Nifty/BankNifty (faster)
-        _BUILTIN_KEYS = {
-            "NIFTY 50":       "NIFTY",
-            "NIFTY BANK":     "BANKNIFTY",
-            "NIFTY NEXT 50":  "NIFTYNEXT50",
-        }
-        builtin_key = _BUILTIN_KEYS.get(index.upper())
-
-        if builtin_key:
-            g_url = "https://www.nseindia.com/api/live-analysis-variations?index=gainers"
-            l_url = "https://www.nseindia.com/api/live-analysis-variations?index=losers"
-            g_data = s.get(g_url, timeout=10).json()
-            gainers_raw = g_data.get(builtin_key, {}).get("data", [])[:top_n]
-            # losers endpoint may be missing — try allIndices losers from NIFTY 500 instead
-            l_data = s.get(l_url, timeout=10).json()
-            losers_raw = l_data.get(builtin_key, {}).get("data", [])
-            if not losers_raw:
-                losers_raw = []
-        else:
-            gainers_raw = []
-            losers_raw  = []
-
-        # For broad indexes or if built-in losers is empty, fetch from equity-stockIndices
         idx_param = index.upper().replace(" ", "%20")
         r2 = s.get(
             f"https://www.nseindia.com/api/equity-stockIndices?index={idx_param}",
@@ -4434,7 +4752,7 @@ def _get_index_symbols(index: str = "NIFTY 50", top_n: int = 50) -> list[str]:
         syms = [r[0] for r in rows]
     except Exception:
         try:
-            if DB_PATH.exists():
+            if _legacy_sqlite_fallbacks_enabled() and DB_PATH.exists():
                 conn = _db_conn()
                 rows = conn.execute(
                     "SELECT DISTINCT symbol FROM stage_snapshots "
@@ -4608,7 +4926,9 @@ def get_sector_heat_calendar(month: int | None = None) -> dict:
         "headwinds":          headwinds,
         "neutral":            neutral,
         "heatmap":            heatmap,
-        "source":             "yfinance NSE sector indices" if use_yf else "local nse_index_data.csv",
+        "source":             "yfinance NSE sector indices"
+                              if use_yf
+                              else "PostgreSQL market.index_eod / seasonal cache (CSV fallback)",
         "note": (
             f"Seasonal analysis based on 7yr history. "
             f"{len(tailwinds)} sector(s) show historical tailwind in {month_name}."
@@ -5206,8 +5526,22 @@ def compare_stocks(
     rows: list[dict] = []
 
     for raw in symbols:
-        sym = raw.strip().upper()
-        row: dict = {"symbol": sym}
+        input_sym = raw.strip().upper()
+        resolution = resolve_symbol(input_sym)
+        sym = str(resolution.get("symbol") or input_sym).strip().upper()
+        row: dict = {
+            "symbol": sym,
+            "input_symbol": input_sym,
+            "resolved_symbol": resolution.get("symbol"),
+            "symbol_resolution_confidence": resolution.get("confidence"),
+            "missing_evidence": [],
+        }
+        if not resolution.get("symbol"):
+            row["resolution_error"] = resolution.get("error") or f"No exact NSE symbol found for '{input_sym}'"
+            row["missing_evidence"].append("symbol_resolution")
+            row["evidence_coverage"] = "missing"
+            rows.append(row)
+            continue
 
         if fetch_tech:
             try:
@@ -5232,10 +5566,13 @@ def compare_stocks(
                         "stance":           snap.get("stance"),
                         "narrative":        snap.get("narrative"),
                     })
+                    row["missing_evidence"].extend(snap.get("missing_evidence") or [])
                 else:
                     row["tech_error"] = snap["error"]
+                    row["missing_evidence"].extend(snap.get("missing_evidence") or ["technical_snapshot"])
             except Exception as e:
                 row["tech_error"] = str(e)
+                row["missing_evidence"].append("technical_snapshot")
 
         if fetch_fund:
             try:
@@ -5258,8 +5595,13 @@ def compare_stocks(
                     })
                 else:
                     row["fund_error"] = sr["error"]
+                    row["missing_evidence"].append("screener_fundamentals")
             except Exception as e:
                 row["fund_error"] = str(e)
+                row["missing_evidence"].append("screener_fundamentals")
+
+        row["missing_evidence"] = list(dict.fromkeys(row.get("missing_evidence") or []))
+        row["evidence_coverage"] = "complete" if not row["missing_evidence"] else "partial"
 
         rows.append(row)
 
@@ -5273,10 +5615,23 @@ def compare_stocks(
 
     return {
         "symbols":          [r["symbol"] for r in rows],
+        "input_symbols":    [str(s).strip().upper() for s in symbols if str(s).strip()],
+        "unresolved_symbols": [r["input_symbol"] for r in rows if "symbol_resolution" in (r.get("missing_evidence") or [])],
         "as_of":            date.today().isoformat(),
         "aspects":          aspects or ["both"],
         "comparison_table": comparison_table,
         "stock_details":    rows,
+        "missing_evidence": list(dict.fromkeys(
+            ev
+            for r in rows
+            for ev in (r.get("missing_evidence") or [])
+        )),
+        "evidence_coverage": "complete" if all(not (r.get("missing_evidence") or []) for r in rows) else "partial",
+        "source_trail": [
+            "resolve_symbol",
+            *(["get_symbol_snapshot"] if fetch_tech else []),
+            *(["scrape_screener_in"] if fetch_fund else []),
+        ],
     }
 
 
@@ -5713,8 +6068,8 @@ TOOL_REGISTRY: dict[str, Any] = {
     "get_intraday_source_health": (
         get_intraday_source_health,
         (
-            "Check SQLite intraday source health. Reports whether intraday_ohlcv and "
-            "related live tables exist, row counts, latest timestamps, freshness, and "
+            "Check PostgreSQL intraday source health. Reports whether intraday.quote_snapshots, "
+            "intraday.ohlcv_bars, and related tables exist, row counts, latest timestamps, freshness, and "
             "overall intraday status. Use before intraday calculations."
         ),
         {
@@ -5728,8 +6083,8 @@ TOOL_REGISTRY: dict[str, Any] = {
     "get_intraday_bars": (
         get_intraday_bars,
         (
-            "Read OHLCV bars from the SQLite intraday_ohlcv table for one symbol and "
-            "timeframe. Returns bars with source metadata and does not use EOD/yfinance fallback."
+            "Read OHLCV bars from PostgreSQL intraday.ohlcv_bars for one symbol and timeframe. "
+            "When PG has no bars, seed PG from yfinance candles and return source metadata."
         ),
         {
             "type": "object",
@@ -5745,7 +6100,7 @@ TOOL_REGISTRY: dict[str, Any] = {
         get_intraday_levels,
         (
             "Compute support, resistance, pivot, EMA, and latest close levels from "
-            "SQLite intraday_ohlcv bars. Technical levels only; not a trade recommendation."
+            "PostgreSQL intraday.ohlcv_bars. Technical levels only; not a trade recommendation."
         ),
         {
             "type": "object",
@@ -5760,8 +6115,7 @@ TOOL_REGISTRY: dict[str, Any] = {
         compute_intraday_indicators,
         (
             "Compute RSI, MACD, Supertrend, EMA, Bollinger, ATR, volume ratio, and "
-            "a research setup score from SQLite intraday_ohlcv bars. Does not use "
-            "EOD/yfinance fallback."
+            "a research setup score from PostgreSQL intraday.ohlcv_bars."
         ),
         {
             "type": "object",
@@ -5775,7 +6129,7 @@ TOOL_REGISTRY: dict[str, Any] = {
     "explain_intraday_setup": (
         explain_intraday_setup,
         (
-            "Explain a symbol's SQLite-backed intraday setup using analyzer-style evidence, "
+            "Explain a symbol's PostgreSQL-backed intraday setup using analyzer-style evidence, "
             "research-only labels LONG_SETUP/SHORT_SETUP/WATCH/AVOID/SETUP_INVALIDATED, "
             "technical target zones, and setup invalidation levels."
         ),
@@ -5791,7 +6145,7 @@ TOOL_REGISTRY: dict[str, Any] = {
     "run_intraday_screener": (
         run_intraday_screener,
         (
-            "Run an intraday screener (SQLite-backed or live yfinance fallback). "
+            "Run an intraday screener (PostgreSQL-backed or live yfinance fallback). "
             "Original types: momentum, breakouts, vcp, supertrend, levels, all. "
             "New types: opening_range_breakout (ORB — first 15-30min range break + volume), "
             "gap_and_go (gap continuation with MACD + volume), "
@@ -6406,7 +6760,7 @@ def get_strategy_recommendations(symbol: str, expiry: str | None = None) -> dict
 
 def refresh_fno_eod_data() -> dict:
     """
-    Download the latest F&O EOD bhavcopy from NSE archives and store in SQLite.
+    Download the latest F&O EOD bhavcopy from NSE archives and store in PostgreSQL.
     Returns summary: trade_date, rows_stored, options count, futures count.
     """
     return _fno_load_latest()
@@ -7317,7 +7671,9 @@ TOOL_REGISTRY.update({
 # PG: First-class document analysis capability for Agent Adda
 # ─────────────────────────────────────────────────────────────────────────────
 
-def analyze_document(source: str, max_pages: int = 30) -> dict:
+def analyze_document(source: str, max_pages: int = 50,
+                     vision_fallback: bool = True,
+                     vision_threshold: int = 200) -> dict:
     """Read and extract text from a local file (PDF, DOCX, TXT, CSV) or a web URL.
 
     Detects the source type automatically:
@@ -7326,6 +7682,10 @@ def analyze_document(source: str, max_pages: int = 30) -> dict:
       - .docx            → extract text with python-docx paragraph by paragraph
       - .txt / .csv / .md → read as plain text
 
+    For PDFs, pages whose text extraction yields < ``vision_threshold`` chars
+    are automatically re-transcribed using the OpenAI vision model so that
+    scanned pages and image-only tables are recovered.
+
     Returns structured dict with text content, metadata, and page/section info.
     """
     import os
@@ -7333,9 +7693,13 @@ def analyze_document(source: str, max_pages: int = 30) -> dict:
 
     # ── URL path ──────────────────────────────────────────────────────────
     if source.lower().startswith(("http://", "https://")):
+        source = _normalise_http_url(source)
+        resolved_pdf_url = _resolve_embedded_pdf_url(source)
         # Check if it's a PDF URL
-        if source.lower().endswith(".pdf") or "/pdf/" in source.lower():
-            return fetch_pdf_text(source, max_pages=max_pages)
+        if resolved_pdf_url or source.lower().endswith(".pdf") or "/pdf/" in source.lower():
+            return fetch_pdf_text(source, max_pages=max_pages,
+                                  vision_fallback=vision_fallback,
+                                  vision_threshold=vision_threshold)
         # Otherwise scrape as web page
         result = fetch_article_content(source, max_chars=15000)
         result["source_type"] = "web_page"
@@ -7371,9 +7735,15 @@ def analyze_document(source: str, max_pages: int = 30) -> dict:
             for i in range(pages_to_read):
                 page = doc[i]
                 text = page.get_text("text").strip()
+                method = "text"
+                if vision_fallback and len(text) < vision_threshold:
+                    vision_text = _vision_transcribe_page(page, i + 1)
+                    if vision_text and len(vision_text) > len(text):
+                        text = vision_text
+                        method = "vision"
                 if text:
-                    pages_text.append({"page": i + 1, "text": text})
-                    full_text_parts.append(f"--- Page {i + 1} ---\n{text}")
+                    pages_text.append({"page": i + 1, "text": text, "extraction_method": method})
+                    full_text_parts.append(f"--- Page {i + 1} ({method}) ---\n{text}")
             doc.close()
             full_text = "\n\n".join(full_text_parts)
             return {
@@ -7459,7 +7829,8 @@ TOOL_REGISTRY.update({
         ("Read and extract text from a local file (PDF, DOCX, TXT, CSV) or a web URL. "
          "Use this for document analysis — annual reports, research papers, filings, "
          "concall transcripts, presentations. Returns full text content with metadata. "
-         "For PDFs: page-by-page extraction. For DOCX: paragraphs + tables. "
+         "For PDFs: page-by-page extraction with automatic vision/OCR fallback "
+         "for image-only or scanned pages. For DOCX: paragraphs + tables. "
          "For URLs: smart web scraping or PDF download."),
         {
             "type": "object",
@@ -7470,8 +7841,13 @@ TOOL_REGISTRY.update({
                 },
                 "max_pages": {
                     "type": "integer",
-                    "description": "Max pages to read for PDFs (default 30)",
-                    "default": 30,
+                    "description": "Max pages to read for PDFs (default 50)",
+                    "default": 50,
+                },
+                "vision_fallback": {
+                    "type": "boolean",
+                    "description": "If true, pages with little extractable text are re-transcribed via OpenAI vision (default true).",
+                    "default": True,
                 },
             },
             "required": ["source"],

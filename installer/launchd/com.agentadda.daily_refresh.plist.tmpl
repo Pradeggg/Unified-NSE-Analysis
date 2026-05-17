@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Agent Adda — Daily Refresh launchd template.
+     Placeholders __VENV__ and __ROOT__ are substituted by setup_wizard.py.
+     Schedule: every weekday at 16:15 IST (post-market close).
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key><string>com.agentadda.daily_refresh</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>__VENV__/bin/python3</string>
+        <string>__ROOT__/daily_refresh.py</string>
+    </array>
+    <key>WorkingDirectory</key><string>__ROOT__</string>
+    <key>StartCalendarInterval</key>
+    <array>
+        <dict><key>Hour</key><integer>16</integer><key>Minute</key><integer>15</integer><key>Weekday</key><integer>1</integer></dict>
+        <dict><key>Hour</key><integer>16</integer><key>Minute</key><integer>15</integer><key>Weekday</key><integer>2</integer></dict>
+        <dict><key>Hour</key><integer>16</integer><key>Minute</key><integer>15</integer><key>Weekday</key><integer>3</integer></dict>
+        <dict><key>Hour</key><integer>16</integer><key>Minute</key><integer>15</integer><key>Weekday</key><integer>4</integer></dict>
+        <dict><key>Hour</key><integer>16</integer><key>Minute</key><integer>15</integer><key>Weekday</key><integer>5</integer></dict>
+    </array>
+    <key>StandardOutPath</key><string>/tmp/agentadda_daily_refresh.log</string>
+    <key>StandardErrorPath</key><string>/tmp/agentadda_daily_refresh.err</string>
+    <key>RunAtLoad</key><false/>
+</dict>
+</plist>

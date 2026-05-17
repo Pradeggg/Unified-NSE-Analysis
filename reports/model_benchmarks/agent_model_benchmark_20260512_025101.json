@@ -1,0 +1,967 @@
+{
+  "generated_at": "2026-05-12T02:48:04",
+  "benchmark_design": "docs/superpowers/specs/2026-05-12-agent-model-benchmark-design.md",
+  "runs": {
+    "openai": {
+      "provider": "openai",
+      "model": "gpt-4o",
+      "backend_status": {
+        "provider": "openai",
+        "model": "gpt-4o",
+        "backend": "OpenAI (gpt-4o)",
+        "switch": {
+          "status": "ok",
+          "provider": "openai",
+          "model": "gpt-4o",
+          "backend": "OpenAI (gpt-4o)"
+        }
+      },
+      "cases": [
+        {
+          "case_id": "market_overview",
+          "category": "market_overview",
+          "query": "Give me a current NSE market overview with NIFTY, BANKNIFTY, breadth, FII/DII flow, and top risks. Be explicit about data freshness.",
+          "notes": "",
+          "status": "ok",
+          "elapsed_seconds": 0.432,
+          "backend": "OpenAI (gpt-4o)",
+          "intent": "market_overview",
+          "answer": "\n▶ LIVE MARKET\n  NIFTY 50: 23,815.85  (-1.49%)\n  NIFTY BANK: 54,439.90  (-1.57%)\n  NIFTY MIDCAP SELECT: 14,333.20  (-1.09%)\n  NIFTY MIDCAP 50: 17,481.05  (-0.83%)\n  NIFTY MIDCAP 100: 61,258.40  (-1.05%)\n  Live breadth: 117 advances / 384 declines\n  Source: NSE live API | As of: 2026-05-12 02:48:05\n\n▶ DB UNIVERSE CONTEXT\n  Advances: 282  Declines: 694  A/D ratio: 0.41\n  Universe avg RS: +0.0%\n  Stage dist: Stage 1: 634 | Stage 2: 187 | Stage 3: 7 | Stage 4: 94 | Unknown: 58\n\n▶ SOURCE TRAIL\n  get_live_market_overview: ok\n  get_market_breadth: ok\n\n━━━ Not investment advice. For research and learning only. ━━━\n\n_Mode: Intraday | Sources: NSE live API + DB breadth | Market: NSE: CLOSED, opens 09:15 | Clock: Tue, 12 May 2026 02:48:05 IST_",
+          "answer_excerpt": "\n▶ LIVE MARKET\n  NIFTY 50: 23,815.85  (-1.49%)\n  NIFTY BANK: 54,439.90  (-1.57%)\n  NIFTY MIDCAP SELECT: 14,333.20  (-1.09%)\n  NIFTY MIDCAP 50: 17,481.05  (-0.83%)\n  NIFTY MIDCAP 100: 61,258.40  (-1.05%)\n  Live breadth: 117 advances / 384 declines\n  Source: NSE live API | As of: 2026-05-12 02:48:05\n\n▶ DB UNIVERSE CONTEXT\n  Advances: 282  Declines: 694  A/D ratio: 0.41\n  Universe avg RS: +0.0%\n  Stage dist: Stage 1: 634 | Stage 2: 187 | Stage 3: 7 | Stage 4: 94 | Unknown: 58\n\n▶ SOURCE TRAIL\n  get_live_market_overview: ok\n  get_market_breadth: ok\n\n━━━ Not investment advice. For research and learning only. ━━━\n\n_Mode: Intraday | Sources: NSE live API + DB breadth | Market: NSE: CLOSED, opens 09:15 | Clock: Tue, 12 May 2026 02:48:05 IST_",
+          "trace_summary": {
+            "tool_count": 2,
+            "tools": [
+              "get_live_market_overview",
+              "get_market_breadth"
+            ],
+            "unique_tools": [
+              "get_live_market_overview",
+              "get_market_breadth"
+            ],
+            "errors": [],
+            "intents": [
+              "market_overview"
+            ]
+          },
+          "answer_metrics": {
+            "chars": 742,
+            "words": 118,
+            "has_disclaimer": true,
+            "mentions_mode": true,
+            "mentions_source_trail": true,
+            "mentions_missing_data": false,
+            "mentions_market_clock": true
+          }
+        },
+        {
+          "case_id": "stock_technical_dmart",
+          "category": "stock_technical",
+          "query": "Give a full technical setup for DMART: Weinstein stage, RSI, ADX, MACD, supertrend, moving averages, RS rank, support/resistance, and source trail.",
+          "notes": "",
+          "status": "ok",
+          "elapsed_seconds": 0.085,
+          "backend": "OpenAI (gpt-4o)",
+          "intent": "stock_brief",
+          "answer": "━━━ AVENUE SUPERMARTS LIMITED (DMART) — Market Brief ━━━\nData: EOD snapshot 2026-05-11\n\n▶ SNAPSHOT\n  Price:  ₹4,389.40  (-0.29%)\n  Stage:  STAGE_2  (score: 0.46)\n  Signal: SELL\n  RS:     —\n  Sector: Other\n  MCap:   LARGE_CAP\n  Note:   DMART (STAGE 2) shows weak momentum with Technical Score 25, RSI 35 (oversold), and a SELL signal on BULLISH. Fundamenta\n  Missing evidence: relative_strength, fundamental_score\n\n▶ TECHNICAL SETUP\n  Derived score: 55 (derived from EOD MA alignment, RSI, MACD, Supertrend, and ADX)\n  RSI:        51.0\n  ADX:        23.1  (>25 = trending)\n  MACD:       bearish\n  Supertrend: SELL\n  MAs:        ▲ SMA50 | ▲ SMA200\n  52W Range:  ₹3,600 – ₹4,950  (-11.3% from high)\n  Volume:     0.3x avg\n\n▶ SECTOR CONTEXT\n  Sector:         Other\n  Stocks in DB:   677\n  Stage 2 count:  85\n  Buy signals:    1\n  Avg 1M chg:     +12.65%\n  Top peers:      AVL, CARRARO, IPCALAB, DCMSHRIRAM, MBAPL\n\n▶ SOURCE TRAIL\n  resolve_symbol: ok\n  get_symbol_snapshot: ok\n  get_technical_setup: ok\n  get_sector_context: ok\n\n━━━ Not investment advice. For research and learning only. ━━━\n\n_Mode: Historical | Sources: EOD CSV + DB snapshot | Market: NSE: CLOSED, opens 09:15 | Clock: Tue, 12 May 2026 02:48:05 IST_",
+          "answer_excerpt": "━━━ AVENUE SUPERMARTS LIMITED (DMART) — Market Brief ━━━\nData: EOD snapshot 2026-05-11\n\n▶ SNAPSHOT\n  Price:  ₹4,389.40  (-0.29%)\n  Stage:  STAGE_2  (score: 0.46)\n  Signal: SELL\n  RS:     —\n  Sector: Other\n  MCap:   LARGE_CAP\n  Note:   DMART (STAGE 2) shows weak momentum with Technical Score 25, RSI 35 (oversold), and a SELL signal on BULLISH. Fundamenta\n  Missing evidence: relative_strength, fundamental_score\n\n▶ TECHNICAL SETUP\n  Derived score: 55 (derived from EOD MA alignment, RSI, MACD, Supertrend, and ADX)\n  RSI:        51.0\n  ADX:        23.1  (>25 = trending)\n  MACD:       bearish\n  Supertrend: SELL\n  MAs:        ▲ SMA50 | ▲ SMA200\n  52W Range:  ₹3,600 – ₹4,950  (-11.3% from high)\n  Volume:     0.3x avg\n\n▶ SECTOR CONTEXT\n  Sector:         Other\n  Stocks in DB:   677\n  Stage 2 count:  85\n  Buy signals:    1\n  Avg 1M chg:     +12.65%\n  Top peers:      AVL, CARRARO, IPCALAB, DCMSHRIRAM, MBAPL\n\n▶ SOURCE TRAIL\n  resolve_symbol: ok\n  get_symbol_snapshot: ok\n  get_technical_setup: ok\n  get_sector_context: ok\n\n━━━ Not investment advice. For research and learning only. ━━━\n\n_Mode: Historical | Sources: EOD CSV + DB snapshot | Market: NSE: CLOSED, opens 09:15 | Clock: Tue, 12 May 2026 02:48:05 IST_",
+          "trace_summary": {
+            "tool_count": 4,
+            "tools": [
+              "resolve_symbol",
+              "get_symbol_snapshot",
+              "get_technical_setup",
+              "get_sector_context"
+            ],
+            "unique_tools": [
+              "get_sector_context",
+              "get_symbol_snapshot",
+              "get_technical_setup",
+              "resolve_symbol"
+            ],
+            "errors": [],
+            "intents": [
+              "stock_brief"
+            ]
+          },
+          "answer_metrics": {
+            "chars": 1213,
+            "words": 170,
+            "has_disclaimer": true,
+            "mentions_mode": true,
+            "mentions_source_trail": true,
+            "mentions_missing_data": true,
+            "mentions_market_clock": true
+          }
+        },
+        {
+          "case_id": "education_roce_roe",
+          "category": "market_education",
+          "query": "Explain how ROCE is different from ROE for an Indian equity investor, with a simple example and common traps.",
+          "notes": "",
+          "status": "ok",
+          "elapsed_seconds": 1.259,
+          "backend": "OpenAI (gpt-4o)",
+          "intent": "market_knowledge",
+          "answer": "Source-backed market education: Explain how ROCE is different from ROE for an Indian equity investor, with a simple example and common traps.\n\nWhat the sources say:\n- Wikipedia: Return on capital employed is an accounting ratio used in finance, valuation, and accounting. It is a useful measure for comparing the relative profitability of companies after taking into account the amount of capital used.\n- Wikipedia: The return on equity (ROE) is a measure of the profitability of a business in relation to its equity; where:ROE = ⁠Net Income/Average Shareholders' Equity⁠\n- Investopedia: Investopedia source URL found, but automated text extraction returned HTTP 403; no unsourced detail was inferred from it.\n\nConcept guide:\nROE focuses on profit generated on shareholders' equity. ROCE focuses on profit generated on total capital employed, so it is often better for comparing capital-intensive companies with different debt levels.\n\nSources:\n- Wikipedia - Return on capital employed: https://en.wikipedia.org/wiki/Return_on_capital_employed\n- Wikipedia - Return on equity: https://en.wikipedia.org/wiki/Return_on_equity\n- Investopedia - Investopedia concept article: https://www.investopedia.com/terms/r/roce.asp\n\nUse this as market education, not a buy/sell recommendation.\n\n_Mode: Historical | Sources: EOD CSV + DB snapshot | Market: NSE: CLOSED, opens 09:15 | Clock: Tue, 12 May 2026 02:48:05 IST_",
+          "answer_excerpt": "Source-backed market education: Explain how ROCE is different from ROE for an Indian equity investor, with a simple example and common traps.\n\nWhat the sources say:\n- Wikipedia: Return on capital employed is an accounting ratio used in finance, valuation, and accounting. It is a useful measure for comparing the relative profitability of companies after taking into account the amount of capital used.\n- Wikipedia: The return on equity (ROE) is a measure of the profitability of a business in relation to its equity; where:ROE = ⁠Net Income/Average Shareholders' Equity⁠\n- Investopedia: Investopedia source URL found, but automated text extraction returned HTTP 403; no unsourced detail was inferred from it.\n\nConcept guide:\nROE focuses on profit generated on shareholders' equity. ROCE focuses on profit generated on total capital employed, so it is often better for comparing capital-intensive companies with different debt levels.\n\nSources:\n- Wikipedia - Return on capital employed: https://en.wikipedia.org/wiki/Return_on_capital_employed\n- Wikipedia - Return on equity: https://en.wikipedia.org/wiki/Return_on_equity\n- Investopedia - Investopedia concept article: https://www.investopedia.com/terms/r/roce.asp\n\nUse this as market education, not a buy/sell recommendation.\n\n_Mode: Historical | Sources: EOD CSV + DB snapshot | Market: NSE: CLOSED, opens 09:15 | Clock: Tue, 12 May 2026 02:48:05 IST_",
+          "trace_summary": {
+            "tool_count": 1,
+            "tools": [
+              "search_market_knowledge"
+            ],
+            "unique_tools": [
+              "search_market_knowledge"
+            ],
+            "errors": [],
+            "intents": [
+              "market_knowledge"
+            ]
+          },
+          "answer_metrics": {
+            "chars": 1404,
+            "words": 197,
+            "has_disclaimer": false,
+            "mentions_mode": true,
+            "mentions_source_trail": false,
+            "mentions_missing_data": false,
+            "mentions_market_clock": true
+          }
+        },
+        {
+          "case_id": "compare_stocks",
+          "category": "comparative_research",
+          "query": "Compare DMART, TRENT, and VBL on technical strength, fundamentals, valuation, and risks. Do not assume missing values.",
+          "notes": "",
+          "status": "ok",
+          "elapsed_seconds": 0.083,
+          "backend": "OpenAI (gpt-4o)",
+          "intent": "stock_brief",
+          "answer": "━━━ TALBROS AUTO. COMP. LTD (TALBROAUTO) — Market Brief ━━━\nData: EOD snapshot 2026-05-11\n\n▶ SNAPSHOT\n  Price:  ₹327.80  (+0.95%)\n  Stage:  STAGE_1  (score: 0.00)\n  Signal: WEAK_HOLD\n  RS:     —\n  Sector: Other\n  MCap:   SMALL_CAP\n  Note:   TALBROAUTO (STAGE 1) shows mixed momentum with Technical Score 37, RSI 74 (overbought), and a WEAK_HOLD signal on BULLIS\n  Missing evidence: relative_strength\n\n▶ TECHNICAL SETUP\n  Derived score: 85 (derived from EOD MA alignment, RSI, MACD, Supertrend, and ADX)\n  RSI:        70.7\n  ADX:        77.4  (>25 = trending)\n  MACD:       bullish\n  Supertrend: SELL\n  MAs:        ▲ SMA20 | ▲ SMA50 | ▲ SMA200\n  52W Range:  ₹214 – ₹350  (-6.4% from high)\n  Volume:     0.9x avg\n\n▶ SECTOR CONTEXT\n  Sector:         Other\n  Stocks in DB:   677\n  Stage 2 count:  85\n  Buy signals:    1\n  Avg 1M chg:     +12.65%\n  Top peers:      AVL, CARRARO, IPCALAB, DCMSHRIRAM, MBAPL\n\n▶ RISKS / WATCH\n  ⚠ Not in Stage 2 (STAGE_1)\n\n▶ SOURCE TRAIL\n  resolve_symbol: ok\n  get_symbol_snapshot: ok\n  get_technical_setup: ok\n  get_sector_context: ok\n\n━━━ Not investment advice. For research and learning only. ━━━\n\n_Mode: Historical | Sources: EOD CSV + DB snapshot | Market: NSE: CLOSED, opens 09:15 | Clock: Tue, 12 May 2026 02:48:07 IST_",
+          "answer_excerpt": "━━━ TALBROS AUTO. COMP. LTD (TALBROAUTO) — Market Brief ━━━\nData: EOD snapshot 2026-05-11\n\n▶ SNAPSHOT\n  Price:  ₹327.80  (+0.95%)\n  Stage:  STAGE_1  (score: 0.00)\n  Signal: WEAK_HOLD\n  RS:     —\n  Sector: Other\n  MCap:   SMALL_CAP\n  Note:   TALBROAUTO (STAGE 1) shows mixed momentum with Technical Score 37, RSI 74 (overbought), and a WEAK_HOLD signal on BULLIS\n  Missing evidence: relative_strength\n\n▶ TECHNICAL SETUP\n  Derived score: 85 (derived from EOD MA alignment, RSI, MACD, Supertrend, and ADX)\n  RSI:        70.7\n  ADX:        77.4  (>25 = trending)\n  MACD:       bullish\n  Supertrend: SELL\n  MAs:        ▲ SMA20 | ▲ SMA50 | ▲ SMA200\n  52W Range:  ₹214 – ₹350  (-6.4% from high)\n  Volume:     0.9x avg\n\n▶ SECTOR CONTEXT\n  Sector:         Other\n  Stocks in DB:   677\n  Stage 2 count:  85\n  Buy signals:    1\n  Avg 1M chg:     +12.65%\n  Top peers:      AVL, CARRARO, IPCALAB, DCMSHRIRAM, MBAPL\n\n▶ RISKS / WATCH\n  ⚠ Not in Stage 2 (STAGE_1)\n\n▶ SOURCE TRAIL\n  resolve_symbol: ok\n  get_symbol_snapshot: ok\n  get_technical_setup: ok\n  get_sector_context: ok\n\n━━━ Not investment advice. For research and learning only. ━━━\n\n_Mode: Historical | Sources: EOD CSV + DB snapshot | Market: NSE: CLOSED, opens 09:15 | Clock: Tue, 12 May 2026 02:48:07 IST_",
+          "trace_summary": {
+            "tool_count": 4,
+            "tools": [
+              "resolve_symbol",
+              "get_symbol_snapshot",
+              "get_technical_setup",
+              "get_sector_context"
+            ],
+            "unique_tools": [
+              "get_sector_context",
+              "get_symbol_snapshot",
+              "get_technical_setup",
+              "resolve_symbol"
+            ],
+            "errors": [],
+            "intents": [
+              "stock_brief"
+            ]
+          },
+          "answer_metrics": {
+            "chars": 1251,
+            "words": 182,
+            "has_disclaimer": true,
+            "mentions_mode": true,
+            "mentions_source_trail": true,
+            "mentions_missing_data": true,
+            "mentions_market_clock": true
+          }
+        },
+        {
+          "case_id": "strength_validation",
+          "category": "validated_strength",
+          "query": "Out of MANINDS, THERMAX, and BAJAJCON, which show strength based on CANSLIM, RS, fundamental analysis, and Piotroski? Validate data and flag missing evidence.",
+          "notes": "",
+          "status": "ok",
+          "elapsed_seconds": 0.342,
+          "backend": "OpenAI (gpt-4o)",
+          "intent": "strength_validation",
+          "answer": "━━━ Validated Multi-Factor Strength ━━━\nData: EOD snapshot 2026-05-11\nNever infer missing CANSLIM, RS, fundamentals, or forensic data; missing fields are reported in missing_evidence.\n- MANINDS: score N/A; CANSLIM 15.00; RS N/A; Fund 69.25; Piotroski 8/9; Risk low; Missing evidence: relative_strength, financial_strength\n  Missing evidence: relative_strength, financial_strength\n- THERMAX: score N/A; CANSLIM 18.00; RS N/A; Fund N/A; Piotroski 7/9; Risk low; Missing evidence: relative_strength, enhanced_fund_score, financial_strength\n  Missing evidence: relative_strength, enhanced_fund_score, financial_strength\n- BAJAJCON: score N/A; CANSLIM 15.00; RS N/A; Fund 61.40; Piotroski 6/9; Risk low; Missing evidence: relative_strength, financial_strength\n  Missing evidence: relative_strength, financial_strength\n\n━━━ Not investment advice. For research and learning only. ━━━\n\n_Mode: Historical | Sources: EOD CSV + DB snapshot | Market: NSE: CLOSED, opens 09:15 | Clock: Tue, 12 May 2026 02:48:07 IST_",
+          "answer_excerpt": "━━━ Validated Multi-Factor Strength ━━━\nData: EOD snapshot 2026-05-11\nNever infer missing CANSLIM, RS, fundamentals, or forensic data; missing fields are reported in missing_evidence.\n- MANINDS: score N/A; CANSLIM 15.00; RS N/A; Fund 69.25; Piotroski 8/9; Risk low; Missing evidence: relative_strength, financial_strength\n  Missing evidence: relative_strength, financial_strength\n- THERMAX: score N/A; CANSLIM 18.00; RS N/A; Fund N/A; Piotroski 7/9; Risk low; Missing evidence: relative_strength, enhanced_fund_score, financial_strength\n  Missing evidence: relative_strength, enhanced_fund_score, financial_strength\n- BAJAJCON: score N/A; CANSLIM 15.00; RS N/A; Fund 61.40; Piotroski 6/9; Risk low; Missing evidence: relative_strength, financial_strength\n  Missing evidence: relative_strength, financial_strength\n\n━━━ Not investment advice. For research and learning only. ━━━\n\n_Mode: Historical | Sources: EOD CSV + DB snapshot | Market: NSE: CLOSED, opens 09:15 | Clock: Tue, 12 May 2026 02:48:07 IST_",
+          "trace_summary": {
+            "tool_count": 1,
+            "tools": [
+              "validate_strength_watchlist"
+            ],
+            "unique_tools": [
+              "validate_strength_watchlist"
+            ],
+            "errors": [],
+            "intents": [
+              "strength_validation"
+            ]
+          },
+          "answer_metrics": {
+            "chars": 1003,
+            "words": 125,
+            "has_disclaimer": true,
+            "mentions_mode": true,
+            "mentions_source_trail": false,
+            "mentions_missing_data": true,
+            "mentions_market_clock": true
+          }
+        },
+        {
+          "case_id": "intraday_nifty",
+          "category": "intraday_situation",
+          "query": "Intraday technical analysis of NIFTY50 right now. Use NSE website snapshot first, then yfinance only as fallback, and label stale data.",
+          "notes": "",
+          "status": "ok",
+          "elapsed_seconds": 7.67,
+          "backend": "OpenAI (gpt-4o)",
+          "intent": "llm_driven",
+          "answer": "**📊 Intraday Technical Analysis for NIFTY 50**\n\nAs of the snapshot from the NSE website, here is the current status for the NIFTY 50 index:\n\n- **Last Price:** ₹23,815.85\n- **Change:** -₹360.3 (-1.49%)\n- **Day High:** ₹23,997.45\n- **Day Low:** ₹23,799.10\n\n### Interpretation\n\n- **Price Action**: The index is trading significantly lower, down by 1.49% from its previous close. The movement today has seen the index finding support near ₹23,799.10, which is inline with its intra-day low.\n  \n- **Volatility**: With a range between ₹23,997.45 (high) and ₹23,799.10 (low), the market is experiencing mild volatility without a definitive breakout from its range as of the last recorded price.\n\n- **Trend Analysis**: Given the decline, bears appear to have stronger control short-term; however, support near the day's low could indicate a potential bounce if buying interest picks up around these levels.\n\nThis snapshot is from the NSE live API as of 02:48:10 IST on May 12, 2026, and will serve for reference until the market opens again at 09:15 IST.\n\n## ⚠️ Risks & Watch Items\n- **Support Level:** Watch for any movement below ₹23,799.10, which could indicate further downside risk.\n- **Resistance Level:** Any move past ₹23,997.45 might suggest a bullish reversal or a more stabilized condition.\n  \nThe above analysis is based on direct market data from the NSE as of now, offering a reliable temperature check pre-market.\n\n**📁 Source Trail**\n- _Mode: Intraday | Source: NSE website live snapshot_ \n\nAlways consider reviewing the data post-market open for further confirmations and updates as market conditions evolve.\n\n━━━ Not investment advice. For research and learning only. ━━━ \n\n## 💬 What to explore next\n1. `/chart NIFTY 50 1d --html` — Visualize the NIFTY 50's intraday chart for more insights on today's movements when the market opens.\n2. `/global` — Check global market trends and cues that might influence NIFTY's session today.\n3. `/search NIFTY analyst` — Find out analyst opinions or strategies recommended for NIFTY based on its current technical position.\n\n━━━ Not investment advice. For research and learning only. ━━━\n\n_Mode: Intraday | Sources: SQLite intraday/live tables | Market: NSE: CLOSED, opens 09:15 | Clock: Tue, 12 May 2026 02:48:07 IST_",
+          "answer_excerpt": "**📊 Intraday Technical Analysis for NIFTY 50**\n\nAs of the snapshot from the NSE website, here is the current status for the NIFTY 50 index:\n\n- **Last Price:** ₹23,815.85\n- **Change:** -₹360.3 (-1.49%)\n- **Day High:** ₹23,997.45\n- **Day Low:** ₹23,799.10\n\n### Interpretation\n\n- **Price Action**: The index is trading significantly lower, down by 1.49% from its previous close. The movement today has seen the index finding support near ₹23,799.10, which is inline with its intra-day low.\n  \n- **Volatility**: With a range between ₹23,997.45 (high) and ₹23,799.10 (low), the market is experiencing mild volatility without a definitive breakout from its range as of the last recorded price.\n\n- **Trend Analysis**: Given the decline, bears appear to have stronger control short-term; however, support near the day's low could indicate a potential bounce if buying interest picks up around these levels.\n\nThis snapshot is from the NSE live API as of 02:48:10 IST on May 12, 2026, and will serve for reference until the market opens again at 09:15 IST.\n\n## ⚠️ Risks & Watch Items\n- **Support Level:** Watch for any movement below ₹23,799.10, which could indicate further downside risk.\n- **Resistance Level:** Any move past ₹23,997.45 might suggest a bullish reversal or a more stabilized condition.\n  \nThe above analysis is based on direct market data from the NSE as of now, offering a reliable temperature check pre-market.\n\n**📁 Source Trail**\n- _Mode: Intraday | Source: NSE website live snapshot_ \n\nAlways consider reviewing the data post-market open for further confirmations and updates as market co",
+          "trace_summary": {
+            "tool_count": 1,
+            "tools": [
+              "get_nse_intraday_snapshot"
+            ],
+            "unique_tools": [
+              "get_nse_intraday_snapshot"
+            ],
+            "errors": [],
+            "intents": []
+          },
+          "answer_metrics": {
+            "chars": 2265,
+            "words": 360,
+            "has_disclaimer": true,
+            "mentions_mode": true,
+            "mentions_source_trail": true,
+            "mentions_missing_data": false,
+            "mentions_market_clock": true
+          }
+        },
+        {
+          "case_id": "tool_heavy_research",
+          "category": "tool_calls",
+          "query": "Research WELCORP with technical setup, sector context, latest catalysts, and forensic red flags. Show what tools were used.",
+          "notes": "",
+          "status": "ok",
+          "elapsed_seconds": 0.09,
+          "backend": "OpenAI (gpt-4o)",
+          "intent": "stock_brief",
+          "answer": "━━━ Welspun Corp Limited (WELCORP) — Market Brief ━━━\nData: EOD snapshot 2026-05-11\n\n▶ SNAPSHOT\n  Price:  ₹1,329.30  (+2.89%)\n  Stage:  STAGE_2  (score: 0.69)\n  Signal: WEAK_HOLD\n  RS:     —\n  Sector: Metals & Mining\n  MCap:   LARGE_CAP\n  Note:   WELCORP (STAGE 2) shows weak momentum with Technical Score 49, RSI 89 (overbought), and a WEAK_HOLD signal on STRONG_BUL\n  Missing evidence: relative_strength\n\n▶ TECHNICAL SETUP\n  Derived score: 65 (derived from EOD MA alignment, RSI, MACD, Supertrend, and ADX)\n  RSI:        85.1\n  ADX:        78.8  (>25 = trending)\n  MACD:       bullish\n  Supertrend: SELL\n  MAs:        ▲ SMA20 | ▲ SMA50 | ▲ SMA200\n  52W Range:  ₹664 – ₹1,342  (-1.0% from high)\n  Volume:     0.9x avg\n\n▶ SECTOR CONTEXT\n  Sector:         Metals & Mining\n  Stocks in DB:   18\n  Stage 2 count:  12\n  Buy signals:    0\n  Avg 1M chg:     +9.51%\n  Top peers:      GALLANTT, HINDALCO, GPIL, TATASTEEL, SARDAEN\n\n▶ RISKS / WATCH\n  ⚠ RSI overbought (>75)\n\n▶ SOURCE TRAIL\n  resolve_symbol: ok\n  get_symbol_snapshot: ok\n  get_technical_setup: ok\n  get_sector_context: ok\n\n━━━ Not investment advice. For research and learning only. ━━━\n\n_Mode: Historical | Sources: EOD CSV + DB snapshot | Market: NSE: CLOSED, opens 09:15 | Clock: Tue, 12 May 2026 02:48:15 IST_",
+          "answer_excerpt": "━━━ Welspun Corp Limited (WELCORP) — Market Brief ━━━\nData: EOD snapshot 2026-05-11\n\n▶ SNAPSHOT\n  Price:  ₹1,329.30  (+2.89%)\n  Stage:  STAGE_2  (score: 0.69)\n  Signal: WEAK_HOLD\n  RS:     —\n  Sector: Metals & Mining\n  MCap:   LARGE_CAP\n  Note:   WELCORP (STAGE 2) shows weak momentum with Technical Score 49, RSI 89 (overbought), and a WEAK_HOLD signal on STRONG_BUL\n  Missing evidence: relative_strength\n\n▶ TECHNICAL SETUP\n  Derived score: 65 (derived from EOD MA alignment, RSI, MACD, Supertrend, and ADX)\n  RSI:        85.1\n  ADX:        78.8  (>25 = trending)\n  MACD:       bullish\n  Supertrend: SELL\n  MAs:        ▲ SMA20 | ▲ SMA50 | ▲ SMA200\n  52W Range:  ₹664 – ₹1,342  (-1.0% from high)\n  Volume:     0.9x avg\n\n▶ SECTOR CONTEXT\n  Sector:         Metals & Mining\n  Stocks in DB:   18\n  Stage 2 count:  12\n  Buy signals:    0\n  Avg 1M chg:     +9.51%\n  Top peers:      GALLANTT, HINDALCO, GPIL, TATASTEEL, SARDAEN\n\n▶ RISKS / WATCH\n  ⚠ RSI overbought (>75)\n\n▶ SOURCE TRAIL\n  resolve_symbol: ok\n  get_symbol_snapshot: ok\n  get_technical_setup: ok\n  get_sector_context: ok\n\n━━━ Not investment advice. For research and learning only. ━━━\n\n_Mode: Historical | Sources: EOD CSV + DB snapshot | Market: NSE: CLOSED, opens 09:15 | Clock: Tue, 12 May 2026 02:48:15 IST_",
+          "trace_summary": {
+            "tool_count": 4,
+            "tools": [
+              "resolve_symbol",
+              "get_symbol_snapshot",
+              "get_technical_setup",
+              "get_sector_context"
+            ],
+            "unique_tools": [
+              "get_sector_context",
+              "get_symbol_snapshot",
+              "get_technical_setup",
+              "resolve_symbol"
+            ],
+            "errors": [],
+            "intents": [
+              "stock_brief"
+            ]
+          },
+          "answer_metrics": {
+            "chars": 1267,
+            "words": 183,
+            "has_disclaimer": true,
+            "mentions_mode": true,
+            "mentions_source_trail": true,
+            "mentions_missing_data": true,
+            "mentions_market_clock": true
+          }
+        },
+        {
+          "case_id": "multi_turn_1",
+          "category": "multi_turn_context",
+          "query": "Analyze WELCORP as a company and stock. Focus on what is known from the database and what still needs fresh evidence.",
+          "notes": "",
+          "status": "ok",
+          "elapsed_seconds": 0.044,
+          "backend": "OpenAI (gpt-4o)",
+          "intent": "stock_brief",
+          "answer": "━━━ Welspun Corp Limited (WELCORP) — Market Brief ━━━\nData: EOD snapshot 2026-05-11\n\n▶ SNAPSHOT\n  Price:  ₹1,329.30  (+2.89%)\n  Stage:  STAGE_2  (score: 0.69)\n  Signal: WEAK_HOLD\n  RS:     —\n  Sector: Metals & Mining\n  MCap:   LARGE_CAP\n  Note:   WELCORP (STAGE 2) shows weak momentum with Technical Score 49, RSI 89 (overbought), and a WEAK_HOLD signal on STRONG_BUL\n  Missing evidence: relative_strength\n\n▶ TECHNICAL SETUP\n  Derived score: 65 (derived from EOD MA alignment, RSI, MACD, Supertrend, and ADX)\n  RSI:        85.1\n  ADX:        78.8  (>25 = trending)\n  MACD:       bullish\n  Supertrend: SELL\n  MAs:        ▲ SMA20 | ▲ SMA50 | ▲ SMA200\n  52W Range:  ₹664 – ₹1,342  (-1.0% from high)\n  Volume:     0.9x avg\n\n▶ SECTOR CONTEXT\n  Sector:         Metals & Mining\n  Stocks in DB:   18\n  Stage 2 count:  12\n  Buy signals:    0\n  Avg 1M chg:     +9.51%\n  Top peers:      GALLANTT, HINDALCO, GPIL, TATASTEEL, SARDAEN\n\n▶ RISKS / WATCH\n  ⚠ RSI overbought (>75)\n\n▶ SOURCE TRAIL\n  resolve_symbol: ok\n  get_symbol_snapshot: ok\n  get_technical_setup: ok\n  get_sector_context: ok\n\n━━━ Not investment advice. For research and learning only. ━━━\n\n_Mode: Historical | Sources: EOD CSV + DB snapshot | Market: NSE: CLOSED, opens 09:15 | Clock: Tue, 12 May 2026 02:48:15 IST_",
+          "answer_excerpt": "━━━ Welspun Corp Limited (WELCORP) — Market Brief ━━━\nData: EOD snapshot 2026-05-11\n\n▶ SNAPSHOT\n  Price:  ₹1,329.30  (+2.89%)\n  Stage:  STAGE_2  (score: 0.69)\n  Signal: WEAK_HOLD\n  RS:     —\n  Sector: Metals & Mining\n  MCap:   LARGE_CAP\n  Note:   WELCORP (STAGE 2) shows weak momentum with Technical Score 49, RSI 89 (overbought), and a WEAK_HOLD signal on STRONG_BUL\n  Missing evidence: relative_strength\n\n▶ TECHNICAL SETUP\n  Derived score: 65 (derived from EOD MA alignment, RSI, MACD, Supertrend, and ADX)\n  RSI:        85.1\n  ADX:        78.8  (>25 = trending)\n  MACD:       bullish\n  Supertrend: SELL\n  MAs:        ▲ SMA20 | ▲ SMA50 | ▲ SMA200\n  52W Range:  ₹664 – ₹1,342  (-1.0% from high)\n  Volume:     0.9x avg\n\n▶ SECTOR CONTEXT\n  Sector:         Metals & Mining\n  Stocks in DB:   18\n  Stage 2 count:  12\n  Buy signals:    0\n  Avg 1M chg:     +9.51%\n  Top peers:      GALLANTT, HINDALCO, GPIL, TATASTEEL, SARDAEN\n\n▶ RISKS / WATCH\n  ⚠ RSI overbought (>75)\n\n▶ SOURCE TRAIL\n  resolve_symbol: ok\n  get_symbol_snapshot: ok\n  get_technical_setup: ok\n  get_sector_context: ok\n\n━━━ Not investment advice. For research and learning only. ━━━\n\n_Mode: Historical | Sources: EOD CSV + DB snapshot | Market: NSE: CLOSED, opens 09:15 | Clock: Tue, 12 May 2026 02:48:15 IST_",
+          "trace_summary": {
+            "tool_count": 4,
+            "tools": [
+              "resolve_symbol",
+              "get_symbol_snapshot",
+              "get_technical_setup",
+              "get_sector_context"
+            ],
+            "unique_tools": [
+              "get_sector_context",
+              "get_symbol_snapshot",
+              "get_technical_setup",
+              "resolve_symbol"
+            ],
+            "errors": [],
+            "intents": [
+              "stock_brief"
+            ]
+          },
+          "answer_metrics": {
+            "chars": 1267,
+            "words": 183,
+            "has_disclaimer": true,
+            "mentions_mode": true,
+            "mentions_source_trail": true,
+            "mentions_missing_data": true,
+            "mentions_market_clock": true
+          }
+        },
+        {
+          "case_id": "multi_turn_2",
+          "category": "multi_turn_context",
+          "query": "Now compare it with NAVABUPA and tell me which one has better evidence quality. Do not treat the word 'it' as a ticker.",
+          "notes": "",
+          "status": "ok",
+          "elapsed_seconds": 12.132,
+          "backend": "OpenAI (gpt-4o)",
+          "intent": "llm_driven",
+          "answer": "**📊 Comparison Between NIFTY 50 and NIVABUPA**\n\nHere's an intraday and recent technical comparison based on the latest data for NIFTY 50 and Niva Bupa Health Insurance (NIVABUPA):\n\n### 📈 NIFTY 50 (Based on earlier snapshot)\n- **Current Analysis** (As of earlier NSE snapshot):\n  - **Last Price**: ₹23,815.85\n  - **Trend**: Currently on a downward movement; likely experiencing mild volatility within a defined range.\n  - **Support & Resistance**: Support around ₹23,799.10; resistance at ₹23,997.45.\n  \n### 📈 NIVABUPA Intraday Details:\n- **Last Price**: ₹83.7\n- **Day Change**: Up 2.96% (+₹2.41) as compared to the previous close.\n- **Volume**: 55.63 million shares, with a traded value of ₹480.47 crores.\n- **Day's Range**: ₹82.74 - ₹89.77.\n- **52-week Range**: ₹67.5 - ₹95.21.\n- **Sector PE**: 114.83\n\n### ✨ Technical Comparison:\n- **NIVABUPA Technicals**:\n  - **Stage**: **Stage 1** (Base Formation)\n  - **RSI**: 71.6 (Mildly overbought)\n  - **Relative Strength %**: 14.93% (indicative of recent strong performance)\n  - **Technical Score**: 85\n  - **Investment Score**: 85\n  - **Trading Signal**: Hold\n  - **Trend Signal**: Strong Bullish\n  - **Supertrend**: Bearish (indicating a potential trend reversal or caution despite short-term bullish signals)\n\n### **Comparison Summary:**\n- **NIFTY 50**: Shows more standard movement with a weak bearish situation, resting near short-term support.\n- **NIVABUPA**: Demonstrates strong bullish characteristics in an early-stage setup. Scoring a high technical score, indicating solid performance momentum, although RSI suggests mild overvaluation territory.\n\n### **Evidence Quality & Insight:**\n- **NIFTY 50**: Intraday levels suggest typical index volatility and could leverage broader market reactions. \n- **NIVABUPA**: Intraday strength paired with high technical scoring marks it as a potentially strong contender in specific movements despite the bearish supertrend indicating potential retracements.\n  \n### **Conclusion:**\nWhile both have different market positions, NIVABUPA exhibits near-term technical strength and trending positivity which may offer short-term trading potential over NIFTY 50's broader index behavior which requires watching for deeper market moves.\n\n**📁 Source Trail**\n- _NIVABUPA: Real-time NSE snapshot (11-May-2026 16:00:00)_\n- _Mode: Intraday Comparison | Sources: NSE live API, DB snapshot for NIVABUPA, previous analysis of NIFTY 50._\n\n━━━ Not investment advice. For research and learning only. ━━━\n\n## 💬 What to explore next\n1. `/chart NIVABUPA 3mo --html` — Get a comprehensive interactive chart for NIVABUPA to examine its trends in depth.\n2. `/fno NIVABUPA` — Explore the F&O analytics for NIVABUPA for deeper options market insights.\n3. `/screen strong_buy` — Check for other strong buy recommendations with similar profiles.",
+          "answer_excerpt": "**📊 Comparison Between NIFTY 50 and NIVABUPA**\n\nHere's an intraday and recent technical comparison based on the latest data for NIFTY 50 and Niva Bupa Health Insurance (NIVABUPA):\n\n### 📈 NIFTY 50 (Based on earlier snapshot)\n- **Current Analysis** (As of earlier NSE snapshot):\n  - **Last Price**: ₹23,815.85\n  - **Trend**: Currently on a downward movement; likely experiencing mild volatility within a defined range.\n  - **Support & Resistance**: Support around ₹23,799.10; resistance at ₹23,997.45.\n  \n### 📈 NIVABUPA Intraday Details:\n- **Last Price**: ₹83.7\n- **Day Change**: Up 2.96% (+₹2.41) as compared to the previous close.\n- **Volume**: 55.63 million shares, with a traded value of ₹480.47 crores.\n- **Day's Range**: ₹82.74 - ₹89.77.\n- **52-week Range**: ₹67.5 - ₹95.21.\n- **Sector PE**: 114.83\n\n### ✨ Technical Comparison:\n- **NIVABUPA Technicals**:\n  - **Stage**: **Stage 1** (Base Formation)\n  - **RSI**: 71.6 (Mildly overbought)\n  - **Relative Strength %**: 14.93% (indicative of recent strong performance)\n  - **Technical Score**: 85\n  - **Investment Score**: 85\n  - **Trading Signal**: Hold\n  - **Trend Signal**: Strong Bullish\n  - **Supertrend**: Bearish (indicating a potential trend reversal or caution despite short-term bullish signals)\n\n### **Comparison Summary:**\n- **NIFTY 50**: Shows more standard movement with a weak bearish situation, resting near short-term support.\n- **NIVABUPA**: Demonstrates strong bullish characteristics in an early-stage setup. Scoring a high technical score, indicating solid performance momentum, although RSI suggests mild overvaluation territory",
+          "trace_summary": {
+            "tool_count": 3,
+            "tools": [
+              "resolve_symbol",
+              "get_nse_intraday_snapshot",
+              "compare_stocks"
+            ],
+            "unique_tools": [
+              "compare_stocks",
+              "get_nse_intraday_snapshot",
+              "resolve_symbol"
+            ],
+            "errors": [],
+            "intents": []
+          },
+          "answer_metrics": {
+            "chars": 2808,
+            "words": 397,
+            "has_disclaimer": true,
+            "mentions_mode": true,
+            "mentions_source_trail": true,
+            "mentions_missing_data": false,
+            "mentions_market_clock": false
+          }
+        }
+      ]
+    },
+    "ollama": {
+      "provider": "ollama",
+      "model": "granite4:latest",
+      "backend_status": {
+        "provider": "ollama",
+        "model": "granite4:latest",
+        "backend": "Ollama (granite4:latest)",
+        "switch": {
+          "status": "ok",
+          "provider": "ollama",
+          "model": "granite4:latest",
+          "backend": "Ollama (granite4:latest)"
+        }
+      },
+      "cases": [
+        {
+          "case_id": "market_overview",
+          "category": "market_overview",
+          "query": "Give me a current NSE market overview with NIFTY, BANKNIFTY, breadth, FII/DII flow, and top risks. Be explicit about data freshness.",
+          "notes": "",
+          "status": "ok",
+          "elapsed_seconds": 0.152,
+          "backend": "Ollama (granite4:latest)",
+          "intent": "market_overview",
+          "answer": "\n▶ LIVE MARKET\n  NIFTY 50: 23,815.85  (-1.49%)\n  NIFTY BANK: 54,439.90  (-1.57%)\n  NIFTY MIDCAP SELECT: 14,333.20  (-1.09%)\n  NIFTY MIDCAP 50: 17,481.05  (-0.83%)\n  NIFTY MIDCAP 100: 61,258.40  (-1.05%)\n  Live breadth: 117 advances / 384 declines\n  Source: NSE live API | As of: 2026-05-12 02:48:27\n\n▶ DB UNIVERSE CONTEXT\n  Advances: 283  Declines: 694  A/D ratio: 0.41\n  Universe avg RS: +14.9%\n  Stage dist: Stage 1: 635 | Stage 2: 187 | Stage 3: 7 | Stage 4: 94 | Unknown: 58\n\n▶ SOURCE TRAIL\n  get_live_market_overview: ok\n  get_market_breadth: ok\n\n━━━ Not investment advice. For research and learning only. ━━━\n\n_Mode: Intraday | Sources: NSE live API + DB breadth | Market: NSE: CLOSED, opens 09:15 | Clock: Tue, 12 May 2026 02:48:27 IST_",
+          "answer_excerpt": "\n▶ LIVE MARKET\n  NIFTY 50: 23,815.85  (-1.49%)\n  NIFTY BANK: 54,439.90  (-1.57%)\n  NIFTY MIDCAP SELECT: 14,333.20  (-1.09%)\n  NIFTY MIDCAP 50: 17,481.05  (-0.83%)\n  NIFTY MIDCAP 100: 61,258.40  (-1.05%)\n  Live breadth: 117 advances / 384 declines\n  Source: NSE live API | As of: 2026-05-12 02:48:27\n\n▶ DB UNIVERSE CONTEXT\n  Advances: 283  Declines: 694  A/D ratio: 0.41\n  Universe avg RS: +14.9%\n  Stage dist: Stage 1: 635 | Stage 2: 187 | Stage 3: 7 | Stage 4: 94 | Unknown: 58\n\n▶ SOURCE TRAIL\n  get_live_market_overview: ok\n  get_market_breadth: ok\n\n━━━ Not investment advice. For research and learning only. ━━━\n\n_Mode: Intraday | Sources: NSE live API + DB breadth | Market: NSE: CLOSED, opens 09:15 | Clock: Tue, 12 May 2026 02:48:27 IST_",
+          "trace_summary": {
+            "tool_count": 2,
+            "tools": [
+              "get_live_market_overview",
+              "get_market_breadth"
+            ],
+            "unique_tools": [
+              "get_live_market_overview",
+              "get_market_breadth"
+            ],
+            "errors": [],
+            "intents": [
+              "market_overview"
+            ]
+          },
+          "answer_metrics": {
+            "chars": 743,
+            "words": 118,
+            "has_disclaimer": true,
+            "mentions_mode": true,
+            "mentions_source_trail": true,
+            "mentions_missing_data": false,
+            "mentions_market_clock": true
+          }
+        },
+        {
+          "case_id": "stock_technical_dmart",
+          "category": "stock_technical",
+          "query": "Give a full technical setup for DMART: Weinstein stage, RSI, ADX, MACD, supertrend, moving averages, RS rank, support/resistance, and source trail.",
+          "notes": "",
+          "status": "ok",
+          "elapsed_seconds": 0.059,
+          "backend": "Ollama (granite4:latest)",
+          "intent": "stock_brief",
+          "answer": "━━━ AVENUE SUPERMARTS LIMITED (DMART) — Market Brief ━━━\nData: EOD snapshot 2026-05-11\n\n▶ SNAPSHOT\n  Price:  ₹4,389.40  (-0.29%)\n  Stage:  STAGE_2  (score: 0.46)\n  Signal: SELL\n  RS:     —\n  Sector: Other\n  MCap:   LARGE_CAP\n  Note:   DMART (STAGE 2) shows weak momentum with Technical Score 25, RSI 35 (oversold), and a SELL signal on BULLISH. Fundamenta\n  Missing evidence: relative_strength, fundamental_score\n\n▶ TECHNICAL SETUP\n  Derived score: 55 (derived from EOD MA alignment, RSI, MACD, Supertrend, and ADX)\n  RSI:        51.0\n  ADX:        23.1  (>25 = trending)\n  MACD:       bearish\n  Supertrend: SELL\n  MAs:        ▲ SMA50 | ▲ SMA200\n  52W Range:  ₹3,600 – ₹4,950  (-11.3% from high)\n  Volume:     0.3x avg\n\n▶ SECTOR CONTEXT\n  Sector:         Other\n  Stocks in DB:   677\n  Stage 2 count:  85\n  Buy signals:    1\n  Avg 1M chg:     +12.65%\n  Top peers:      AVL, CARRARO, IPCALAB, DCMSHRIRAM, MBAPL\n\n▶ SOURCE TRAIL\n  resolve_symbol: ok\n  get_symbol_snapshot: ok\n  get_technical_setup: ok\n  get_sector_context: ok\n\n━━━ Not investment advice. For research and learning only. ━━━\n\n_Mode: Historical | Sources: EOD CSV + DB snapshot | Market: NSE: CLOSED, opens 09:15 | Clock: Tue, 12 May 2026 02:48:27 IST_",
+          "answer_excerpt": "━━━ AVENUE SUPERMARTS LIMITED (DMART) — Market Brief ━━━\nData: EOD snapshot 2026-05-11\n\n▶ SNAPSHOT\n  Price:  ₹4,389.40  (-0.29%)\n  Stage:  STAGE_2  (score: 0.46)\n  Signal: SELL\n  RS:     —\n  Sector: Other\n  MCap:   LARGE_CAP\n  Note:   DMART (STAGE 2) shows weak momentum with Technical Score 25, RSI 35 (oversold), and a SELL signal on BULLISH. Fundamenta\n  Missing evidence: relative_strength, fundamental_score\n\n▶ TECHNICAL SETUP\n  Derived score: 55 (derived from EOD MA alignment, RSI, MACD, Supertrend, and ADX)\n  RSI:        51.0\n  ADX:        23.1  (>25 = trending)\n  MACD:       bearish\n  Supertrend: SELL\n  MAs:        ▲ SMA50 | ▲ SMA200\n  52W Range:  ₹3,600 – ₹4,950  (-11.3% from high)\n  Volume:     0.3x avg\n\n▶ SECTOR CONTEXT\n  Sector:         Other\n  Stocks in DB:   677\n  Stage 2 count:  85\n  Buy signals:    1\n  Avg 1M chg:     +12.65%\n  Top peers:      AVL, CARRARO, IPCALAB, DCMSHRIRAM, MBAPL\n\n▶ SOURCE TRAIL\n  resolve_symbol: ok\n  get_symbol_snapshot: ok\n  get_technical_setup: ok\n  get_sector_context: ok\n\n━━━ Not investment advice. For research and learning only. ━━━\n\n_Mode: Historical | Sources: EOD CSV + DB snapshot | Market: NSE: CLOSED, opens 09:15 | Clock: Tue, 12 May 2026 02:48:27 IST_",
+          "trace_summary": {
+            "tool_count": 4,
+            "tools": [
+              "resolve_symbol",
+              "get_symbol_snapshot",
+              "get_technical_setup",
+              "get_sector_context"
+            ],
+            "unique_tools": [
+              "get_sector_context",
+              "get_symbol_snapshot",
+              "get_technical_setup",
+              "resolve_symbol"
+            ],
+            "errors": [],
+            "intents": [
+              "stock_brief"
+            ]
+          },
+          "answer_metrics": {
+            "chars": 1213,
+            "words": 170,
+            "has_disclaimer": true,
+            "mentions_mode": true,
+            "mentions_source_trail": true,
+            "mentions_missing_data": true,
+            "mentions_market_clock": true
+          }
+        },
+        {
+          "case_id": "education_roce_roe",
+          "category": "market_education",
+          "query": "Explain how ROCE is different from ROE for an Indian equity investor, with a simple example and common traps.",
+          "notes": "",
+          "status": "ok",
+          "elapsed_seconds": 0.773,
+          "backend": "Ollama (granite4:latest)",
+          "intent": "market_knowledge",
+          "answer": "Source-backed market education: Explain how ROCE is different from ROE for an Indian equity investor, with a simple example and common traps.\n\nWhat the sources say:\n- Wikipedia: Return on capital employed is an accounting ratio used in finance, valuation, and accounting. It is a useful measure for comparing the relative profitability of companies after taking into account the amount of capital used.\n- Wikipedia: The return on equity (ROE) is a measure of the profitability of a business in relation to its equity; where:ROE = ⁠Net Income/Average Shareholders' Equity⁠\n- Investopedia: Investopedia source URL found, but automated text extraction returned HTTP 403; no unsourced detail was inferred from it.\n\nConcept guide:\nROE focuses on profit generated on shareholders' equity. ROCE focuses on profit generated on total capital employed, so it is often better for comparing capital-intensive companies with different debt levels.\n\nSources:\n- Wikipedia - Return on capital employed: https://en.wikipedia.org/wiki/Return_on_capital_employed\n- Wikipedia - Return on equity: https://en.wikipedia.org/wiki/Return_on_equity\n- Investopedia - Investopedia concept article: https://www.investopedia.com/terms/r/roce.asp\n\nUse this as market education, not a buy/sell recommendation.\n\n_Mode: Historical | Sources: EOD CSV + DB snapshot | Market: NSE: CLOSED, opens 09:15 | Clock: Tue, 12 May 2026 02:48:27 IST_",
+          "answer_excerpt": "Source-backed market education: Explain how ROCE is different from ROE for an Indian equity investor, with a simple example and common traps.\n\nWhat the sources say:\n- Wikipedia: Return on capital employed is an accounting ratio used in finance, valuation, and accounting. It is a useful measure for comparing the relative profitability of companies after taking into account the amount of capital used.\n- Wikipedia: The return on equity (ROE) is a measure of the profitability of a business in relation to its equity; where:ROE = ⁠Net Income/Average Shareholders' Equity⁠\n- Investopedia: Investopedia source URL found, but automated text extraction returned HTTP 403; no unsourced detail was inferred from it.\n\nConcept guide:\nROE focuses on profit generated on shareholders' equity. ROCE focuses on profit generated on total capital employed, so it is often better for comparing capital-intensive companies with different debt levels.\n\nSources:\n- Wikipedia - Return on capital employed: https://en.wikipedia.org/wiki/Return_on_capital_employed\n- Wikipedia - Return on equity: https://en.wikipedia.org/wiki/Return_on_equity\n- Investopedia - Investopedia concept article: https://www.investopedia.com/terms/r/roce.asp\n\nUse this as market education, not a buy/sell recommendation.\n\n_Mode: Historical | Sources: EOD CSV + DB snapshot | Market: NSE: CLOSED, opens 09:15 | Clock: Tue, 12 May 2026 02:48:27 IST_",
+          "trace_summary": {
+            "tool_count": 1,
+            "tools": [
+              "search_market_knowledge"
+            ],
+            "unique_tools": [
+              "search_market_knowledge"
+            ],
+            "errors": [],
+            "intents": [
+              "market_knowledge"
+            ]
+          },
+          "answer_metrics": {
+            "chars": 1404,
+            "words": 197,
+            "has_disclaimer": false,
+            "mentions_mode": true,
+            "mentions_source_trail": false,
+            "mentions_missing_data": false,
+            "mentions_market_clock": true
+          }
+        },
+        {
+          "case_id": "compare_stocks",
+          "category": "comparative_research",
+          "query": "Compare DMART, TRENT, and VBL on technical strength, fundamentals, valuation, and risks. Do not assume missing values.",
+          "notes": "",
+          "status": "ok",
+          "elapsed_seconds": 0.068,
+          "backend": "Ollama (granite4:latest)",
+          "intent": "stock_brief",
+          "answer": "━━━ TALBROS AUTO. COMP. LTD (TALBROAUTO) — Market Brief ━━━\nData: EOD snapshot 2026-05-11\n\n▶ SNAPSHOT\n  Price:  ₹327.80  (+0.95%)\n  Stage:  STAGE_1  (score: 0.00)\n  Signal: WEAK_HOLD\n  RS:     —\n  Sector: Other\n  MCap:   SMALL_CAP\n  Note:   TALBROAUTO (STAGE 1) shows mixed momentum with Technical Score 37, RSI 74 (overbought), and a WEAK_HOLD signal on BULLIS\n  Missing evidence: relative_strength\n\n▶ TECHNICAL SETUP\n  Derived score: 85 (derived from EOD MA alignment, RSI, MACD, Supertrend, and ADX)\n  RSI:        70.7\n  ADX:        77.4  (>25 = trending)\n  MACD:       bullish\n  Supertrend: SELL\n  MAs:        ▲ SMA20 | ▲ SMA50 | ▲ SMA200\n  52W Range:  ₹214 – ₹350  (-6.4% from high)\n  Volume:     0.9x avg\n\n▶ SECTOR CONTEXT\n  Sector:         Other\n  Stocks in DB:   677\n  Stage 2 count:  85\n  Buy signals:    1\n  Avg 1M chg:     +12.65%\n  Top peers:      AVL, CARRARO, IPCALAB, DCMSHRIRAM, MBAPL\n\n▶ RISKS / WATCH\n  ⚠ Not in Stage 2 (STAGE_1)\n\n▶ SOURCE TRAIL\n  resolve_symbol: ok\n  get_symbol_snapshot: ok\n  get_technical_setup: ok\n  get_sector_context: ok\n\n━━━ Not investment advice. For research and learning only. ━━━\n\n_Mode: Historical | Sources: EOD CSV + DB snapshot | Market: NSE: CLOSED, opens 09:15 | Clock: Tue, 12 May 2026 02:48:28 IST_",
+          "answer_excerpt": "━━━ TALBROS AUTO. COMP. LTD (TALBROAUTO) — Market Brief ━━━\nData: EOD snapshot 2026-05-11\n\n▶ SNAPSHOT\n  Price:  ₹327.80  (+0.95%)\n  Stage:  STAGE_1  (score: 0.00)\n  Signal: WEAK_HOLD\n  RS:     —\n  Sector: Other\n  MCap:   SMALL_CAP\n  Note:   TALBROAUTO (STAGE 1) shows mixed momentum with Technical Score 37, RSI 74 (overbought), and a WEAK_HOLD signal on BULLIS\n  Missing evidence: relative_strength\n\n▶ TECHNICAL SETUP\n  Derived score: 85 (derived from EOD MA alignment, RSI, MACD, Supertrend, and ADX)\n  RSI:        70.7\n  ADX:        77.4  (>25 = trending)\n  MACD:       bullish\n  Supertrend: SELL\n  MAs:        ▲ SMA20 | ▲ SMA50 | ▲ SMA200\n  52W Range:  ₹214 – ₹350  (-6.4% from high)\n  Volume:     0.9x avg\n\n▶ SECTOR CONTEXT\n  Sector:         Other\n  Stocks in DB:   677\n  Stage 2 count:  85\n  Buy signals:    1\n  Avg 1M chg:     +12.65%\n  Top peers:      AVL, CARRARO, IPCALAB, DCMSHRIRAM, MBAPL\n\n▶ RISKS / WATCH\n  ⚠ Not in Stage 2 (STAGE_1)\n\n▶ SOURCE TRAIL\n  resolve_symbol: ok\n  get_symbol_snapshot: ok\n  get_technical_setup: ok\n  get_sector_context: ok\n\n━━━ Not investment advice. For research and learning only. ━━━\n\n_Mode: Historical | Sources: EOD CSV + DB snapshot | Market: NSE: CLOSED, opens 09:15 | Clock: Tue, 12 May 2026 02:48:28 IST_",
+          "trace_summary": {
+            "tool_count": 4,
+            "tools": [
+              "resolve_symbol",
+              "get_symbol_snapshot",
+              "get_technical_setup",
+              "get_sector_context"
+            ],
+            "unique_tools": [
+              "get_sector_context",
+              "get_symbol_snapshot",
+              "get_technical_setup",
+              "resolve_symbol"
+            ],
+            "errors": [],
+            "intents": [
+              "stock_brief"
+            ]
+          },
+          "answer_metrics": {
+            "chars": 1251,
+            "words": 182,
+            "has_disclaimer": true,
+            "mentions_mode": true,
+            "mentions_source_trail": true,
+            "mentions_missing_data": true,
+            "mentions_market_clock": true
+          }
+        },
+        {
+          "case_id": "strength_validation",
+          "category": "validated_strength",
+          "query": "Out of MANINDS, THERMAX, and BAJAJCON, which show strength based on CANSLIM, RS, fundamental analysis, and Piotroski? Validate data and flag missing evidence.",
+          "notes": "",
+          "status": "ok",
+          "elapsed_seconds": 0.336,
+          "backend": "Ollama (granite4:latest)",
+          "intent": "strength_validation",
+          "answer": "━━━ Validated Multi-Factor Strength ━━━\nData: EOD snapshot 2026-05-11\nNever infer missing CANSLIM, RS, fundamentals, or forensic data; missing fields are reported in missing_evidence.\n- MANINDS: score N/A; CANSLIM 15.00; RS N/A; Fund 69.25; Piotroski 8/9; Risk low; Missing evidence: relative_strength, financial_strength\n  Missing evidence: relative_strength, financial_strength\n- THERMAX: score N/A; CANSLIM 18.00; RS N/A; Fund N/A; Piotroski 7/9; Risk low; Missing evidence: relative_strength, enhanced_fund_score, financial_strength\n  Missing evidence: relative_strength, enhanced_fund_score, financial_strength\n- BAJAJCON: score N/A; CANSLIM 15.00; RS N/A; Fund 61.40; Piotroski 6/9; Risk low; Missing evidence: relative_strength, financial_strength\n  Missing evidence: relative_strength, financial_strength\n\n━━━ Not investment advice. For research and learning only. ━━━\n\n_Mode: Historical | Sources: EOD CSV + DB snapshot | Market: NSE: CLOSED, opens 09:15 | Clock: Tue, 12 May 2026 02:48:28 IST_",
+          "answer_excerpt": "━━━ Validated Multi-Factor Strength ━━━\nData: EOD snapshot 2026-05-11\nNever infer missing CANSLIM, RS, fundamentals, or forensic data; missing fields are reported in missing_evidence.\n- MANINDS: score N/A; CANSLIM 15.00; RS N/A; Fund 69.25; Piotroski 8/9; Risk low; Missing evidence: relative_strength, financial_strength\n  Missing evidence: relative_strength, financial_strength\n- THERMAX: score N/A; CANSLIM 18.00; RS N/A; Fund N/A; Piotroski 7/9; Risk low; Missing evidence: relative_strength, enhanced_fund_score, financial_strength\n  Missing evidence: relative_strength, enhanced_fund_score, financial_strength\n- BAJAJCON: score N/A; CANSLIM 15.00; RS N/A; Fund 61.40; Piotroski 6/9; Risk low; Missing evidence: relative_strength, financial_strength\n  Missing evidence: relative_strength, financial_strength\n\n━━━ Not investment advice. For research and learning only. ━━━\n\n_Mode: Historical | Sources: EOD CSV + DB snapshot | Market: NSE: CLOSED, opens 09:15 | Clock: Tue, 12 May 2026 02:48:28 IST_",
+          "trace_summary": {
+            "tool_count": 1,
+            "tools": [
+              "validate_strength_watchlist"
+            ],
+            "unique_tools": [
+              "validate_strength_watchlist"
+            ],
+            "errors": [],
+            "intents": [
+              "strength_validation"
+            ]
+          },
+          "answer_metrics": {
+            "chars": 1003,
+            "words": 125,
+            "has_disclaimer": true,
+            "mentions_mode": true,
+            "mentions_source_trail": false,
+            "mentions_missing_data": true,
+            "mentions_market_clock": true
+          }
+        },
+        {
+          "case_id": "intraday_nifty",
+          "category": "intraday_situation",
+          "query": "Intraday technical analysis of NIFTY50 right now. Use NSE website snapshot first, then yfinance only as fallback, and label stale data.",
+          "notes": "",
+          "status": "ok",
+          "elapsed_seconds": 10.509,
+          "backend": "Ollama (granite4:latest)",
+          "intent": "llm_driven",
+          "answer": "\n\n━━━ Not investment advice. For research and learning only. ━━━\n\n_Mode: Intraday | Sources: SQLite intraday/live tables | Market: NSE: CLOSED, opens 09:15 | Clock: Tue, 12 May 2026 02:48:29 IST_",
+          "answer_excerpt": "\n\n━━━ Not investment advice. For research and learning only. ━━━\n\n_Mode: Intraday | Sources: SQLite intraday/live tables | Market: NSE: CLOSED, opens 09:15 | Clock: Tue, 12 May 2026 02:48:29 IST_",
+          "trace_summary": {
+            "tool_count": 0,
+            "tools": [],
+            "unique_tools": [],
+            "errors": [],
+            "intents": []
+          },
+          "answer_metrics": {
+            "chars": 195,
+            "words": 31,
+            "has_disclaimer": true,
+            "mentions_mode": true,
+            "mentions_source_trail": false,
+            "mentions_missing_data": false,
+            "mentions_market_clock": true
+          }
+        },
+        {
+          "case_id": "tool_heavy_research",
+          "category": "tool_calls",
+          "query": "Research WELCORP with technical setup, sector context, latest catalysts, and forensic red flags. Show what tools were used.",
+          "notes": "",
+          "status": "ok",
+          "elapsed_seconds": 0.057,
+          "backend": "Ollama (granite4:latest)",
+          "intent": "stock_brief",
+          "answer": "━━━ Welspun Corp Limited (WELCORP) — Market Brief ━━━\nData: EOD snapshot 2026-05-11\n\n▶ SNAPSHOT\n  Price:  ₹1,329.30  (+2.89%)\n  Stage:  STAGE_2  (score: 0.69)\n  Signal: WEAK_HOLD\n  RS:     —\n  Sector: Metals & Mining\n  MCap:   LARGE_CAP\n  Note:   WELCORP (STAGE 2) shows weak momentum with Technical Score 49, RSI 89 (overbought), and a WEAK_HOLD signal on STRONG_BUL\n  Missing evidence: relative_strength\n\n▶ TECHNICAL SETUP\n  Derived score: 65 (derived from EOD MA alignment, RSI, MACD, Supertrend, and ADX)\n  RSI:        85.1\n  ADX:        78.8  (>25 = trending)\n  MACD:       bullish\n  Supertrend: SELL\n  MAs:        ▲ SMA20 | ▲ SMA50 | ▲ SMA200\n  52W Range:  ₹664 – ₹1,342  (-1.0% from high)\n  Volume:     0.9x avg\n\n▶ SECTOR CONTEXT\n  Sector:         Metals & Mining\n  Stocks in DB:   18\n  Stage 2 count:  12\n  Buy signals:    0\n  Avg 1M chg:     +9.51%\n  Top peers:      GALLANTT, HINDALCO, GPIL, TATASTEEL, SARDAEN\n\n▶ RISKS / WATCH\n  ⚠ RSI overbought (>75)\n\n▶ SOURCE TRAIL\n  resolve_symbol: ok\n  get_symbol_snapshot: ok\n  get_technical_setup: ok\n  get_sector_context: ok\n\n━━━ Not investment advice. For research and learning only. ━━━\n\n_Mode: Historical | Sources: EOD CSV + DB snapshot | Market: NSE: CLOSED, opens 09:15 | Clock: Tue, 12 May 2026 02:48:39 IST_",
+          "answer_excerpt": "━━━ Welspun Corp Limited (WELCORP) — Market Brief ━━━\nData: EOD snapshot 2026-05-11\n\n▶ SNAPSHOT\n  Price:  ₹1,329.30  (+2.89%)\n  Stage:  STAGE_2  (score: 0.69)\n  Signal: WEAK_HOLD\n  RS:     —\n  Sector: Metals & Mining\n  MCap:   LARGE_CAP\n  Note:   WELCORP (STAGE 2) shows weak momentum with Technical Score 49, RSI 89 (overbought), and a WEAK_HOLD signal on STRONG_BUL\n  Missing evidence: relative_strength\n\n▶ TECHNICAL SETUP\n  Derived score: 65 (derived from EOD MA alignment, RSI, MACD, Supertrend, and ADX)\n  RSI:        85.1\n  ADX:        78.8  (>25 = trending)\n  MACD:       bullish\n  Supertrend: SELL\n  MAs:        ▲ SMA20 | ▲ SMA50 | ▲ SMA200\n  52W Range:  ₹664 – ₹1,342  (-1.0% from high)\n  Volume:     0.9x avg\n\n▶ SECTOR CONTEXT\n  Sector:         Metals & Mining\n  Stocks in DB:   18\n  Stage 2 count:  12\n  Buy signals:    0\n  Avg 1M chg:     +9.51%\n  Top peers:      GALLANTT, HINDALCO, GPIL, TATASTEEL, SARDAEN\n\n▶ RISKS / WATCH\n  ⚠ RSI overbought (>75)\n\n▶ SOURCE TRAIL\n  resolve_symbol: ok\n  get_symbol_snapshot: ok\n  get_technical_setup: ok\n  get_sector_context: ok\n\n━━━ Not investment advice. For research and learning only. ━━━\n\n_Mode: Historical | Sources: EOD CSV + DB snapshot | Market: NSE: CLOSED, opens 09:15 | Clock: Tue, 12 May 2026 02:48:39 IST_",
+          "trace_summary": {
+            "tool_count": 4,
+            "tools": [
+              "resolve_symbol",
+              "get_symbol_snapshot",
+              "get_technical_setup",
+              "get_sector_context"
+            ],
+            "unique_tools": [
+              "get_sector_context",
+              "get_symbol_snapshot",
+              "get_technical_setup",
+              "resolve_symbol"
+            ],
+            "errors": [],
+            "intents": [
+              "stock_brief"
+            ]
+          },
+          "answer_metrics": {
+            "chars": 1267,
+            "words": 183,
+            "has_disclaimer": true,
+            "mentions_mode": true,
+            "mentions_source_trail": true,
+            "mentions_missing_data": true,
+            "mentions_market_clock": true
+          }
+        },
+        {
+          "case_id": "multi_turn_1",
+          "category": "multi_turn_context",
+          "query": "Analyze WELCORP as a company and stock. Focus on what is known from the database and what still needs fresh evidence.",
+          "notes": "",
+          "status": "ok",
+          "elapsed_seconds": 0.044,
+          "backend": "Ollama (granite4:latest)",
+          "intent": "stock_brief",
+          "answer": "━━━ Welspun Corp Limited (WELCORP) — Market Brief ━━━\nData: EOD snapshot 2026-05-11\n\n▶ SNAPSHOT\n  Price:  ₹1,329.30  (+2.89%)\n  Stage:  STAGE_2  (score: 0.69)\n  Signal: WEAK_HOLD\n  RS:     —\n  Sector: Metals & Mining\n  MCap:   LARGE_CAP\n  Note:   WELCORP (STAGE 2) shows weak momentum with Technical Score 49, RSI 89 (overbought), and a WEAK_HOLD signal on STRONG_BUL\n  Missing evidence: relative_strength\n\n▶ TECHNICAL SETUP\n  Derived score: 65 (derived from EOD MA alignment, RSI, MACD, Supertrend, and ADX)\n  RSI:        85.1\n  ADX:        78.8  (>25 = trending)\n  MACD:       bullish\n  Supertrend: SELL\n  MAs:        ▲ SMA20 | ▲ SMA50 | ▲ SMA200\n  52W Range:  ₹664 – ₹1,342  (-1.0% from high)\n  Volume:     0.9x avg\n\n▶ SECTOR CONTEXT\n  Sector:         Metals & Mining\n  Stocks in DB:   18\n  Stage 2 count:  12\n  Buy signals:    0\n  Avg 1M chg:     +9.51%\n  Top peers:      GALLANTT, HINDALCO, GPIL, TATASTEEL, SARDAEN\n\n▶ RISKS / WATCH\n  ⚠ RSI overbought (>75)\n\n▶ SOURCE TRAIL\n  resolve_symbol: ok\n  get_symbol_snapshot: ok\n  get_technical_setup: ok\n  get_sector_context: ok\n\n━━━ Not investment advice. For research and learning only. ━━━\n\n_Mode: Historical | Sources: EOD CSV + DB snapshot | Market: NSE: CLOSED, opens 09:15 | Clock: Tue, 12 May 2026 02:48:39 IST_",
+          "answer_excerpt": "━━━ Welspun Corp Limited (WELCORP) — Market Brief ━━━\nData: EOD snapshot 2026-05-11\n\n▶ SNAPSHOT\n  Price:  ₹1,329.30  (+2.89%)\n  Stage:  STAGE_2  (score: 0.69)\n  Signal: WEAK_HOLD\n  RS:     —\n  Sector: Metals & Mining\n  MCap:   LARGE_CAP\n  Note:   WELCORP (STAGE 2) shows weak momentum with Technical Score 49, RSI 89 (overbought), and a WEAK_HOLD signal on STRONG_BUL\n  Missing evidence: relative_strength\n\n▶ TECHNICAL SETUP\n  Derived score: 65 (derived from EOD MA alignment, RSI, MACD, Supertrend, and ADX)\n  RSI:        85.1\n  ADX:        78.8  (>25 = trending)\n  MACD:       bullish\n  Supertrend: SELL\n  MAs:        ▲ SMA20 | ▲ SMA50 | ▲ SMA200\n  52W Range:  ₹664 – ₹1,342  (-1.0% from high)\n  Volume:     0.9x avg\n\n▶ SECTOR CONTEXT\n  Sector:         Metals & Mining\n  Stocks in DB:   18\n  Stage 2 count:  12\n  Buy signals:    0\n  Avg 1M chg:     +9.51%\n  Top peers:      GALLANTT, HINDALCO, GPIL, TATASTEEL, SARDAEN\n\n▶ RISKS / WATCH\n  ⚠ RSI overbought (>75)\n\n▶ SOURCE TRAIL\n  resolve_symbol: ok\n  get_symbol_snapshot: ok\n  get_technical_setup: ok\n  get_sector_context: ok\n\n━━━ Not investment advice. For research and learning only. ━━━\n\n_Mode: Historical | Sources: EOD CSV + DB snapshot | Market: NSE: CLOSED, opens 09:15 | Clock: Tue, 12 May 2026 02:48:39 IST_",
+          "trace_summary": {
+            "tool_count": 4,
+            "tools": [
+              "resolve_symbol",
+              "get_symbol_snapshot",
+              "get_technical_setup",
+              "get_sector_context"
+            ],
+            "unique_tools": [
+              "get_sector_context",
+              "get_symbol_snapshot",
+              "get_technical_setup",
+              "resolve_symbol"
+            ],
+            "errors": [],
+            "intents": [
+              "stock_brief"
+            ]
+          },
+          "answer_metrics": {
+            "chars": 1267,
+            "words": 183,
+            "has_disclaimer": true,
+            "mentions_mode": true,
+            "mentions_source_trail": true,
+            "mentions_missing_data": true,
+            "mentions_market_clock": true
+          }
+        },
+        {
+          "case_id": "multi_turn_2",
+          "category": "multi_turn_context",
+          "query": "Now compare it with NAVABUPA and tell me which one has better evidence quality. Do not treat the word 'it' as a ticker.",
+          "notes": "",
+          "status": "ok",
+          "elapsed_seconds": 31.923,
+          "backend": "Ollama (granite4:latest)",
+          "intent": "llm_driven",
+          "answer": "The comparison between **NAVABUPA** (the “NAVA‑up” or NAVA‑derived) stock and the other instrument you’re comparing against is essentially a benchmark of **evidence quality** rather than a quantitative price metric.\n\n### What Do We Mean by “Evidence Quality”?\n\n| Dimension | NAVABUPA | Other Instrument |\n|-----------|----------|-------------------|\n| **Source & Transparency** | • Derived from NAVA’s proprietary analytics engine.<br>• Requires access to internal data pipelines that publish limited public commentary. | • Directly sourced from open market indices (e.g., Sensex, Nifty) or algorithmic feeds with full disclosure of methodology and data inputs. |\n| **Methodological Rigor** | • Relies on pattern‑recognition signals calibrated against historical price/volume/RSI data.<br>• Fewer published validation studies; most insights are proprietary to NAVA’s research team. | • Uses well‑established econometric models (e.g., GARCH, cointegration) that have been peer‑reviewed and reproduced in academic literature. |\n| **Backtesting & Performance** | • Backtested only on the limited data set used internally by NAVA; no external third‑party verification.<br>• Occasionally published “in‑sample” results on internal research platforms. | • Comprehensive out‑of‑sample backtests, stress tests across market regimes, and sensitivity analyses performed by independent analysts or quantitative firms. |\n| **Auditability** | • Internal audit procedures are not publicly disclosed; NAVA’s methodology is kept confidential.<br>• Limited ability for third parties to verify the underlying data feed (e.g., delayed tickers). | • Full code repositories on GitHub, reproducible notebooks, and public performance dashboards allow anyone to rerun tests or scrutinize assumptions. |\n| **Reproducibility** | • Replicating NAVABUPA signals often requires access to a proprietary data layer that many traders lack.<br>• Few have the same level of detail in replication studies. | • Open‑source backtests are readily available; results can be reproduced with minor adjustments (e.g., changing look‑back windows). |\n| **Peer Review & Community Feedback** | • Limited external peer review; feedback mainly comes from NAVA’s subscriber base.<br>• Few community discussions or academic citations. | • Active discussion forums, StackExchange Q&A, and research papers published in journals or at conferences. |\n\n### Bottom Line\n\n- **Evidence quality is higher for the other instrument** because it benefits from:\n  - Transparent data sources.\n  - Rigorous, peer‑reviewed methodologies.\n  - Extensive backtesting and validation across multiple regimes.\n  - Openness to independent verification and replication.\n\n- **NAVABUPA**, while effective within NAVA’s proprietary framework, lacks the broader transparency and third‑party scrutiny that elevate its evidential status. This makes it a more *proprietary* or *internal‑only* solution, which can be riskier for users who need robust, auditable evidence before committing capital.\n\n### Recommendation\n\nIf **evidence quality** is your top priority—especially for high‑frequency trading, regulatory compliance, or when seeking investor confidence—opt for the instrument that offers full transparency, peer‑reviewed methodologies, and reproducibility. In this case, it will likely be the other listed option (or a public index/ETF) rather than NAVABUPA.\n\n━━━ Not investment advice. For research and learning only. ━━━\n\n_Mode: Intraday | Sources: SQLite intraday/live tables | Market: NSE: CLOSED, opens 09:15 | Clock: Tue, 12 May 2026 02:48:39 IST_",
+          "answer_excerpt": "The comparison between **NAVABUPA** (the “NAVA‑up” or NAVA‑derived) stock and the other instrument you’re comparing against is essentially a benchmark of **evidence quality** rather than a quantitative price metric.\n\n### What Do We Mean by “Evidence Quality”?\n\n| Dimension | NAVABUPA | Other Instrument |\n|-----------|----------|-------------------|\n| **Source & Transparency** | • Derived from NAVA’s proprietary analytics engine.<br>• Requires access to internal data pipelines that publish limited public commentary. | • Directly sourced from open market indices (e.g., Sensex, Nifty) or algorithmic feeds with full disclosure of methodology and data inputs. |\n| **Methodological Rigor** | • Relies on pattern‑recognition signals calibrated against historical price/volume/RSI data.<br>• Fewer published validation studies; most insights are proprietary to NAVA’s research team. | • Uses well‑established econometric models (e.g., GARCH, cointegration) that have been peer‑reviewed and reproduced in academic literature. |\n| **Backtesting & Performance** | • Backtested only on the limited data set used internally by NAVA; no external third‑party verification.<br>• Occasionally published “in‑sample” results on internal research platforms. | • Comprehensive out‑of‑sample backtests, stress tests across market regimes, and sensitivity analyses performed by independent analysts or quantitative firms. |\n| **Auditability** | • Internal audit procedures are not publicly disclosed; NAVA’s methodology is kept confidential.<br>• Limited ability for third parties to verify the underlying data feed ",
+          "trace_summary": {
+            "tool_count": 0,
+            "tools": [],
+            "unique_tools": [],
+            "errors": [],
+            "intents": []
+          },
+          "answer_metrics": {
+            "chars": 3579,
+            "words": 490,
+            "has_disclaimer": true,
+            "mentions_mode": true,
+            "mentions_source_trail": false,
+            "mentions_missing_data": false,
+            "mentions_market_clock": true
+          }
+        }
+      ]
+    }
+  },
+  "report_generation": {
+    "status": "ok",
+    "elapsed_seconds": 0.023,
+    "report_type": "stage2",
+    "format": "md",
+    "path": "/Users/pgorai/Documents/Projects/Unified-NSE-Analysis/reports/generated/NSE_stage2_20260512_024911.md",
+    "content_chars": 20131,
+    "result": {
+      "path": "/Users/pgorai/Documents/Projects/Unified-NSE-Analysis/reports/generated/NSE_stage2_20260512_024911.md",
+      "format": "md",
+      "title": "Stage 2 Tracker — NSE Universe — 12 May 2026",
+      "report_type": "stage2",
+      "symbol": "NSE",
+      "success": true,
+      "note": "Generated directly from DB snapshot — no LLM required."
+    }
+  },
+  "heuristic_summary": {
+    "openai": {
+      "ok_cases": 9,
+      "error_cases": 0,
+      "avg_elapsed_seconds": 2.46,
+      "avg_tool_calls": 2.67,
+      "avg_words": 212.8,
+      "cases_with_source_trail": 7,
+      "cases_with_missing_data_flag": 5,
+      "errors": []
+    },
+    "ollama": {
+      "ok_cases": 9,
+      "error_cases": 0,
+      "avg_elapsed_seconds": 4.88,
+      "avg_tool_calls": 2.22,
+      "avg_words": 186.6,
+      "cases_with_source_trail": 5,
+      "cases_with_missing_data_flag": 5,
+      "errors": []
+    }
+  },
+  "gpt55_evaluation": {
+    "status": "ok",
+    "model": "gpt-5.5",
+    "evaluation": {
+      "overall_winner": "OpenAI gpt-4o",
+      "executive_summary": "OpenAI gpt-4o wins on application behavior because it followed tool discipline better in the live intraday NIFTY case and produced more usable, source-labeled output under LLM-driven routing. However, both backends show serious application-level failures: the compare_stocks case returned TALBROAUTO instead of DMART/TRENT/VBL, market_overview omitted FII/DII flow without flagging it, and several stock reports used generic single-stock templates despite broader requests. Ollama granite4:latest matched OpenAI on template-driven tool-routed cases but failed badly on LLM-driven intraday and multi-turn cases, including zero tool calls, blank/near-blank intraday output, and fabricated claims about NAVABUPA/NAVA proprietary analytics. Neither backend is acceptable as an unconstrained autonomous market-research backend without stricter routing, symbol resolution validation, source trails, and missing-evidence gating.",
+      "case_scores": {
+        "market_overview": {
+          "openai_score": 3,
+          "ollama_score": 3,
+          "winner": "tie",
+          "notes": "Both called the right market overview and breadth tools, labeled freshness, clock, sources, and market state. Both omitted the requested FII/DII flow and did not explicitly mark it missing, so evidence completeness is only moderate."
+        },
+        "stock_technical_dmart": {
+          "openai_score": 4,
+          "ollama_score": 4,
+          "winner": "tie",
+          "notes": "Both used the expected symbol, snapshot, technical, and sector tools and exposed a source trail. Missing RS was flagged. However, requested support/resistance was not directly provided beyond 52-week range, and the narrative had internal inconsistency between snapshot RSI and technical RSI."
+        },
+        "education_roce_roe": {
+          "openai_score": 3,
+          "ollama_score": 3,
+          "winner": "tie",
+          "notes": "Both used a knowledge search and cited accessible sources while disclosing the Investopedia extraction failure. The answer was source-backed but did not fully satisfy the request for a simple example and common traps in the excerpted output."
+        },
+        "compare_stocks": {
+          "openai_score": 1,
+          "ollama_score": 1,
+          "winner": "tie",
+          "notes": "Severe failure for both. The query asked to compare DMART, TRENT, and VBL, but the response was a single-stock TALBROAUTO brief. This indicates symbol extraction or routing failure and makes the output unusable for the requested comparative research."
+        },
+        "strength_validation": {
+          "openai_score": 4,
+          "ollama_score": 4,
+          "winner": "tie",
+          "notes": "Both used the dedicated validation tool, did not infer missing RS/fundamental/forensic evidence, and flagged missing fields. Source trail was absent, and no clear ranked conclusion was given beyond the raw validation rows."
+        },
+        "intraday_nifty": {
+          "openai_score": 4,
+          "ollama_score": 1,
+          "winner": "OpenAI gpt-4o",
+          "notes": "OpenAI called the NSE intraday snapshot tool, used NSE first as requested, labeled data freshness, and gave usable support/resistance from the snapshot. It could better label the market-closed/stale nature of the snapshot. Ollama made zero tool calls and returned almost no analysis, failing the main instruction."
+        },
+        "tool_heavy_research": {
+          "openai_score": 3,
+          "ollama_score": 3,
+          "winner": "tie",
+          "notes": "Both showed tools used and provided technical and sector context for WELCORP. However, neither retrieved or reported latest catalysts or forensic red flags; missing catalyst/forensic evidence was not explicitly handled."
+        },
+        "multi_turn_1": {
+          "openai_score": 3,
+          "ollama_score": 3,
+          "winner": "tie",
+          "notes": "Both provided a WELCORP stock brief with tool trail and missing RS evidence. The company-analysis component was shallow, and fresh-evidence needs were not comprehensively separated from known DB facts."
+        },
+        "multi_turn_2": {
+          "openai_score": 1,
+          "ollama_score": 1,
+          "winner": "OpenAI gpt-4o",
+          "notes": "Both failed the multi-turn evidence-quality comparison. OpenAI at least used tools, but it lost the antecedent of 'it' and compared NIFTY 50 with NIVABUPA instead of WELCORP with NAVABUPA/NIVABUPA. Ollama made no tool calls, lost context, and fabricated unsupported claims about proprietary NAVA analytics, peer review, GitHub repositories, and econometric methods."
+        }
+      },
+      "strengths": {
+        "openai": [
+          {
+            "score": 4,
+            "finding": "Strong tool discipline in most tool-routed cases, with correct calls for market overview, stock brief, strength validation, and intraday NIFTY."
+          },
+          {
+            "score": 4,
+            "finding": "Generally good source transparency in templated market and stock outputs, including mode, clock, source labels, and explicit tool trails."
+          },
+          {
+            "score": 4,
+            "finding": "Better output usability than Ollama on LLM-driven intraday analysis because it produced actionable levels and freshness labels from a real tool result."
+          },
+          {
+            "score": 3,
+            "finding": "Reasonable risk handling in stock briefs by flagging overbought RSI, non-Stage-2 conditions, and missing evidence where template fields support it."
+          }
+        ],
+        "ollama": [
+          {
+            "score": 4,
+            "finding": "Performed similarly to OpenAI on deterministic, template-driven tool routes such as market overview, DMART technicals, strength validation, and WELCORP brief."
+          },
+          {
+            "score": 4,
+            "finding": "Fast and stable on simple routed cases, with no reported tool errors in the successful template paths."
+          },
+          {
+            "score": 3,
+            "finding": "Preserved disclaimer, mode, clock, and source formatting when the application path generated a standard report template."
+          }
+        ]
+      },
+      "weaknesses": {
+        "openai": [
+          {
+            "score": 2,
+            "finding": "Failed comparative stock routing in the DMART/TRENT/VBL case by returning TALBROAUTO, making the answer irrelevant."
+          },
+          {
+            "score": 2,
+            "finding": "Poor multi-turn context management in the final turn: it did not resolve 'it' to WELCORP and instead compared NIFTY 50 with NIVABUPA."
+          },
+          {
+            "score": 3,
+            "finding": "Sometimes omitted requested dimensions such as FII/DII flow, latest catalysts, forensic red flags, support/resistance, examples, and traps."
+          },
+          {
+            "score": 3,
+            "finding": "Evidence transparency is good when a template supplies it, but missing requested data is not always explicitly marked as unavailable."
+          }
+        ],
+        "ollama": [
+          {
+            "score": 1,
+            "finding": "Failed LLM-driven intraday tool discipline: zero tool calls and a near-empty answer despite explicit instruction to use NSE snapshot first."
+          },
+          {
+            "score": 1,
+            "finding": "Severe hallucination in multi-turn comparison, including unsupported claims about NAVABUPA/NAVA proprietary analytics, peer-reviewed models, GitHub repositories, and validation studies."
+          },
+          {
+            "score": 1,
+            "finding": "Poor context management: did not anchor 'it' to the previous WELCORP analysis and did not validate NAVABUPA/NIVABUPA through tools."
+          },
+          {
+            "score": 2,
+            "finding": "Same symbol/routing failure as OpenAI in compare_stocks, returning TALBROAUTO instead of the requested DMART/TRENT/VBL comparison."
+          }
+        ]
+      },
+      "tool_call_findings": {
+        "openai_score": 3,
+        "ollama_score": 2,
+        "findings": [
+          "OpenAI made 24 tool calls across the evaluated cases and usually selected relevant tools for routed tasks.",
+          "OpenAI correctly used get_nse_intraday_snapshot for the intraday NIFTY instruction, satisfying the NSE-first requirement.",
+          "OpenAI still had tool/routing failures: compare_stocks resolved or processed the wrong symbol, and multi_turn_2 mixed resolve_symbol, get_nse_intraday_snapshot, and compare_stocks into an incorrect NIFTY-vs-NIVABUPA comparison.",
+          "Ollama matched tool calls in standard intent-routed templates but made zero tool calls in two critical LLM-driven cases: intraday_nifty and multi_turn_2.",
+          "Ollama's zero-tool multi_turn_2 response fabricated evidence instead of retrieving or validating it.",
+          "Both backends need hard validation that requested tickers match resolved tickers before generating reports."
+        ]
+      },
+      "context_findings": {
+        "openai_score": 2,
+        "ollama_score": 1,
+        "findings": [
+          "OpenAI handled single-turn context adequately but failed the key pronoun-resolution test. It did not treat 'it' as a ticker, but it also did not map 'it' to WELCORP; it substituted NIFTY 50 from a prior intraday case.",
+          "Ollama failed the same pronoun-resolution task more severely, producing a generic fabricated evidence-quality essay without grounding either instrument in the prior WELCORP context.",
+          "Both systems need conversation-state constraints that bind referents to the immediately preceding stock entity and disallow unrelated symbols unless explicitly requested.",
+          "The test specifically asked not to treat common words as symbols. Neither output showed an 'IT' ticker mistake, but both still failed context grounding."
+        ]
+      },
+      "report_generation_findings": {
+        "openai_score": 4,
+        "ollama_score": 4,
+        "findings": [
+          "The stage2 report generation succeeded, produced a Markdown report of 20131 characters, and was generated directly from the DB snapshot with no LLM required.",
+          "Because report generation bypassed the model backend, the result does not distinguish OpenAI from Ollama.",
+          "The no-LLM report path is a strength for reliability and reproducibility: it avoids hallucinated market data and ensures a deterministic DB-backed artifact.",
+          "Recommended improvement: include a machine-readable source manifest, snapshot timestamp, row counts, missing-field counts, and validation checks in the report metadata."
+        ]
+      },
+      "recommended_backend_policy": {
+        "primary_backend": "OpenAI gpt-4o",
+        "fallback_backend": "Ollama granite4:latest only for deterministic template-routed tasks after tool outputs are already validated",
+        "policy_score": 4,
+        "rules": [
+          "Use OpenAI gpt-4o for LLM-driven market reasoning, intraday interpretation, and user-facing synthesis.",
+          "Use Ollama granite4:latest only where the application controls the data path and the model is not responsible for deciding whether tools are needed.",
+          "Do not allow either backend to generate comparative research unless all requested symbols are resolved and echoed back before analysis.",
+          "Block final answers when requested fields such as FII/DII flow, catalysts, forensic red flags, RS rank, valuation, or fundamentals are unavailable unless the response explicitly marks them missing.",
+          "Require source trails for every market-data answer, including tool names, timestamps, source type, and freshness state.",
+          "For multi-turn sessions, maintain an explicit entity memory object and force pronoun resolution against that object before any tool call or narrative answer.",
+          "Reject or retry outputs that introduce symbols not requested or not resolved from the user's query."
+        ]
+      },
+      "remediation_backlog": [
+        {
+          "priority": 1,
+          "score": 5,
+          "item": "Add a symbol-resolution guardrail that compares requested symbols with resolved symbols and blocks outputs when they mismatch, especially for multi-symbol comparisons."
+        },
+        {
+          "priority": 2,
+          "score": 5,
+          "item": "Implement mandatory missing-evidence reporting for every requested dimension, including FII/DII flow, support/resistance, RS rank, valuation, catalysts, and forensic red flags."
+        },
+        {
+          "priority": 3,
+          "score": 5,
+          "item": "Add a multi-turn entity memory layer that records the active company/ticker and resolves pronouns like 'it' before routing or answering."
+        },
+        {
+          "priority": 4,
+          "score": 5,
+          "item": "Disallow zero-tool answers for live, intraday, latest, current, comparison, or evidence-quality queries unless a cached validated data object is already attached."
+        },
+        {
+          "priority": 5,
+          "score": 4,
+          "item": "Introduce a hallucination gate that rejects unsupported claims about proprietary analytics, peer review, GitHub repositories, backtests, and methodologies unless backed by retrieved sources."
+        },
+        {
+          "priority": 6,
+          "score": 4,
+          "item": "Create a dedicated comparative-research workflow that loops over each requested symbol, collects the same evidence fields, and produces a table with missing values explicitly preserved."
+        },
+        {
+          "priority": 7,
+          "score": 4,
+          "item": "Improve intraday freshness labeling by clearly distinguishing live market data, market-closed snapshots, previous-session close data, and stale fallback data."
+        },
+        {
+          "priority": 8,
+          "score": 3,
+          "item": "Enhance education answers to satisfy instructional details such as simple examples, common traps, Indian investor context, and source list."
+        },
+        {
+          "priority": 9,
+          "score": 3,
+          "item": "Standardize source trails across all answer types, including validation outputs and education outputs."
+        },
+        {
+          "priority": 10,
+          "score": 3,
+          "item": "Add report-generation metadata with DB snapshot timestamp, universe size, filters used, missing-field counts, and validation status."
+        }
+      ]
+    }
+  },
+  "json_path": "/Users/pgorai/Documents/Projects/Unified-NSE-Analysis/reports/model_benchmarks/agent_model_benchmark_20260512_025101.json",
+  "rerendered_at": "2026-05-12T02:51:01"
+}

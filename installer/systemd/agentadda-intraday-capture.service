@@ -1,0 +1,20 @@
+# Agent Adda — Intraday Capture systemd unit.
+# Runs terminal.intraday_capture as an always-on background service.
+# Placeholders __VENV__ and __ROOT__ are substituted by setup_wizard.py.
+[Unit]
+Description=Agent Adda — Intraday Quote-Tape Capture
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=__ROOT__
+EnvironmentFile=-__ROOT__/.env
+ExecStart=__VENV__/bin/python -c "import time; from terminal.intraday_capture import start_background_capture; start_background_capture();\nwhile True: time.sleep(3600)"
+Restart=always
+RestartSec=15
+StandardOutput=append:/var/log/agentadda_capture.log
+StandardError=append:/var/log/agentadda_capture.err
+
+[Install]
+WantedBy=multi-user.target

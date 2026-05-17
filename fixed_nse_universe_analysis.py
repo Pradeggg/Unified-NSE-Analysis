@@ -53,6 +53,13 @@ NSE_DATA_DIR.mkdir(exist_ok=True, parents=True)
 DB_PATH = ROOT / "nse_analysis.db"
 PG_DSN = "dbname=nse_market user=nse_admin host=/tmp"
 
+STOCK_RESULT_COLUMNS = [
+    'SYMBOL', 'COMPANY_NAME', 'MARKET_CAP_CATEGORY', 'CURRENT_PRICE',
+    'CHANGE_1D', 'CHANGE_1W', 'CHANGE_1M', 'TECHNICAL_SCORE', 'RSI',
+    'RELATIVE_STRENGTH', 'CAN_SLIM_SCORE', 'MINERVINI_SCORE',
+    'ENHANCED_FUND_SCORE', 'TREND_SIGNAL', 'TRADING_SIGNAL',
+]
+
 print("Starting ENHANCED NSE Universe Analysis (Python)...")
 
 # =============================================================================
@@ -188,6 +195,62 @@ def _load_postgres_stock_history():
     return df
 
 
+def _load_postgres_index_history():
+    """Load full NSE index history from PostgreSQL for RS and index scoring."""
+    try:
+        import psycopg2
+    except ImportError:
+        return None
+
+    try:
+        conn = psycopg2.connect(PG_DSN)
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT index_symbol AS "SYMBOL",
+                           trade_date AS "TIMESTAMP",
+                           open AS "OPEN",
+                           high AS "HIGH",
+                           low AS "LOW",
+                           close AS "CLOSE",
+                           volume AS "TOTTRDQTY",
+                           COALESCE(turnover_cr, 0) * 10000000 AS "TOTTRDVAL"
+                    FROM market.index_eod
+                    WHERE close IS NOT NULL
+                      AND close > 0
+                      AND trade_date IS NOT NULL
+                    ORDER BY trade_date, index_symbol
+                    """
+                )
+                df = pd.DataFrame(
+                    cur.fetchall(),
+                    columns=["SYMBOL", "TIMESTAMP", "OPEN", "HIGH", "LOW", "CLOSE", "TOTTRDQTY", "TOTTRDVAL"],
+                )
+        finally:
+            conn.close()
+    except Exception as e:
+        print(f"PostgreSQL index history unavailable; using CSV only ({e})")
+        return None
+
+    if df.empty:
+        return None
+
+    df["TIMESTAMP"] = pd.to_datetime(df["TIMESTAMP"]).dt.date
+    for col in ["CLOSE", "OPEN", "HIGH", "LOW", "TOTTRDQTY", "TOTTRDVAL"]:
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+    df = df[
+        df["SYMBOL"].notna()
+        & df["TIMESTAMP"].notna()
+        & df["CLOSE"].notna()
+        & (df["CLOSE"] > 0)
+    ].copy()
+    df = df.sort_values(["SYMBOL", "TIMESTAMP"]).drop_duplicates(subset=["SYMBOL", "TIMESTAMP"], keep="last")
+    df = df.sort_values(["TIMESTAMP", "SYMBOL"])
+    print(f"Loaded {len(df)} PostgreSQL index history records")
+    return df
+
+
 def load_stock_data():
     """Load NSE stock data, preferring PostgreSQL history when the local CSV has only one day."""
     print("Loading NSE stock data with enhanced error handling...")
@@ -241,8 +304,11 @@ def load_stock_data():
         raise
 
 def load_index_data():
-    """Load NSE index data from CSV"""
+    """Load NSE index data, preferring PostgreSQL history for RS calculations."""
     print("Loading comprehensive NSE index data...")
+    pg_df = _load_postgres_index_history()
+    if pg_df is not None and not pg_df.empty:
+        return pg_df
     
     index_file = DATA_DIR / 'nse_index_data.csv'
     if not index_file.exists():
@@ -255,6 +321,11 @@ def load_index_data():
         df['TIMESTAMP'] = pd.to_datetime(df['TIMESTAMP']).dt.date
         df['CLOSE'] = pd.to_numeric(df['CLOSE'], errors='coerce')
         df = df[df['CLOSE'].notna() & df['TIMESTAMP'].notna() & (df['CLOSE'] > 0)]
+        max_history = int(df.groupby("SYMBOL")["TIMESTAMP"].nunique().max()) if not df.empty else 0
+        if max_history < 50:
+            pg_df = _load_postgres_index_history()
+            if pg_df is not None and not pg_df.empty:
+                return pg_df
         print(f"Loaded comprehensive index data: {len(df)} records")
         return df
     except Exception as e:
@@ -679,6 +750,8 @@ def analyze_stocks(stock_data, index_data, fundamental_data, company_names, late
     results = []
     processed_count = 0
     error_count = 0
+    insufficient_history_count = 0
+    no_score_count = 0
     
     # Get NIFTY500 index data for relative strength calculation
     nifty500_data = index_data[index_data['SYMBOL'].str.upper() == 'NIFTY 500'].copy() if 'SYMBOL' in index_data.columns else None
@@ -690,6 +763,7 @@ def analyze_stocks(stock_data, index_data, fundamental_data, company_names, late
             stock_history = stock_data[stock_data['SYMBOL'] == symbol].sort_values('TIMESTAMP')
             
             if len(stock_history) < 50:
+                insufficient_history_count += 1
                 continue
             
             # Calculate technical score
@@ -701,6 +775,7 @@ def analyze_stocks(stock_data, index_data, fundamental_data, company_names, late
             )
             
             if tech_result['score'] is None:
+                no_score_count += 1
                 continue
             
             # Calculate price changes
@@ -771,8 +846,15 @@ def analyze_stocks(stock_data, index_data, fundamental_data, company_names, late
                 print(f"Warning: failed to analyze {symbol}: {e}")
     
     print(f"Processing completed. Successfully processed: {processed_count} stocks. Errors: {error_count}")
+    if insufficient_history_count:
+        print(
+            "Skipped for insufficient history (<50 trading rows): "
+            f"{insufficient_history_count} stocks"
+        )
+    if no_score_count:
+        print(f"Skipped because technical score could not be computed: {no_score_count} stocks")
     
-    return pd.DataFrame(results)
+    return pd.DataFrame(results, columns=STOCK_RESULT_COLUMNS)
 
 # =============================================================================
 # Index Analysis Functions
@@ -1230,6 +1312,15 @@ def save_daily_scores_to_postgres(results, latest_date):
 # Report Generation Functions
 # =============================================================================
 
+def _report_num(value, digits=2, suffix=""):
+    try:
+        if value is None or pd.isna(value):
+            return "N/A"
+        return f"{float(value):.{digits}f}{suffix}"
+    except Exception:
+        return "N/A"
+
+
 def generate_markdown_report(results, index_results, latest_date, timestamp):
     """Generate comprehensive markdown report"""
     report_file = REPORTS_DIR / f"NSE_Analysis_Report_{latest_date.strftime('%Y%m%d')}_{timestamp}.md"
@@ -1260,13 +1351,13 @@ def generate_markdown_report(results, index_results, latest_date, timestamp):
         f.write("|------|--------|------------|-------|----|----|----|------------|-----|----|----------|-----------|-------|--------|\n")
         for idx, (_, row) in enumerate(top_15.iterrows(), 1):
             f.write(f"| {idx} | {row['SYMBOL']} | {row['MARKET_CAP_CATEGORY']} | "
-                   f"₹{row['CURRENT_PRICE']:.2f} | "
-                   f"{row.get('CHANGE_1D', 'N/A'):.2f}% | "
-                   f"{row.get('CHANGE_1W', 'N/A'):.2f}% | "
-                   f"{row.get('CHANGE_1M', 'N/A'):.2f}% | "
-                   f"{row['TECHNICAL_SCORE']:.1f} | "
-                   f"{row.get('RSI', 'N/A')} | "
-                   f"{row.get('RELATIVE_STRENGTH', 'N/A')}% | "
+                   f"₹{_report_num(row.get('CURRENT_PRICE'))} | "
+                   f"{_report_num(row.get('CHANGE_1D'), suffix='%')} | "
+                   f"{_report_num(row.get('CHANGE_1W'), suffix='%')} | "
+                   f"{_report_num(row.get('CHANGE_1M'), suffix='%')} | "
+                   f"{_report_num(row.get('TECHNICAL_SCORE'), 1)} | "
+                   f"{_report_num(row.get('RSI'), 1)} | "
+                   f"{_report_num(row.get('RELATIVE_STRENGTH'), suffix='%')} | "
                    f"{row['CAN_SLIM_SCORE']} | "
                    f"{row['MINERVINI_SCORE']} | "
                    f"{row['TREND_SIGNAL']} | "
@@ -1280,10 +1371,10 @@ def generate_markdown_report(results, index_results, latest_date, timestamp):
             f.write("|-------|-------|------------|-----|----------|----|----|--------|\n")
             for _, row in index_results.iterrows():
                 f.write(f"| {row['INDEX_NAME']} | {row['CURRENT_LEVEL']:.2f} | "
-                       f"{row['TECHNICAL_SCORE']:.1f} | "
-                       f"{row.get('RSI', 'N/A')} | "
-                       f"{row.get('MOMENTUM_50D', 'N/A')}% | "
-                       f"{row.get('RELATIVE_STRENGTH', 'N/A')}% | "
+                       f"{_report_num(row.get('TECHNICAL_SCORE'), 1)} | "
+                       f"{_report_num(row.get('RSI'), 1)} | "
+                       f"{_report_num(row.get('MOMENTUM_50D'), suffix='%')} | "
+                       f"{_report_num(row.get('RELATIVE_STRENGTH'), suffix='%')} | "
                        f"{row['TREND_SIGNAL']} | "
                        f"{row['TRADING_SIGNAL']} |\n")
             f.write("\n")
@@ -1319,6 +1410,18 @@ if __name__ == "__main__":
         
         # Analyze stocks
         results = analyze_stocks(stock_data, index_data, fundamental_data, company_names, latest_date)
+        if results.empty:
+            max_stock_history = int(stock_data.groupby("SYMBOL")["TIMESTAMP"].nunique().max()) if not stock_data.empty else 0
+            print("\n❌ No stocks could be analyzed.")
+            print(
+                "Reason: stock history is insufficient for the 50-day technical window "
+                f"(max rows per symbol: {max_stock_history})."
+            )
+            print(
+                "Action: start PostgreSQL with `postgres/start_pg.sh start`, then rerun "
+                "`python postgres/loader.py --eod-only` and this analysis."
+            )
+            sys.exit(1)
         
         # Sort by technical score
         results = results.sort_values('TECHNICAL_SCORE', ascending=False)

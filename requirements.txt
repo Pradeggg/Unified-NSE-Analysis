@@ -62,3 +62,7 @@ googlesearch-python>=1.2.3
 
 scipy>=1.11
 plotext>=5.2
+
+# Agent REPL UI (nse_agent.py): coloured banner + prompt toolkit input bar
+colorama>=0.4.6
+prompt_toolkit>=3.0.43

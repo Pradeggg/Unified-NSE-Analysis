@@ -68,3 +68,20 @@ organized/core_scripts/organized/backtesting_results/real_backtesting_signals_20
 PR*.zip
 *29102025.csv
 *29102025.txt
+
+# ── Distribution / build artefacts (never ship these) ────────────────────────
+installer/macos/Agent Adda.app/
+installer/macos/Agent Adda.app
+installer/.env.template          # generated at runtime by setup_wizard
+dist/
+*.tar.gz
+*.zip
+# Built launchd plists rendered by setup_wizard / Makefile (templates live in
+# installer/launchd/ — only the *.tmpl variants should be tracked)
+installer/launchd/com.agentadda.*.plist
+!installer/launchd/com.agentadda.*.plist.tmpl
+
+# OS / IDE noise that occasionally leaks in
+.AppleDouble
+.LSOverride
+Icon?

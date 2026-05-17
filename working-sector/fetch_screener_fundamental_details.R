@@ -1,6 +1,7 @@
 #!/usr/bin/env Rscript
-# Fetch P&L, Quarterly Results, Balance Sheet, and Financial Ratios from Screener.in for a symbol list.
-# Writes working-sector/output/fundamental_details.csv (symbol, pnl_summary, quarterly_summary, balance_sheet_summary, ratios_summary).
+# Fetch P&L, Quarterly Results, Balance Sheet, Cash Flow, Investor/Shareholding,
+# and Financial Ratios from Screener.in for a symbol list.
+# Writes working-sector/output/fundamental_details.csv with rich section summaries.
 # Ratios: from screener financial ratios table when available; when not (e.g. ROCE, ROE, EPS missing),
 # they are computed from P&L and Balance sheet (ROE = Net Profit/Equity; ROCE = EBIT or EBITDA/Capital Employed; EPS from P&L; NPM = Net Profit/Sales).
 # Usage: Rscript fetch_screener_fundamental_details.R [symbols_file] [output_csv]
@@ -122,6 +123,69 @@ format_bs <- function(bs) {
   paste(out, collapse = "; ")
 }
 
+# Cash flow summary: latest CFO/CFI/CFF and FCF proxy when possible
+format_cashflow <- function(cf) {
+  if (is.null(cf) || !is.data.frame(cf) || nrow(cf) == 0 || ncol(cf) < 2) return(NA_character_)
+  items <- as.character(cf[[1]])
+  latest <- suppressWarnings(as.numeric(gsub("[^0-9.\\-]", "", as.character(cf[[ncol(cf)]]))))
+  if (all(is.na(latest))) return(NA_character_)
+
+  pick_val <- function(pattern) {
+    i <- which(grepl(pattern, items, ignore.case = TRUE))[1]
+    if (is.na(i)) return(NA_real_)
+    latest[i]
+  }
+
+  cfo <- pick_val("CashfromOperating|Cash Flow from Operating|Net Cash from Operating")
+  cfi <- pick_val("CashfromInvesting|Cash Flow from Investing|Net Cash from Investing")
+  cff <- pick_val("CashfromFinancing|Cash Flow from Financing|Net Cash from Financing")
+  capex <- pick_val("CapitalExpenditure|PurchaseofFixedAssets|Capex")
+
+  out <- character(0)
+  if (!is.na(cfo)) out <- c(out, paste0("CFO: ", round(cfo, 0), " Cr"))
+  if (!is.na(cfi)) out <- c(out, paste0("CFI: ", round(cfi, 0), " Cr"))
+  if (!is.na(cff)) out <- c(out, paste0("CFF: ", round(cff, 0), " Cr"))
+  if (!is.na(cfo) && !is.na(capex)) {
+    # Capex is usually negative in Screener tables; CFO + Capex approximates FCF.
+    fcf <- round(cfo + capex, 0)
+    out <- c(out, paste0("FCF proxy: ", fcf, " Cr"))
+  }
+
+  if (length(out) == 0) return(NA_character_)
+  paste(out, collapse = "; ")
+}
+
+# Investor summary from shareholding pattern (latest column only)
+format_investor <- function(sh) {
+  if (is.null(sh) || !is.data.frame(sh) || nrow(sh) == 0 || ncol(sh) < 2) return(NA_character_)
+  if (!"Items" %in% names(sh)) return(NA_character_)
+
+  latest_col <- names(sh)[ncol(sh)]
+  values <- suppressWarnings(as.numeric(gsub("[^0-9.\\-]", "", as.character(sh[[latest_col]]))))
+  if (all(is.na(values))) return(NA_character_)
+  items <- as.character(sh$Items)
+
+  get_latest <- function(pattern) {
+    i <- which(grepl(pattern, items, ignore.case = TRUE))[1]
+    if (is.na(i)) return(NA_real_)
+    values[i]
+  }
+
+  promoter <- get_latest("Promoter")
+  fii <- get_latest("FII|Foreign")
+  dii <- get_latest("DII|DomesticInstitution")
+  public <- get_latest("Public")
+
+  out <- character(0)
+  if (!is.na(promoter)) out <- c(out, paste0("Promoter: ", round(promoter, 2), "%"))
+  if (!is.na(fii)) out <- c(out, paste0("FII: ", round(fii, 2), "%"))
+  if (!is.na(dii)) out <- c(out, paste0("DII: ", round(dii, 2), "%"))
+  if (!is.na(public)) out <- c(out, paste0("Public: ", round(public, 2), "%"))
+
+  if (length(out) == 0) return(NA_character_)
+  paste(out, collapse = "; ")
+}
+
 # Helper: get latest (most recent column) numeric value from P&L for a row matching pattern
 get_pnl_latest <- function(pnl, pattern) {
   if (is.null(pnl) || nrow(pnl) == 0 || ncol(pnl) < 2) return(NA_real_)
@@ -225,7 +289,7 @@ results <- list()
 for (i in seq_along(symbols)) {
   sym <- symbols[i]
   message("[", i, "/", length(symbols), "] ", sym, " ...")
-  pnl_sum <- quarterly_sum <- bs_sum <- ratios_sum <- NA_character_
+  pnl_sum <- quarterly_sum <- bs_sum <- cash_sum <- investor_sum <- ratios_sum <- NA_character_
   pnl <- NULL
   bs  <- NULL
   tryCatch({
@@ -244,6 +308,16 @@ for (i in seq_along(symbols)) {
     Sys.sleep(2)
   }, error = function(e) NULL)
   tryCatch({
+    cf <- get_screener_cashflow_data(sym)
+    cash_sum <- format_cashflow(cf)
+    Sys.sleep(2)
+  }, error = function(e) NULL)
+  tryCatch({
+    sh <- get_screener_shareholdingpattern_data(sym)
+    investor_sum <- format_investor(sh)
+    Sys.sleep(2)
+  }, error = function(e) NULL)
+  tryCatch({
     fr <- get_screener_finratios_data(sym)
     ratios_sum <- format_ratios(fr, pnl = pnl, bs = bs)
     Sys.sleep(2)
@@ -253,6 +327,8 @@ for (i in seq_along(symbols)) {
     pnl_summary = if (is.na(pnl_sum)) "" else pnl_sum,
     quarterly_summary = if (is.na(quarterly_sum)) "" else quarterly_sum,
     balance_sheet_summary = if (is.na(bs_sum)) "" else bs_sum,
+    cash_flow_summary = if (is.na(cash_sum)) "" else cash_sum,
+    investor_summary = if (is.na(investor_sum)) "" else investor_sum,
     ratios_summary = if (is.na(ratios_sum)) "" else ratios_sum,
     stringsAsFactors = FALSE
   )

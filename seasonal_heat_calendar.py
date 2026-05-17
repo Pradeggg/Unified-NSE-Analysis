@@ -8,6 +8,7 @@ Renders a standalone HTML heatmap table embeddable in the sector rotation report
 from __future__ import annotations
 
 import math
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -30,20 +31,61 @@ _TAILWIND_PCT = 2.0   # avg monthly return > +2% → TAILWIND
 _HEADWIND_PCT = -1.0  # avg monthly return < -1% → HEADWIND
 _MIN_OBS = 5          # minimum observations required for a signal
 
+_INDEX_SYMBOL_ALIASES = {
+    "NIFTY FIN SERVICE": "NIFTY FINANCIAL SERVICES",
+    "NIFTY FINANCIAL SERVICE": "NIFTY FINANCIAL SERVICES",
+}
+
 
 # ---------------------------------------------------------------------------
 # Data loading helpers
 # ---------------------------------------------------------------------------
 
+def _normalize_index_symbol(symbol: str) -> str:
+    return " ".join(str(symbol).upper().replace("&", "AND").split())
+
+
 def _load_index_data() -> pd.DataFrame:
-    df = pd.read_csv(_INDEX_CSV, parse_dates=["TIMESTAMP"])
-    return df
+    try:
+        import psycopg2
+        dsn = os.environ.get("AGENT_ADDA_PG_DSN") or "dbname=nse_market user=nse_admin host=/tmp"
+        with psycopg2.connect(dsn) as conn, conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT index_symbol AS "SYMBOL",
+                       trade_date AS "TIMESTAMP",
+                       close AS "CLOSE"
+                FROM market.index_eod
+                WHERE close IS NOT NULL
+                ORDER BY index_symbol, trade_date
+                """,
+            )
+            df = pd.DataFrame(cur.fetchall(), columns=["SYMBOL", "TIMESTAMP", "CLOSE"])
+        if not df.empty:
+            df["TIMESTAMP"] = pd.to_datetime(df["TIMESTAMP"], errors="coerce")
+            return df
+    except Exception:
+        pass
+    return pd.read_csv(_INDEX_CSV, parse_dates=["TIMESTAMP"])
 
 
 def _build_monthly_returns(index_symbols: list[str]) -> pd.DataFrame:
     """Return a long-form DataFrame: [symbol, period, month_num, return_pct]."""
     df = _load_index_data()
-    df = df[df["SYMBOL"].isin(index_symbols)].copy()
+    requested_by_norm = {_normalize_index_symbol(symbol): symbol for symbol in index_symbols}
+    requested_by_norm.update(
+        {
+            _normalize_index_symbol(alias): requested_by_norm[_normalize_index_symbol(canonical)]
+            for alias, canonical in _INDEX_SYMBOL_ALIASES.items()
+            if _normalize_index_symbol(canonical) in requested_by_norm
+        }
+    )
+    df["_symbol_norm"] = df["SYMBOL"].map(_normalize_index_symbol)
+    df = df[df["_symbol_norm"].isin(requested_by_norm)].copy()
+    df["SYMBOL"] = df["_symbol_norm"].map(requested_by_norm)
+    df = df.drop(columns=["_symbol_norm"])
+    df["TIMESTAMP"] = pd.to_datetime(df["TIMESTAMP"], errors="coerce")
+    df = df.dropna(subset=["TIMESTAMP", "CLOSE"])
 
     # Last trading day close per calendar month per symbol
     df["period"] = df["TIMESTAMP"].dt.to_period("M")
@@ -82,7 +124,11 @@ def build_seasonal_heat_calendar(
         age_days = (datetime.now() - datetime.fromtimestamp(_CACHE_CSV.stat().st_mtime)).days
         if age_days < _CACHE_TTL_DAYS:
             cached = pd.read_csv(_CACHE_CSV)
-            if set(index_to_sector.keys()).issubset(set(cached["symbol"].unique())):
+            if (
+                not cached.empty
+                and "symbol" in cached.columns
+                and set(index_to_sector.keys()).issubset(set(cached["symbol"].unique()))
+            ):
                 monthly_long = cached
                 _apply_sector_names(monthly_long, index_to_sector)
                 return _pivot_heat(monthly_long)

@@ -1,0 +1,18 @@
+# Agent Adda — Daily Refresh systemd unit.
+# Placeholders __VENV__ and __ROOT__ are substituted by setup_wizard.py.
+# Pair with agentadda-daily-refresh.timer for scheduling at 16:15 IST.
+[Unit]
+Description=Agent Adda — Daily NSE Data Refresh
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=__ROOT__
+EnvironmentFile=-__ROOT__/.env
+ExecStart=__VENV__/bin/python __ROOT__/daily_refresh.py
+StandardOutput=append:/var/log/agentadda_daily_refresh.log
+StandardError=append:/var/log/agentadda_daily_refresh.err
+
+[Install]
+WantedBy=multi-user.target

@@ -1,4 +1,5 @@
 import unittest
+from datetime import date, timedelta
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -13,6 +14,7 @@ from sector_rotation_report import (
     calculate_peak_resilience,
     classify_consolidation_breakout,
     compute_supertrend,
+    dedupe_sector_rank_by_display_name,
     merge_fundamental_scores,
     report_output_paths,
     render_html_interactive,
@@ -37,6 +39,21 @@ class SectorRotationReportTests(unittest.TestCase):
         self.assertEqual(ranked.iloc[0]["SYMBOL"], "Nifty Defence")
         self.assertGreater(ranked.iloc[0]["ROTATION_SCORE"], ranked.iloc[-1]["ROTATION_SCORE"])
         self.assertAlmostEqual(ranked.iloc[0]["RS_1M"], 12.0)
+
+    def test_dedupe_sector_rank_keeps_one_display_sector_by_best_score(self):
+        sector_rank = pd.DataFrame(
+            [
+                {"SYMBOL": "NIFTY HEALTHCARE", "SECTOR_NAME": "Pharma & Healthcare", "ROTATION_SCORE": 9.7, "RS_1M": 10.1, "RET_1M": 9.8},
+                {"SYMBOL": "NIFTY PHARMA", "SECTOR_NAME": "Pharma & Healthcare", "ROTATION_SCORE": 9.0, "RS_1M": 9.5, "RET_1M": 9.2},
+                {"SYMBOL": "NIFTY METAL", "SECTOR_NAME": "Metals & Mining", "ROTATION_SCORE": 13.3, "RS_1M": 6.3, "RET_1M": 6.0},
+            ]
+        )
+
+        deduped = dedupe_sector_rank_by_display_name(sector_rank)
+
+        self.assertEqual(deduped["SECTOR_NAME"].tolist(), ["Metals & Mining", "Pharma & Healthcare"])
+        pharma = deduped[deduped["SECTOR_NAME"] == "Pharma & Healthcare"].iloc[0]
+        self.assertEqual(pharma["SYMBOL"], "NIFTY HEALTHCARE")
 
     def test_compute_supertrend_marks_persistent_uptrend_as_bullish(self):
         prices = pd.DataFrame(
@@ -416,6 +433,105 @@ class SectorRotationReportTests(unittest.TestCase):
         self.assertIn('data-sector="Defence"', html)
         self.assertIn("Results in 3d (2026-05-05)", html)
 
+    def test_rotation_tab_includes_market_breadth_and_heatmap(self):
+        sector_rank = pd.DataFrame(
+            [
+                {
+                    "SYMBOL": "NIFTYDEF",
+                    "SECTOR_NAME": "Defence",
+                    "CLOSE": 1000,
+                    "RET_5D": 1,
+                    "RET_1M": 5,
+                    "RET_3M": 8,
+                    "RET_6M": 10,
+                    "RS_1M": 2,
+                    "ROTATION_SCORE": 10,
+                    "BREADTH_PCT50": 62,
+                    "BREADTH_SIGNAL": "HEALTHY",
+                    "BREADTH_DIVERGENCE": "NONE",
+                }
+            ]
+        )
+        candidates = pd.DataFrame(
+            [
+                {
+                    "SYMBOL": "ABC",
+                    "COMPANY_NAME": "ABC Ltd",
+                    "SECTOR_NAME": "Defence",
+                    "CURRENT_PRICE": 100,
+                    "TRADING_SIGNAL": "HOLD",
+                    "SETUP_CLASS": "NEUTRAL",
+                    "ACTION_BUCKET": "WATCHLIST",
+                    "INVESTMENT_SCORE": 55,
+                    "TECHNICAL_SCORE": 60,
+                    "ENHANCED_FUND_SCORE": 50,
+                    "RELATIVE_STRENGTH": 4,
+                    "RSI": 55,
+                    "SUPERTREND_STATE": "BULLISH",
+                    "PATTERN": "TRENDING_OR_CHOPPY",
+                    "VOLUME_RATIO": 1,
+                    "ANALYSIS_DATE": "2026-05-12",
+                }
+            ]
+        )
+
+        html = render_html_interactive(
+            sector_rank,
+            candidates,
+            pd.DataFrame(),
+            Path("source.csv"),
+            pd.Timestamp("2026-05-12"),
+            {"sectors": {}, "stocks": {}, "market_summary": ""},
+        )
+
+        self.assertIn("Market Breadth", html)
+        self.assertIn("Sector Rotation Heatmap", html)
+        self.assertIn("rot-hm-cell", html)
+        self.assertIn("62% &gt;50DMA", html)
+
+    def test_rotation_heatmap_collapses_duplicate_display_sectors(self):
+        sector_rank = pd.DataFrame(
+            [
+                {
+                    "SYMBOL": "NIFTY HEALTHCARE",
+                    "SECTOR_NAME": "Pharma & Healthcare",
+                    "CLOSE": 1000,
+                    "RET_5D": 1,
+                    "RET_1M": 9.8,
+                    "RET_3M": 8,
+                    "RET_6M": 10,
+                    "RS_1M": 10.1,
+                    "ROTATION_SCORE": 9.7,
+                    "BREADTH_PCT50": 62.0,
+                    "BREADTH_SIGNAL": "HEALTHY",
+                },
+                {
+                    "SYMBOL": "NIFTY PHARMA",
+                    "SECTOR_NAME": "Pharma & Healthcare",
+                    "CLOSE": 900,
+                    "RET_5D": 1,
+                    "RET_1M": 9.2,
+                    "RET_3M": 7,
+                    "RET_6M": 9,
+                    "RS_1M": 9.5,
+                    "ROTATION_SCORE": 9.0,
+                    "BREADTH_PCT50": 58.0,
+                    "BREADTH_SIGNAL": "NEUTRAL",
+                },
+            ]
+        )
+
+        html = render_html_interactive(
+            sector_rank,
+            pd.DataFrame(columns=["SECTOR_NAME"]),
+            pd.DataFrame(),
+            Path("source.csv"),
+            pd.Timestamp("2026-05-12"),
+            {"sectors": {}, "stocks": {}, "market_summary": ""},
+        )
+
+        self.assertEqual(html.count('<div class="rot-hm-sector">Pharma &amp; Healthcare</div>'), 1)
+
     def test_html_includes_economic_cycle_banner_and_candidate_cycle_tag(self):
         sector_rank = pd.DataFrame(
             [
@@ -787,6 +903,64 @@ class SectorRotationReportTests(unittest.TestCase):
         self.assertIn("Broader Market Technical Narrative", html)
         self.assertIn("Nifty 50", html)
         self.assertIn('data-tab="screeners"', html)
+
+    def test_technical_view_loads_archived_index_history_when_live_csv_is_short(self):
+        with TemporaryDirectory() as td:
+            tmp = Path(td)
+            archive_csv = tmp / "archive_index.csv"
+            live_csv = tmp / "live_index.csv"
+            rows = []
+            start = date(2026, 3, 1)
+            for i in range(35):
+                rows.append(
+                    {
+                        "SYMBOL": "Nifty 50",
+                        "OPEN": 1000 + i,
+                        "HIGH": 1010 + i,
+                        "LOW": 990 + i,
+                        "CLOSE": 1000 + i,
+                        "TIMESTAMP": (start + timedelta(days=i)).isoformat(),
+                        "TOTTRDQTY": 0,
+                    }
+                )
+            pd.DataFrame(rows).to_csv(archive_csv, index=False)
+            pd.DataFrame(
+                [
+                    {
+                        "SYMBOL": "Nifty 50",
+                        "OPEN": 1100,
+                        "HIGH": 1110,
+                        "LOW": 1090,
+                        "CLOSE": 1105,
+                        "TIMESTAMP": "2026-05-12",
+                        "TOTTRDQTY": 0,
+                    }
+                ]
+            ).to_csv(live_csv, index=False)
+
+            old_paths = sector_rotation_report.INDEX_HISTORY_FALLBACK_CSVS
+            old_pg = sector_rotation_report.load_index_eod_from_postgres
+            try:
+                sector_rotation_report.INDEX_HISTORY_FALLBACK_CSVS = [live_csv, archive_csv]
+                sector_rotation_report.load_index_eod_from_postgres = lambda cols: None
+                history = sector_rotation_report.load_index_history_for_technical_view(
+                    ["SYMBOL", "OPEN", "HIGH", "LOW", "CLOSE", "TIMESTAMP", "TOTTRDQTY"]
+                )
+                view = build_short_term_technical_view(history, index_basket=["Nifty 50"])
+            finally:
+                sector_rotation_report.INDEX_HISTORY_FALLBACK_CSVS = old_paths
+                sector_rotation_report.load_index_eod_from_postgres = old_pg
+
+        self.assertGreaterEqual(len(history[history["SYMBOL"] == "Nifty 50"]), 30)
+        self.assertFalse(view["metrics"].empty)
+        self.assertEqual(view["missing_indices"], [])
+        self.assertIn("Nifty 50 closed", view["narrative"])
+
+    def test_report_deep_link_hash_overrides_saved_tab(self):
+        self.assertIn(
+            "var savedTab=location.hash.slice(1)||_ls('nse_tab')||'overview';",
+            sector_rotation_report._JS,
+        )
 
     def test_global_us_context_tab_helper_links_available_latest_report(self):
         with TemporaryDirectory() as td:

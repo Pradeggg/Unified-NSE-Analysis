@@ -55,6 +55,25 @@ CREATE TABLE IF NOT EXISTS intraday.ohlcv_bars (
     PRIMARY KEY (symbol, timeframe, timestamp, source)
 );
 
+CREATE TABLE IF NOT EXISTS intraday.futures_snapshots (
+    symbol       TEXT NOT NULL,
+    expiry       TEXT NOT NULL,
+    source       TEXT NOT NULL,
+    as_of        TIMESTAMPTZ NOT NULL,
+    captured_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    underlying   NUMERIC(18,6),
+    last_price   NUMERIC(18,6),
+    change_pct   NUMERIC(18,6),
+    basis        NUMERIC(18,6),
+    basis_pct    NUMERIC(18,6),
+    oi           BIGINT,
+    oi_change    BIGINT,
+    volume       BIGINT,
+    lot_size     INTEGER,
+    raw_json     JSONB NOT NULL DEFAULT '{}'::jsonb,
+    PRIMARY KEY (symbol, expiry, source, as_of)
+);
+
 CREATE TABLE IF NOT EXISTS intraday.scan_signals (
     snapshot_ts              TIMESTAMPTZ NOT NULL,
     scan_key                 TEXT NOT NULL,
@@ -81,6 +100,8 @@ CREATE INDEX IF NOT EXISTS idx_intraday_quote_symbol_time
     ON intraday.quote_snapshots (symbol, as_of DESC);
 CREATE INDEX IF NOT EXISTS idx_intraday_ohlcv_symbol_timeframe_time
     ON intraday.ohlcv_bars (symbol, timeframe, timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_intraday_futures_symbol_expiry_time
+    ON intraday.futures_snapshots (symbol, expiry, as_of DESC);
 CREATE INDEX IF NOT EXISTS idx_intraday_scan_symbol_time
     ON intraday.scan_signals (symbol, snapshot_ts DESC);
 """
@@ -141,6 +162,8 @@ def _parse_timestamp(value: Any) -> datetime:
         return datetime.now(timezone.utc)
     text = str(value).strip()
     formats = (
+        "%H:%M:%S",
+        "%H:%M",
         "%d-%b-%Y %H:%M:%S",
         "%d-%b-%Y %H:%M",
         "%Y-%m-%d %H:%M:%S",
@@ -150,6 +173,9 @@ def _parse_timestamp(value: Any) -> datetime:
     for fmt in formats:
         try:
             parsed = datetime.strptime(text, fmt)
+            if fmt in {"%H:%M:%S", "%H:%M"}:
+                today = datetime.now(ist).date()
+                parsed = datetime.combine(today, parsed.time())
             return parsed if parsed.tzinfo else parsed.replace(tzinfo=ist)
         except ValueError:
             continue
@@ -279,6 +305,94 @@ def persist_intraday_bars(
             execute_values(cur, sql, values, page_size=500)
         db.commit()
         return {"ok": True, "rows_inserted": len(rows), "schema": "intraday", "table": "ohlcv_bars"}
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        if own_conn:
+            db.close()
+
+
+def persist_live_futures_snapshot(
+    snapshot: dict[str, Any],
+    *,
+    conn=None,
+    dsn: str | None = None,
+) -> dict[str, Any]:
+    """Persist one live futures-chain snapshot into intraday.futures_snapshots."""
+    if not snapshot or snapshot.get("error"):
+        return {"ok": False, "rows_inserted": 0, "reason": snapshot.get("error") if snapshot else "empty_snapshot"}
+
+    sym = str(snapshot.get("symbol") or "").strip().upper()
+    futures = snapshot.get("futures") or []
+    if not sym or not futures:
+        return {"ok": False, "rows_inserted": 0, "reason": "missing_symbol_or_futures"}
+
+    source = str(snapshot.get("source") or "unknown").strip() or "unknown"
+    as_of = _parse_timestamp(snapshot.get("as_of"))
+    underlying = _safe_float(snapshot.get("underlying") or snapshot.get("spot"))
+    lot_size = _safe_int(snapshot.get("lot_size"))
+
+    rows = []
+    for future in futures:
+        expiry = str(future.get("expiry") or "").strip()
+        if not expiry:
+            continue
+        last_price = _safe_float(future.get("last_price") or future.get("settle_price"))
+        basis = _safe_float(future.get("basis"))
+        basis_pct = _safe_float(future.get("basis_pct"))
+        if basis is None and underlying is not None and last_price is not None:
+            basis = round(last_price - underlying, 6)
+        if basis_pct is None and underlying and last_price is not None:
+            basis_pct = round((last_price / underlying - 1) * 100, 6)
+        rows.append(
+            {
+                "symbol": sym,
+                "expiry": expiry,
+                "source": source,
+                "as_of": as_of,
+                "underlying": underlying,
+                "last_price": last_price,
+                "change_pct": _safe_float(future.get("change_pct")),
+                "basis": basis,
+                "basis_pct": basis_pct,
+                "oi": _safe_int(future.get("oi")),
+                "oi_change": _safe_int(future.get("oi_change")),
+                "volume": _safe_int(future.get("volume")),
+                "lot_size": lot_size,
+                "raw_json": Json(_jsonable(future)),
+            }
+        )
+
+    if not rows:
+        return {"ok": False, "rows_inserted": 0, "reason": "no_valid_futures"}
+
+    cols = list(rows[0].keys())
+    values = [[row[col] for col in cols] for row in rows]
+    sql = (
+        f"INSERT INTO intraday.futures_snapshots ({', '.join(cols)}) VALUES %s "
+        "ON CONFLICT (symbol, expiry, source, as_of) DO UPDATE SET "
+        "captured_at = now(), "
+        "underlying = EXCLUDED.underlying, "
+        "last_price = EXCLUDED.last_price, "
+        "change_pct = EXCLUDED.change_pct, "
+        "basis = EXCLUDED.basis, "
+        "basis_pct = EXCLUDED.basis_pct, "
+        "oi = EXCLUDED.oi, "
+        "oi_change = EXCLUDED.oi_change, "
+        "volume = EXCLUDED.volume, "
+        "lot_size = EXCLUDED.lot_size, "
+        "raw_json = EXCLUDED.raw_json"
+    )
+
+    own_conn = conn is None
+    db = conn or connect(dsn)
+    try:
+        ensure_intraday_schema(db, commit=False)
+        with db.cursor() as cur:
+            execute_values(cur, sql, values, page_size=100)
+        db.commit()
+        return {"ok": True, "rows_inserted": len(rows), "schema": "intraday", "table": "futures_snapshots"}
     except Exception:
         db.rollback()
         raise

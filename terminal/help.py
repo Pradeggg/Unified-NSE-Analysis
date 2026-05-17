@@ -109,9 +109,10 @@ SECTIONS: dict[str, dict] = {
         "title":  "Deep Search Engine",
         "icon":   "🔍",
         "color":  "magenta",
-        "aliases": ["search", "deep", "news", "insider", "analyst", "broker", "mf", "concall", "social", "shareholding"],
+        "aliases": ["search", "deep", "news", "insider", "analyst", "broker", "mf", "concall", "social", "shareholding", "results"],
         "entries": [
             ("/search RELIANCE",                "Full deep-dive (11 parallel verticals)"),
+            ("/results RELIANCE",               "Latest quarterly results, filings, concalls, catalysts"),
             ("/search RELIANCE dividend",       "Dividends, splits, bonuses (NSE live)"),
             ("/search RELIANCE insider",        "Insider/promoter trade disclosures"),
             ("/search RELIANCE shareholding",   "Promoter/FII/DII/pledge trend"),
@@ -168,7 +169,7 @@ SECTIONS: dict[str, dict] = {
         "color":  "blue",
         "aliases": ["heat", "cycle", "scenario", "narrative", "voice", "macro", "seasonal", "concall", "global", "dashboard", "dash"],
         "entries": [
-            ("/dashboard",              "Auto-refreshing current market dashboard + narrative"),
+            ("/dashboard",              "Auto-refreshing stock-market-TV dashboard + LLM narrative, heatmap, news, movers"),
             ("/dash",                   "Alias for /dashboard"),
             ("/heat",                   "Sector seasonal heatmap (current month)"),
             ("/heat 3",                 "Seasonal signals for March"),

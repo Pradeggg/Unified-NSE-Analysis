@@ -1,7 +1,9 @@
 import unittest
 from unittest.mock import patch
 
-from terminal.agent import Agent, SYSTEM_PROMPT, _keyword_intent
+from terminal.agent import Agent, SYSTEM_PROMPT, _keyword_intent, _required_tools_for_query
+from terminal.tools import compare_stocks
+from terminal.deliberation import build_hypotheses, build_plan, evaluate_evidence, render_final_answer
 from voice_persona import normalize_spoken_query
 
 
@@ -17,6 +19,83 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
         self.assertEqual(routed["intent"], "market_overview")
         self.assertEqual(routed["plan"][0][0], "get_live_market_overview")
         self.assertNotIn("OVERVIEW", str(routed))
+
+    def test_placeholder_symbol_request_does_not_run_stock_tools(self):
+        routed = _keyword_intent("/assess SYMBOL")
+
+        self.assertEqual(routed["intent"], "placeholder_symbol_request")
+        self.assertEqual(routed["plan"], [])
+
+    def test_placeholder_detection_does_not_block_prose_stock_or_symbol_words(self):
+        education = _keyword_intent(
+            "Teach me PE vs PB using TCS and INFY examples, but do not run a stock deep dive"
+        )
+        screener = _keyword_intent(
+            "show stocks above VWAP bounce / vwap reclaim right now, not a single symbol",
+            data_mode="intraday",
+        )
+
+        self.assertEqual(education["intent"], "market_knowledge")
+        self.assertEqual(screener["intent"], "intraday_screener")
+        self.assertEqual(screener["plan"], [("run_intraday_screener", {"screen_type": "vwap_reclaim"})])
+
+    def test_document_link_followup_does_not_route_to_stock_brief(self):
+        for query in (
+            "check alternative document link",
+            "find alternative PDF link for Diageo India audited financial results",
+        ):
+            with self.subTest(query=query):
+                routed = _keyword_intent(query)
+                self.assertEqual(routed["intent"], "document_link_help")
+                self.assertEqual(routed["plan"], [])
+                self.assertNotIn("resolve_symbol", str(routed))
+                self.assertNotIn("TI", str(routed))
+
+    def test_agent_explains_document_link_followup_without_resolving_symbol(self):
+        agent = Agent()
+        agent.backend = object()
+        agent.backend_name = "TestBackend"
+
+        with patch("terminal.agent._execute_plan") as execute_plan:
+            result = agent.query("check alternative document link")
+
+        execute_plan.assert_called_once_with([])
+        self.assertEqual(result["intent"], "document_link_help")
+        self.assertIn("DOCUMENT LINK FOLLOW-UP", result["answer"])
+        self.assertIn("/analyze <URL>", result["answer"])
+        self.assertNotIn("TILAKNAGAR", result["answer"])
+
+    def test_new_highs_query_routes_to_new_highs_screener(self):
+        routed = _keyword_intent("companies creating new high")
+
+        self.assertEqual(routed["intent"], "screener")
+        self.assertEqual(routed["plan"], [("run_screener_query", {"screen_type": "new_highs"})])
+
+    def test_agent_explains_placeholder_symbol_without_missing_evidence_report(self):
+        agent = Agent()
+        agent.backend = object()
+        agent.backend_name = "TestBackend"
+
+        with patch("terminal.agent._execute_plan") as execute_plan:
+            result = agent.query("/assess SYMBOL")
+
+        execute_plan.assert_called_once_with([])
+        self.assertEqual(result["intent"], "placeholder_symbol_request")
+        self.assertIn("NEED A REAL NSE SYMBOL", result["answer"])
+        self.assertIn("/assess RELIANCE", result["answer"])
+        self.assertNotIn("SYMBOL (SYMBOL) — Market Brief", result["answer"])
+        self.assertNotIn("MISSING EVIDENCE", result["answer"])
+
+    def test_deliberation_package_builds_executable_plan_and_render(self):
+        plan = build_plan("Assess RELIANCE technical setup")
+        hypotheses = build_hypotheses(plan.intent)
+        evidence = evaluate_evidence([{"tool": "resolve_symbol", "result": {"symbol": "RELIANCE"}}])
+        rendered = render_final_answer(plan, hypotheses, evidence)
+
+        self.assertEqual(plan.intent, "symbol_assessment")
+        self.assertEqual(plan.executable()[0], ("resolve_symbol", {"query": "RELIANCE"}))
+        self.assertIn("Deliberation Plan", rendered)
+        self.assertIn("bullish_setup", rendered)
 
     def test_recent_minutes_question_routes_to_market_recap_not_happened_symbol(self):
         routed = _keyword_intent("what happened in the last 15 minutes")
@@ -95,6 +174,7 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
         ]
         self.assertTrue(derived_tasks)
         self.assertIn("recovery_plan", derived_tasks[0])
+        self.assertFalse(routed["assessment_plan"]["show_plan"])
         self.assertNotIn("INDIN", str(routed).upper())
 
     def test_agent_market_status_breadth_and_gainers_renders_stock_and_index_movers(self):
@@ -134,9 +214,9 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
 
         execute_plan.assert_called_once()
         self.assertEqual(result["intent"], "market_situation_assessment")
-        self.assertIn("SITUATION ASSESSMENT PLAN", result["answer"])
-        self.assertIn("derived_from=get_live_market_overview", result["answer"])
-        self.assertIn("recovery/code plan", result["answer"])
+        self.assertNotIn("SITUATION ASSESSMENT PLAN", result["answer"])
+        self.assertNotIn("derived_from=get_live_market_overview", result["answer"])
+        self.assertNotIn("recovery/code plan", result["answer"])
         self.assertIn("LIVE MARKET", result["answer"])
         self.assertIn("Live breadth: 310 advances / 190 declines", result["answer"])
         self.assertIn("INDEX MOVERS", result["answer"])
@@ -144,6 +224,99 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
         self.assertIn("TOP STOCK MOVERS", result["answer"])
         self.assertIn("AAA +5.20%", result["answer"])
         self.assertNotIn("INDIN", result["answer"].upper())
+
+    def test_contextual_stage2_last_30_question_answers_from_prior_turn(self):
+        agent = Agent()
+        agent.backend = object()
+        agent.backend_name = "TestBackend"
+
+        with patch("terminal.agent._execute_plan") as execute_plan:
+            execute_plan.return_value = [
+                {
+                    "tool": "run_screener_query",
+                    "args": {"screen_type": "stage2"},
+                    "result": {
+                        "screen_type": "stage2",
+                        "count": 2,
+                        "results": [{"symbol": "BLISSGVS"}, {"symbol": "IPCALAB"}],
+                    },
+                }
+            ]
+            first = agent.query("lets look at the Stage 2 uptrend stocks")
+            second = agent.query("were these pulled from last 30mins")
+
+        execute_plan.assert_called_once()
+        self.assertEqual(first["intent"], "screener")
+        self.assertEqual(second["intent"], "situation_assessment")
+        self.assertIn("SITUATION ASSESSMENT", second["answer"])
+        self.assertIn("No.", second["answer"])
+        self.assertIn("EOD CSV + DB snapshot", second["answer"])
+        self.assertIn("not from the last 30 minutes", second["answer"])
+        self.assertNotIn("Last 30 Minutes", second["answer"])
+        self.assertNotIn("get_intraday_market_recap", str(second["trace"]))
+
+    def test_contextual_stage2_scan_these_uses_prior_symbols(self):
+        agent = Agent()
+        agent.backend = object()
+        agent.backend_name = "TestBackend"
+
+        with patch("terminal.agent._execute_plan") as execute_plan:
+            execute_plan.side_effect = [
+                [
+                    {
+                        "tool": "run_screener_query",
+                        "args": {"screen_type": "stage2"},
+                        "result": {
+                            "screen_type": "stage2",
+                            "count": 2,
+                            "results": [{"symbol": "BLISSGVS"}, {"symbol": "IPCALAB"}],
+                        },
+                    }
+                ],
+                [
+                    {
+                        "tool": "scan_symbols_intraday",
+                        "args": {"symbols": ["BLISSGVS", "IPCALAB"], "interval": "15m"},
+                        "result": {
+                            "symbols_scanned": ["BLISSGVS", "IPCALAB"],
+                            "interval": "15m",
+                            "data_source": "PostgreSQL intraday.ohlcv_bars",
+                            "top_buy": [
+                                {
+                                    "symbol": "BLISSGVS",
+                                    "strategy": "supertrend",
+                                    "entry": 289.0,
+                                    "target": 296.0,
+                                    "stoploss": 284.0,
+                                    "rr": 1.4,
+                                }
+                            ],
+                            "top_sell": [],
+                        },
+                    }
+                ],
+            ]
+            agent.query("show Stage 2 stocks")
+            result = agent.query("scan these for 15m intraday setups")
+
+        self.assertEqual(execute_plan.call_count, 2)
+        execute_plan.assert_any_call(
+            [("scan_symbols_intraday", {"symbols": ["BLISSGVS", "IPCALAB"], "interval": "15m"})]
+        )
+        self.assertEqual(result["intent"], "contextual_tool_plan")
+        self.assertIn("SITUATION ASSESSMENT", result["answer"])
+        self.assertIn("INTRADAY SYMBOL SCAN", result["answer"])
+        self.assertIn("BLISSGVS", result["answer"])
+        self.assertIn("PostgreSQL intraday.ohlcv_bars", result["answer"])
+
+    def test_market_situation_plan_is_shown_only_when_requested(self):
+        routed = _keyword_intent(
+            "show plan step by step for current market status breadth and top gainers",
+            data_mode="intraday",
+        )
+
+        self.assertEqual(routed["intent"], "market_situation_assessment")
+        self.assertTrue(routed["assessment_plan"]["show_plan"])
 
     def test_market_dashboard_routes_to_dashboard_tool_plan(self):
         routed = _keyword_intent("current market dashboard with narrative", data_mode="intraday")
@@ -278,7 +451,72 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
         self.assertIn("get_live_market_overview", planned_tools)
         self.assertIn("get_fii_dii_activity", planned_tools)
         self.assertIn("get_top_gainers_losers", planned_tools)
+        self.assertNotIn("search_latest_catalysts", planned_tools)
         self.assertNotIn("search_market_knowledge", planned_tools)
+
+    def test_startup_briefing_news_word_does_not_require_catalyst_search(self):
+        query = """
+        Give a comprehensive, investigative morning briefing before market open.
+        Include key macro events or news overnight, any significant corporate news
+        or events from yesterday, and 3-4 stocks or sectors to watch.
+        (use multi_source_web_search or search_latest_catalysts to get current global data)
+        """
+
+        routed = _keyword_intent(query, data_mode="global")
+
+        self.assertEqual(routed["intent"], "startup_morning_briefing")
+        self.assertEqual(_required_tools_for_query(routed["intent"], query), ())
+
+    def test_agent_startup_briefing_with_news_word_does_not_fail_required_tool_validation(self):
+        agent = Agent()
+        agent.backend = object()
+        agent.backend_name = "TestBackend"
+        query = """
+        Give a comprehensive, investigative morning briefing before market open.
+        Include key macro events or news overnight, any significant corporate news
+        or events from yesterday, and 3-4 stocks or sectors to watch.
+        (use multi_source_web_search or search_latest_catalysts to get current global data)
+        """
+
+        with patch("terminal.agent._execute_plan") as execute_plan:
+            execute_plan.return_value = [
+                {
+                    "tool": "get_global_market_assessment",
+                    "args": {},
+                    "result": {
+                        "risk_regime": "mixed",
+                        "as_of": "2026-05-15",
+                        "regions": {"US": {"avg_pct_change": 0.1, "bias": "mixed"}},
+                        "moves": {"S&P 500": {"pct_change": 0.1}},
+                        "india_readthrough": ["Global cues are mixed."],
+                    },
+                },
+                {"tool": "get_index_snapshot", "args": {"index_name": "NIFTY 50"}, "result": {"index": "NIFTY 50", "close": 23775.2, "chg_pct": 0.36}},
+                {"tool": "get_index_snapshot", "args": {"index_name": "NIFTY BANK"}, "result": {"index": "NIFTY BANK", "close": 54250.2, "chg_pct": 0.22}},
+                {
+                    "tool": "get_live_market_overview",
+                    "args": {},
+                    "result": {
+                        "source": "NSE live API",
+                        "as_of": "2026-05-15 09:25:00",
+                        "indices": {"NIFTY 50": {"last": 23775.2, "pct_change": 0.36}},
+                        "adv_dec": {"advances": 249, "declines": 251},
+                    },
+                },
+                {"tool": "get_market_breadth", "args": {}, "result": {"advances": 501, "declines": 409, "ad_ratio": 1.22}},
+                {
+                    "tool": "get_top_gainers_losers",
+                    "args": {"index": "NIFTY 50", "top_n": 3, "direction": "both"},
+                    "result": {"gainers": [{"symbol": "ABC", "pct_change": 2.0}], "losers": []},
+                },
+                {"tool": "get_fii_dii_activity", "args": {}, "result": {"data": [{"category": "FII", "net_crore": -100.0}]}},
+            ]
+            result = agent.query(query)
+
+        self.assertEqual(result["intent"], "startup_morning_briefing")
+        self.assertNotIn("REQUIRED TOOL VALIDATION FAILED", result["answer"])
+        self.assertIn("Global Overnight Context", result["answer"])
+        self.assertIn("Current Market Status", result["answer"])
 
     def test_agent_executes_morning_briefing_without_llm_knowledge_lookup(self):
         agent = Agent()
@@ -386,6 +624,68 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
         self.assertEqual(routed["plan"][0], ("resolve_symbol", {"query": "WELCORP"}))
         self.assertNotIn("'INTO'", str(routed))
 
+    def test_forensic_prompt_routes_to_forensic_tool(self):
+        routed = _keyword_intent(
+            "Run run_forensic_analysis for TATASTEEL. Present Beneish M-score, "
+            "Piotroski F-score and Altman Z-score clearly."
+        )
+
+        self.assertEqual(routed["intent"], "stock_brief")
+        self.assertIn(("resolve_symbol", {"query": "TATASTEEL"}), routed["plan"])
+        self.assertIn(("run_forensic_analysis", {"symbol": "TATASTEEL"}), routed["plan"])
+
+    def test_agent_forensic_prompt_renders_three_scores_without_validation_failure(self):
+        agent = Agent()
+        agent.backend = object()
+        agent.backend_name = "TestBackend"
+
+        with patch("terminal.agent._execute_plan") as execute_plan:
+            execute_plan.return_value = [
+                {"tool": "resolve_symbol", "args": {"query": "TATASTEEL"}, "result": {"symbol": "TATASTEEL"}},
+                {"tool": "get_symbol_snapshot", "args": {"symbol": "TATASTEEL"}, "result": {"symbol": "TATASTEEL", "company_name": "Tata Steel"}},
+                {"tool": "get_technical_setup", "args": {"symbol": "TATASTEEL"}, "result": {"symbol": "TATASTEEL"}},
+                {"tool": "get_sector_context", "args": {"sector_or_symbol": "TATASTEEL"}, "result": {"symbol": "TATASTEEL"}},
+                {
+                    "tool": "run_forensic_analysis",
+                    "args": {"symbol": "TATASTEEL"},
+                    "result": {
+                        "symbol": "TATASTEEL",
+                        "source_url": "https://www.screener.in/company/TATASTEEL/consolidated/",
+                        "overall_risk": "moderate",
+                        "beneish": {
+                            "score": -2.1,
+                            "interpretation": "No clear manipulation signal",
+                            "risk_flags": ["GMI elevated"],
+                            "variables": {"DSRI": 0.9, "GMI": 1.2},
+                        },
+                        "piotroski": {
+                            "score": 6,
+                            "max_possible": 9,
+                            "strength": "Average",
+                            "signals": {"positive_roa": 1, "positive_operating_cashflow": 1},
+                        },
+                        "altman": {
+                            "score": 2.4,
+                            "zone": "grey zone",
+                            "components": {"X1_working_capital_ratio": 0.1},
+                        },
+                        "summary": "Forensic summary",
+                    },
+                },
+            ]
+            result = agent.query(
+                "Run run_forensic_analysis for TATASTEEL. Present Beneish M-score, "
+                "Piotroski F-score and Altman Z-score clearly."
+            )
+
+        self.assertEqual(result["intent"], "stock_brief")
+        self.assertNotIn("REQUIRED TOOL VALIDATION FAILED", result["answer"])
+        self.assertIn("FORENSIC ACCOUNTING", result["answer"])
+        self.assertIn("Beneish M-score", result["answer"])
+        self.assertIn("Piotroski F-score", result["answer"])
+        self.assertIn("Altman Z", result["answer"])
+        self.assertIn("GMI elevated", result["answer"])
+
     def test_end_to_end_trade_research_routes_to_explicit_symbol_not_task_label(self):
         routed = _keyword_intent(
             "End-to-end trade research for THERMAX with technical setup, fundamentals and risk"
@@ -395,6 +695,16 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
         self.assertEqual(routed["plan"][0], ("resolve_symbol", {"query": "THERMAX"}))
         self.assertNotIn("END-TO-END", str(routed).upper())
 
+    def test_detailed_fundamental_technical_analysis_routes_company_name(self):
+        routed = _keyword_intent("detailed fundamental and technical analysis of Tata steel")
+
+        self.assertEqual(routed["intent"], "stock_brief")
+        self.assertEqual(routed["plan"][0], ("resolve_symbol", {"query": "TATASTEEL"}))
+        self.assertIn(("scrape_screener_in", {"symbol": "TATASTEEL"}), routed["plan"])
+        self.assertIn(("get_technical_setup", {"symbol": "TATASTEEL"}), routed["plan"])
+        self.assertNotIn("'DETAILED'", str(routed).upper())
+        self.assertNotIn("'TATA'", str(routed).upper())
+
     def test_earnings_playbook_routes_to_explicit_symbol_not_earnings_label(self):
         routed = _keyword_intent(
             "Earnings playbook for TCS after results with margin, valuation and risk"
@@ -403,6 +713,18 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
         self.assertEqual(routed["intent"], "stock_brief")
         self.assertEqual(routed["plan"][0], ("resolve_symbol", {"query": "TCS"}))
         self.assertNotIn("'EARNINGS'", str(routed).upper())
+
+    def test_latest_results_routes_to_full_results_evidence_pack(self):
+        routed = _keyword_intent("latest results for DMART")
+
+        self.assertEqual(routed["intent"], "stock_results")
+        self.assertEqual(routed["plan"][0], ("resolve_symbol", {"query": "DMART"}))
+        self.assertIn(("scrape_screener_in", {"symbol": "DMART"}), routed["plan"])
+        self.assertIn(("search_nse_announcements", {"symbol": "DMART"}), routed["plan"])
+        self.assertIn(("search_bse_filings", {"symbol": "DMART"}), routed["plan"])
+        self.assertIn(("search_concall_transcripts", {"symbol": "DMART"}), routed["plan"])
+        self.assertIn(("search_latest_catalysts", {"symbol": "DMART"}), routed["plan"])
+        self.assertNotIn("'RESULTS'", str(routed).upper())
 
     def test_market_education_examples_do_not_route_teach_as_symbol(self):
         routed = _keyword_intent("Teach me PE with examples from TCS and INFY")
@@ -421,6 +743,55 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
         )
         self.assertNotIn("SABEVENTS", str(routed).upper())
 
+    def test_strength_question_routes_to_high_rs_screener_not_which_symbol(self):
+        routed = _keyword_intent("which stocks are still showing strength")
+
+        self.assertEqual(routed["intent"], "screener")
+        self.assertEqual(routed["plan"], [("run_screener_query", {"screen_type": "high_rs"})])
+        self.assertNotIn("'WHICH'", str(routed).upper())
+
+    def test_explicit_eod_screener_high_rs_routes_to_screener(self):
+        routed = _keyword_intent(
+            "Run EOD screener high_rs and show the top results with technical context"
+        )
+
+        self.assertEqual(routed["intent"], "screener")
+        self.assertEqual(routed["plan"], [("run_screener_query", {"screen_type": "high_rs"})])
+        self.assertNotIn("NIFTY", str(routed).upper())
+        self.assertNotIn("resolve_symbol", str(routed))
+
+    def test_agent_executes_strength_screener_without_llm_symbol_guess(self):
+        agent = Agent()
+        agent.backend = object()
+        agent.backend_name = "TestBackend"
+
+        with patch("terminal.agent._execute_plan") as execute_plan:
+            execute_plan.return_value = [
+                {
+                    "tool": "run_screener_query",
+                    "args": {"screen_type": "high_rs"},
+                    "result": {
+                        "screen_type": "high_rs",
+                        "count": 1,
+                        "results": [
+                            {
+                                "symbol": "INDOTECH",
+                                "price": 1000,
+                                "rs_pct": 88.0,
+                                "trading_signal": "BUY",
+                            }
+                        ],
+                    },
+                }
+            ]
+            result = agent.query("which stocks are still showing strength")
+
+        execute_plan.assert_called_once_with([("run_screener_query", {"screen_type": "high_rs"})])
+        self.assertEqual(result["intent"], "screener")
+        self.assertIn("SCREENER: HIGH_RS", result["answer"])
+        self.assertIn("INDOTECH", result["answer"])
+        self.assertNotIn("WHICH (WHICH) — Market Brief", result["answer"])
+
     def test_fno_overview_routes_to_derivatives_tools_not_market_overview(self):
         routed = _keyword_intent(
             "Give a comprehensive F&O overview for NIFTY: option chain PCR max pain top OI strikes, futures basis and cost of carry"
@@ -437,6 +808,34 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
         self.assertNotEqual(routed["intent"], "market_overview")
         self.assertNotIn("get_live_market_overview", str(routed))
 
+    def test_fno_overview_with_strategy_request_stays_derivatives_route(self):
+        routed = _keyword_intent(
+            "Give a comprehensive F&O overview for NIFTY: option chain (PCR, max pain, top OI strikes), "
+            "futures basis and cost of carry, and recommend the best options strategy based on current conditions.",
+            data_mode="intraday",
+        )
+
+        self.assertEqual(routed["intent"], "fno_overview")
+        self.assertEqual(
+            routed["plan"],
+            [
+                ("get_options_chain", {"symbol": "NIFTY", "expiry_index": 0}),
+                ("get_futures_analysis", {"symbol": "NIFTY"}),
+                ("get_strategy_recommendations", {"symbol": "NIFTY"}),
+            ],
+        )
+        self.assertNotIn("get_live_market_overview", str(routed))
+
+    def test_options_strategy_phrase_routes_to_derivatives_tools(self):
+        routed = _keyword_intent(
+            "Build a long straddle options strategy for NIFTY. Show legs, strikes, entry cost, max risk, max reward, and breakevens.",
+            data_mode="intraday",
+        )
+
+        self.assertEqual(routed["intent"], "fno_overview")
+        self.assertIn(("get_strategy_recommendations", {"symbol": "NIFTY"}), routed["plan"])
+        self.assertNotIn("explain_intraday_setup", str(routed))
+
     def test_intraday_nifty_uses_nse_snapshot_before_fallback(self):
         routed = _keyword_intent(
             "Intraday technical analysis of NIFTY50 right now. Use NSE website snapshot first, then yfinance only as fallback, and label stale data.",
@@ -446,6 +845,56 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
         self.assertEqual(routed["intent"], "intraday_setup")
         self.assertIn(("get_nse_intraday_snapshot", {"symbol": "NIFTY50"}), routed["plan"])
         self.assertIn(("get_intraday_analysis", {"symbol": "NIFTY50"}), routed["plan"])
+
+    def test_intraday_vcp_nifty500_scan_routes_to_index_scan_not_nifty_setup(self):
+        routed = _keyword_intent(
+            "Scan NIFTY 500 for VCP (Volatility Contraction Pattern) stocks ready for intraday breakout on 15m.",
+            data_mode="intraday",
+        )
+
+        self.assertEqual(routed["intent"], "intraday_index_scan")
+        self.assertEqual(
+            routed["plan"],
+            [
+                (
+                    "scan_intraday_market",
+                    {
+                        "index": "NIFTY 500",
+                        "interval": "15m",
+                        "strategies": ["vcp"],
+                        "direction_filter": "buy",
+                        "min_rr": 1.3,
+                        "top_n": 10,
+                    },
+                )
+            ],
+        )
+        self.assertNotIn("explain_intraday_setup", str(routed))
+
+    def test_intraday_rsi_reversal_routes_to_screener_not_symbol_setup(self):
+        routed = _keyword_intent("RSI reversal intraday", data_mode="intraday")
+
+        self.assertEqual(routed["intent"], "intraday_screener")
+        self.assertEqual(routed["plan"], [("run_intraday_screener", {"screen_type": "rsi_divergence"})])
+        self.assertNotIn("resolve_symbol", str(routed))
+
+    def test_intraday_source_health_routes_to_health_not_postgresql_symbol(self):
+        routed = _keyword_intent("PostgreSQL intraday table health", data_mode="intraday")
+
+        self.assertEqual(routed["intent"], "intraday_health")
+        self.assertEqual(routed["plan"], [("get_intraday_source_health", {})])
+        self.assertNotIn("resolve_symbol", str(routed))
+
+    def test_intraday_bulk_and_most_active_utilities_route_before_symbol_setup(self):
+        bulk = _keyword_intent("show bulk deals today", data_mode="intraday")
+        active = _keyword_intent("most active stocks today", data_mode="intraday")
+
+        self.assertEqual(bulk["intent"], "market_overview")
+        self.assertEqual(bulk["plan"], [("get_bulk_block_deals", {})])
+        self.assertEqual(active["intent"], "market_overview")
+        self.assertEqual(active["plan"], [("get_most_active_stocks", {})])
+        self.assertNotIn("resolve_symbol", str(bulk))
+        self.assertNotIn("resolve_symbol", str(active))
 
     def test_sector_analysis_routes_to_sector_context_not_market_overview(self):
         routed = _keyword_intent("Sector analysis for IT: breadth, leaders, laggards, rotation, and risks.")
@@ -629,6 +1078,269 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
         self.assertIn("NIFTY MIDCAP 100", result["answer"])
         self.assertIn("invalidation 97.5", result["answer"])
         self.assertNotIn("━━━ NIFTY (NIFTY) — Market Brief", result["answer"])
+
+    def test_ric_sherlock_prompts_keep_requested_symbol(self):
+        prompts = [
+            "Live price and quote for TMPV — current price, % change, volume, day high/low vs 52-week range.",
+            "Full technical setup for TMPV — Weinstein stage, RSI, ADX, MACD, supertrend direction, position vs 20/50/200 MA, RS rank vs Nifty 50.",
+            "Fundamental analysis of TMPV from screener.in — P/E, P/B, ROE, ROCE, debt/equity, revenue growth, pros and cons.",
+            "Latest news and catalysts for TMPV — recent announcements, results, management commentary, analyst views.",
+            "Intraday trading setup for TMPV on 15m — entry price, target, stoploss, R:R ratio, key support/resistance levels, recommended strategy.",
+        ]
+
+        for prompt in prompts:
+            with self.subTest(prompt=prompt):
+                routed = _keyword_intent(prompt, data_mode="auto")
+                self.assertIn(("resolve_symbol", {"query": "TMPV"}), routed["plan"])
+                self.assertNotIn("LOTUSEYE", str(routed))
+                self.assertNotIn("INDIACEM", str(routed))
+
+    def test_intraday_mode_keeps_explicit_sherlock_technical_symbol_specific(self):
+        routed = _keyword_intent(
+            "Full technical setup for TMPV — Weinstein stage, RSI, ADX, MACD, "
+            "supertrend direction, position vs 20/50/200 MA, RS rank vs Nifty 50.",
+            data_mode="intraday",
+        )
+
+        self.assertEqual(routed["intent"], "intraday_setup")
+        self.assertIn(("resolve_symbol", {"query": "TMPV"}), routed["plan"])
+        self.assertIn(("explain_intraday_setup", {"symbol": "TMPV"}), routed["plan"])
+        self.assertNotIn("run_intraday_screener", str(routed))
+
+    def test_intraday_mode_keeps_explicit_sherlock_news_as_catalyst_lookup(self):
+        routed = _keyword_intent(
+            "Latest news and catalysts for TMPV — recent announcements, results, "
+            "management commentary, analyst views.",
+            data_mode="intraday",
+        )
+
+        self.assertEqual(routed["intent"], "stock_brief")
+        self.assertIn(("resolve_symbol", {"query": "TMPV"}), routed["plan"])
+        self.assertIn(("search_latest_catalysts", {"symbol": "TMPV"}), routed["plan"])
+        self.assertNotIn("explain_intraday_setup", str(routed))
+
+    def test_intraday_symbol_setup_ignores_timeframe_preposition(self):
+        routed = _keyword_intent("RELIANCE intraday setup on 15m", data_mode="intraday")
+
+        self.assertEqual(routed["intent"], "intraday_setup")
+        self.assertEqual(routed["plan"][0], ("resolve_symbol", {"query": "RELIANCE"}))
+        self.assertNotIn("M&M", str(routed))
+
+    def test_intraday_levels_keep_symbol_before_level_terms(self):
+        routed = _keyword_intent(
+            "Intraday levels for TMPV support resistance pivots",
+            data_mode="intraday",
+        )
+
+        self.assertEqual(routed["intent"], "intraday_levels")
+        self.assertEqual(routed["plan"][0], ("resolve_symbol", {"query": "TMPV"}))
+
+    def test_intraday_screener_phrases_do_not_fall_to_symbol_brief(self):
+        cases = [
+            ("show vwap reclaim intraday stocks", "vwap_reclaim"),
+            ("opening range breakout stocks", "opening_range_breakout"),
+        ]
+
+        for query, screen_type in cases:
+            with self.subTest(query=query):
+                routed = _keyword_intent(query, data_mode="intraday")
+                self.assertEqual(routed["intent"], "intraday_screener")
+                self.assertEqual(
+                    routed["plan"],
+                    [("run_intraday_screener", {"screen_type": screen_type})],
+                )
+
+    def test_intraday_banknifty_scan_keeps_bank_index_and_sell_direction(self):
+        routed = _keyword_intent(
+            "Scan BANKNIFTY for short breakdown setups on 15m",
+            data_mode="intraday",
+        )
+
+        self.assertEqual(routed["intent"], "intraday_index_scan")
+        self.assertEqual(routed["plan"][0][1]["index"], "NIFTY BANK")
+        self.assertEqual(routed["plan"][0][1]["direction_filter"], "sell")
+
+    def test_intraday_postgres_health_wins_over_generic_data_health(self):
+        routed = _keyword_intent("intraday data health postgres ohlcv table")
+
+        self.assertEqual(routed["intent"], "intraday_health")
+        self.assertEqual(routed["plan"], [("get_intraday_source_health", {})])
+
+    def test_compare_slash_separated_symbols_routes_deterministically(self):
+        routed = _keyword_intent("DMART/TRENT/VBL which is better")
+
+        self.assertEqual(routed["intent"], "stock_comparison")
+        self.assertEqual(
+            routed["plan"],
+            [("compare_stocks", {"symbols": ["DMART", "TRENT", "VBL"], "aspects": ["both"]})],
+        )
+
+    def test_compare_stocks_keeps_unresolved_exact_ticker_as_missing_row(self):
+        result = compare_stocks(["ZZZNOTREAL"], aspects=["technical"])
+
+        self.assertEqual(result["input_symbols"], ["ZZZNOTREAL"])
+        self.assertEqual(result["symbols"], ["ZZZNOTREAL"])
+        self.assertEqual(result["unresolved_symbols"], ["ZZZNOTREAL"])
+        self.assertEqual(result["evidence_coverage"], "partial")
+        self.assertIn("symbol_resolution", result["missing_evidence"])
+        self.assertIn("resolution_error", result["stock_details"][0])
+
+    def test_final_symbol_validator_blocks_unrequested_tool_symbol(self):
+        agent = Agent()
+        agent.backend = object()
+        agent.backend_name = "TestBackend"
+
+        with patch("terminal.agent._execute_plan") as execute_plan:
+            execute_plan.return_value = [
+                {"tool": "resolve_symbol", "args": {"query": "NAVABUPA"}, "result": {"symbol": "TALBROAUTO"}},
+                {"tool": "get_symbol_snapshot", "args": {"symbol": "TALBROAUTO"}, "result": {"symbol": "TALBROAUTO"}},
+            ]
+            result = agent.query("NAVABUPA technical setup")
+
+        self.assertEqual(result["intent"], "stock_brief")
+        self.assertIn("SYMBOL VALIDATION FAILED", result["answer"])
+        self.assertIn("NAVABUPA->TALBROAUTO", result["answer"])
+        self.assertNotIn("TALBROAUTO (TALBROAUTO) — Market Brief", result["answer"])
+
+    def test_symbol_validator_ignores_uppercase_technical_terms(self):
+        agent = Agent()
+        agent.backend = object()
+        agent.backend_name = "TestBackend"
+
+        with patch("terminal.agent._execute_plan") as execute_plan:
+            execute_plan.return_value = [
+                {"tool": "resolve_symbol", "args": {"query": "SAKAR"}, "result": {"symbol": "SAKAR"}},
+                {"tool": "scrape_screener_in", "args": {"symbol": "SAKAR"}, "result": {"symbol": "SAKAR"}},
+                {"tool": "get_symbol_snapshot", "args": {"symbol": "SAKAR"}, "result": {"symbol": "SAKAR", "price": 696.7}},
+                {"tool": "get_technical_setup", "args": {"symbol": "SAKAR"}, "result": {"symbol": "SAKAR", "rsi": 52, "adx": 24}},
+                {"tool": "get_sector_context", "args": {"sector_or_symbol": "SAKAR"}, "result": {"symbol": "SAKAR"}},
+            ]
+            result = agent.query("SAKAR technical setup with RSI, ADX, MACD and MA context")
+
+        self.assertEqual(result["intent"], "stock_brief")
+        self.assertNotIn("SYMBOL VALIDATION FAILED", result["answer"])
+        self.assertNotIn("Requested symbol(s): SAKAR, ADX, MA", result["answer"])
+        self.assertIn("SAKAR", result["answer"])
+
+    def test_required_tool_validator_blocks_missing_screener_tool(self):
+        agent = Agent()
+        agent.backend = object()
+        agent.backend_name = "TestBackend"
+
+        with patch("terminal.agent._execute_plan") as execute_plan:
+            execute_plan.return_value = []
+            result = agent.query("show me Stage 2 breakout stocks")
+
+        self.assertEqual(result["intent"], "screener")
+        self.assertIn("REQUIRED TOOL VALIDATION FAILED", result["answer"])
+        self.assertIn("run_screener_query", result["answer"])
+
+    def test_results_command_renders_latest_results_evidence(self):
+        agent = Agent()
+        agent.backend = object()
+        agent.backend_name = "TestBackend"
+
+        with patch("terminal.agent._execute_plan") as execute_plan:
+            execute_plan.return_value = [
+                {"tool": "resolve_symbol", "args": {"query": "DMART"}, "result": {"symbol": "DMART"}},
+                {
+                    "tool": "scrape_screener_in",
+                    "args": {"symbol": "DMART"},
+                    "result": {
+                        "symbol": "DMART",
+                        "ratios": {"Market Cap": "3,00,000", "Stock P/E": "95"},
+                        "quarterly": {
+                            "_headers": ["Mar 2026", "Dec 2025"],
+                            "Sales": ["14,000", "13,500"],
+                            "Net Profit": ["800", "760"],
+                        },
+                        "annual_pl": {"_headers": ["2026", "2025"], "Sales": ["55,000", "48,000"]},
+                        "announcements": [{"title": "Audited financial results", "url": "https://bse.example/results.pdf"}],
+                        "concalls": [{"period": "May 2026", "transcript_url": "https://example.com/transcript.pdf"}],
+                    },
+                },
+                {
+                    "tool": "search_nse_announcements",
+                    "args": {"symbol": "DMART"},
+                    "result": {"symbol": "DMART", "results": [{"title": "Financial Results", "url": "https://nse.example"}]},
+                },
+                {"tool": "search_bse_filings", "args": {"symbol": "DMART"}, "result": {"symbol": "DMART", "results": []}},
+                {"tool": "search_concall_transcripts", "args": {"symbol": "DMART"}, "result": {"symbol": "DMART", "results": []}},
+                {"tool": "search_latest_catalysts", "args": {"symbol": "DMART"}, "result": {"symbol": "DMART", "results": []}},
+            ]
+            result = agent.query("/results DMART")
+
+        self.assertEqual(result["intent"], "entity_topic_command")
+        self.assertIn("Latest Results Evidence", result["answer"])
+        self.assertIn("Mar 2026", result["answer"])
+        self.assertIn("Audited financial results", result["answer"])
+        self.assertIn("search_bse_filings: ok", result["answer"])
+        self.assertNotIn("REQUIRED TOOL VALIDATION FAILED", result["answer"])
+
+    def test_required_tool_validator_blocks_unsupported_broker_claims(self):
+        agent = Agent()
+        agent.backend = object()
+        agent.backend_name = "TestBackend"
+
+        with patch("terminal.agent._execute_plan") as execute_plan:
+            execute_plan.return_value = [
+                {"tool": "resolve_symbol", "args": {"query": "RELIANCE"}, "result": {"symbol": "RELIANCE"}},
+                {"tool": "get_symbol_snapshot", "args": {"symbol": "RELIANCE"}, "result": {"symbol": "RELIANCE"}},
+                {"tool": "get_technical_setup", "args": {"symbol": "RELIANCE"}, "result": {"symbol": "RELIANCE"}},
+                {"tool": "get_sector_context", "args": {"sector_or_symbol": "RELIANCE"}, "result": {"symbol": "RELIANCE"}},
+            ]
+            result = agent.query("RELIANCE analyst target price and broker rating")
+
+        self.assertEqual(result["intent"], "stock_brief")
+        self.assertIn("REQUIRED TOOL VALIDATION FAILED", result["answer"])
+        self.assertIn("search_broker_research", result["answer"])
+
+    def test_missing_evidence_guard_is_rendered_for_partial_stock_evidence(self):
+        agent = Agent()
+        agent.backend = object()
+        agent.backend_name = "TestBackend"
+
+        with patch("terminal.agent._execute_plan") as execute_plan:
+            execute_plan.return_value = [
+                {"tool": "resolve_symbol", "args": {"query": "RELIANCE"}, "result": {"symbol": "RELIANCE"}},
+                {
+                    "tool": "get_symbol_snapshot",
+                    "args": {"symbol": "RELIANCE"},
+                    "result": {
+                        "symbol": "RELIANCE",
+                        "company_name": "Reliance Industries",
+                        "missing_evidence": ["fundamental_score"],
+                        "evidence_coverage": "partial",
+                    },
+                },
+                {"tool": "get_technical_setup", "args": {"symbol": "RELIANCE"}, "result": {"symbol": "RELIANCE"}},
+                {"tool": "get_sector_context", "args": {"sector_or_symbol": "RELIANCE"}, "result": {"symbol": "RELIANCE"}},
+            ]
+            result = agent.query("RELIANCE technical setup")
+
+        self.assertIn("MISSING EVIDENCE", result["answer"])
+        self.assertIn("get_symbol_snapshot.fundamental_score", result["answer"])
+        self.assertIn("No unsupported technical, fundamental, catalyst, forensic, broker, or sector conclusion", result["answer"])
+
+    def test_analyze_document_does_not_require_concall_search_for_prompt_keywords(self):
+        from terminal.agent import _validate_required_tools
+
+        # /analyze <URL> expands to a prompt that mentions "concall transcript" and
+        # "management commentary" as generic interpretation hints. The validator must
+        # not require search_concall_transcripts when the user is analyzing a document.
+        analyze_prompt = (
+            "Use the analyze_document tool with source='https://example.com/doc.pdf'. "
+            "Read the full document and provide: 1. Document Summary ... "
+            "If this is a financial document (annual report, concall transcript, results), "
+            "also evaluate: revenue/profit trends, management commentary, guidance changes, "
+            "risk factors, and investment implications."
+        )
+        tool_results = [
+            {"tool": "analyze_document",
+             "args": {"source": "https://example.com/doc.pdf"},
+             "result": {"text_length": 4500}},
+        ]
+        self.assertIsNone(_validate_required_tools(analyze_prompt, "llm_driven", tool_results))
 
 
 if __name__ == "__main__":

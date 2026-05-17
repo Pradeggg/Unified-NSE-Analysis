@@ -860,11 +860,20 @@ def load_scores(cur, dry_run=False):
                 "pnl_summary":          str(r.get("pnl_summary","")).strip() or None,
                 "quarterly_summary":    str(r.get("quarterly_summary","")).strip() or None,
                 "balance_sheet_summary":str(r.get("balance_sheet_summary","")).strip() or None,
+                "cash_flow_summary":    str(r.get("cash_flow_summary","")).strip() or None,
+                "investor_summary":     str(r.get("investor_summary","")).strip() or None,
                 "ratios_summary":       str(r.get("ratios_summary","")).strip() or None,
             })
         if not dry_run and rows:
             upsert(cur, "scores.fundamentals", rows, ["symbol"],
-                   ["pnl_summary","quarterly_summary","balance_sheet_summary","ratios_summary"])
+                   [
+                       "pnl_summary",
+                       "quarterly_summary",
+                       "balance_sheet_summary",
+                       "cash_flow_summary",
+                       "investor_summary",
+                       "ratios_summary",
+                   ])
         log(f"scores.fundamentals (fund_cache): {len(rows)} rows")
 
     # --- long_term_screeners_*.csv ---
