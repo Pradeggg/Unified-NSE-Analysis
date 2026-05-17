@@ -68,6 +68,69 @@ from terminal.search_engine import (
 
 # ── Forensic accounting suite ─────────────────────────────────────────────────
 from terminal.forensics import run_forensic_analysis, screen_forensic_watchlist
+from terminal.postgres_tools import (
+    audit_postgres_coverage,
+    ensure_postgres_schema,
+    get_data_source_manifest,
+    get_postgres_health,
+    load_historical_eod_to_postgres,
+    load_intraday_ohlcv_to_postgres,
+)
+from terminal.report_context import (
+    compare_reports,
+    get_last_report,
+    list_generated_reports,
+    open_report,
+    read_report,
+    summarize_report,
+)
+from terminal.entity_resolution import (
+    detect_non_symbol_terms,
+    resolve_company_alias,
+    resolve_index_or_stock,
+    resolve_stock_entity,
+    validate_requested_symbols,
+)
+from terminal.situation_assessment import (
+    assess_user_situation,
+    request_clarification,
+    resolve_conversation_reference,
+    resolve_entity_context,
+    validate_intent_evidence_plan,
+)
+from terminal.results_tools import (
+    discover_financial_filings,
+    get_latest_results,
+    ingest_financial_filing,
+    parse_financial_filing,
+    parse_pdf_filing as parse_results_pdf_filing,
+    parse_xbrl_filing,
+    reconcile_filing_facts,
+    summarize_latest_results,
+)
+from terminal.evidence_gate import (
+    build_evidence_matrix,
+    render_missing_evidence_block,
+    validate_answer_against_evidence,
+    validate_required_tools_executed,
+)
+from terminal.fno_composite import (
+    get_cost_of_carry as get_composite_cost_of_carry,
+    get_fno_overview,
+    get_futures_basis as get_composite_futures_basis,
+    get_max_pain as get_composite_max_pain,
+    get_option_chain_summary,
+    get_pcr_summary,
+    get_top_oi_strikes,
+    recommend_options_strategy,
+)
+from terminal.company_evidence_tools import (
+    audit_company_search,
+    get_company_evidence_coverage,
+    promote_company_evidence_to_postgres,
+    search_company_filings as audit_search_company_filings,
+    search_company_official_sources,
+)
 
 # ── Seasonal / macro modules ──────────────────────────────────────────────────
 import sys as _sys
@@ -5983,10 +6046,341 @@ TOOL_REGISTRY: dict[str, Any] = {
         "Resolve a company name, alias, or near-match to its canonical NSE ticker symbol. Call this before stock-specific tools.",
         {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]},
     ),
+    "resolve_stock_entity": (
+        resolve_stock_entity,
+        "Resolve a stock/company mention to a canonical NSE equity symbol with status, confidence, and mismatch-safe output.",
+        {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]},
+    ),
+    "resolve_company_alias": (
+        resolve_company_alias,
+        "Resolve a company alias/name such as USL or United Spirits to the canonical NSE equity symbol.",
+        {"type": "object", "properties": {"alias": {"type": "string"}}, "required": ["alias"]},
+    ),
+    "validate_requested_symbols": (
+        validate_requested_symbols,
+        "Validate explicit ticker-looking symbols requested by the user against symbols used in executed evidence, ignoring indicators like RSI/ADX/MA.",
+        {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string"},
+                "executed_symbols": {"type": "array", "items": {"type": "string"}},
+            },
+            "required": ["query"],
+        },
+    ),
+    "detect_non_symbol_terms": (
+        detect_non_symbol_terms,
+        "Detect market or technical terms such as RSI, ADX, MA, MACD that must not be routed as stock symbols.",
+        {"type": "object", "properties": {"text": {"type": "string"}}, "required": ["text"]},
+    ),
+    "resolve_index_or_stock": (
+        resolve_index_or_stock,
+        "Resolve index/derivative underlyings such as NIFTY/BANKNIFTY first, otherwise resolve the query as an NSE stock.",
+        {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]},
+    ),
+    "assess_user_situation": (
+        assess_user_situation,
+        "Assess what the user is asking, prior context needs, resolved entities, evidence plan, and clarification needs before routing.",
+        {
+            "type": "object",
+            "properties": {
+                "user_input": {"type": "string"},
+                "data_mode": {"type": "string", "default": "historical"},
+            },
+            "required": ["user_input"],
+        },
+    ),
+    "resolve_conversation_reference": (
+        resolve_conversation_reference,
+        "Resolve contextual references like 'the report' or 'these' against prior turn context when available.",
+        {"type": "object", "properties": {"user_input": {"type": "string"}}, "required": ["user_input"]},
+    ),
+    "resolve_entity_context": (
+        resolve_entity_context,
+        "Resolve entity plus topic from commands or natural prompts such as 'search USL growth strategy'.",
+        {"type": "object", "properties": {"user_input": {"type": "string"}}, "required": ["user_input"]},
+    ),
+    "validate_intent_evidence_plan": (
+        validate_intent_evidence_plan,
+        "Validate a planned evidence-tool list against required tools for an intent.",
+        {
+            "type": "object",
+            "properties": {
+                "intent": {"type": "string"},
+                "evidence_plan": {"type": "array", "items": {"type": "string"}},
+                "required_tools": {"type": "array", "items": {"type": "string"}},
+            },
+            "required": ["intent"],
+        },
+    ),
+    "request_clarification": (
+        request_clarification,
+        "Return a structured clarification request when situation assessment cannot safely choose tools.",
+        {
+            "type": "object",
+            "properties": {
+                "question": {"type": "string"},
+                "reason": {"type": "string"},
+            },
+            "required": ["question"],
+        },
+    ),
     "get_symbol_snapshot": (
         get_symbol_snapshot,
         "Get the latest DB snapshot for a symbol: stage, RS, RSI, trading signal, sector, price",
         {"type": "object", "properties": {"symbol": {"type": "string"}}, "required": ["symbol"]},
+    ),
+    "discover_financial_filings": (
+        discover_financial_filings,
+        "Discover ranked latest-results filing candidates from NSE, BSE, and Screener for a symbol.",
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string"},
+                "max_results": {"type": "integer", "default": 10},
+            },
+            "required": ["symbol"],
+        },
+    ),
+    "ingest_financial_filing": (
+        ingest_financial_filing,
+        "Download/register a direct financial filing URL using the deterministic filing registry.",
+        {
+            "type": "object",
+            "properties": {
+                "url": {"type": "string"},
+                "symbol": {"type": "string"},
+                "period": {"type": "string", "default": "latest"},
+                "root_dir": {"type": "string"},
+                "force": {"type": "boolean", "default": False},
+            },
+            "required": ["url"],
+        },
+    ),
+    "parse_financial_filing": (
+        parse_financial_filing,
+        "Parse a registered financial filing manifest and return extracted evidence/facts when supported.",
+        {"type": "object", "properties": {"manifest_path": {"type": "string"}}, "required": ["manifest_path"]},
+    ),
+    "parse_xbrl_filing": (
+        parse_xbrl_filing,
+        "Parse an XBRL filing path when XBRL support is wired; currently returns explicit unsupported status.",
+        {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]},
+    ),
+    "parse_results_pdf_filing": (
+        parse_results_pdf_filing,
+        "Parse a local PDF results filing path using deterministic text/table extraction.",
+        {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]},
+    ),
+    "reconcile_filing_facts": (
+        reconcile_filing_facts,
+        "Reconcile parsed filing evidence with Screener quarterly tables without inventing missing revenue/PAT/EPS facts.",
+        {
+            "type": "object",
+            "properties": {
+                "parsed_filing": {"type": "object"},
+                "screener_data": {"type": "object"},
+            },
+            "required": [],
+        },
+    ),
+    "get_latest_results": (
+        get_latest_results,
+        "High-level latest-results evidence pack for a symbol: discovery, ingestion, parsing, reconciliation, missing facts, and source trail.",
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string"},
+                "period": {"type": "string", "default": "latest"},
+                "ingest": {"type": "boolean", "default": True},
+            },
+            "required": ["symbol"],
+        },
+    ),
+    "summarize_latest_results": (
+        summarize_latest_results,
+        "Summarize a latest-results evidence pack without inventing missing revenue/PAT/EPS facts.",
+        {"type": "object", "properties": {"results_pack": {"type": "object"}}, "required": ["results_pack"]},
+    ),
+    "build_evidence_matrix": (
+        build_evidence_matrix,
+        "Build a semantic evidence matrix from executed tool results by category.",
+        {"type": "object", "properties": {"tool_results": {"type": "array", "items": {"type": "object"}}}, "required": ["tool_results"]},
+    ),
+    "validate_answer_against_evidence": (
+        validate_answer_against_evidence,
+        "Validate rendered answer text against available evidence categories and report unsupported claim categories.",
+        {
+            "type": "object",
+            "properties": {
+                "answer": {"type": "string"},
+                "tool_results": {"type": "array", "items": {"type": "object"}},
+            },
+            "required": ["answer", "tool_results"],
+        },
+    ),
+    "render_missing_evidence_block": (
+        render_missing_evidence_block,
+        "Render a standard missing-evidence block for blocked unsupported conclusions.",
+        {
+            "type": "object",
+            "properties": {
+                "intent": {"type": "string"},
+                "missing_categories": {"type": "array", "items": {"type": "string"}},
+                "missing_tools": {"type": "array", "items": {"type": "string"}},
+            },
+            "required": ["intent"],
+        },
+    ),
+    "validate_required_tools_executed": (
+        validate_required_tools_executed,
+        "Validate that all required evidence tools executed for a planned intent.",
+        {
+            "type": "object",
+            "properties": {
+                "required_tools": {"type": "array", "items": {"type": "string"}},
+                "tool_results": {"type": "array", "items": {"type": "object"}},
+            },
+            "required": ["required_tools", "tool_results"],
+        },
+    ),
+    "get_fno_overview": (
+        get_fno_overview,
+        "Composite F&O overview: option-chain PCR/max-pain/top OI, futures basis/carry, and a gated options-strategy recommendation.",
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string", "default": "NIFTY"},
+                "expiry_index": {"type": "integer", "default": 0},
+            },
+            "required": [],
+        },
+    ),
+    "get_option_chain_summary": (
+        get_option_chain_summary,
+        "Summarize option-chain PCR, max pain, and top OI strikes for an index/equity.",
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string"},
+                "expiry_index": {"type": "integer", "default": 0},
+            },
+            "required": ["symbol"],
+        },
+    ),
+    "get_composite_max_pain": (
+        get_composite_max_pain,
+        "Return max-pain summary from the composite option-chain wrapper.",
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string"},
+                "expiry_index": {"type": "integer", "default": 0},
+            },
+            "required": ["symbol"],
+        },
+    ),
+    "get_pcr_summary": (
+        get_pcr_summary,
+        "Return put-call ratio and regime from the composite option-chain wrapper.",
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string"},
+                "expiry_index": {"type": "integer", "default": 0},
+            },
+            "required": ["symbol"],
+        },
+    ),
+    "get_top_oi_strikes": (
+        get_top_oi_strikes,
+        "Return top call and put OI strikes from the composite option-chain wrapper.",
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string"},
+                "expiry_index": {"type": "integer", "default": 0},
+            },
+            "required": ["symbol"],
+        },
+    ),
+    "get_composite_futures_basis": (
+        get_composite_futures_basis,
+        "Return futures basis from the composite F&O wrapper.",
+        {"type": "object", "properties": {"symbol": {"type": "string"}}, "required": ["symbol"]},
+    ),
+    "get_composite_cost_of_carry": (
+        get_composite_cost_of_carry,
+        "Return cost-of-carry from the composite F&O wrapper.",
+        {"type": "object", "properties": {"symbol": {"type": "string"}}, "required": ["symbol"]},
+    ),
+    "recommend_options_strategy": (
+        recommend_options_strategy,
+        "Recommend a gated research-only options strategy from option-chain and futures evidence.",
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string"},
+                "option_chain": {"type": "object"},
+                "futures": {"type": "object"},
+                "raw_strategy": {"type": "object"},
+            },
+            "required": ["symbol"],
+        },
+    ),
+    "audit_company_search": (
+        audit_company_search,
+        "Audit company evidence search attempts with source group, query, result count, parse status, and gaps.",
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string"},
+                "alias": {"type": "string"},
+                "include_external": {"type": "boolean", "default": False},
+            },
+            "required": ["symbol"],
+        },
+    ),
+    "search_company_official_sources": (
+        search_company_official_sources,
+        "Search or report official company source attempts before external sources.",
+        {
+            "type": "object",
+            "properties": {"symbol": {"type": "string"}, "alias": {"type": "string"}},
+            "required": ["symbol"],
+        },
+    ),
+    "search_company_filings": (
+        audit_search_company_filings,
+        "Search or report company filing-source attempts with auditable no-result gaps.",
+        {
+            "type": "object",
+            "properties": {"symbol": {"type": "string"}, "alias": {"type": "string"}},
+            "required": ["symbol"],
+        },
+    ),
+    "promote_company_evidence_to_postgres": (
+        promote_company_evidence_to_postgres,
+        "Prepare/dry-run promotion of company evidence records into PostgreSQL with source URL/path metadata.",
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string"},
+                "evidence": {"type": "array", "items": {"type": "object"}},
+                "dsn": {"type": "string"},
+                "dry_run": {"type": "boolean", "default": True},
+            },
+            "required": ["symbol"],
+        },
+    ),
+    "get_company_evidence_coverage": (
+        get_company_evidence_coverage,
+        "Report company evidence coverage counts and source gaps by category.",
+        {
+            "type": "object",
+            "properties": {"symbol": {"type": "string"}, "alias": {"type": "string"}},
+            "required": ["symbol"],
+        },
     ),
     "get_technical_setup": (
         get_technical_setup,
@@ -7877,6 +8271,139 @@ def _generate_report_tool(content: str, report_type: str = "research",
 
 
 TOOL_REGISTRY.update({
+    "list_generated_reports": (
+        list_generated_reports,
+        "List generated report artifacts with type, symbol, path, timestamp, and size metadata.",
+        {
+            "type": "object",
+            "properties": {
+                "project_root": {"type": "string"},
+                "report_type": {"type": "string", "default": "any"},
+                "limit": {"type": "integer", "default": 20},
+            },
+            "required": [],
+        },
+    ),
+    "get_last_report": (
+        get_last_report,
+        "Return the last generated report path/context, or request clarification if none is remembered.",
+        {
+            "type": "object",
+            "properties": {
+                "last_report_path": {"type": "string"},
+                "project_root": {"type": "string"},
+            },
+            "required": [],
+        },
+    ),
+    "open_report": (
+        open_report,
+        "Open a generated report file by path and return a structured status message.",
+        {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string"},
+                "project_root": {"type": "string"},
+            },
+            "required": ["path"],
+        },
+    ),
+    "read_report": (
+        read_report,
+        "Read a generated Markdown/HTML/JSON/CSV report and return content plus report metadata.",
+        {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string"},
+                "project_root": {"type": "string"},
+                "max_chars": {"type": "integer", "default": 12000},
+            },
+            "required": ["path"],
+        },
+    ),
+    "summarize_report": (
+        summarize_report,
+        "Summarize an existing report while preserving symbol, report type, recommendation, and source path.",
+        {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string"},
+                "project_root": {"type": "string"},
+            },
+            "required": ["path"],
+        },
+    ),
+    "compare_reports": (
+        compare_reports,
+        "Compare two generated reports and highlight recommendation changes.",
+        {
+            "type": "object",
+            "properties": {
+                "first_path": {"type": "string"},
+                "second_path": {"type": "string"},
+                "project_root": {"type": "string"},
+            },
+            "required": ["first_path", "second_path"],
+        },
+    ),
+    "get_postgres_health": (
+        get_postgres_health,
+        "Check PostgreSQL connectivity, DSN/socket details, required schemas/tables, and row counts.",
+        {
+            "type": "object",
+            "properties": {"dsn": {"type": "string", "description": "Optional PostgreSQL DSN override"}},
+            "required": [],
+        },
+    ),
+    "ensure_postgres_schema": (
+        ensure_postgres_schema,
+        "Idempotently create core Agent Adda PostgreSQL schemas/tables required by runtime tools.",
+        {
+            "type": "object",
+            "properties": {"dsn": {"type": "string", "description": "Optional PostgreSQL DSN override"}},
+            "required": [],
+        },
+    ),
+    "audit_postgres_coverage": (
+        audit_postgres_coverage,
+        "Audit PostgreSQL table existence and row-count coverage for market, intraday, scores, and report data.",
+        {
+            "type": "object",
+            "properties": {"dsn": {"type": "string", "description": "Optional PostgreSQL DSN override"}},
+            "required": [],
+        },
+    ),
+    "load_historical_eod_to_postgres": (
+        load_historical_eod_to_postgres,
+        "Report or trigger historical EOD loading into PostgreSQL once the load orchestrator is wired.",
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string"},
+                "days": {"type": "integer", "default": 0},
+                "dsn": {"type": "string"},
+            },
+            "required": [],
+        },
+    ),
+    "load_intraday_ohlcv_to_postgres": (
+        load_intraday_ohlcv_to_postgres,
+        "Report or trigger intraday OHLCV loading into PostgreSQL once the load orchestrator is wired.",
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string"},
+                "timeframe": {"type": "string", "default": "15m"},
+                "dsn": {"type": "string"},
+            },
+            "required": [],
+        },
+    ),
+    "get_data_source_manifest": (
+        get_data_source_manifest,
+        "Return Agent Adda's active data-source manifest, PostgreSQL primary-store policy, and fallback rules.",
+        {"type": "object", "properties": {}, "required": []},
+    ),
     "generate_report": (
         _generate_report_tool,
         ("Generate a formatted report file (HTML, PDF, or Markdown) from analysis content. "

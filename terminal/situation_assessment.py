@@ -31,6 +31,8 @@ class SituationAssessment:
     context_found: str = ""
     source_assessment: str = ""
     clarification_question: str = ""
+    resolved_entities: list[str] = field(default_factory=list)
+    evidence_plan: list[str] = field(default_factory=list)
     tool_plan: list[tuple[str, dict[str, Any]]] = field(default_factory=list)
     plan: list[str] = field(default_factory=list)
 
@@ -113,7 +115,7 @@ def needs_situation_assessment(user_input: str) -> bool:
     # not contextual follow-ups even when they reference "the report" in instructions.
     if "analyze_document tool with source=" in q or "use the analyze_document tool" in q:
         return False
-    return any(pattern in q for pattern in _CONTEXTUAL_PATTERNS) or any(
+    return q.startswith("search ") or any(pattern in q for pattern in _CONTEXTUAL_PATTERNS) or any(
         q.startswith(command + " ") for command in _ENTITY_TOPIC_COMMANDS
     )
 
@@ -127,10 +129,14 @@ def assess_entity_topic_request(user_input: str) -> EntityTopicAssessment:
     """
     text = (user_input or "").strip()
     parts = text.split()
-    if not parts or parts[0].lower() not in _ENTITY_TOPIC_COMMANDS:
+    if not parts:
         return EntityTopicAssessment(applies=False, decision="fallback_to_router")
 
     command = parts[0].lower()
+    if command == "search":
+        command = "/search"
+    if command not in _ENTITY_TOPIC_COMMANDS:
+        return EntityTopicAssessment(applies=False, decision="fallback_to_router")
     args = parts[1:]
     output_format = ""
     if args and args[-1].lower() in _OUTPUT_FORMATS:
@@ -365,7 +371,44 @@ def assess_followup(user_input: str, previous_context: TurnContext | None) -> Si
             "Do you mean technical setup, fundamentals, news/catalysts, intraday levels, or F&O context for these?",
         )
 
-    if "based on the report" in q or "based on report" in q or "the report" in q:
+    if _asks_report_reference(q):
+        report_path = _report_path_from_context(previous_context)
+        if report_path and ("open" in q or "show" in q):
+            return SituationAssessment(
+                applies=True,
+                decision="run_tool_plan",
+                confidence="high",
+                user_is_asking="Open the prior report referenced by the previous conversation.",
+                context_found=_report_context_found(previous_context, report_path),
+                source_assessment=_source_assessment(previous_context),
+                resolved_entities=previous_context.symbols,
+                evidence_plan=["open_report"],
+                tool_plan=[("open_report", {"path": report_path})],
+                plan=[
+                    "Resolve 'the report' to the prior report path from conversation context.",
+                    "Open that exact report rather than searching unrelated report types.",
+                ],
+            )
+        if report_path and "result" in q:
+            return SituationAssessment(
+                applies=True,
+                decision="run_tool_plan",
+                confidence="high",
+                user_is_asking="Assess the prior report context and summarize what the report concluded.",
+                context_found=_report_context_found(previous_context, report_path),
+                source_assessment=_source_assessment(previous_context),
+                resolved_entities=previous_context.symbols,
+                evidence_plan=["read_report", "summarize_report"],
+                tool_plan=[
+                    ("read_report", {"path": report_path, "max_chars": 12000}),
+                    ("summarize_report", {"path": report_path}),
+                ],
+                plan=[
+                    "Resolve 'the report' to the prior report path from conversation context.",
+                    "Read and summarize the report before making any statement about its result.",
+                    "If price-performance evaluation is needed, ask for the evaluation window.",
+                ],
+            )
         return SituationAssessment(
             applies=True,
             decision="ask_clarification",
@@ -424,6 +467,133 @@ def assess_followup(user_input: str, previous_context: TurnContext | None) -> Si
         )
 
     return SituationAssessment(applies=False, decision="fallback_to_router")
+
+
+def assess_user_situation(
+    user_input: str,
+    previous_context: TurnContext | None = None,
+    data_mode: str = "historical",
+) -> dict:
+    """Return the v2 situation-assessment contract used before routing."""
+    entity = assess_entity_topic_request(user_input)
+    if entity.applies:
+        return {
+            "applies": True,
+            "user_is_asking": entity.user_is_asking,
+            "context_found": "Direct entity/topic command." if entity.canonical_symbol else "No resolved entity.",
+            "resolved_entities": [entity.canonical_symbol] if entity.canonical_symbol else [],
+            "evidence_plan": [tool for tool, _ in _entity_topic_plan_preview(entity)],
+            "decision": entity.decision,
+            "clarification_question": "" if entity.decision != "ask_clarification" else "Which NSE symbol or company should I use?",
+            "confidence": entity.confidence,
+            "data_mode": data_mode,
+        }
+
+    if needs_situation_assessment(user_input):
+        assessment = assess_followup(user_input, previous_context)
+        return {
+            "applies": assessment.applies,
+            "user_is_asking": assessment.user_is_asking,
+            "context_found": assessment.context_found,
+            "resolved_entities": assessment.resolved_entities,
+            "evidence_plan": assessment.evidence_plan,
+            "decision": assessment.decision,
+            "clarification_question": assessment.clarification_question,
+            "confidence": assessment.confidence,
+            "data_mode": data_mode,
+        }
+
+    return {
+        "applies": False,
+        "user_is_asking": "Non-contextual query; use normal routing.",
+        "context_found": "",
+        "resolved_entities": [],
+        "evidence_plan": [],
+        "decision": "fallback_to_router",
+        "clarification_question": "",
+        "confidence": "low",
+        "data_mode": data_mode,
+    }
+
+
+def resolve_conversation_reference(
+    user_input: str,
+    previous_context: TurnContext | None = None,
+) -> dict:
+    """Resolve references like 'the report' or 'these' against prior context."""
+    q = _normalize(user_input)
+    if not previous_context:
+        return {"status": "unresolved", "reference_type": "unknown", "reason": "No previous context."}
+    if _asks_report_reference(q):
+        path = _report_path_from_context(previous_context)
+        if path:
+            return {
+                "status": "resolved",
+                "reference_type": "report",
+                "path": path,
+                "symbols": previous_context.symbols,
+                "context_found": _report_context_found(previous_context, path),
+            }
+    if any(term in q for term in ("these", "this", "same")) and previous_context.result_items:
+        return {
+            "status": "resolved",
+            "reference_type": "result_items",
+            "items": previous_context.result_items,
+            "symbols": previous_context.symbols,
+            "context_found": _context_found(previous_context),
+        }
+    return {"status": "unresolved", "reference_type": "unknown", "reason": "No matching contextual reference."}
+
+
+def resolve_entity_context(user_input: str) -> dict:
+    """Resolve an entity/topic prompt without running evidence tools."""
+    assessment = assess_entity_topic_request(user_input)
+    if not assessment.applies or not assessment.canonical_symbol:
+        return {
+            "status": "unresolved",
+            "query": user_input,
+            "topic": assessment.topic if assessment.applies else "",
+            "reason": "No resolvable entity/topic command found.",
+        }
+    return {
+        "status": "resolved",
+        "query": user_input,
+        "command": assessment.command,
+        "entity_query": assessment.entity_query,
+        "canonical_symbol": assessment.canonical_symbol,
+        "topic": assessment.topic,
+        "rewritten_input": assessment.rewritten_input,
+    }
+
+
+def validate_intent_evidence_plan(
+    intent: str,
+    evidence_plan: list[str] | tuple[str, ...] | None = None,
+    required_tools: list[str] | tuple[str, ...] | None = None,
+) -> dict:
+    """Validate that an assessment/tool plan covers the required evidence tools."""
+    planned = list(dict.fromkeys(evidence_plan or []))
+    required = list(dict.fromkeys(required_tools or []))
+    missing = [tool for tool in required if tool not in planned]
+    return {
+        "intent": intent,
+        "evidence_plan": planned,
+        "required_tools": required,
+        "missing_tools": missing,
+        "status": "ok" if not missing else "missing_required_tools",
+    }
+
+
+def request_clarification(question: str, reason: str = "") -> dict:
+    """Return a structured clarification decision."""
+    return {
+        "applies": True,
+        "decision": "ask_clarification",
+        "confidence": "high",
+        "reason": reason,
+        "clarification_question": question,
+        "evidence_plan": [],
+    }
 
 
 def render_assessment_block(assessment: SituationAssessment) -> str:
@@ -494,6 +664,16 @@ def _asks_source(q: str) -> bool:
     )
 
 
+def _asks_report_reference(q: str) -> bool:
+    return (
+        "based on the report" in q
+        or "based on report" in q
+        or "the report" in q
+        or "last report" in q
+        or "previous report" in q
+    )
+
+
 def _asks_scan_15m(q: str) -> bool:
     return ("scan these" in q or "check these" in q) and ("15m" in q or "15 m" in q or "15-minute" in q)
 
@@ -519,6 +699,28 @@ def _source_assessment(context: TurnContext) -> str:
     return " ".join(pieces)
 
 
+def _report_path_from_context(context: TurnContext) -> str:
+    for item in context.result_items:
+        text = str(item)
+        if re.search(r"\.(?:html|md|pdf|json|csv)$", text, re.IGNORECASE) or "/" in text or "\\" in text:
+            return text
+    for args in context.tool_args:
+        for key in ("path", "file", "report_path"):
+            value = args.get(key)
+            if value:
+                return str(value)
+    return ""
+
+
+def _report_context_found(context: TurnContext, report_path: str) -> str:
+    pieces = [f"Prior report context resolved to {report_path}."]
+    if context.symbols:
+        pieces.append(f"Symbols: {', '.join(context.symbols)}.")
+    if context.result_summary:
+        pieces.append(context.result_summary)
+    return " ".join(pieces)
+
+
 def _freshness_suffix(context: TurnContext) -> str:
     return f" with freshness {context.freshness}" if context.freshness else ""
 
@@ -536,6 +738,25 @@ def _clarify(context: TurnContext, asking: str, question: str) -> SituationAsses
     )
 
 
+def _entity_topic_plan_preview(assessment: EntityTopicAssessment) -> list[tuple[str, dict[str, Any]]]:
+    if not assessment.canonical_symbol:
+        return []
+    command = assessment.command
+    if command == "/search":
+        return [("deep_search", {"symbol": assessment.canonical_symbol, "context": assessment.topic or "full overview"})]
+    if command == "/results":
+        return [
+            ("resolve_symbol", {"query": assessment.canonical_symbol}),
+            ("get_latest_results", {"symbol": assessment.canonical_symbol}),
+        ]
+    if command in {"/fno", "/chain", "/oi", "/options"}:
+        if command == "/fno":
+            return [("get_fno_overview", {"symbol": assessment.canonical_symbol, "expiry_index": 0})]
+        tools = [("get_options_chain", {"symbol": assessment.canonical_symbol})]
+        return tools
+    return [("resolve_symbol", {"query": assessment.canonical_symbol})]
+
+
 def _infer_result_type(intent: str, tool_results: list[dict[str, Any]]) -> str:
     tool_names = {str(item.get("tool", "")) for item in tool_results}
     if "run_screener_query" in tool_names:
@@ -545,10 +766,12 @@ def _infer_result_type(intent: str, tool_results: list[dict[str, Any]]) -> str:
             if screen_type == "stage2":
                 return "stage2_screener"
         return "screener"
-    if {"get_options_chain", "get_futures_analysis"} & tool_names:
+    if {"get_options_chain", "get_futures_analysis", "get_fno_overview"} & tool_names:
         return "fno_overview"
     if "explain_intraday_setup" in tool_names:
         return "intraday_setup"
+    if tool_names & {"find_latest_report", "list_generated_reports", "get_last_report", "open_report", "read_report", "summarize_report"}:
+        return "report"
     return intent or "unknown"
 
 
@@ -565,12 +788,23 @@ def _extract_symbols(tool_results: list[dict[str, Any]]) -> list[str]:
             for row in rows:
                 if isinstance(row, dict) and row.get("symbol"):
                     symbols.append(str(row["symbol"]).upper())
+        report = result.get("report") if isinstance(result, dict) else None
+        if isinstance(report, dict) and report.get("symbol"):
+            symbols.append(str(report["symbol"]).upper())
     return _dedupe(symbols)
 
 
 def _extract_result_items(tool_results: list[dict[str, Any]]) -> list[str]:
     for item in tool_results:
         result = item.get("result") or {}
+        for key in ("path", "absolute_path"):
+            if isinstance(result, dict) and result.get(key):
+                return [str(result[key])]
+        report = result.get("report") if isinstance(result, dict) else None
+        if isinstance(report, dict):
+            for key in ("path", "absolute_path"):
+                if report.get(key):
+                    return [str(report[key])]
         rows = result.get("results") if isinstance(result, dict) else None
         if isinstance(rows, list):
             return _dedupe(

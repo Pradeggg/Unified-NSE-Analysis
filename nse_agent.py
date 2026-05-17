@@ -206,14 +206,12 @@ def _is_open_last_report_request(text: str) -> bool:
 
 def _open_last_generated_report() -> str:
     report = _last_generated_report
+    from terminal.report_context import open_report
+
     if report is None:
         return "No report has been generated in this session yet."
-    if not report.exists():
-        return f"Last report path is no longer available: {report}"
-    import subprocess
-
-    subprocess.Popen(["open", str(report)])
-    return f"Opening report: {report}"
+    result = open_report(str(report))
+    return result.get("message") or f"Opening report: {report}"
 
 
 def _canonical_search_symbol(raw_symbol: str) -> str:
@@ -805,6 +803,8 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/refresh status",   "Check if refresh is running"),
     ("/refresh stop",     "Stop a running refresh"),
     ("/data-status",      "Check technical/fundamental DB readiness"),
+    ("/doctor",           "Check PostgreSQL process, DSN, schemas, tables, and source readiness"),
+    ("/doctor --repair",  "Create/repair core PostgreSQL schemas and then rerun doctor checks"),
     ("/refresh-data",     "Run readiness refresh if DB is stale or partial"),
     ("/refresh-data --check", "Show the refresh plan without running it"),
     # ── Command discovery ──────────────────────────────────────────────────
@@ -871,6 +871,7 @@ _CMD_CATEGORIES: dict[str, tuple[str, str]] = {
     "/scale":    ("Settings & Data",     "⚙️"),
     "/refresh":  ("Settings & Data",     "⚙️"),
     "/data-status": ("Settings & Data",  "⚙️"),
+    "/doctor": ("Settings & Data",       "⚙️"),
     "/refresh-data": ("Settings & Data", "⚙️"),
     "/commands": ("Help",                "❓"),
 }
@@ -4393,6 +4394,18 @@ def _single_query(agent, query: str, show_trace: bool) -> None:
         console.print(Markdown(_open_last_generated_report()))
         return
 
+    if query.strip().lower().startswith("/doctor"):
+        _print_user(query)
+        try:
+            from terminal.postgres_tools import render_postgres_doctor
+
+            parts = query.strip().split()
+            output = render_postgres_doctor(repair="--repair" in parts)
+            console.print(output)
+        except Exception as exc:
+            console.print(f"[bold red]  ❌ PostgreSQL doctor failed: {exc}[/bold red]")
+        return
+
     if query.strip().lower().startswith("/strength"):
         parts = query.strip().split()[1:]
         symbols = [re.sub(r"[^A-Za-z0-9&-]", "", p).upper() for p in parts]
@@ -4990,6 +5003,18 @@ def _chat_loop(agent, show_trace: bool) -> None:
             topic = parts[1].strip() if len(parts) > 1 else "market assessment for India"
             text = f"global {topic}"
             console.print(f"[dim]  → Global assessment: {topic}[/dim]")
+
+        # ── /doctor — PostgreSQL operational health ────────────────────────
+        if text.lower().startswith("/doctor"):
+            try:
+                from terminal.postgres_tools import render_postgres_doctor
+
+                parts = text.split()
+                output = render_postgres_doctor(repair="--repair" in parts)
+                console.print(output)
+            except Exception as exc:
+                console.print(f"[bold red]  ❌ PostgreSQL doctor failed: {exc}[/bold red]")
+            continue
 
         # ── /data-status and /refresh-data — startup data readiness ─────────
         if text.lower().startswith("/data-status") or text.lower().startswith("/refresh-data"):

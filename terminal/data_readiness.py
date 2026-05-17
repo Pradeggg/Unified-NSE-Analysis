@@ -375,6 +375,15 @@ def render_readiness_panel(status: DataReadinessStatus, plan: RefreshPlan | None
         f"Status: {status.status}",
         f"Action: {action_text}",
     ]
+    try:
+        from terminal.postgres_tools import get_postgres_health
+
+        pg_health = get_postgres_health(PG_DSN)
+        missing = pg_health.get("missing_tables") or []
+        missing_label = f"missing {len(missing)} table(s)" if missing else "required tables ready"
+        lines.append(f"PostgreSQL: {pg_health.get('status')} · {missing_label}")
+    except Exception as exc:
+        lines.append(f"PostgreSQL: error · {exc}")
     if status.blockers:
         lines.append(f"Blockers: {', '.join(status.blockers)}")
     if status.warnings:

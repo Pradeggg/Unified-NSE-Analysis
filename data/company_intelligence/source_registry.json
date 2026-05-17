@@ -1,0 +1,27 @@
+{
+  "official_exchange": {
+    "tier": 1,
+    "sources": ["NSE", "BSE"],
+    "allowed_document_types": ["filing", "announcement", "results", "shareholding", "concall_transcript"]
+  },
+  "official_policy": {
+    "tier": 1,
+    "sources": ["RBI", "Union Budget", "Ministry of Finance", "PIB"],
+    "allowed_document_types": ["policy_statement", "budget_document", "press_release"]
+  },
+  "company_ir": {
+    "tier": 1,
+    "sources": ["company_website", "investor_relations"],
+    "allowed_document_types": ["annual_report", "investor_presentation", "results", "transcript"]
+  },
+  "structured_internal": {
+    "tier": 2,
+    "sources": ["agent_adda_fundamentals", "sector_rotation", "technical_cache", "knowledge_graph"],
+    "allowed_document_types": ["dataset", "report", "cache"]
+  },
+  "external_context": {
+    "tier": 3,
+    "sources": ["news", "industry_articles", "analyst_coverage", "broker_research_landing_pages", "rating_commentary"],
+    "allowed_document_types": ["article", "summary", "landing_page", "public_pdf"]
+  }
+}

@@ -49,6 +49,37 @@ class StrategyCouncilReportTests(unittest.TestCase):
         self.assertIn("Source Trail", md)
         self.assertIn("PostgreSQL market.equity_eod", md)
 
+    def test_render_council_markdown_includes_enriched_evidence(self):
+        evidence = EvidencePack(
+            symbol="DMART",
+            as_of="2026-05-15",
+            technical={"close": 100, "bars": 300},
+            fundamental={
+                "snapshot": {"fundamental_score": 72},
+                "latest_results": {"status": "ok", "facts": {"revenue": {"value": "14000"}}},
+                "readiness": {"score": 85, "status": "usable"},
+            },
+            market={"breadth": {"advances": 500, "declines": 420}},
+            news=[{"title": "DMART update"}],
+        )
+        result = CouncilResult(
+            config=CouncilConfig(symbol="DMART"),
+            evidence=evidence,
+            iterations=(),
+            locked_strategy=None,
+            test_results=(),
+            recommendation="WAIT",
+            rationale="Research-only.",
+        )
+
+        md = render_council_markdown(result)
+
+        self.assertIn("Enriched Evidence", md)
+        self.assertIn("fundamental_score", md)
+        self.assertIn("latest_results", md)
+        self.assertIn("DMART update", md)
+        self.assertIn("Readiness", md)
+
     def test_write_council_report_creates_markdown_file(self):
         result = CouncilResult(
             config=CouncilConfig(symbol="DMART"),

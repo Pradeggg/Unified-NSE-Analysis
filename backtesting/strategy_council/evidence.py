@@ -159,3 +159,126 @@ def build_evidence_pack(symbol: str, *, project_root: Path | None = None) -> Evi
     for optional in ("fundamentals", "market_breadth", "news", "sentiment", "latest_results"):
         pack.missing.append(optional)
     return pack
+
+
+def _fetch_symbol_snapshot(symbol: str) -> dict:
+    from terminal.tools import get_symbol_snapshot
+
+    return get_symbol_snapshot(symbol)
+
+
+def _fetch_market_breadth() -> dict:
+    from terminal.tools import get_market_breadth
+
+    return get_market_breadth()
+
+
+def _fetch_latest_catalysts(symbol: str) -> dict:
+    from terminal.tools import search_latest_catalysts
+
+    return search_latest_catalysts(symbol)
+
+
+def _fetch_latest_results(symbol: str) -> dict:
+    from terminal.results_tools import get_latest_results
+
+    return get_latest_results(symbol)
+
+
+def _clear_missing(pack: EvidencePack, item: str) -> None:
+    pack.missing = [m for m in pack.missing if m != item]
+
+
+def enrich_strategy_council_evidence(pack: EvidencePack) -> EvidencePack:
+    """Attach optional research evidence with explicit source/missing metadata."""
+    sym = pack.symbol.strip().upper()
+
+    try:
+        snapshot = _fetch_symbol_snapshot(sym)
+        if snapshot and not snapshot.get("error"):
+            pack.fundamental["snapshot"] = snapshot
+            _clear_missing(pack, "fundamentals")
+            pack.source_trail.append("get_symbol_snapshot: ok")
+        else:
+            pack.source_trail.append(f"get_symbol_snapshot: ERROR: {(snapshot or {}).get('error', 'no data')}")
+    except Exception as exc:
+        pack.source_trail.append(f"get_symbol_snapshot: ERROR: {exc}")
+
+    try:
+        breadth = _fetch_market_breadth()
+        if breadth and not breadth.get("error"):
+            pack.market["breadth"] = breadth
+            _clear_missing(pack, "market_breadth")
+            pack.source_trail.append("get_market_breadth: ok")
+        else:
+            pack.source_trail.append(f"get_market_breadth: ERROR: {(breadth or {}).get('error', 'no data')}")
+    except Exception as exc:
+        pack.source_trail.append(f"get_market_breadth: ERROR: {exc}")
+
+    try:
+        catalysts = _fetch_latest_catalysts(sym)
+        rows = catalysts.get("results") if isinstance(catalysts, dict) else []
+        if rows:
+            pack.news = rows
+            _clear_missing(pack, "news")
+            pack.source_trail.append("search_latest_catalysts: ok")
+        else:
+            pack.source_trail.append("search_latest_catalysts: no results")
+    except Exception as exc:
+        pack.source_trail.append(f"search_latest_catalysts: ERROR: {exc}")
+
+    try:
+        latest_results = _fetch_latest_results(sym)
+        if latest_results and not latest_results.get("error"):
+            pack.fundamental["latest_results"] = latest_results
+            _clear_missing(pack, "latest_results")
+            pack.source_trail.append("get_latest_results: ok")
+        else:
+            pack.source_trail.append(f"get_latest_results: ERROR: {(latest_results or {}).get('error', 'no data')}")
+    except Exception as exc:
+        pack.source_trail.append(f"get_latest_results: ERROR: {exc}")
+
+    readiness = score_strategy_data_readiness(pack)
+    pack.fundamental["readiness"] = readiness
+    pack.freshness["strategy_evidence_readiness"] = readiness["status"]
+    return pack
+
+
+def build_strategy_council_evidence_pack(symbol: str, *, project_root: Path | None = None) -> EvidencePack:
+    """Build base point-in-time EOD evidence and enrich optional context."""
+    return enrich_strategy_council_evidence(build_evidence_pack(symbol, project_root=project_root))
+
+
+def validate_strategy_council_evidence(pack: EvidencePack) -> dict:
+    missing_mandatory: list[str] = []
+    if not pack.technical.get("close") or not pack.technical.get("bars"):
+        missing_mandatory.append("technical_eod")
+    missing_optional = list(dict.fromkeys(pack.missing))
+    return {
+        "symbol": pack.symbol,
+        "status": "ok" if not missing_mandatory else "insufficient",
+        "missing_mandatory": missing_mandatory,
+        "missing_optional": missing_optional,
+        "source_trail": pack.source_trail,
+    }
+
+
+def score_strategy_data_readiness(pack: EvidencePack) -> dict:
+    score = 100
+    if not pack.technical.get("close") or not pack.technical.get("bars"):
+        score -= 45
+    if "fundamentals" in pack.missing or not pack.fundamental.get("snapshot"):
+        score -= 15
+    if "market_breadth" in pack.missing or not pack.market.get("breadth"):
+        score -= 10
+    if "news" in pack.missing or not pack.news:
+        score -= 10
+    if "latest_results" in pack.missing or not pack.fundamental.get("latest_results"):
+        score -= 15
+    score = max(0, min(100, score))
+    status = "ready" if score >= 80 else ("usable" if score >= 55 else "insufficient")
+    return {
+        "score": score,
+        "status": status,
+        "missing": list(dict.fromkeys(pack.missing)),
+    }

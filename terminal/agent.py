@@ -27,6 +27,8 @@ load_dotenv(Path(__file__).parent.parent / ".env")
 from .tools import call_tool, get_symbol_snapshot, openai_tool_schemas, resolve_symbol
 from .market_calendar import market_context_for_agent, market_session_status
 from .data_readiness import append_readiness_metadata
+from .entity_resolution import TECHNICAL_NON_SYMBOL_TERMS, validate_requested_symbols
+from .evidence_gate import validate_required_tools_executed
 from .situation_assessment import (
     TurnContext,
     assess_entity_topic_request,
@@ -937,7 +939,7 @@ _SYMBOL_VALIDATION_SKIP: frozenset[str] = frozenset(
         "PDF", "URL", "HTML", "EOD", "DB", "PG", "API", "LLM", "AI",
         "BUY", "SELL", "HOLD", "LONG", "SHORT", "OPEN", "HIGH", "LOW",
     }
-)
+) | TECHNICAL_NON_SYMBOL_TERMS
 
 
 _REQUIRED_TOOLS_BY_INTENT: dict[str, tuple[str, ...]] = {
@@ -946,17 +948,13 @@ _REQUIRED_TOOLS_BY_INTENT: dict[str, tuple[str, ...]] = {
     "intraday_index_scan": ("scan_intraday_market",),
     "intraday_setup": ("explain_intraday_setup", "get_nse_intraday_snapshot"),
     "intraday_levels": ("get_intraday_levels", "get_nse_intraday_snapshot"),
-    "fno_overview": ("get_options_chain", "get_futures_analysis"),
+    "fno_overview": ("get_fno_overview",),
     "stock_comparison": ("compare_stocks",),
     "strength_validation": ("validate_strength_watchlist",),
     "stock_brief": ("resolve_symbol", "get_symbol_snapshot"),
     "stock_results": (
         "resolve_symbol",
-        "scrape_screener_in",
-        "search_nse_announcements",
-        "search_bse_filings",
-        "search_concall_transcripts",
-        "search_latest_catalysts",
+        "get_latest_results",
     ),
 }
 
@@ -977,9 +975,9 @@ _DYNAMIC_EVIDENCE_REQUIRED_INTENTS: frozenset[str] = frozenset(
 
 def _explicit_requested_symbols(query: str) -> list[str]:
     """Return explicit ticker-looking symbols from user text without fuzzy substitution."""
-    tokens = re.findall(r"\b[A-Z][A-Z0-9&-]{1,12}\b", query or "")
+    requested = validate_requested_symbols(query or "").get("requested_symbols", [])
     symbols: list[str] = []
-    for token in tokens:
+    for token in requested:
         clean = token.strip().upper()
         if clean in _SYMBOL_VALIDATION_SKIP:
             continue
@@ -1048,7 +1046,7 @@ def _required_tools_for_query(intent: str, query: str) -> tuple[str, ...]:
         "balance sheet", "cash flow statement", "financial statements",
         "fundamental analysis", "quarterly numbers", "quarterly financials",
     )):
-        required.append("scrape_screener_in")
+        required.append("get_latest_results")
     return tuple(dict.fromkeys(required))
 
 
@@ -1073,7 +1071,8 @@ def _validate_required_tools(query: str, intent: str, tool_results: list[dict]) 
         required = tuple(t for t in required if t not in document_safe_skip)
         if not required:
             return None
-    missing = [tool for tool in required if tool not in executed]
+    validation = validate_required_tools_executed(list(required), tool_results or [])
+    missing = validation.get("missing_tools") or [tool for tool in required if tool not in executed]
     if not missing:
         return None
     lines = [
@@ -1254,19 +1253,14 @@ def _entity_topic_execution_plan(assessment) -> list[tuple[str, dict]]:
     if command == "/results":
         return [
             ("resolve_symbol", {"query": symbol}),
-            ("scrape_screener_in", {"symbol": symbol}),
-            ("search_nse_announcements", {"symbol": symbol}),
-            ("search_bse_filings", {"symbol": symbol}),
-            ("search_concall_transcripts", {"symbol": symbol}),
-            ("search_latest_catalysts", {"symbol": symbol}),
+            ("get_latest_results", {"symbol": symbol}),
         ]
     if command in {"/fno", "/chain", "/oi", "/options"}:
+        if command == "/fno":
+            return [("get_fno_overview", {"symbol": symbol, "expiry_index": 0})]
         plan = [
             ("get_options_chain", {"symbol": symbol, "expiry_index": 0}),
         ]
-        if command == "/fno":
-            plan.append(("get_futures_analysis", {"symbol": symbol}))
-            plan.append(("get_strategy_recommendations", {"symbol": symbol}))
         return plan
     if command == "/report":
         report_type = (topic.split() or ["research"])[0]
@@ -1554,12 +1548,7 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
     )
     if any(term in f" {q} " for term in fno_terms):
         symbol = _extract_fno_symbol(routing_text)
-        plan = [
-            ("get_options_chain", {"symbol": symbol, "expiry_index": 0}),
-            ("get_futures_analysis", {"symbol": symbol}),
-        ]
-        if any(term in q for term in ("strategy", "recommend", "best options", "options play")):
-            plan.append(("get_strategy_recommendations", {"symbol": symbol}))
+        plan = [("get_fno_overview", {"symbol": symbol, "expiry_index": 0})]
         return {"intent": "fno_overview", "plan": plan}
 
     assessment_plan = _build_market_situation_assessment_plan(query, data_mode=data_mode)
@@ -1840,12 +1829,7 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
         sym_q = _primary_symbol_query(candidates, symbol_candidates, routing_text)
         return {"intent": "stock_results", "plan": [
             ("resolve_symbol",           {"query": sym_q}),
-            ("scrape_screener_in",       {"symbol": sym_q.upper()}),
-            ("search_nse_announcements", {"symbol": sym_q.upper()}),
-            ("search_bse_filings",       {"symbol": sym_q.upper()}),
-            ("search_concall_transcripts", {"symbol": sym_q.upper()}),
-            ("search_latest_catalysts",  {"symbol": sym_q.upper()}),
-            ("get_symbol_snapshot",      {"symbol": sym_q.upper()}),
+            ("get_latest_results",       {"symbol": sym_q.upper()}),
         ]}
 
     if candidates and explicit_stock_subject and any(term in q for term in forensic_stock_terms):
@@ -2153,6 +2137,7 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
     fno_chain = _get("get_options_chain") or _get("get_option_chain")
     fno_futures = _get("get_futures_analysis")
     fno_strategy = _get("get_strategy_recommendations")
+    fno_overview = _get("get_fno_overview")
     forensic = _get("run_forensic_analysis")
     deep = _get("deep_search")
     intra_setup = _get("explain_intraday_setup")
@@ -2167,6 +2152,13 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
     nse_ann  = _get("search_nse_announcements")
     bse_filings = _get("search_bse_filings")
     concalls = _get("search_concall_transcripts")
+    latest_results = _get("get_latest_results")
+    latest_report = _get("find_latest_report")
+    listed_reports = _get("list_generated_reports")
+    opened_report = _get("open_report")
+    read_report_result = _get("read_report")
+    report_summary = _get("summarize_report")
+    last_report = _get("get_last_report")
 
     sym = (snap or {}).get("symbol") or (tech or {}).get("symbol") or ""
     if not sym and forensic:
@@ -2688,11 +2680,103 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
         lines.append("\n━━━ Not investment advice. For research and learning only. ━━━")
         return "\n".join(lines)
 
-    if intent == "stock_results":
-        _render_stock_results(sym or (scr_fund or {}).get("symbol", ""))
+    if intent == "report_lookup":
+        report_payload = opened_report or report_summary or read_report_result or last_report or listed_reports or latest_report or {}
+        status = report_payload.get("status") or ("ok" if report_payload else "unknown")
+        lines.append("▶ REPORT CONTEXT")
+        if opened_report:
+            lines.append(f"  Status: {status}")
+            lines.append(f"  Path:   {opened_report.get('path') or 'N/A'}")
+            if opened_report.get("message"):
+                lines.append(f"  Note:   {opened_report.get('message')}")
+        elif report_summary:
+            lines.append(f"  Status:         {status}")
+            lines.append(f"  Path:           {report_summary.get('path') or 'N/A'}")
+            if report_summary.get("symbol"):
+                lines.append(f"  Symbol:         {report_summary.get('symbol')}")
+            if report_summary.get("recommendation"):
+                lines.append(f"  Recommendation: {report_summary.get('recommendation')}")
+            if report_summary.get("summary"):
+                lines.append("")
+                lines.append("▶ SUMMARY")
+                for line in str(report_summary.get("summary")).splitlines()[:12]:
+                    lines.append(f"  {line}")
+        elif read_report_result:
+            lines.append(f"  Status: {status}")
+            lines.append(f"  Path:   {read_report_result.get('path') or 'N/A'}")
+            content = str(read_report_result.get("content") or "").strip()
+            if content:
+                lines.append("")
+                lines.append("▶ PREVIEW")
+                for line in content.splitlines()[:12]:
+                    if line.strip():
+                        lines.append(f"  {line[:140]}")
+        elif last_report and last_report.get("report"):
+            report = last_report.get("report") or {}
+            lines.append(f"  Status: {status}")
+            lines.append(f"  Path:   {report.get('path') or report.get('absolute_path') or 'N/A'}")
+            lines.append(f"  Type:   {report.get('report_type') or 'report'}")
+        elif listed_reports:
+            reports = listed_reports.get("reports") or []
+            lines.append(f"  Status: {status}")
+            lines.append(f"  Count:  {listed_reports.get('count', len(reports))}")
+            for row in reports[:10]:
+                lines.append(f"  - {row.get('name')} | {row.get('report_type')} | {row.get('path')}")
+        elif latest_report:
+            files = latest_report.get("files") or []
+            lines.append(f"  Count: {latest_report.get('count', len(files))}")
+            for row in files[:10]:
+                lines.append(f"  - {row.get('name')} | {row.get('path')}")
+        else:
+            lines.append("  No report context was available.")
+        lines.append("")
         lines.append("▶ SOURCE TRAIL")
-        for trail_line in _source_trail_lines(tool_results):
-            lines.append(trail_line)
+        lines.extend(_source_trail_lines(tool_results))
+        lines.append("\n━━━ Not investment advice. For research and learning only. ━━━")
+        return "\n".join(lines)
+
+    if intent == "stock_results":
+        if latest_results:
+            lines.append(f"━━━ {latest_results.get('symbol', 'SYMBOL')} — Latest Results Evidence ━━━")
+            lines.append("")
+            lines.append("▶ LATEST RESULTS PACK")
+            lines.append(f"  Status: {latest_results.get('status', 'unknown')}")
+            lines.append(f"  Period: {latest_results.get('period', 'latest')}")
+            selected = latest_results.get("selected_filing") or {}
+            if selected:
+                lines.append(f"  Selected filing: {selected.get('title') or selected.get('url') or 'N/A'}")
+                if selected.get("source"):
+                    lines.append(f"  Filing source:   {selected.get('source')}")
+            facts = latest_results.get("facts") or {}
+            if facts:
+                lines.append("")
+                lines.append("▶ RECONCILED FACTS")
+                for label, key in (("Revenue", "revenue"), ("PAT", "pat"), ("EPS", "eps")):
+                    item = facts.get(key)
+                    if item:
+                        lines.append(
+                            f"  {label}: {item.get('value')} "
+                            f"({item.get('period', 'latest')} · {item.get('source', 'source unavailable')})"
+                        )
+            missing = latest_results.get("missing_facts") or []
+            if missing:
+                lines.append("")
+                lines.append("▶ MISSING FACTS")
+                lines.append("  " + ", ".join(missing))
+            if latest_results.get("summary"):
+                lines.append("")
+                lines.append("▶ SUMMARY")
+                for line in str(latest_results.get("summary")).splitlines():
+                    lines.append(f"  {line}")
+        else:
+            _render_stock_results(sym or (scr_fund or {}).get("symbol", ""))
+        lines.append("▶ SOURCE TRAIL")
+        if latest_results and isinstance(latest_results.get("source_trail"), dict):
+            for tool, status in latest_results["source_trail"].items():
+                lines.append(f"  {tool}: {status}")
+        else:
+            for trail_line in _source_trail_lines(tool_results):
+                lines.append(trail_line)
         lines.append("\n━━━ Not investment advice. For research and learning only. ━━━")
         body = "\n".join(lines)
         # Save Markdown deep-dive report alongside the terminal output
@@ -2767,6 +2851,26 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
                 lines.append(f"  Symbol: {fno_chain.get('symbol', symbol)}")
                 lines.append(f"  PCR: {fno_chain.get('pcr', 'n/a')}")
                 lines.append(f"  Max pain: {fno_chain.get('max_pain', 'n/a')}")
+        if latest_results is not None:
+            lines.append("")
+            lines.append("▶ Latest Results Evidence")
+            lines.append(f"  Status: {latest_results.get('status', 'unknown')}")
+            lines.append(f"  Period: {latest_results.get('period', 'latest')}")
+            selected = latest_results.get("selected_filing") or {}
+            if selected:
+                lines.append(f"  Selected filing: {selected.get('title') or selected.get('url') or 'N/A'}")
+            facts = latest_results.get("facts") or {}
+            for label, key in (("Revenue", "revenue"), ("PAT", "pat"), ("EPS", "eps")):
+                item = facts.get(key)
+                if item:
+                    lines.append(f"  {label}: {item.get('value')} ({item.get('period', 'latest')})")
+            missing = latest_results.get("missing_facts") or []
+            if missing:
+                lines.append(f"  Missing facts: {', '.join(missing)}")
+            if latest_results.get("summary"):
+                lines.append("  Summary:")
+                for line in str(latest_results.get("summary")).splitlines()[:6]:
+                    lines.append(f"    {line}")
         if scr_fund is not None and (nse_ann is not None or bse_filings is not None or concalls is not None):
             lines.append("")
             _render_stock_results(symbol)
@@ -2776,6 +2880,9 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
             result = tr.get("result") if isinstance(tr.get("result"), dict) else {}
             status = f"ERROR: {result.get('error')}" if result.get("error") else "ok"
             lines.append(f"  {tr.get('tool')}: {status}")
+            if tr.get("tool") == "get_latest_results" and isinstance(result.get("source_trail"), dict):
+                for sub_tool, sub_status in result["source_trail"].items():
+                    lines.append(f"  {sub_tool}: {sub_status}")
         lines.append("\n━━━ Not investment advice. For research and learning only. ━━━")
         return "\n".join(lines)
 
@@ -3066,6 +3173,48 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
         return "\n".join(l for l in lines if str(l).strip() != "")
 
     if intent == "fno_overview":
+        if fno_overview:
+            symbol = fno_overview.get("symbol") or "NIFTY"
+            lines.append(f"━━━ {symbol} — F&O Overview ━━━")
+            lines.append("\n▶ OPTION CHAIN")
+            chain = fno_overview.get("option_chain") or {}
+            if chain.get("status") == "missing" or chain.get("error"):
+                lines.append(f"  ERROR: {chain.get('error') or 'option-chain evidence missing'}")
+            else:
+                lines.append(f"  PCR: {fno_overview.get('pcr', '—')} | Max pain: {fno_overview.get('max_pain', '—')}")
+                top_oi = fno_overview.get("top_oi_strikes") or {}
+                lines.append(f"  Top call OI: {top_oi.get('calls') or '—'}")
+                lines.append(f"  Top put OI: {top_oi.get('puts') or '—'}")
+            lines.append("\n▶ FUTURES BASIS & CARRY")
+            futures = fno_overview.get("futures") or {}
+            if futures.get("status") == "missing" or futures.get("error"):
+                lines.append(f"  ERROR: {futures.get('error') or 'futures evidence missing'}")
+            else:
+                lines.append(f"  Basis: {fno_overview.get('basis', '—')} | Cost of carry: {fno_overview.get('cost_of_carry', '—')}")
+            rec = fno_overview.get("recommendation") or {}
+            lines.append("\n▶ STRATEGY CONTEXT")
+            if rec.get("status") == "blocked":
+                lines.append(f"  Blocked: {rec.get('reason')}")
+            else:
+                lines.append(f"  Strategy: {rec.get('strategy', '—')}")
+                if rec.get("conditions"):
+                    lines.append("  Conditions: " + " | ".join(map(str, rec.get("conditions") or [])))
+                if rec.get("invalidation"):
+                    lines.append(f"  Invalidation: {rec.get('invalidation')}")
+                if rec.get("max_loss"):
+                    lines.append(f"  Max loss: {rec.get('max_loss')}")
+                if rec.get("max_profit"):
+                    lines.append(f"  Max profit: {rec.get('max_profit')}")
+            missing = fno_overview.get("missing_evidence") or []
+            if missing:
+                lines.append("\n▶ MISSING EVIDENCE")
+                lines.append("  " + ", ".join(missing))
+            lines.append("\n▶ SOURCE TRAIL")
+            for tool, status in (fno_overview.get("source_trail") or {}).items():
+                lines.append(f"  {tool}: {status}")
+            lines.append("\n━━━ Not investment advice. For research and learning only. ━━━")
+            return "\n".join(l for l in lines if str(l).strip() != "")
+
         def _fmt_num(value, decimals: int = 2) -> str:
             if isinstance(value, (int, float)):
                 return f"{value:,.{decimals}f}"
@@ -4608,12 +4757,17 @@ class Agent:
             if assessment.applies and assessment.decision == "run_tool_plan":
                 tool_results = _execute_plan(assessment.tool_plan)
                 trace.extend(tool_results)
+                synthesis_intent = (
+                    "report_lookup"
+                    if any(name in {"open_report", "read_report", "summarize_report", "get_last_report", "list_generated_reports"} for name, _ in assessment.tool_plan)
+                    else "intraday_symbol_scan"
+                )
                 answer_body = (
                     render_assessment_block(assessment)
                     + "\n\n"
-                    + _synthesize_no_llm("intraday_symbol_scan", tool_results)
+                    + _synthesize_no_llm(synthesis_intent, tool_results)
                 )
-                answer_body = _apply_response_guardrails(clean_input, "intraday_symbol_scan", tool_results, answer_body)
+                answer_body = _apply_response_guardrails(clean_input, synthesis_intent, tool_results, answer_body)
                 answer = answer_body + mode_suffix
                 turn_context = build_turn_context(
                     user_input=clean_input,

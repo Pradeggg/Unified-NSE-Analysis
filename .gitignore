@@ -70,7 +70,9 @@ postgres/data.ascii.*/
 postgres/data.corrupt.*/
 
 # Generated local knowledge/data caches
-data/company_intelligence/
+data/company_intelligence/*
+!data/company_intelligence/
+!data/company_intelligence/source_registry.json
 data/knowledge_base/
 data/nse-raw/
 data/data/

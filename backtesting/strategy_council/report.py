@@ -58,6 +58,41 @@ def _intraday_evidence_lines(result: CouncilResult) -> list[str]:
     return lines
 
 
+def _enriched_evidence_lines(result: CouncilResult) -> list[str]:
+    evidence = result.evidence
+    has_enriched = bool(
+        evidence.fundamental.get("snapshot")
+        or evidence.fundamental.get("latest_results")
+        or evidence.fundamental.get("readiness")
+        or evidence.market.get("breadth")
+        or evidence.news
+    )
+    if not has_enriched:
+        return []
+
+    lines = ["", "## Enriched Evidence"]
+    readiness = evidence.fundamental.get("readiness")
+    if readiness:
+        lines.append(f"- Readiness: `{readiness}`")
+    snapshot = evidence.fundamental.get("snapshot")
+    if snapshot:
+        lines.append(f"- Fundamental snapshot: `{snapshot}`")
+    latest_results = evidence.fundamental.get("latest_results")
+    if latest_results:
+        lines.append(f"- latest_results: `{latest_results}`")
+    breadth = evidence.market.get("breadth")
+    if breadth:
+        lines.append(f"- Market breadth: `{breadth}`")
+    if evidence.news:
+        lines.append("- News/catalysts:")
+        for item in evidence.news[:5]:
+            if isinstance(item, dict):
+                lines.append(f"  - {item.get('title') or item.get('url') or item}")
+            else:
+                lines.append(f"  - {item}")
+    return lines
+
+
 def render_council_markdown(result: CouncilResult) -> str:
     lines = [
         f"# Strategy Council — {result.config.symbol}",
@@ -82,6 +117,7 @@ def render_council_markdown(result: CouncilResult) -> str:
         lines.extend(["", "## Source Trail"])
         lines.extend(f"- {item}" for item in result.evidence.source_trail)
 
+    lines.extend(_enriched_evidence_lines(result))
     lines.extend(_intraday_evidence_lines(result))
 
     lines.extend(["", "## Iterations"])

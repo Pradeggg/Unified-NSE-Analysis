@@ -8,6 +8,8 @@
 
 **Tech Stack:** Python 3.10+, PostgreSQL via existing project DSN, pandas where already used, existing `terminal.tools` registry, existing `nse_agent.py` command layer, pytest/unittest tests, no new paid data dependencies.
 
+**Implementation status (2026-05-17):** Implemented on branch `agent-adda-tooling-expansion` through Phase 9. Covered PostgreSQL doctor tools, report context, entity resolution, situation assessment v2, latest-results composite, evidence gate, Strategy Council enrichment, F&O composite overview, company evidence audit tools, and scenario regressions. Final verification: `619 passed, 40 subtests passed`; `py_compile` passed for the modified runtime modules; `/doctor` smoke passed in single-query mode.
+
 ---
 
 ## Source Design
@@ -700,4 +702,3 @@ Expected: each command returns source trail or missing-evidence block without tr
 ## Execution Handoff
 
 Recommended execution mode: subagent-driven development with one task family per worker because PostgreSQL tools, report context, F&O composite, latest results, and evidence gating have mostly separate write scopes.
-

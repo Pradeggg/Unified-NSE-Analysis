@@ -719,11 +719,7 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
 
         self.assertEqual(routed["intent"], "stock_results")
         self.assertEqual(routed["plan"][0], ("resolve_symbol", {"query": "DMART"}))
-        self.assertIn(("scrape_screener_in", {"symbol": "DMART"}), routed["plan"])
-        self.assertIn(("search_nse_announcements", {"symbol": "DMART"}), routed["plan"])
-        self.assertIn(("search_bse_filings", {"symbol": "DMART"}), routed["plan"])
-        self.assertIn(("search_concall_transcripts", {"symbol": "DMART"}), routed["plan"])
-        self.assertIn(("search_latest_catalysts", {"symbol": "DMART"}), routed["plan"])
+        self.assertIn(("get_latest_results", {"symbol": "DMART"}), routed["plan"])
         self.assertNotIn("'RESULTS'", str(routed).upper())
 
     def test_market_education_examples_do_not_route_teach_as_symbol(self):
@@ -800,10 +796,7 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
         self.assertEqual(routed["intent"], "fno_overview")
         self.assertEqual(
             routed["plan"],
-            [
-                ("get_options_chain", {"symbol": "NIFTY", "expiry_index": 0}),
-                ("get_futures_analysis", {"symbol": "NIFTY"}),
-            ],
+            [("get_fno_overview", {"symbol": "NIFTY", "expiry_index": 0})],
         )
         self.assertNotEqual(routed["intent"], "market_overview")
         self.assertNotIn("get_live_market_overview", str(routed))
@@ -818,11 +811,7 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
         self.assertEqual(routed["intent"], "fno_overview")
         self.assertEqual(
             routed["plan"],
-            [
-                ("get_options_chain", {"symbol": "NIFTY", "expiry_index": 0}),
-                ("get_futures_analysis", {"symbol": "NIFTY"}),
-                ("get_strategy_recommendations", {"symbol": "NIFTY"}),
-            ],
+            [("get_fno_overview", {"symbol": "NIFTY", "expiry_index": 0})],
         )
         self.assertNotIn("get_live_market_overview", str(routed))
 
@@ -833,7 +822,7 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
         )
 
         self.assertEqual(routed["intent"], "fno_overview")
-        self.assertIn(("get_strategy_recommendations", {"symbol": "NIFTY"}), routed["plan"])
+        self.assertIn(("get_fno_overview", {"symbol": "NIFTY", "expiry_index": 0}), routed["plan"])
         self.assertNotIn("explain_intraday_setup", str(routed))
 
     def test_intraday_nifty_uses_nse_snapshot_before_fallback(self):
@@ -943,43 +932,35 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
         with patch("terminal.agent._execute_plan") as execute_plan:
             execute_plan.return_value = [
                 {
-                    "tool": "get_options_chain",
+                    "tool": "get_fno_overview",
                     "args": {"symbol": "NIFTY", "expiry_index": 0},
                     "result": {
                         "symbol": "NIFTY",
-                        "expiry": "2026-05-12",
-                        "underlying": 23650.0,
+                        "status": "ok",
+                        "option_chain": {"status": "ok"},
                         "atm": 23650,
                         "pcr": 0.82,
                         "max_pain": 23700,
-                        "total_call_oi": 1200000,
-                        "total_put_oi": 984000,
-                        "calls": [{"strike": 23700, "oi": 400000, "chg_oi": 25000}],
-                        "puts": [{"strike": 23600, "oi": 350000, "chg_oi": 18000}],
-                        "source": "NSE live API",
-                    },
-                },
-                {
-                    "tool": "get_futures_analysis",
-                    "args": {"symbol": "NIFTY"},
-                    "result": {
-                        "symbol": "NIFTY",
-                        "spot": 23650.0,
-                        "source": "NSE live API",
-                        "as_of": "2026-05-12 10:45:00",
-                        "lot_size": 75,
-                        "futures": [
-                            {
-                                "expiry": "2026-05-28",
-                                "last_price": 23680.0,
-                                "basis": 30.0,
-                                "basis_pct": 0.127,
-                                "cost_of_carry_annualised_pct": 3.2,
-                                "oi": 100000,
-                                "oi_change": 5000,
-                            }
-                        ],
-                        "rollover": {"rollover_pct": 12.5, "interpretation": "Low rollover"},
+                        "top_oi_strikes": {
+                            "calls": [{"strike": 23700, "oi": 400000, "chg_oi": 25000}],
+                            "puts": [{"strike": 23600, "oi": 350000, "chg_oi": 18000}],
+                        },
+                        "futures": {"status": "ok", "basis": 30.0, "cost_of_carry": 3.2},
+                        "basis": 30.0,
+                        "cost_of_carry": 3.2,
+                        "recommendation": {
+                            "status": "ok",
+                            "strategy": "defined_risk_spread",
+                            "conditions": ["PCR supportive"],
+                            "invalidation": "Breakdown",
+                            "max_loss": "Defined by spread",
+                            "max_profit": "Defined by spread",
+                        },
+                        "source_trail": {
+                            "get_options_chain": "ok",
+                            "get_futures_analysis": "ok",
+                            "get_strategy_recommendations": "ok",
+                        },
                     },
                 },
             ]
@@ -992,9 +973,9 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
         self.assertIn("OPTION CHAIN", result["answer"])
         self.assertIn("PCR: 0.82", result["answer"])
         self.assertIn("Max pain: 23700", result["answer"])
-        self.assertIn("Top CE OI", result["answer"])
+        self.assertIn("Top call OI", result["answer"])
         self.assertIn("FUTURES BASIS & CARRY", result["answer"])
-        self.assertIn("basis 30.00 (0.127%)", result["answer"])
+        self.assertIn("Basis: 30.0", result["answer"])
         self.assertNotIn("LIVE MARKET", result["answer"])
 
     def test_low_information_voice_answer_word_does_not_route_as_answer_ticker(self):
@@ -1244,29 +1225,32 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
             execute_plan.return_value = [
                 {"tool": "resolve_symbol", "args": {"query": "DMART"}, "result": {"symbol": "DMART"}},
                 {
-                    "tool": "scrape_screener_in",
+                    "tool": "get_latest_results",
                     "args": {"symbol": "DMART"},
                     "result": {
                         "symbol": "DMART",
-                        "ratios": {"Market Cap": "3,00,000", "Stock P/E": "95"},
-                        "quarterly": {
-                            "_headers": ["Mar 2026", "Dec 2025"],
-                            "Sales": ["14,000", "13,500"],
-                            "Net Profit": ["800", "760"],
+                        "status": "ok",
+                        "period": "latest",
+                        "selected_filing": {
+                            "title": "Audited financial results",
+                            "url": "https://bse.example/results.pdf",
+                            "source": "bse_filings",
                         },
-                        "annual_pl": {"_headers": ["2026", "2025"], "Sales": ["55,000", "48,000"]},
-                        "announcements": [{"title": "Audited financial results", "url": "https://bse.example/results.pdf"}],
-                        "concalls": [{"period": "May 2026", "transcript_url": "https://example.com/transcript.pdf"}],
+                        "facts": {
+                            "revenue": {"value": "14,000", "period": "Mar 2026", "source": "scrape_screener_in.quarterly"},
+                            "pat": {"value": "800", "period": "Mar 2026", "source": "scrape_screener_in.quarterly"},
+                        },
+                        "missing_facts": ["eps"],
+                        "summary": "Latest results evidence for DMART (latest).\nRevenue: 14,000 (Mar 2026)",
+                        "source_trail": {
+                            "discover_financial_filings": "ok",
+                            "search_bse_filings": "ok",
+                            "ingest_financial_filing": "ok",
+                            "parse_financial_filing": "ok",
+                            "reconcile_filing_facts": "ok",
+                        },
                     },
                 },
-                {
-                    "tool": "search_nse_announcements",
-                    "args": {"symbol": "DMART"},
-                    "result": {"symbol": "DMART", "results": [{"title": "Financial Results", "url": "https://nse.example"}]},
-                },
-                {"tool": "search_bse_filings", "args": {"symbol": "DMART"}, "result": {"symbol": "DMART", "results": []}},
-                {"tool": "search_concall_transcripts", "args": {"symbol": "DMART"}, "result": {"symbol": "DMART", "results": []}},
-                {"tool": "search_latest_catalysts", "args": {"symbol": "DMART"}, "result": {"symbol": "DMART", "results": []}},
             ]
             result = agent.query("/results DMART")
 

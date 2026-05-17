@@ -133,7 +133,7 @@ class TestIntradayCaptureDaemon(unittest.TestCase):
 
     def test_default_knobs(self):
         self.assertEqual(self.cap.CAPTURE_INTERVAL_SEC, 60)
-        self.assertEqual(self.cap.RETENTION_MINUTES, 120)  # "clears every 2 hours"
+        self.assertEqual(self.cap.RETENTION_MINUTES, 129600)  # 90 days
 
     def test_env_override(self):
         os.environ["AGENT_ADDA_CAPTURE_INTERVAL_SEC"] = "30"
