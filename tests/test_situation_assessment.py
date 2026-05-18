@@ -1,3 +1,5 @@
+import pytest
+
 from terminal.situation_assessment import (
     EntityTopicAssessment,
     SituationAssessment,
@@ -709,3 +711,108 @@ def test_assessment_from_bound_action_preserves_tool_plan():
     assert asm.decision == "run_tool_plan"
     assert asm.tool_plan[0] == ("read_report", {"path": "/tmp/x.html", "max_chars": 12000})
     assert asm.resolved_entities == ["SWELECTES"]
+
+
+# ---------------------------------------------------------------------------
+# Multi-symbol setup review — bind to prior intraday scan buckets
+# ---------------------------------------------------------------------------
+
+def _intraday_scan_context(longs=None, shorts=None):
+    """Build a TurnContext mirroring a real scan_intraday_market output."""
+    from terminal.situation_assessment import build_turn_context
+
+    long_rows = [
+        {"symbol": s, "strategy": "Supertrend", "entry": 100.0, "rr": 2.0}
+        for s in (longs or [])
+    ]
+    short_rows = [
+        {"symbol": s, "strategy": "Supertrend", "entry": 200.0, "rr": 2.5}
+        for s in (shorts or [])
+    ]
+    tool_results = [{
+        "tool": "scan_intraday_market",
+        "args": {"index": "NIFTY MIDCAP 100", "interval": "15m"},
+        "result": {
+            "index": "NIFTY MIDCAP 100",
+            "interval": "15m",
+            "buy_signals": long_rows,
+            "sell_signals": short_rows,
+        },
+    }]
+    return build_turn_context(
+        user_input="Scan NIFTY MIDCAP 100 for Supertrend setups on 15m",
+        intent="intraday_index_scan",
+        mode="intraday",
+        source_label="PG intraday",
+        tool_results=tool_results,
+        answer="",
+    )
+
+
+def test_intraday_scan_populates_result_groups_with_long_and_short_buckets():
+    ctx = _intraday_scan_context(longs=["GLENMARK", "MANKIND"], shorts=["EXIDEIND"])
+    assert ctx.result_groups == {
+        "long": ["GLENMARK", "MANKIND"],
+        "short": ["EXIDEIND"],
+    }
+    # Flat lists are also populated so legacy follow-up rules still match.
+    assert set(ctx.symbols) == {"GLENMARK", "MANKIND", "EXIDEIND"}
+    assert set(ctx.result_items) == {"GLENMARK", "MANKIND", "EXIDEIND"}
+
+
+@pytest.mark.parametrize("query,expected_symbols", [
+    ("Review all the longsetups",          ["GLENMARK", "PREMIERENE", "MANKIND"]),
+    ("Review all the long setups",         ["GLENMARK", "PREMIERENE", "MANKIND"]),
+    ("Review the longs",                   ["GLENMARK", "PREMIERENE", "MANKIND"]),
+    ("review long",                        ["GLENMARK", "PREMIERENE", "MANKIND"]),
+    ("Details on the long setups",         ["GLENMARK", "PREMIERENE", "MANKIND"]),
+    ("deep dive on the long setups",       ["GLENMARK", "PREMIERENE", "MANKIND"]),
+    ("Review short setups",                ["EXIDEIND", "SBICARD"]),
+    ("Review the shorts",                  ["EXIDEIND", "SBICARD"]),
+    ("review shorts",                      ["EXIDEIND", "SBICARD"]),
+    ("Review setups",                      ["GLENMARK", "PREMIERENE", "MANKIND", "EXIDEIND", "SBICARD"]),
+    ("review all the setups",              ["GLENMARK", "PREMIERENE", "MANKIND", "EXIDEIND", "SBICARD"]),
+    ("deep dive on these setups",          ["GLENMARK", "PREMIERENE", "MANKIND", "EXIDEIND", "SBICARD"]),
+])
+def test_review_setups_binds_to_prior_scan_buckets(query, expected_symbols):
+    """Regression for: 'Review all the long setups' after an intraday
+    scan must NOT route to a random single-stock Market Brief (observed:
+    'Review all the long setups' → LATENTVIEW). It must bind to the
+    prior buy_signals / sell_signals lists and run compare_stocks.
+    """
+    from terminal.situation_assessment import assess_followup
+
+    ctx = _intraday_scan_context(
+        longs=["GLENMARK", "PREMIERENE", "MANKIND"],
+        shorts=["EXIDEIND", "SBICARD"],
+    )
+    asm = assess_followup(query, ctx)
+
+    assert asm.applies is True, f"{query!r} did not bind"
+    assert asm.decision == "run_tool_plan", f"{query!r} → {asm.decision}"
+    assert asm.resolved_entities == expected_symbols
+    assert len(asm.tool_plan) == 1
+    tool_name, args = asm.tool_plan[0]
+    assert tool_name == "compare_stocks"
+    assert args["symbols"] == expected_symbols
+    assert args["aspects"] == ["both"]
+
+
+def test_review_setups_without_prior_scan_does_not_bind():
+    """If there is no intraday scan in prior context, 'review the long
+    setups' should fall through to the LLM tier / router — it must NOT
+    fabricate a tool plan against an empty bucket."""
+    from terminal.situation_assessment import TurnContext, assess_followup
+
+    empty_ctx = TurnContext(
+        user_input="hi",
+        intent="market_situation_assessment",
+        mode="historical",
+        tools=[],
+        source_label="snapshot",
+    )
+    asm = assess_followup("review the long setups", empty_ctx)
+    # Either falls through to router or escalates to LLM (which is disabled
+    # in tests). Decision must NOT be a confident run_tool_plan with a
+    # fabricated symbol list.
+    assert not (asm.decision == "run_tool_plan" and asm.applies)

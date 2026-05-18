@@ -20,6 +20,12 @@ class TurnContext:
     symbols: list[str] = field(default_factory=list)
     result_items: list[str] = field(default_factory=list)
     tool_args: list[dict[str, Any]] = field(default_factory=list)
+    # Optional grouped symbol breakdown produced by multi-bucket tools
+    # (e.g. intraday scans with separate long/short signal lists, screener
+    # results split by direction). Keyed by bucket name; values are
+    # uppercase NSE symbols in display order. Empty for tools that do not
+    # produce a directional breakdown.
+    result_groups: dict[str, list[str]] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -120,6 +126,17 @@ _CONTEXTUAL_PATTERNS = (
     "the conclusion",
     "what does it say",
     "what does the report say",
+    # Multi-symbol setup review — bind to prior intraday-scan buckets.
+    "review",
+    "long setups",
+    "short setups",
+    "longs",
+    "shorts",
+    "the longs",
+    "the shorts",
+    "deep dive",
+    "deep-dive",
+    "details on",
 )
 _AFFIRMATIVE_FOLLOWUPS = {
     "yes",
@@ -380,6 +397,19 @@ def build_turn_context(
     tool_args = [dict(item.get("args") or {}) for item in tool_results]
     symbols = _extract_symbols(tool_results)
     result_items = _extract_result_items(tool_results)
+    result_groups = _extract_result_groups(tool_results)
+    # If grouped buckets carry symbols (e.g. intraday scan long/short setups)
+    # but the flat symbols/result_items lists are empty, promote them so
+    # downstream follow-up rules that key off symbols still match.
+    if result_groups:
+        merged: list[str] = []
+        for bucket_symbols in result_groups.values():
+            merged.extend(bucket_symbols)
+        if merged:
+            if not symbols:
+                symbols = _dedupe(merged)
+            if not result_items:
+                result_items = _dedupe(merged)
     freshness = _extract_freshness(tool_results, answer)
     result_type = _infer_result_type(intent, tool_results)
     result_summary = _summarize_result(result_type, tool_results, symbols, result_items)
@@ -396,6 +426,7 @@ def build_turn_context(
         symbols=symbols,
         result_items=result_items,
         tool_args=tool_args,
+        result_groups=result_groups,
     )
 
 
@@ -643,6 +674,45 @@ def assess_followup(user_input: str, previous_context: TurnContext | None) -> Si
             "A revalidation request, but the time-frame is ambiguous.",
             "Do you want a fresh Stage 2 re-scan on the same symbols, an intraday momentum check, or just the source/freshness of the prior list?",
         )
+
+    # "review (all the | these) (long|short)? setups" — bind to the prior
+    # intraday-scan long/short buckets and emit a deterministic compare_stocks
+    # plan over the requested direction. Without this rule the LLM router has
+    # no anchor and tends to hallucinate an unrelated single ticker
+    # (observed: 'Review all the long setups' → LATENTVIEW Market Brief).
+    review_setups = _asks_review_setups(q)
+    if review_setups and previous_context.result_groups:
+        direction = review_setups  # "long" | "short" | "both"
+        groups = previous_context.result_groups or {}
+        if direction == "long":
+            symbols = list(groups.get("long") or [])
+        elif direction == "short":
+            symbols = list(groups.get("short") or [])
+        else:
+            symbols = list(groups.get("long") or []) + list(groups.get("short") or [])
+        symbols = _dedupe(symbols)[:10]
+        if symbols:
+            label = (
+                "long setups" if direction == "long"
+                else "short setups" if direction == "short"
+                else "setups"
+            )
+            return SituationAssessment(
+                applies=True,
+                decision="run_tool_plan",
+                confidence="high",
+                user_is_asking=f"Deep-dive review of the prior intraday scan's {label}.",
+                context_found=_context_found(previous_context),
+                source_assessment=_source_assessment(previous_context),
+                resolved_entities=symbols,
+                evidence_plan=["compare_stocks"],
+                tool_plan=[("compare_stocks", {"symbols": symbols, "aspects": ["both"]})],
+                plan=[
+                    f"Bind the reply to the prior scan's {label} ({len(symbols)} symbols).",
+                    "Run compare_stocks on those symbols across technical + fundamental aspects.",
+                    "Do not resolve a new symbol from the reply text; the binding is authoritative.",
+                ],
+            )
 
     if _asks_last_window(q) and previous_context.result_type == "stage2_screener":
         return SituationAssessment(
@@ -1118,6 +1188,45 @@ def _asks_scan_15m(q: str) -> bool:
     return ("scan these" in q or "check these" in q) and ("15m" in q or "15 m" in q or "15-minute" in q)
 
 
+def _asks_review_setups(q: str) -> str | None:
+    """If the user asks to review the prior scan's setups, return the
+    direction bucket they want — ``"long"``, ``"short"``, or ``"both"``.
+    Returns ``None`` if no review intent is detected.
+
+    Matches phrasings like:
+        review all the long setups / review the longs / review longs
+        deep dive on the short setups / details on these setups
+        review setups / review all setups (→ both)
+    """
+    has_review_verb = (
+        "review" in q
+        or "deep dive" in q
+        or "deep-dive" in q
+        or "details on" in q
+    )
+    if not has_review_verb:
+        return None
+    # Direction detection. Look for whole-word matches so we don't catch
+    # "longs" inside arbitrary words. We tolerate "long setups", "the longs",
+    # "longsetups" (no space) — all observed in practice.
+    long_hit = bool(re.search(r"\blongs?(?:etups)?\b|long\s*setups?\b", q))
+    short_hit = bool(re.search(r"\bshorts?(?:etups)?\b|short\s*setups?\b", q))
+    if long_hit and not short_hit:
+        return "long"
+    if short_hit and not long_hit:
+        return "short"
+    if long_hit and short_hit:
+        return "both"
+    # Bare 'review setups' / 'review these' / 'review all setups' → both buckets.
+    if (
+        "setup" in q
+        or "these" in q
+        or "all" in q
+    ):
+        return "both"
+    return None
+
+
 def _context_found(context: TurnContext) -> str:
     pieces = []
     if context.result_summary:
@@ -1294,6 +1403,39 @@ def _extract_result_items(tool_results: list[dict[str, Any]]) -> list[str]:
                 if isinstance(row, dict) and row.get("symbol")
             )
     return []
+
+
+def _extract_result_groups(tool_results: list[dict[str, Any]]) -> dict[str, list[str]]:
+    """Pull bucketed symbol lists from tools that produce a directional split.
+
+    Currently recognises the intraday-scan family (``scan_intraday_market``,
+    ``scan_symbols_intraday``, ``run_intraday_screener``) which return
+    ``buy_signals`` / ``sell_signals`` lists of setup dicts. Each dict has
+    a ``symbol`` key plus entry/target/invalidation fields. We project
+    those down to uppercase NSE symbols in display order and expose them
+    under stable keys (``long`` / ``short``) so follow-up rules like
+    "review the long setups" can bind to them deterministically.
+    """
+    long_symbols: list[str] = []
+    short_symbols: list[str] = []
+    for item in tool_results:
+        result = item.get("result") or {}
+        if not isinstance(result, dict):
+            continue
+        # Intraday scan family: buy_signals / sell_signals are lists of
+        # {symbol, strategy, entry, target, invalidation, rr, ...} dicts.
+        for key, bucket in (("buy_signals", long_symbols), ("sell_signals", short_symbols)):
+            rows = result.get(key)
+            if isinstance(rows, list):
+                for row in rows:
+                    if isinstance(row, dict) and row.get("symbol"):
+                        bucket.append(str(row["symbol"]).upper())
+    groups: dict[str, list[str]] = {}
+    if long_symbols:
+        groups["long"] = _dedupe(long_symbols)
+    if short_symbols:
+        groups["short"] = _dedupe(short_symbols)
+    return groups
 
 
 def _extract_freshness(tool_results: list[dict[str, Any]], answer: str) -> str | None:
