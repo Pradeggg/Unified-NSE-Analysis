@@ -91,6 +91,7 @@ def test_get_postgres_health_reports_missing_required_tables(monkeypatch):
         {
             "current_database": ("nse_market", "nse_admin"),
             "version()": ("PostgreSQL 16",),
+            "information_schema.schemata": [("intraday",), ("report",)],
             "to_regclass": [(None,), ("intraday.ohlcv_bars",), (None,)],
             "COUNT(*) FROM intraday.ohlcv_bars": (42,),
         }
@@ -109,6 +110,9 @@ def test_get_postgres_health_reports_missing_required_tables(monkeypatch):
     assert result["database"] == "nse_market"
     assert result["user"] == "nse_admin"
     assert result["host"] == "/tmp"
+    assert result["socket_path"] == "/tmp/.s.PGSQL.5432"
+    assert result["missing_schemas"] == ["market", "scores"]
+    assert result["migration_status"] == "schema_missing"
     assert result["tables"]["intraday.ohlcv_bars"]["exists"] is True
     assert result["tables"]["intraday.ohlcv_bars"]["row_count"] == 42
     assert "intraday.quote_snapshots" in result["missing_tables"]
@@ -159,7 +163,16 @@ def test_render_postgres_doctor_runs_repair_before_health(monkeypatch):
             "status": "ok",
             "dsn": "dbname=nse_market user=nse_admin host=/tmp",
             "host": "/tmp",
+            "socket_path": "/tmp/.s.PGSQL.5432",
+            "socket_exists": True,
+            "required_schemas": ["market", "scores", "intraday", "report"],
+            "missing_schemas": [],
+            "migration_status": "ready",
             "missing_tables": [],
+            "tables": {
+                "intraday.ohlcv_bars": {"exists": True, "row_count": 42},
+                "scores.stage_snapshots": {"exists": True, "row_count": 915},
+            },
             "next_action": "no action needed",
         }
 
@@ -171,6 +184,11 @@ def test_render_postgres_doctor_runs_repair_before_health(monkeypatch):
     assert calls == ["repair", "health"]
     assert "PostgreSQL Doctor" in output
     assert "Status: ok" in output
+    assert "Socket: /tmp/.s.PGSQL.5432 (exists)" in output
+    assert "Schemas: ready" in output
+    assert "Migration status: ready" in output
+    assert "intraday.ohlcv_bars: ok (42 rows)" in output
+    assert "scores.stage_snapshots: ok (915 rows)" in output
     assert "Missing tables: none" in output
 
 

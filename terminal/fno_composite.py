@@ -29,18 +29,58 @@ def _status(result: dict | None) -> str:
     return f"ERROR: {result.get('error')}" if result.get("error") else "ok"
 
 
+def _pcr_value(chain: dict) -> float | int | None:
+    pcr = chain.get("pcr")
+    if isinstance(pcr, dict):
+        return _first_present(pcr.get("oi"), pcr.get("pcr_oi"))
+    return pcr
+
+
+def _first_present(*values):
+    for value in values:
+        if value is not None:
+            return value
+    return None
+
+
+def _top_oi(rows: list[dict] | None, oi_keys: tuple[str, ...], limit: int = 5) -> list[dict]:
+    def oi_value(row: dict) -> float:
+        for key in oi_keys:
+            value = row.get(key)
+            if value is not None:
+                try:
+                    return float(value)
+                except (TypeError, ValueError):
+                    return 0.0
+        return 0.0
+
+    return sorted(rows or [], key=oi_value, reverse=True)[:limit]
+
+
 def get_option_chain_summary(symbol: str, expiry_index: int = 0) -> dict:
     chain = _get_options_chain(symbol, expiry_index=expiry_index)
     if chain.get("error"):
         return {"status": "missing", "symbol": symbol.upper(), "error": chain.get("error")}
+    top_calls = (
+        chain.get("top_call_oi")
+        or chain.get("top_calls")
+        or chain.get("top_ce_oi_strikes")
+        or _top_oi(chain.get("calls"), ("oi", "ce_oi", "open_interest"))
+    )
+    top_puts = (
+        chain.get("top_put_oi")
+        or chain.get("top_puts")
+        or chain.get("top_pe_oi_strikes")
+        or _top_oi(chain.get("puts"), ("oi", "pe_oi", "open_interest"))
+    )
     return {
         "status": "ok",
         "symbol": chain.get("symbol", symbol.upper()),
         "expiry": chain.get("expiry"),
-        "pcr": chain.get("pcr"),
+        "pcr": _pcr_value(chain),
         "max_pain": chain.get("max_pain"),
-        "top_call_oi": chain.get("top_call_oi") or chain.get("top_calls") or [],
-        "top_put_oi": chain.get("top_put_oi") or chain.get("top_puts") or [],
+        "top_call_oi": top_calls or [],
+        "top_put_oi": top_puts or [],
         "raw": chain,
     }
 
@@ -75,21 +115,56 @@ def get_futures_basis(symbol: str) -> dict:
     futures = _get_futures_analysis(symbol)
     if futures.get("error"):
         return {"status": "missing", "symbol": symbol.upper(), "error": futures.get("error")}
-    basis = futures.get("basis")
-    if basis is None and futures.get("future") is not None and futures.get("spot") is not None:
-        basis = float(futures["future"]) - float(futures["spot"])
-    return {"status": "ok", "symbol": futures.get("symbol", symbol.upper()), "basis": basis, "raw": futures}
+    normalized = _normalize_futures(futures, symbol.upper())
+    return {"status": "ok", "symbol": futures.get("symbol", symbol.upper()), "basis": normalized.get("basis"), "raw": futures}
 
 
 def get_cost_of_carry(symbol: str) -> dict:
     futures = _get_futures_analysis(symbol)
     if futures.get("error"):
         return {"status": "missing", "symbol": symbol.upper(), "error": futures.get("error")}
+    normalized = _normalize_futures(futures, symbol.upper())
     return {
         "status": "ok",
         "symbol": futures.get("symbol", symbol.upper()),
-        "cost_of_carry": futures.get("cost_of_carry") or futures.get("annualized_cost_of_carry"),
+        "cost_of_carry": normalized.get("cost_of_carry"),
         "raw": futures,
+    }
+
+
+def _normalize_futures(futures_raw: dict, symbol: str) -> dict:
+    """Expose near-contract basis/carry at the root of the composite result."""
+    if futures_raw.get("error"):
+        return {"status": "missing", "symbol": symbol, "error": futures_raw.get("error")}
+
+    contracts = futures_raw.get("futures") or []
+    near = contracts[0] if contracts else {}
+    spot = _first_present(futures_raw.get("spot"), futures_raw.get("underlying"), near.get("underlying"))
+    future = _first_present(futures_raw.get("future"), near.get("last_price"), near.get("settle_price"))
+    basis = _first_present(futures_raw.get("basis"), near.get("basis"))
+    if basis is None and future is not None and spot is not None:
+        try:
+            basis = round(float(future) - float(spot), 2)
+        except (TypeError, ValueError):
+            basis = None
+    cost_of_carry = _first_present(
+        futures_raw.get("cost_of_carry"),
+        futures_raw.get("annualized_cost_of_carry"),
+        futures_raw.get("annualised_cost_of_carry"),
+        near.get("cost_of_carry"),
+        near.get("annualized_cost_of_carry"),
+        near.get("cost_of_carry_annualised_pct"),
+    )
+    return {
+        "status": "ok",
+        **futures_raw,
+        "symbol": futures_raw.get("symbol", symbol),
+        "spot": spot,
+        "future": future,
+        "near_contract": near,
+        "basis": basis,
+        "cost_of_carry": cost_of_carry,
+        "annualized_cost_of_carry": cost_of_carry,
     }
 
 
@@ -136,10 +211,7 @@ def get_fno_overview(symbol: str = "NIFTY", expiry_index: int = 0) -> dict:
     sym = symbol.strip().upper()
     chain = get_option_chain_summary(sym, expiry_index=expiry_index)
     futures_raw = _get_futures_analysis(sym)
-    futures = {"status": "missing", "symbol": sym, "error": futures_raw.get("error")} if futures_raw.get("error") else {
-        "status": "ok",
-        **futures_raw,
-    }
+    futures = _normalize_futures(futures_raw, sym)
     missing: list[str] = []
     if chain.get("status") != "ok":
         missing.append("option_chain")

@@ -980,6 +980,21 @@ _DYNAMIC_EVIDENCE_REQUIRED_INTENTS: frozenset[str] = frozenset(
 def _explicit_requested_symbols(query: str) -> list[str]:
     """Return explicit ticker-looking symbols from user text without fuzzy substitution."""
     requested = validate_requested_symbols(query or "").get("requested_symbols", [])
+    # The universe-backed validator deliberately filters non-listed tokens to
+    # avoid instruction words becoming symbols in generated prompts. For final
+    # evidence validation, retain explicit all-caps user tokens in stock-shaped
+    # queries so a bad resolver cannot silently substitute another company.
+    if not requested and re.search(
+        r"\b(technical|setup|stock|analy[sz]e|result|results|earnings|screener|breakout)\b",
+        query or "",
+        re.I,
+    ):
+        requested = [
+            token
+            for token in re.findall(r"\b[A-Z][A-Z0-9&-]{1,12}\b", query or "")
+            if token.upper() not in _SYMBOL_VALIDATION_SKIP
+            and token.upper() not in TECHNICAL_NON_SYMBOL_TERMS
+        ]
     symbols: list[str] = []
     for token in requested:
         clean = token.strip().upper()
@@ -1920,6 +1935,19 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
         if any(w in q for w in mover_words):
             plan.append(("get_top_gainers_losers", {"index": "NIFTY 500", "top_n": 5, "direction": "both"}))
         return {"intent": "market_overview", "plan": plan}
+
+    # Sector leadership questions should use live NSE sector indices, not the
+    # stock-level high-RS screener.
+    if (
+        "sector" in q
+        and any(term in q for term in ("strength", "strong", "leading", "leaders", "showing strength", "outperforming"))
+        and not any(term in q for term in ("stock", "stocks", "names"))
+        and not any(term in q for term in ("compare", " vs ", " versus ", "which is better", "better", "between"))
+    ):
+        return {"intent": "market_overview", "plan": [
+            ("get_live_market_overview", {}),
+            ("get_market_breadth", {}),
+        ]}
 
     # Standalone movers query (e.g. "top gainers", "top losers", "biggest movers").
     # Without this branch, "top gainers" used to fall through to the
@@ -3749,6 +3777,19 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
 
     if intent == "fno_overview":
         if fno_overview:
+            def _fmt_oi_rows(rows: list[dict] | None) -> str:
+                parts: list[str] = []
+                for row in (rows or [])[:5]:
+                    strike = row.get("strike", "—")
+                    oi = next((row.get(k) for k in ("oi", "ce_oi", "pe_oi", "open_interest") if row.get(k) is not None), None)
+                    chg = next((row.get(k) for k in ("chg_oi", "ce_oi_chg", "pe_oi_chg", "oi_change") if row.get(k) is not None), None)
+                    oi_text = f"{int(oi):,}" if isinstance(oi, (int, float)) else str(oi or "—")
+                    chg_text = ""
+                    if isinstance(chg, (int, float)):
+                        chg_text = f", chg {int(chg):+,}"
+                    parts.append(f"{strike} (OI {oi_text}{chg_text})")
+                return "; ".join(parts) if parts else "—"
+
             symbol = fno_overview.get("symbol") or "NIFTY"
             lines.append(f"━━━ {symbol} — F&O Overview ━━━")
             lines.append("\n▶ OPTION CHAIN")
@@ -3758,8 +3799,8 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
             else:
                 lines.append(f"  PCR: {fno_overview.get('pcr', '—')} | Max pain: {fno_overview.get('max_pain', '—')}")
                 top_oi = fno_overview.get("top_oi_strikes") or {}
-                lines.append(f"  Top call OI: {top_oi.get('calls') or '—'}")
-                lines.append(f"  Top put OI: {top_oi.get('puts') or '—'}")
+                lines.append(f"  Top call OI: {_fmt_oi_rows(top_oi.get('calls'))}")
+                lines.append(f"  Top put OI: {_fmt_oi_rows(top_oi.get('puts'))}")
             lines.append("\n▶ FUTURES BASIS & CARRY")
             futures = fno_overview.get("futures") or {}
             if futures.get("status") == "missing" or futures.get("error"):
@@ -4509,6 +4550,21 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
             )
         if live.get("as_of") or live.get("source"):
             lines.append(f"  Source: {live.get('source', 'NSE live API')} | As of: {live.get('as_of', '—')}")
+
+        top_sectors = live.get("top_sectors") or []
+        bottom_sectors = live.get("bottom_sectors") or []
+        if (top_sectors or bottom_sectors) and intent in {"market_overview", "market_situation_assessment"}:
+            lines.append("\n▶ SECTOR STRENGTH")
+            if top_sectors:
+                lines.append("  Leading sectors: " + " | ".join(
+                    f"{row.get('name', '—')} {float(row.get('pct_change') or 0):+.2f}%"
+                    for row in top_sectors[:5]
+                ))
+            if bottom_sectors:
+                lines.append("  Weak sectors: " + " | ".join(
+                    f"{row.get('name', '—')} {float(row.get('pct_change') or 0):+.2f}%"
+                    for row in bottom_sectors[:5]
+                ))
 
         index_rows = []
         for name, row in indices.items():

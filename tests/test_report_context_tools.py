@@ -44,6 +44,32 @@ def test_read_and_summarize_report_preserves_symbol_and_heading(tmp_path):
     assert "Recommendation: WAIT" in summary["summary"]
 
 
+def test_summarize_html_report_uses_visible_text(tmp_path):
+    from terminal.report_context import summarize_report
+
+    report = tmp_path / "reports" / "generated" / "SCHAEFFLER_research_20260517_220217.html"
+    report.parent.mkdir(parents=True)
+    report.write_text(
+        """
+        <html><head><style>.x{}</style></head><body>
+          <h1>SCHAEFFLER — Comprehensive Research Report</h1>
+          <p>Recommendation: HOLD</p>
+          <p>Evidence Pack: Screener + EOD snapshot</p>
+          <script>Recommendation: BUY</script>
+        </body></html>
+        """,
+        encoding="utf-8",
+    )
+
+    summary = summarize_report(str(report), project_root=tmp_path)
+
+    assert summary["status"] == "ok"
+    assert summary["symbol"] == "SCHAEFFLER"
+    assert summary["recommendation"] == "HOLD"
+    assert "Screener + EOD snapshot" in summary["summary"]
+    assert "BUY" not in summary["summary"]
+
+
 def test_get_last_report_returns_clarification_when_missing():
     from terminal.report_context import get_last_report
 

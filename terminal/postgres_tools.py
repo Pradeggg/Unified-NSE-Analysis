@@ -17,6 +17,13 @@ from typing import Any
 
 DEFAULT_DSN = os.environ.get("AGENT_ADDA_PG_DSN") or os.environ.get("PG_DSN") or "dbname=nse_market user=nse_admin host=/tmp"
 
+REQUIRED_SCHEMAS: tuple[str, ...] = (
+    "market",
+    "scores",
+    "intraday",
+    "report",
+)
+
 REQUIRED_TABLES: tuple[str, ...] = (
     "market.equity_eod",
     "scores.stage_snapshots",
@@ -43,6 +50,36 @@ def _parse_dsn(dsn: str | None = None) -> dict[str, str]:
         key, value = part.split("=", 1)
         result[key] = value
     return result
+
+
+def _socket_path(parsed_dsn: dict[str, str]) -> str | None:
+    host = parsed_dsn.get("host", "")
+    if not host.startswith("/"):
+        return None
+    port = parsed_dsn.get("port", "5432")
+    return str(Path(host) / f".s.PGSQL.{port}")
+
+
+def _pg_isready_status(dsn: str | None = None) -> dict[str, Any]:
+    try:
+        proc = subprocess.run(
+            ["pg_isready", "-d", dsn or DEFAULT_DSN],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+    except FileNotFoundError:
+        return {"available": False, "status": "pg_isready_not_found"}
+    except Exception as exc:
+        return {"available": False, "status": "error", "error": str(exc)}
+    return {
+        "available": proc.returncode == 0,
+        "status": "ok" if proc.returncode == 0 else "not_ready",
+        "exit_code": proc.returncode,
+        "stdout": (proc.stdout or "").strip(),
+        "stderr": (proc.stderr or "").strip(),
+    }
 
 
 def _safe_count(cur, table: str) -> int | None:
@@ -81,10 +118,18 @@ def get_postgres_health(dsn: str | None = None) -> dict[str, Any]:
         "host": parsed.get("host", "localhost"),
         "database": parsed.get("dbname", ""),
         "user": parsed.get("user", ""),
+        "required_schemas": list(REQUIRED_SCHEMAS),
         "required_tables": list(REQUIRED_TABLES),
+        "missing_schemas": [],
         "tables": {},
         "missing_tables": [],
+        "migration_status": "not_checked",
+        "server_check": _pg_isready_status(dsn),
     }
+    socket_path = _socket_path(parsed)
+    if socket_path:
+        out["socket_path"] = socket_path
+        out["socket_exists"] = Path(socket_path).exists()
 
     try:
         with _connect(dsn) as conn, conn.cursor() as cur:
@@ -97,11 +142,25 @@ def get_postgres_health(dsn: str | None = None) -> dict[str, Any]:
             out["version"] = version_row[0] if version_row else ""
 
             cur.execute(
+                """
+                SELECT schema_name
+                FROM information_schema.schemata
+                WHERE schema_name = ANY(%s::text[])
+                """,
+                (list(REQUIRED_SCHEMAS),),
+            )
+            existing_schemas = {str(row[0]) for row in (cur.fetchall() or [])}
+            out["missing_schemas"] = [
+                schema for schema in REQUIRED_SCHEMAS if schema not in existing_schemas
+            ]
+
+            cur.execute(
                 "SELECT to_regclass(table_name) FROM unnest(%s::text[]) AS table_name",
                 (list(REQUIRED_TABLES),),
             )
             existence_rows = cur.fetchall() or []
-            for table, exists_row in zip(REQUIRED_TABLES, existence_rows):
+            for index, table in enumerate(REQUIRED_TABLES):
+                exists_row = existence_rows[index] if index < len(existence_rows) else None
                 exists = bool(exists_row and exists_row[0])
                 entry = {"exists": exists, "row_count": None}
                 if exists:
@@ -114,13 +173,24 @@ def get_postgres_health(dsn: str | None = None) -> dict[str, Any]:
             {
                 "status": "error",
                 "error": str(exc),
+                "migration_status": "connection_error",
                 "next_action": "./postgres/start_pg.sh status && ./postgres/start_pg.sh start",
             }
         )
         return out
 
-    out["status"] = "ok" if not out["missing_tables"] else "degraded"
-    out["next_action"] = "no action needed" if out["status"] == "ok" else "run ensure_postgres_schema or project migrations"
+    if out["missing_schemas"]:
+        out["migration_status"] = "schema_missing"
+    elif out["missing_tables"]:
+        out["migration_status"] = "table_missing"
+    else:
+        out["migration_status"] = "ready"
+    out["status"] = "ok" if out["migration_status"] == "ready" else "degraded"
+    out["next_action"] = (
+        "no action needed"
+        if out["status"] == "ok"
+        else "run /doctor --repair, then postgres/migrate.py or postgres/loader.py for missing data tables"
+    )
     return out
 
 
@@ -224,8 +294,25 @@ def render_postgres_doctor(repair: bool = False, dsn: str | None = None) -> str:
     lines.append(f"Status: {health.get('status')}")
     lines.append(f"DSN: {health.get('dsn')}")
     lines.append(f"Host: {health.get('host')}")
+    if health.get("socket_path"):
+        socket_label = "exists" if health.get("socket_exists") else "missing"
+        lines.append(f"Socket: {health.get('socket_path')} ({socket_label})")
+    missing_schemas = health.get("missing_schemas") or []
+    lines.append(f"Schemas: {', '.join(missing_schemas) if missing_schemas else 'ready'}")
+    lines.append(f"Migration status: {health.get('migration_status')}")
     if health.get("error"):
         lines.append(f"Error: {health.get('error')}")
+    tables = health.get("tables") or {}
+    if tables:
+        lines.append("Tables:")
+        for table in sorted(tables):
+            details = tables[table] or {}
+            if details.get("exists"):
+                row_count = details.get("row_count")
+                row_label = "unknown rows" if row_count is None else f"{row_count} rows"
+                lines.append(f"  - {table}: ok ({row_label})")
+            else:
+                lines.append(f"  - {table}: missing")
     missing = health.get("missing_tables") or []
     lines.append(f"Missing tables: {', '.join(missing) if missing else 'none'}")
     lines.append(f"Next action: {health.get('next_action')}")

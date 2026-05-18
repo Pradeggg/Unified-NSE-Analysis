@@ -184,6 +184,8 @@ def _remember_generated_report(output: str) -> Path | None:
     global _last_generated_report
     match = re.search(r"(?m)^Report:\s*(.+?)\s*$", output or "")
     if not match:
+        match = re.search(r"Report saved \([^)]*\):\s*(.+?)(?:\n|$)", output or "")
+    if not match:
         return None
     path = Path(match.group(1)).expanduser()
     _last_generated_report = path
@@ -262,6 +264,7 @@ def _remember_terminal_interaction(
     source_label: str = "terminal direct command",
     symbols: list[str] | None = None,
     result_type: str | None = None,
+    result_items: list[str] | None = None,
 ) -> None:
     """Persist direct-rendered terminal command output into Agent context."""
     try:
@@ -282,7 +285,7 @@ def _remember_terminal_interaction(
             result_type=result_type or intent,
             result_summary=summary,
             symbols=list(dict.fromkeys(clean_symbols))[:10],
-            result_items=list(dict.fromkeys(clean_symbols))[:20],
+            result_items=result_items or list(dict.fromkeys(clean_symbols))[:20],
         )
         agent._remember_interaction(user_input, answer, [], turn_context=ctx)
     except Exception:
@@ -707,6 +710,11 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/forensic",                         "D5 Forensic analysis — Beneish M-score, Piotroski F-score, Altman Z'-score"),
     ("/forensic RELIANCE",                "Forensic accounting analysis for RELIANCE"),
     ("/forensic TCS INFY WIPRO",          "Forensic screening across multiple stocks"),
+    # ── Latest results feed commands ────────────────────────────────────────
+    ("/results-feed",                     "Latest quarterly results filings — default last 2 weeks"),
+    ("/results-feed 2",                   "Latest quarterly results filings in last N weeks"),
+    ("/results-feed --weeks 4",           "Latest quarterly results filings in last 4 weeks"),
+    ("/latest-results 2",                 "Alias: quarterly results filings in last N weeks"),
     # ── Intraday market recap ──────────────────────────────────────────────
     # PG-recap-slash: bare `/recap` had no handler → was falling through to the
     # symbol planner and getting resolved to a random ticker (e.g. AVONMORE).
@@ -845,6 +853,9 @@ _CMD_CATEGORIES: dict[str, tuple[str, str]] = {
     "/chart":    ("Charts",              "📈"),
     "/search":   ("Deep Search",         "🌐"),
     "/results":  ("Latest Results",      "🧾"),
+    "/results-feed": ("Latest Results",  "🧾"),
+    "/resultsfeed": ("Latest Results",   "🧾"),
+    "/latest-results": ("Latest Results", "🧾"),
     "/youtube":  ("YouTube Intelligence", "▶️"),
     "/learn":    ("Market Knowledge",    "📚"),
     "/define":   ("Market Knowledge",    "📚"),
@@ -1310,14 +1321,18 @@ def _summarise_report_for_terminal(content: str, fpath: str) -> None:
     console.print(f"  [dim]──────────────────────────────────────────────────────────────[/dim]")
 
 
-def _auto_export_report(content: str, report_type: str, symbol: str, fmt: str) -> None:
+def _auto_export_report(content: str, report_type: str, symbol: str, fmt: str) -> Path | None:
     """Save agent response content as a styled report file and open it."""
     try:
+        global _last_generated_report
         from terminal.reports import generate_report
         res = generate_report(content, report_type=report_type, symbol=symbol, output_format=fmt)
         fpath  = res.get("path", "")
         actual = res.get("format", fmt).upper()
         note   = res.get("note", "")
+        remembered_path = Path(fpath).expanduser() if fpath else None
+        if remembered_path:
+            _last_generated_report = remembered_path
         console.print(f"\n  [bold green]📄 Report saved ({actual}):[/bold green] [cyan]{fpath}[/cyan]")
         if note:
             console.print(f"  [dim]{note}[/dim]")
@@ -1330,8 +1345,23 @@ def _auto_export_report(content: str, report_type: str, symbol: str, fmt: str) -
             _sp.run(["open", fpath], check=False)
         except Exception:
             pass
+        return remembered_path
     except Exception as _e:
         console.print(f"  [bold red]  ❌ Report export error: {_e}[/bold red]")
+        return None
+
+
+def _parse_multi_analyze_symbols(arg: str) -> list[str]:
+    """Return comma/slash separated ticker symbols for multi-stock /analyze."""
+    if not re.search(r"[,;/]", arg or ""):
+        return []
+    symbols = [
+        token.upper()
+        for token in re.split(r"[\s,;/]+", arg or "")
+        if re.fullmatch(r"[A-Za-z0-9&-]{2,12}", token)
+        and token.lower() not in {"html", "pdf", "md"}
+    ]
+    return list(dict.fromkeys(symbols))
 
 
 def _run_ric(agent, key: str, arg: str, show_trace: bool, output_format: str = "") -> None:
@@ -2037,6 +2067,131 @@ def _dashboard_breadth_flow_line(snapshot: dict, flows: list[str], *, compact: b
     return " | ".join(pieces)
 
 
+def _dashboard_bar(
+    value: float | int | None,
+    *,
+    scale: float = 2.0,
+    width: int = 14,
+    positive_style: str = "green",
+    negative_style: str = "red",
+) -> str:
+    """Terminal-native horizontal meter for +/- percentage style values."""
+    if not isinstance(value, (int, float)):
+        return "[dim]" + ("─" * width) + "[/dim]"
+    magnitude = min(abs(float(value)) / max(scale, 0.01), 1.0)
+    filled = max(1 if value else 0, int(round(magnitude * width)))
+    empty = max(0, width - filled)
+    style = positive_style if value >= 0 else negative_style
+    return f"[{style}]{'█' * filled}[/][dim]{'░' * empty}[/]"
+
+
+def _dashboard_breadth_gauge(snapshot: dict, width: int = 24) -> str:
+    live = snapshot.get("get_live_market_overview") or {}
+    adv_dec = live.get("adv_dec") or {}
+    adv, dec = adv_dec.get("advances"), adv_dec.get("declines")
+    if not isinstance(adv, (int, float)) or not isinstance(dec, (int, float)) or adv + dec <= 0:
+        return "[dim]Breadth Gauge[/dim] unavailable"
+    total = adv + dec
+    adv_slots = int(round((adv / total) * width))
+    dec_slots = max(0, width - adv_slots)
+    adv_pct = adv / total * 100.0
+    label_style = "green" if adv > dec else ("red" if dec > adv else "yellow")
+    return (
+        f"[bold {label_style}]Breadth Gauge[/] "
+        f"[green]{'█' * adv_slots}[/][red]{'█' * dec_slots}[/] "
+        f"{int(adv)}A/{int(dec)}D · {adv_pct:.0f}% adv"
+    )
+
+
+def _dashboard_tape_bias(snapshot: dict) -> str:
+    live = snapshot.get("get_live_market_overview") or {}
+    indices = live.get("indices") or {}
+    adv_dec = live.get("adv_dec") or {}
+    n50 = indices.get("NIFTY 50") or {}
+    n50_pct = n50.get("pct_change", n50.get("chg_pct"))
+    adv, dec = adv_dec.get("advances"), adv_dec.get("declines")
+
+    score = 0
+    if isinstance(n50_pct, (int, float)):
+        score += 1 if n50_pct > 0.15 else (-1 if n50_pct < -0.15 else 0)
+    if isinstance(adv, (int, float)) and isinstance(dec, (int, float)):
+        score += 1 if adv > dec else (-1 if dec > adv else 0)
+
+    if score >= 2:
+        return "[bold green]Tape Bias[/] constructive"
+    if score <= -2:
+        return "[bold red]Tape Bias[/] defensive"
+    return "[bold yellow]Tape Bias[/] mixed / range-bound"
+
+
+def _dashboard_index_momentum_table(indices: dict, limit: int = 5) -> Table:
+    table = Table(box=box.SIMPLE, expand=True, padding=(0, 1), show_header=False)
+    table.add_column("Index", style="bold cyan", no_wrap=True, width=18)
+    table.add_column("Move", justify="right", no_wrap=True, width=9)
+    table.add_column("Meter", no_wrap=True)
+    rows: list[tuple[str, float]] = []
+    for name in ("NIFTY 50", "NIFTY BANK", "NIFTY IT", "NIFTY METAL", "NIFTY FMCG", "NIFTY REALTY", "INDIA VIX"):
+        row = indices.get(name) or {}
+        pct = row.get("pct_change", row.get("chg_pct"))
+        if isinstance(pct, (int, float)):
+            rows.append((name.replace("NIFTY ", ""), float(pct)))
+    for name, pct in rows[:limit]:
+        table.add_row(name, f"[{_dashboard_pct_style(pct)}]{_dashboard_fmt_pct(pct)}[/]", _dashboard_bar(pct, scale=2.0, width=16))
+    if not rows:
+        table.add_row("n/a", "n/a", "[dim]momentum unavailable[/dim]")
+    return table
+
+
+def _dashboard_sector_strength_table(indices: dict, limit: int = 6) -> Table:
+    table = Table(box=box.SIMPLE, expand=True, padding=(0, 1), show_header=False)
+    table.add_column("Sector", style="bold cyan", no_wrap=True, width=16)
+    table.add_column("Chg", justify="right", no_wrap=True, width=8)
+    table.add_column("Strength", no_wrap=True)
+    rows: list[tuple[str, float]] = []
+    for name in _DASHBOARD_SECTOR_NAMES:
+        row = indices.get(name) or {}
+        pct = row.get("pct_change", row.get("chg_pct"))
+        if isinstance(pct, (int, float)):
+            rows.append((name.replace("NIFTY ", "").replace(" INDEX", ""), float(pct)))
+    rows = sorted(rows, key=lambda item: item[1], reverse=True)[:limit]
+    for name, pct in rows:
+        table.add_row(name[:16], f"[{_dashboard_pct_style(pct)}]{_dashboard_fmt_pct(pct)}[/]", _dashboard_bar(pct, scale=2.0, width=18))
+    if not rows:
+        table.add_row("n/a", "n/a", "[dim]sector data unavailable[/dim]")
+    return table
+
+
+def _dashboard_mover_velocity_table(movers: dict, limit: int = 4) -> Table:
+    table = Table(box=box.SIMPLE, expand=True, padding=(0, 1), show_header=False)
+    table.add_column("Symbol", style="bold", no_wrap=True, width=12)
+    table.add_column("Move", justify="right", no_wrap=True, width=9)
+    table.add_column("Velocity", no_wrap=True)
+    rows = []
+    for row in (movers.get("gainers") or [])[:limit]:
+        pct = row.get("pct_change")
+        if isinstance(pct, (int, float)):
+            rows.append((str(row.get("symbol") or "—"), float(pct)))
+    for row in (movers.get("losers") or [])[:limit]:
+        pct = row.get("pct_change")
+        if isinstance(pct, (int, float)):
+            rows.append((str(row.get("symbol") or "—"), float(pct)))
+    for sym, pct in sorted(rows, key=lambda item: abs(item[1]), reverse=True)[:limit]:
+        table.add_row(sym, f"[{_dashboard_pct_style(pct)}]{_dashboard_fmt_pct(pct)}[/]", _dashboard_bar(pct, scale=8.0, width=18))
+    if not rows:
+        table.add_row("n/a", "n/a", "[dim]movers unavailable[/dim]")
+    return table
+
+
+def _dashboard_visual_summary(snapshot: dict) -> Table:
+    table = Table(box=box.SIMPLE, expand=True, padding=(0, 1), show_header=False)
+    table.add_column("Metric", style="bold cyan", no_wrap=True, width=16)
+    table.add_column("Visual", overflow="fold")
+    table.add_row("Tape Bias", _dashboard_tape_bias(snapshot))
+    table.add_row("Breadth Gauge", _dashboard_breadth_gauge(snapshot, width=22))
+    table.add_row("Action Cue", "Prefer confirmation: sector strength + breadth + F&O alignment before risk.")
+    return table
+
+
 def _market_dashboard_renderable(snapshot: dict, *, width: int | None = None, height: int | None = None):
     """Return a screen-fitting Rich renderable for the live market dashboard."""
     size = shutil.get_terminal_size((120, 34))
@@ -2115,6 +2270,15 @@ def _market_dashboard_renderable(snapshot: dict, *, width: int | None = None, he
             border_style="bright_blue",
             height=3,
         )
+        cockpit = Table.grid(expand=True)
+        cockpit.add_column(ratio=1)
+        cockpit.add_column(ratio=1)
+        cockpit.add_column(ratio=1)
+        cockpit.add_row(
+            Panel(_dashboard_visual_summary(snapshot), title="Tape Bias / Breadth Gauge", border_style="bright_green", height=9),
+            Panel(_dashboard_index_momentum_table(indices, limit=5), title="Market Tape / Index Momentum", border_style="cyan", height=9),
+            Panel(_dashboard_mover_velocity_table(movers, limit=4), title="Mover Velocity / Top Gainers / Top Losers", border_style="magenta", height=9),
+        )
 
         market_tape = Table(box=box.SIMPLE_HEAD, expand=True, padding=(0, 1))
         market_tape.add_column("Metric", style="bold cyan", no_wrap=True)
@@ -2156,12 +2320,6 @@ def _market_dashboard_renderable(snapshot: dict, *, width: int | None = None, he
             Panel(leadership, title="Index Leadership", border_style="green", height=8 if large_compact else 10),
         )
 
-        heatmap = Panel(
-            _dashboard_sector_heatmap(indices, limit=8 if large_compact else 12),
-            title="Sectoral Heatmap",
-            border_style="bright_magenta",
-            height=8 if large_compact else 7,
-        )
         intraday_alerts = Table(box=box.SIMPLE, expand=True, padding=(0, 1), show_header=False)
         intraday_alerts.add_column("Section", style="bold cyan", no_wrap=True, width=16)
         intraday_alerts.add_column("Readout", overflow="fold")
@@ -2172,7 +2330,10 @@ def _market_dashboard_renderable(snapshot: dict, *, width: int | None = None, he
         middle = Table.grid(expand=True)
         middle.add_column(ratio=1)
         middle.add_column(ratio=1)
-        middle.add_row(heatmap, Panel(intraday_alerts, title="Breadth / Flows / Global / Intraday / Preset Alerts", border_style="yellow", height=8 if large_compact else 7))
+        middle.add_row(
+            Panel(_dashboard_sector_strength_table(indices, limit=5 if large_compact else 6), title="Sector Strength / Sectoral Heatmap", border_style="bright_magenta", height=8 if large_compact else 9),
+            Panel(intraday_alerts, title="Breadth / Flows / Global / Intraday / Preset Alerts", border_style="yellow", height=8 if large_compact else 9),
+        )
 
         movers_table = Table(box=box.SIMPLE_HEAD, expand=True, padding=(0, 1))
         movers_table.add_column("Top Gainers", style="green")
@@ -2207,21 +2368,27 @@ def _market_dashboard_renderable(snapshot: dict, *, width: int | None = None, he
         return Panel(
             Group(
                 ticker_panel,
-                top,
+                cockpit,
                 middle,
                 Panel(_dashboard_recommendations_table(snapshot), title="Recommendations", border_style="bright_green"),
-                lower,
-                Panel(llm_narrative, title="LLM Narrative", border_style="yellow"),
+                fno_rs_news_panel,
             ),
             title=f"📺 Stock Market TV / Market Dashboard · {fetched_at} · focus: {focus} · refresh: 60s · Ctrl+C to exit"[: max(40, width - 4)],
-            subtitle="LIVE Ticker • Market Tape • Recommendations • F&O • Sectoral Heatmap • News Now • Ctrl+C to exit",
+            subtitle="LIVE Ticker • Tape Bias • Breadth Gauge • Index Momentum • Sector Strength • F&O • Ctrl+C to exit",
             border_style="bold white",
             expand=True,
         )
 
     tv.add_row(f"[{pulse_style}]● LIVE[/{pulse_style}]", f"LIVE Ticker | {_dashboard_ticker(snapshot, width)}")
+    tv.add_row("Tape Bias", _dashboard_tape_bias(snapshot))
+    tv.add_row("Breadth Gauge", _dashboard_breadth_gauge(snapshot, width=16 if ultra_compact else 20))
     tv.add_row("Market Tape", " | ".join([_idx_line("N50", n50), _idx_line("BANK", bank), _idx_line("INDIA VIX", vix)]))
+    tv.add_row("Index Momentum", " | ".join(
+        f"{name} {_dashboard_bar(row.get('pct_change', row.get('chg_pct')), scale=2.0, width=8)}"
+        for name, row in (("N50", n50), ("BANK", bank), ("VIX", vix))
+    ))
     tv.add_row("Sectoral Heatmap", _dashboard_sector_heatmap(indices, limit=6 if ultra_compact else 10))
+    tv.add_row("Sector Strength", _dashboard_sector_heatmap(indices, limit=4 if ultra_compact else 6))
     tv.add_row(
         "Breadth / Flows / Global",
         f"Breadth / Flows / Global | {_dashboard_breadth_flow_line(snapshot, flows)}",
@@ -2238,6 +2405,12 @@ def _market_dashboard_renderable(snapshot: dict, *, width: int | None = None, he
         + " | "
         + (f"Top Losers {losers[0].get('symbol', '—')} {_dashboard_fmt_pct(losers[0].get('pct_change'))}" if losers else "Top Losers n/a"),
     )
+    tv.add_row("Mover Velocity", " | ".join(
+        part for part in [
+            (f"{gainers[0].get('symbol', '—')} {_dashboard_bar(gainers[0].get('pct_change'), scale=8.0, width=8)}" if gainers else ""),
+            (f"{losers[0].get('symbol', '—')} {_dashboard_bar(losers[0].get('pct_change'), scale=8.0, width=8)}" if losers else ""),
+        ] if part
+    ) or "movers unavailable")
     tv.add_row("Recommendations", _dashboard_recommendations_line(snapshot))
     tv.add_row("Sharp Moves", f"Sharp Moves | {_dashboard_sharp_moves(snapshot, limit=3)}")
     tv.add_row("F&O", f"F&O | {_dashboard_fno_line(snapshot)}")
@@ -4057,6 +4230,10 @@ def _print_help() -> None:
             "  [dim]Beneish M-score: M > -1.78 = manipulation risk (8-variable probit model)[/dim]\n"
             "  [dim]Piotroski F-score: 0-9 (7+ = strong, 0-3 = weak financial health)[/dim]\n"
             "  [dim]Altman Z'-score: Z' < 1.1 = distress zone (emerging-market version)[/dim]\n\n"
+            "[bold cyan]LATEST RESULTS 🧾[/bold cyan]\n"
+            "  [cyan]/results-feed[/cyan]              — Quarterly results filings from the last 2 weeks\n"
+            "  [cyan]/results-feed 4[/cyan]            — Quarterly results filings from the last 4 weeks\n"
+            "  [cyan]/results-feed --weeks 6[/cyan]    — Same command with explicit weeks parameter\n\n"
             "[bold yellow]EVENT CALENDAR 📅[/bold yellow]\n"
             "  [yellow]/events[/yellow]                  — Upcoming events for NIFTY 50 (next 14 days)\n"
             "  [yellow]/events NIFTY 50[/yellow]         — Dividends, splits, results, AGMs, board meetings\n"
@@ -5598,32 +5775,48 @@ def _chat_loop(agent, show_trace: bool) -> None:
                 _analyze_report_after = (_analyze_sym, "research", _doc_export_fmt)
             else:
                 # ── Stock deep 360° analysis mode ─────────────────────────
-                _analyze_sym = arg.upper().split()[0]
                 _eff_fmt = _analyze_fmt or "html"  # default to html for stock analysis
                 _fmt_note = f" → saving {_analyze_fmt.upper()} report" if _analyze_fmt else " → saving HTML report"
-                console.print(f"[dim]  → 360° Deep Analysis: [bold]{_analyze_sym}[/bold] "
-                               f"(technical + fundamental + forensic + news + sentiment){_fmt_note}[/dim]")
-                text = (
-                    f"Perform a comprehensive 360° analysis of {_analyze_sym}. Execute these tools IN ORDER:\n\n"
-                    f"1. **get_technical_setup** for {_analyze_sym} — trend, RSI, MACD, support/resistance, stage\n"
-                    f"2. **comprehensive_stock_research** for {_analyze_sym} — fundamentals, valuations, peer comparison\n"
-                    f"3. **run_forensic_analysis** for {_analyze_sym} — Beneish M-score, Piotroski F-score, Altman Z'-score\n"
-                    f"4. **search_latest_catalysts** for {_analyze_sym} — latest news, read top 2 articles for sentiment\n"
-                    f"5. **get_sector_context** for {_analyze_sym} — sector rotation status and relative strength\n"
-                    f"6. **deep_search** for {_analyze_sym} verticals=['shareholding','insider_trades','analyst_targets'] — institutional & insider activity\n\n"
-                    f"Then synthesize ALL results into a unified report with these sections:\n"
-                    f"• **Executive Summary** — 3-line bull/bear verdict with conviction level\n"
-                    f"• **Technical Position** — trend, key levels, stage, momentum signals\n"
-                    f"• **Fundamental Quality** — revenue/profit growth, margins, ROE, debt, valuations\n"
-                    f"• **Financial Health** — forensic scores (Beneish, Piotroski, Altman) with flags\n"
-                    f"• **Institutional & Insider Activity** — FII/DII changes, promoter moves, bulk deals\n"
-                    f"• **News & Sentiment** — recent catalysts, management commentary, market sentiment\n"
-                    f"• **Risk Factors** — top 3-5 risks specific to this stock\n"
-                    f"• **Investment Verdict** — BUY/HOLD/AVOID with entry zone, target, stop-loss, timeframe\n\n"
-                    f"Use data from ALL tool calls. Be specific with numbers, dates, and levels."
-                )
-                # Stock analysis: always export HTML (or specified format)
-                _analyze_report_after = (_analyze_sym, "research", _eff_fmt)
+                _multi_symbols = _parse_multi_analyze_symbols(arg)
+                if len(_multi_symbols) >= 2:
+                    _analyze_sym = "_".join(_multi_symbols[:5])
+                    _symbol_list = ", ".join(_multi_symbols[:5])
+                    console.print(
+                        f"[dim]  → Comparative Analysis: [bold]{_symbol_list}[/bold] "
+                        f"(technical + fundamental side-by-side){_fmt_note}[/dim]"
+                    )
+                    text = (
+                        f"Compare {_symbol_list} from technical, fundamental, valuation, sector strength, "
+                        f"risk, and evidence-quality perspective. Use compare_stocks with symbols={_multi_symbols[:5]} "
+                        f"and aspects=['both']. Then synthesize a concise comparative report with: Executive Summary, "
+                        f"side-by-side strengths/weaknesses, key risks, and research verdict. Do not drop any requested symbol."
+                    )
+                    _analyze_report_after = (_analyze_sym, "research", _eff_fmt)
+                else:
+                    _analyze_sym = re.sub(r"[^A-Z0-9&-]", "", arg.upper().split()[0])
+                    console.print(f"[dim]  → 360° Deep Analysis: [bold]{_analyze_sym}[/bold] "
+                                   f"(technical + fundamental + forensic + news + sentiment){_fmt_note}[/dim]")
+                    text = (
+                        f"Perform a comprehensive 360° analysis of {_analyze_sym}. Execute these tools IN ORDER:\n\n"
+                        f"1. **get_technical_setup** for {_analyze_sym} — trend, RSI, MACD, support/resistance, stage\n"
+                        f"2. **comprehensive_stock_research** for {_analyze_sym} — fundamentals, valuations, peer comparison\n"
+                        f"3. **run_forensic_analysis** for {_analyze_sym} — Beneish M-score, Piotroski F-score, Altman Z'-score\n"
+                        f"4. **search_latest_catalysts** for {_analyze_sym} — latest news, read top 2 articles for sentiment\n"
+                        f"5. **get_sector_context** for {_analyze_sym} — sector rotation status and relative strength\n"
+                        f"6. **deep_search** for {_analyze_sym} verticals=['shareholding','insider_trades','analyst_targets'] — institutional & insider activity\n\n"
+                        f"Then synthesize ALL results into a unified report with these sections:\n"
+                        f"• **Executive Summary** — 3-line bull/bear verdict with conviction level\n"
+                        f"• **Technical Position** — trend, key levels, stage, momentum signals\n"
+                        f"• **Fundamental Quality** — revenue/profit growth, margins, ROE, debt, valuations\n"
+                        f"• **Financial Health** — forensic scores (Beneish, Piotroski, Altman) with flags\n"
+                        f"• **Institutional & Insider Activity** — FII/DII changes, promoter moves, bulk deals\n"
+                        f"• **News & Sentiment** — recent catalysts, management commentary, market sentiment\n"
+                        f"• **Risk Factors** — top 3-5 risks specific to this stock\n"
+                        f"• **Investment Verdict** — BUY/HOLD/AVOID with entry zone, target, stop-loss, timeframe\n\n"
+                        f"Use data from ALL tool calls. Be specific with numbers, dates, and levels."
+                    )
+                    # Stock analysis: always export HTML (or specified format)
+                    _analyze_report_after = (_analyze_sym, "research", _eff_fmt)
 
         # ── /canslim <symbol> — William O'Neil CANSLIM analysis ──────────
         # PG: First-class CANSLIM growth quality evaluation framework.
@@ -6612,11 +6805,41 @@ def _chat_loop(agent, show_trace: bool) -> None:
             _clean_ans, _ = _parse_followups(result.get("answer", ""))
             if _clean_ans.strip():
                 if _analyze_report_after:
-                    _auto_export_report(_clean_ans, _analyze_report_after[1],
-                                        _analyze_report_after[0], _analyze_report_after[2])
+                    if (
+                        result.get("intent") == "market_situation_assessment"
+                        and str(_analyze_report_after[0]).lower() not in {"market", "document"}
+                    ):
+                        console.print(
+                            "[yellow]  ⚠ Skipped report export: stock analysis routed to market situation output.[/yellow]"
+                        )
+                    else:
+                        _report_path = _auto_export_report(_clean_ans, _analyze_report_after[1],
+                                                           _analyze_report_after[0], _analyze_report_after[2])
+                        if _report_path:
+                            _remember_terminal_interaction(
+                                agent,
+                                text,
+                                f"Report: {_report_path}",
+                                intent="generated_report",
+                                source_label="generated report",
+                                symbols=[str(_analyze_report_after[0]).upper()],
+                                result_type="report",
+                                result_items=[str(_report_path)],
+                            )
                 elif _search_report_after:
-                    _auto_export_report(_clean_ans, _search_report_after[1],
-                                        _search_report_after[0], _search_report_after[2])
+                    _report_path = _auto_export_report(_clean_ans, _search_report_after[1],
+                                                       _search_report_after[0], _search_report_after[2])
+                    if _report_path:
+                        _remember_terminal_interaction(
+                            agent,
+                            text,
+                            f"Report: {_report_path}",
+                            intent="generated_report",
+                            source_label="generated report",
+                            symbols=[str(_search_report_after[0]).upper()],
+                            result_type="report",
+                            result_items=[str(_report_path)],
+                        )
             _analyze_report_after = None
             _search_report_after  = None
         except Exception as e:

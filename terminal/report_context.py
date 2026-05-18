@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import subprocess
 from datetime import datetime
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
 
@@ -103,6 +104,33 @@ def read_report(path: str, project_root: str | Path | None = None, max_chars: in
     return {**meta, "status": "ok", "content": content[:max_chars], "truncated": len(content) > max_chars}
 
 
+class _VisibleTextParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.parts: list[str] = []
+        self._skip = False
+
+    def handle_starttag(self, tag: str, attrs) -> None:
+        if tag.lower() in {"script", "style"}:
+            self._skip = True
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag.lower() in {"script", "style"}:
+            self._skip = False
+
+    def handle_data(self, data: str) -> None:
+        if not self._skip and data.strip():
+            self.parts.append(data.strip())
+
+
+def _visible_text(content: str, suffix: str = "") -> str:
+    if suffix.lower() not in {".html", ".htm"}:
+        return content or ""
+    parser = _VisibleTextParser()
+    parser.feed(content or "")
+    return "\n".join(parser.parts)
+
+
 def _extract_recommendation(content: str) -> str:
     match = re.search(r"(?im)^\s*Recommendation\s*:\s*([A-Z_ -]+)\s*$", content or "")
     return match.group(1).strip() if match else ""
@@ -112,7 +140,7 @@ def summarize_report(path: str, project_root: str | Path | None = None) -> dict[
     report = read_report(path, project_root=project_root)
     if report.get("status") != "ok":
         return report
-    content = report.get("content", "")
+    content = _visible_text(report.get("content", ""), report.get("suffix", ""))
     lines = [line.strip() for line in content.splitlines() if line.strip()]
     heading = next((line.lstrip("# ").strip() for line in lines if line.startswith("#")), report.get("name", "Report"))
     recommendation = _extract_recommendation(content)

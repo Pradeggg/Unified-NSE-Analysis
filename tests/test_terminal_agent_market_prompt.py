@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from terminal.agent import Agent, SYSTEM_PROMPT, _keyword_intent, _required_tools_for_query
+from terminal.agent import Agent, SYSTEM_PROMPT, _keyword_intent, _required_tools_for_query, _split_compound_query
 from terminal.tools import compare_stocks
 from terminal.deliberation import build_hypotheses, build_plan, evaluate_evidence, render_final_answer
 from voice_persona import normalize_spoken_query
@@ -607,6 +607,15 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
             [("compare_stocks", {"symbols": ["RELIANCE", "ONGC"], "aspects": ["technical"]})],
         )
 
+    def test_analyze_multi_symbol_command_routes_to_comparison(self):
+        routed = _keyword_intent("/analyze SWELECTES, SCHAEFFLER")
+
+        self.assertEqual(routed["intent"], "stock_comparison")
+        self.assertEqual(
+            routed["plan"],
+            [("compare_stocks", {"symbols": ["SWELECTES", "SCHAEFFLER"], "aspects": ["both"]})],
+        )
+
     def test_portfolio_wording_routes_symbols_not_own_ticker(self):
         routed = _keyword_intent("I own RELIANCE TCS INFY, check overlap, risk and what I should monitor today", data_mode="intraday")
 
@@ -739,6 +748,12 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
         )
         self.assertNotIn("SABEVENTS", str(routed).upper())
 
+    def test_event_calendar_query_with_results_word_does_not_route_to_results_feed(self):
+        routed = _keyword_intent("events, results and corporate actions this week")
+
+        self.assertEqual(routed["intent"], "event_calendar")
+        self.assertEqual(routed["plan"][0][0], "get_event_calendar_summary")
+
     def test_strength_question_routes_to_high_rs_screener_not_which_symbol(self):
         routed = _keyword_intent("which stocks are still showing strength")
 
@@ -787,6 +802,58 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
         self.assertIn("SCREENER: HIGH_RS", result["answer"])
         self.assertIn("INDOTECH", result["answer"])
         self.assertNotIn("WHICH (WHICH) — Market Brief", result["answer"])
+
+    def test_sector_strength_query_routes_to_live_sector_overview_not_high_rs_screener(self):
+        agent = Agent()
+        agent.backend = object()
+        agent.backend_name = "TestBackend"
+
+        with patch("terminal.agent._execute_plan") as execute_plan:
+            execute_plan.return_value = [
+                {
+                    "tool": "get_live_market_overview",
+                    "args": {},
+                    "result": {
+                        "indices": {},
+                        "top_sectors": [
+                            {"name": "NIFTY REALTY", "pct_change": 1.25},
+                            {"name": "NIFTY AUTO", "pct_change": 0.85},
+                        ],
+                        "bottom_sectors": [
+                            {"name": "NIFTY IT", "pct_change": -0.45},
+                        ],
+                        "source": "NSE live API",
+                        "as_of": "2026-05-18 10:26:10",
+                    },
+                },
+                {
+                    "tool": "get_market_breadth",
+                    "args": {},
+                    "result": {"advances": 250, "declines": 220, "ad_ratio": 1.14, "avg_rs_pct": 1.8},
+                },
+            ]
+
+            result = agent.query("which sectors are showing strength")
+
+        execute_plan.assert_called_once_with([
+            ("get_live_market_overview", {}),
+            ("get_market_breadth", {}),
+        ])
+        self.assertEqual(result["intent"], "market_overview")
+        self.assertIn("SECTOR STRENGTH", result["answer"])
+        self.assertIn("NIFTY REALTY +1.25%", result["answer"])
+        self.assertNotIn("SCREENER: HIGH_RS", result["answer"])
+
+    def test_live_mode_sector_strength_query_does_not_treat_which_as_symbol(self):
+        routed = _keyword_intent("which sectors are showing strength", data_mode="intraday")
+
+        self.assertEqual(routed["intent"], "market_overview")
+        self.assertEqual(routed["plan"], [
+            ("get_live_market_overview", {}),
+            ("get_market_breadth", {}),
+        ])
+        self.assertNotIn("resolve_symbol", str(routed))
+        self.assertNotIn("WHICH", str(routed))
 
     def test_fno_overview_routes_to_derivatives_tools_not_market_overview(self):
         routed = _keyword_intent(
@@ -974,6 +1041,7 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
         self.assertIn("PCR: 0.82", result["answer"])
         self.assertIn("Max pain: 23700", result["answer"])
         self.assertIn("Top call OI", result["answer"])
+        self.assertIn("23700 (OI 400,000, chg +25,000)", result["answer"])
         self.assertIn("FUTURES BASIS & CARRY", result["answer"])
         self.assertIn("Basis: 30.0", result["answer"])
         self.assertNotIn("LIVE MARKET", result["answer"])
@@ -1203,6 +1271,24 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
         self.assertNotIn("Requested symbol(s): SAKAR, ADX, MA", result["answer"])
         self.assertIn("SAKAR", result["answer"])
 
+    def test_symbol_validator_ignores_generated_stock_360_instruction_words(self):
+        from terminal.agent import _validate_symbol_grounding
+
+        query = (
+            "Perform a comprehensive 360° analysis of SCHAEFFLER. Execute these tools IN ORDER:\n\n"
+            "1. **get_technical_setup** for SCHAEFFLER — trend, RSI, MACD, support/resistance, stage\n"
+            "2. **comprehensive_stock_research** for SCHAEFFLER — fundamentals, valuations, peer comparison\n"
+            "Then synthesize ALL results into a unified report with BUY/HOLD/AVOID verdict."
+        )
+        tool_results = [
+            {"tool": "resolve_symbol", "args": {"query": "SCHAEFFLER"}, "result": {"symbol": "SCHAEFFLER"}},
+            {"tool": "get_symbol_snapshot", "args": {"symbol": "SCHAEFFLER"}, "result": {"symbol": "SCHAEFFLER"}},
+            {"tool": "get_technical_setup", "args": {"symbol": "SCHAEFFLER"}, "result": {"symbol": "SCHAEFFLER"}},
+            {"tool": "comprehensive_stock_research", "args": {"symbol": "SCHAEFFLER"}, "result": {"symbol": "SCHAEFFLER"}},
+        ]
+
+        self.assertIsNone(_validate_symbol_grounding(query, "stock_brief", tool_results))
+
     def test_required_tool_validator_blocks_missing_screener_tool(self):
         agent = Agent()
         agent.backend = object()
@@ -1270,6 +1356,143 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
         self.assertEqual(routed["plan"][0], ("resolve_symbol", {"query": "Delhivery"}))
         self.assertEqual(routed["plan"][1], ("get_latest_results", {"symbol": "DELHIVERY"}))
 
+    def test_results_in_last_two_weeks_routes_to_results_feed_not_symbol_in(self):
+        from terminal.agent import _keyword_intent
+
+        routed = _keyword_intent("results in last 2 weeks")
+
+        self.assertEqual(routed["intent"], "results_feed")
+        self.assertEqual(routed["plan"], [("get_latest_results_feed", {"days_back": 14, "limit": 50})])
+
+    def test_results_feed_slash_command_accepts_weeks_parameter(self):
+        from terminal.agent import _keyword_intent
+
+        cases = {
+            "/results-feed": 14,
+            "/results-feed 2": 14,
+            "/results-feed 4w": 28,
+            "/results-feed --weeks 6": 42,
+            "/results-feed --weeks=8": 56,
+            "/latest-results 3": 21,
+        }
+
+        for query, days in cases.items():
+            with self.subTest(query=query):
+                routed = _keyword_intent(query)
+
+                self.assertEqual(routed["intent"], "results_feed")
+                self.assertEqual(routed["plan"], [("get_latest_results_feed", {"days_back": days, "limit": 50})])
+
+    def test_results_feed_slash_command_is_exposed_in_terminal_browser(self):
+        import nse_agent
+
+        slash_commands = [cmd for cmd, _desc in nse_agent._SLASH_COMMANDS]
+
+        self.assertIn("/results-feed", slash_commands)
+        self.assertEqual(nse_agent._CMD_CATEGORIES["/results-feed"][0], "Latest Results")
+
+    def test_results_feed_slash_command_runs_without_llm(self):
+        agent = Agent()
+        agent.backend = object()
+        agent.backend_name = "TestBackend"
+
+        with patch("terminal.agent._execute_plan") as execute_plan, patch.object(agent, "_llm_query") as llm_query:
+            execute_plan.return_value = [
+                {
+                    "tool": "get_latest_results_feed",
+                    "args": {"days_back": 28, "limit": 50},
+                    "result": {"results": [], "days_back": 28, "source": "nse", "total_in_window": 0, "total_available": 0},
+                }
+            ]
+            result = agent.query("/results-feed 4")
+
+        execute_plan.assert_called_once_with([("get_latest_results_feed", {"days_back": 28, "limit": 50})])
+        self.assertEqual(result["intent"], "results_feed")
+        self.assertIn("last 28 day(s)", result["answer"])
+        llm_query.assert_not_called()
+
+    def test_generated_deep_search_prompt_does_not_split_or_resolve_use_as_symbol(self):
+        prompt = (
+            "Run a comprehensive deep search for SCHAEFFLER. "
+            "Use deep_search with all default verticals. "
+            "Context: 'results'. "
+            "Present results section-by-section: NSE announcements, corporate actions, insider trades. "
+            "Include dates, real URLs, and actionable insights."
+        )
+
+        self.assertEqual(_split_compound_query(prompt), [prompt])
+        routed = _keyword_intent(prompt)
+
+        self.assertEqual(routed["intent"], "entity_topic_command")
+        self.assertEqual(routed["plan"], [("deep_search", {"symbol": "SCHAEFFLER", "context": "results"})])
+        self.assertNotIn("USE", str(routed))
+
+    def test_agent_generated_deep_search_prompt_runs_as_single_deep_search(self):
+        agent = Agent()
+        agent.backend = object()
+        agent.backend_name = "TestBackend"
+        prompt = (
+            "Run a comprehensive deep search for SCHAEFFLER. "
+            "Use deep_search with all default verticals. "
+            "Context: 'results'. "
+            "Present results section-by-section: NSE announcements, corporate actions, insider trades. "
+            "Include dates, real URLs, and actionable insights."
+        )
+
+        with patch("terminal.agent._execute_plan") as execute_plan:
+            execute_plan.return_value = [
+                {"tool": "deep_search", "args": {"symbol": "SCHAEFFLER", "context": "results"}, "result": {"symbol": "SCHAEFFLER", "results": []}},
+            ]
+            result = agent.query(prompt)
+
+        execute_plan.assert_called_once_with([("deep_search", {"symbol": "SCHAEFFLER", "context": "results"})])
+        self.assertEqual(result["intent"], "entity_topic_command")
+        self.assertNotIn("Part 2 of", result["answer"])
+        self.assertNotIn("USE (USE)", result["answer"])
+
+    def test_result_announcement_time_window_phrasings_route_to_results_feed(self):
+        from terminal.agent import _keyword_intent
+
+        cases = {
+            "latest results last two weeks": 14,
+            "results during last 2 weeks": 14,
+            "results over the past fortnight": 14,
+            "results for last 14 days": 14,
+            "results in last 10 days": 10,
+            "results submitted last month": 30,
+            "BSE results announcements in past two weeks": 14,
+            "announcements of latest results submitted by various companies in last 2 weeks": 14,
+            "latest result announcements in past two weeks": 14,
+            "companies that filed results during previous 10 days": 10,
+        }
+
+        for query, days in cases.items():
+            with self.subTest(query=query):
+                routed = _keyword_intent(query)
+
+                self.assertEqual(routed["intent"], "results_feed")
+                self.assertEqual(routed["plan"], [("get_latest_results_feed", {"days_back": days, "limit": 50})])
+
+    def test_symbol_less_latest_results_runs_results_feed_not_llm(self):
+        agent = Agent()
+        agent.backend = object()
+        agent.backend_name = "TestBackend"
+
+        with patch("terminal.agent._execute_plan") as execute_plan, patch.object(agent, "_llm_query") as llm_query:
+            execute_plan.return_value = [
+                {
+                    "tool": "get_latest_results_feed",
+                    "args": {"days_back": 7, "limit": 50},
+                    "result": {"status": "ok", "count": 0, "results": []},
+                }
+            ]
+            result = agent.query("latest results")
+
+        self.assertEqual(result["intent"], "results_feed")
+        self.assertIn("Latest Quarterly Results Feed", result["answer"])
+        self.assertNotIn("REQUIRED TOOL VALIDATION FAILED", result["answer"])
+        llm_query.assert_not_called()
+
     def test_required_tool_validator_blocks_unsupported_broker_claims(self):
         agent = Agent()
         agent.backend = object()
@@ -1324,9 +1547,9 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
         analyze_prompt = (
             "Use the analyze_document tool with source='https://example.com/doc.pdf'. "
             "Read the full document and provide: 1. Document Summary ... "
-            "If this is a financial document (annual report, concall transcript, results), "
+            "If this is a financial document (annual report, concall transcript, quarterly results), "
             "also evaluate: revenue/profit trends, management commentary, guidance changes, "
-            "risk factors, and investment implications."
+            "financial statements, latest results, risk factors, and investment implications."
         )
         tool_results = [
             {"tool": "analyze_document",
@@ -1449,6 +1672,28 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
         self.assertIn("search_latest_catalysts", tools)
         self.assertIn("search_concall_transcripts", tools)
         self.assertIn("search_broker_research", tools)
+
+    def test_analyze_stock_360_prompt_does_not_route_to_market_situation(self):
+        from terminal.agent import _keyword_intent
+
+        routed = _keyword_intent(
+            "Perform a comprehensive 360° analysis of SCHAEFFLER. Execute these tools IN ORDER:\n\n"
+            "1. **get_technical_setup** for SCHAEFFLER — trend, RSI, MACD, support/resistance, stage\n"
+            "2. **comprehensive_stock_research** for SCHAEFFLER — fundamentals, valuations, peer comparison\n"
+            "3. **run_forensic_analysis** for SCHAEFFLER — Beneish M-score, Piotroski F-score, Altman Z'-score\n"
+            "4. **search_latest_catalysts** for SCHAEFFLER — latest news, read top 2 articles for sentiment\n"
+            "5. **get_sector_context** for SCHAEFFLER — sector rotation status and relative strength\n"
+            "6. **deep_search** for SCHAEFFLER verticals=['shareholding','insider_trades','analyst_targets'] — institutional & insider activity\n\n"
+            "Then synthesize ALL results into a unified report with News & Sentiment and FII/DII changes."
+        )
+        tools = [name for name, _args in routed["plan"]]
+
+        self.assertEqual(routed["intent"], "stock_brief")
+        self.assertNotIn("get_live_market_overview", tools)
+        self.assertIn("get_symbol_snapshot", tools)
+        self.assertIn("comprehensive_stock_research", tools)
+        self.assertIn("run_forensic_analysis", tools)
+        self.assertIn("deep_search", tools)
 
     def test_required_tool_validator_allows_stock_brief_when_dynamic_tools_run(self):
         from terminal.agent import _validate_required_tools

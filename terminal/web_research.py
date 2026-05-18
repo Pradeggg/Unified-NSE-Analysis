@@ -207,32 +207,36 @@ def scrape_screener_in(symbol: str) -> dict:
     pros = [li.get_text(strip=True) for li in soup.select(".pros li")][:6]
     cons = [li.get_text(strip=True) for li in soup.select(".cons li")][:6]
 
-    # ── Quarterly results (last 6 columns) ──────────────────────────────────
+    # ── Quarterly results (latest 6 columns) ────────────────────────────────
     quarterly: dict[str, Any] = {}
     qtable = soup.select_one("#quarters")
     if qtable:
         rows = qtable.select("tr")
         if rows:
-            headers = [td.get_text(strip=True) for td in rows[0].select("td,th")][1:7]
+            all_headers = [td.get_text(strip=True) for td in rows[0].select("td,th")][1:]
+            headers = all_headers[-6:]
             for row in rows[1:]:
                 cells = [td.get_text(strip=True) for td in row.select("td,th")]
                 if cells:
-                    quarterly[cells[0]] = cells[1:7]
+                    values = cells[1:]
+                    quarterly[cells[0]] = values[-len(headers):] if headers else values
             quarterly["_headers"] = headers
 
-    # ── Annual P&L (last 5 years) ────────────────────────────────────────────
+    # ── Annual P&L (latest 5 columns, including TTM when present) ───────────
     annual_pl: dict[str, Any] = {}
     plt = soup.select_one("#profit-loss")
     if plt:
         rows = plt.select("tr")
         if rows:
-            # Get the last 5 year columns (skip first label col)
-            all_headers = [td.get_text(strip=True) for td in rows[0].select("td,th")]
-            yr_headers  = all_headers[-6:-1] if len(all_headers) > 6 else all_headers[1:]
+            all_headers = [td.get_text(strip=True) for td in rows[0].select("td,th")][1:]
+            yr_headers = all_headers[-5:]
             for row in rows[1:]:
                 cells = [td.get_text(strip=True) for td in row.select("td,th")]
-                if cells:
-                    annual_pl[cells[0]] = cells[-(len(yr_headers)+1):-1] or cells[1:]
+                if cells and len(cells) > 1:
+                    values = cells[1:]
+                    if yr_headers and len(values) < len(yr_headers):
+                        continue
+                    annual_pl[cells[0]] = values[-len(yr_headers):] if yr_headers else values
             annual_pl["_headers"] = yr_headers
 
     # ── Peer comparison ──────────────────────────────────────────────────────

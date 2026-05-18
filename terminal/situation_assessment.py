@@ -83,6 +83,16 @@ _CONTEXTUAL_PATTERNS = (
     "previous conversation",
     "same for",
 )
+_AFFIRMATIVE_FOLLOWUPS = {
+    "yes",
+    "yes please",
+    "please",
+    "do it",
+    "go ahead",
+    "sure",
+    "ok",
+    "okay",
+}
 
 _ENTITY_TOPIC_COMMANDS = {
     "/analyze",
@@ -123,7 +133,7 @@ def needs_situation_assessment(user_input: str) -> bool:
     # not contextual follow-ups even when they reference "the report" in instructions.
     if "analyze_document tool with source=" in q or "use the analyze_document tool" in q:
         return False
-    return q.startswith("search ") or any(pattern in q for pattern in _CONTEXTUAL_PATTERNS) or any(
+    return q in _AFFIRMATIVE_FOLLOWUPS or q.startswith("search ") or any(pattern in q for pattern in _CONTEXTUAL_PATTERNS) or any(
         q.startswith(command + " ") for command in _ENTITY_TOPIC_COMMANDS
     )
 
@@ -354,6 +364,43 @@ def assess_followup(user_input: str, previous_context: TurnContext | None) -> Si
         )
 
     q = _normalize(user_input)
+
+    if q in _AFFIRMATIVE_FOLLOWUPS:
+        report_path = _report_path_from_context(previous_context)
+        if report_path:
+            return SituationAssessment(
+                applies=True,
+                decision="run_tool_plan",
+                confidence="medium",
+                user_is_asking="Confirming the prior clarification; default to summarizing the report result.",
+                context_found=_report_context_found(previous_context, report_path),
+                source_assessment=_source_assessment(previous_context),
+                resolved_entities=previous_context.symbols,
+                evidence_plan=["read_report", "summarize_report"],
+                tool_plan=[
+                    ("read_report", {"path": report_path, "max_chars": 12000}),
+                    ("summarize_report", {"path": report_path}),
+                ],
+                plan=[
+                    "Resolve the affirmative reply against the prior report clarification.",
+                    "Read and summarize the latest remembered report.",
+                    "Avoid making new market conclusions beyond the report evidence.",
+                ],
+            )
+        return SituationAssessment(
+            applies=True,
+            decision="answer_from_context",
+            confidence="medium",
+            user_is_asking="Confirming the prior clarification; answer from available prior context.",
+            context_found=_context_found(previous_context),
+            source_assessment=_source_assessment(previous_context),
+            resolved_entities=previous_context.symbols,
+            evidence_plan=previous_context.tools,
+            plan=[
+                "Treat the affirmative reply as a continuation of the previous contextual turn.",
+                "Use prior context only; do not resolve 'yes' or 'please' as entities.",
+            ],
+        )
 
     if _asks_scan_15m(q) and previous_context.result_items:
         symbols = previous_context.result_items[:20]

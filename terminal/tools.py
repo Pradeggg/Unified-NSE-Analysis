@@ -571,6 +571,39 @@ _SYMBOL_CONTEXT_TOKENS: set[str] = {
 }
 
 
+_GENERIC_NAME_TOKENS: frozenset[str] = frozenset({
+    # Generic business / industry words that appear in many company names.
+    # Never register these as single-token aliases — they collide across
+    # dozens of issuers (e.g. "INVEST" would otherwise resolve to whichever
+    # company name was scanned first).
+    "AUTO", "BANK", "BHARAT", "CEMENT", "COAL", "COMPANIES", "COMPANY",
+    "CORP", "CORPORATION", "ELECTRIC", "ELECTRICALS", "ELECTRONICS",
+    "ENERGIES", "ENERGY", "ENTERPRISE", "ENTERPRISES", "FINANCE",
+    "FINANCIAL", "FINSERV", "FOODS", "GAS", "GLOBAL", "GROUP", "GROWTH",
+    "HINDUSTAN", "HOLDING", "HOLDINGS", "HOTEL", "HOTELS", "INC", "INDIA",
+    "INDIAN", "INDUSTRIES", "INDUSTRY", "INFRA", "INFRASTRUCTURE",
+    "INTERNATIONAL", "INVEST", "INVESTMENT", "INVESTMENTS", "LEVER",
+    "LIMITED", "LTD", "MANUFACTURING", "MOTOR", "MOTORS", "NATIONAL",
+    "NETWORK", "NETWORKS", "PHARMA", "PHARMACEUTICALS", "POWER",
+    "PRIVATE", "PRODUCTS", "PROJECTS", "PUBLIC", "SERVICES", "SOLUTIONS",
+    "STEEL", "SYSTEMS", "TECH", "TECHNOLOGIES", "TECHNOLOGY",
+})
+
+
+def _register_name_tokens(mapping: dict[str, str], name_u: str, sym_u: str) -> None:
+    """Register multi-word company-name tokens as fuzzy aliases.
+
+    Skips generic English/business words that would otherwise collide across
+    issuers (e.g. "INVEST" should not resolve to AUTHUM just because that
+    name happens to be scanned first).
+    """
+    tokens = re.sub(r"[^A-Z0-9 ]", "", name_u).split()
+    for t in tokens:
+        if len(t) < 4 or t in _GENERIC_NAME_TOKENS:
+            continue
+        mapping.setdefault(t, sym_u)
+
+
 def _all_symbols_map() -> dict[str, str]:
     """Return {normalized_name: symbol, symbol: symbol} for fuzzy resolution."""
     # Start with F&O index aliases — always available
@@ -593,10 +626,7 @@ def _all_symbols_map() -> dict[str, str]:
             if name:
                 name_u = str(name).upper()
                 mapping[name_u] = sym_u
-                tokens = re.sub(r"[^A-Z0-9 ]", "", name_u).split()
-                for t in tokens:
-                    if len(t) >= 4:
-                        mapping.setdefault(t, sym_u)
+                _register_name_tokens(mapping, name_u, sym_u)
         return mapping
     except Exception:
         pass
@@ -613,11 +643,7 @@ def _all_symbols_map() -> dict[str, str]:
         mapping[sym.upper()] = sym.upper()
         if name:
             mapping[name.upper()] = sym.upper()
-            # Add short tokens: "Reliance Industries" → "RELIANCE"
-            tokens = re.sub(r"[^A-Z0-9 ]", "", name.upper()).split()
-            for t in tokens:
-                if len(t) >= 4:
-                    mapping.setdefault(t, sym.upper())
+            _register_name_tokens(mapping, name.upper(), sym.upper())
     return mapping
 
 
@@ -650,6 +676,13 @@ def _resolve_local_symbol(query: str) -> dict:
 
     q_tokens = re.sub(r"[^A-Z0-9 ]", " ", q).split()
     if len(q_tokens) > 1 and any(tok in _SYMBOL_CONTEXT_TOKENS for tok in q_tokens):
+        return {"symbol": None, "confidence": "none", "query": query}
+
+    # Refuse fuzzy substring resolution for generic English/business words
+    # that would otherwise contains-match arbitrary company names (e.g.
+    # "invest" → TATAINVEST, "energy" → GKENERGY). Such words are never a
+    # ticker on their own — the caller must qualify with more context.
+    if len(q_tokens) == 1 and q_tokens[0] in _GENERIC_NAME_TOKENS:
         return {"symbol": None, "confidence": "none", "query": query}
 
     contains_hits: list[tuple[int, str, str]] = []
@@ -738,7 +771,7 @@ def resolve_symbol(query: str) -> dict:
         "REPORTING", "REPORTED", "ANNOUNCED", "FILED", "POSTED",
         "EARNINGS", "DIVIDEND", "DIVIDENDS", "AGM", "RIGHTS", "SPLIT", "BONUS",
     }
-    if q in _CONCEPT_TOKENS:
+    if q in _CONCEPT_TOKENS or q in _GENERIC_NAME_TOKENS:
         return {
             "symbol": None,
             "confidence": "none",
@@ -4104,8 +4137,16 @@ def get_live_market_overview() -> dict:
         # PG-indices: keep `indices` flat for backward compat with existing callers.
         indices = {**broad, **sector}
 
-        # Top movers among sectoral indices for quick "winners/losers" framing.
-        sector_sorted = sorted(sector.items(), key=lambda kv: kv[1]["pct_change"], reverse=True)
+        # Top movers among equity sector/thematic indices for quick
+        # "winners/losers" framing. NSE allIndices also includes bond/debt
+        # indices under NIFTY names; exclude them from sector-strength answers.
+        non_equity_markers = ("BOND", "G-SEC", "SDL", "T-BILL", "LIQUID", "OVERNIGHT")
+        equity_sector = {
+            name: row
+            for name, row in sector.items()
+            if name in SECTORAL and not any(marker in name for marker in non_equity_markers)
+        }
+        sector_sorted = sorted(equity_sector.items(), key=lambda kv: kv[1]["pct_change"], reverse=True)
         top_sectors = [{"name": k, **v} for k, v in sector_sorted[:5]]
         bot_sectors = [{"name": k, **v} for k, v in sector_sorted[-5:][::-1]]
 

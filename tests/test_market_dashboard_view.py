@@ -73,6 +73,12 @@ class MarketDashboardViewTests(unittest.TestCase):
     def test_dashboard_renderable_includes_recommendations_and_derivatives_context(self):
         text = _render_text(nse_agent._market_dashboard_renderable(_dashboard_snapshot(), width=160, height=44))
 
+        self.assertIn("Tape Bias", text)
+        self.assertIn("Breadth Gauge", text)
+        self.assertIn("Index Momentum", text)
+        self.assertIn("Sector Strength", text)
+        self.assertIn("Mover Velocity", text)
+        self.assertIn("█", text)
         self.assertIn("Recommendations", text)
         self.assertIn("Research stance", text)
         self.assertIn("Derivatives", text)

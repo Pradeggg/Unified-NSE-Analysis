@@ -58,6 +58,7 @@ def test_contextual_source_questions_trigger_assessment():
     assert needs_situation_assessment("/report technical United Spirits pdf")
     assert needs_situation_assessment("/results United Spirits latest quarter")
     assert needs_situation_assessment("what would be your recommendation based on the above financial analysis")
+    assert needs_situation_assessment("yes please")
 
 
 def test_direct_queries_do_not_trigger_assessment():
@@ -441,6 +442,49 @@ def test_based_on_report_results_uses_report_context():
         ("summarize_report", {"path": "/tmp/strategy_council_KIRLOSENG.md"}),
     ]
     assert "prior report context" in assessment.context_found.lower()
+
+
+def test_affirmative_after_report_clarification_summarizes_prior_report():
+    ctx = TurnContext(
+        user_input="/analyze SCHAEFFLER",
+        intent="generated_report",
+        mode="historical",
+        tools=[],
+        source_label="generated report",
+        result_type="report",
+        result_summary="Report: /tmp/SCHAEFFLER_research.html",
+        symbols=["SCHAEFFLER"],
+        result_items=["/tmp/SCHAEFFLER_research.html"],
+    )
+
+    assessment = assess_followup("yes please", ctx)
+
+    assert assessment.decision == "run_tool_plan"
+    assert assessment.tool_plan == [
+        ("read_report", {"path": "/tmp/SCHAEFFLER_research.html", "max_chars": 12000}),
+        ("summarize_report", {"path": "/tmp/SCHAEFFLER_research.html"}),
+    ]
+    assert assessment.resolved_entities == ["SCHAEFFLER"]
+    assert "prior clarification" in assessment.user_is_asking.lower()
+
+
+def test_affirmative_without_report_uses_context_not_symbol_resolution():
+    ctx = TurnContext(
+        user_input="SCHAEFFLER technical setup",
+        intent="stock_brief",
+        mode="historical",
+        tools=["get_symbol_snapshot", "get_technical_setup"],
+        source_label="EOD CSV + DB snapshot",
+        result_type="stock_brief",
+        result_summary="stock brief for SCHAEFFLER; signal HOLD; MACD bearish.",
+        symbols=["SCHAEFFLER"],
+    )
+
+    assessment = assess_followup("yes please", ctx)
+
+    assert assessment.decision == "answer_from_context"
+    assert assessment.resolved_entities == ["SCHAEFFLER"]
+    assert "yes" not in assessment.resolved_entities
 
 
 def test_assess_user_situation_returns_v2_contract_for_ambiguous_followup():

@@ -18,6 +18,28 @@ class TerminalSymbolResolutionTests(unittest.TestCase):
         self.assertIn(result["confidence"], {"fuzzy", "near-match"})
         live_session.assert_not_called()
 
+    def test_resolve_symbol_picks_distinctive_name_token_over_generic_word(self):
+        # Regression: a user query that includes a generic English word
+        # (e.g. "invest") which happens to appear in another issuer's name
+        # must not be silently resolved to that issuer. The distinctive
+        # word in the query ("Premier Energies") should win.
+        mapping = {
+            "PREMIERENE": "PREMIERENE",
+            "PREMIER ENERGIES LIMITED": "PREMIERENE",
+            "PREMIER": "PREMIERENE",
+            "AIIL": "AIIL",
+            "AUTHUM INVESTMENT & INFRASTRUCTURE LTD": "AIIL",
+            "AUTHUM": "AIIL",
+        }
+        with patch("terminal.tools._all_symbols_map", return_value=mapping), patch(
+            "terminal.tools._get_live_session"
+        ) as live_session:
+            self.assertEqual(resolve_symbol("Premier Energies")["symbol"], "PREMIERENE")
+            self.assertIsNone(resolve_symbol("invest")["symbol"])
+            self.assertIsNone(resolve_symbol("INVEST")["symbol"])
+            self.assertIsNone(resolve_symbol("energy")["symbol"])
+        live_session.assert_not_called()
+
     def test_resolve_symbol_does_not_substitute_exact_unknown_ticker(self):
         with patch(
             "terminal.tools._all_symbols_map",

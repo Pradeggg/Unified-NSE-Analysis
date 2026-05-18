@@ -109,10 +109,13 @@ SECTIONS: dict[str, dict] = {
         "title":  "Deep Search Engine",
         "icon":   "🔍",
         "color":  "magenta",
-        "aliases": ["search", "deep", "news", "insider", "analyst", "broker", "mf", "concall", "social", "shareholding", "results"],
+        "aliases": ["search", "deep", "news", "insider", "analyst", "broker", "mf", "concall", "social", "shareholding", "results", "latest results", "results-feed", "latest-results"],
         "entries": [
             ("/search RELIANCE",                "Full deep-dive (11 parallel verticals)"),
             ("/results RELIANCE",               "Latest quarterly results, filings, concalls, catalysts"),
+            ("/results-feed",                   "Market-wide latest quarterly results filings, default last 2 weeks"),
+            ("/results-feed --weeks 4",         "Market-wide latest results filings over the last 4 weeks"),
+            ("/latest-results 2",               "Alias for latest quarterly results feed over N weeks"),
             ("/search RELIANCE dividend",       "Dividends, splits, bonuses (NSE live)"),
             ("/search RELIANCE insider",        "Insider/promoter trade disclosures"),
             ("/search RELIANCE shareholding",   "Promoter/FII/DII/pledge trend"),
@@ -158,10 +161,12 @@ SECTIONS: dict[str, dict] = {
         "title":  "Forensic Accounting",
         "icon":   "🧪",
         "color":  "red",
-        "aliases": ["forensic", "beneish", "piotroski", "altman", "fraud", "quality"],
+        "aliases": ["forensic", "beneish", "piotroski", "altman", "fraud", "quality", "strength", "canslim"],
         "entries": [
             ("/forensic RELIANCE",          "Beneish M-score + Piotroski F-score + Altman Z'"),
             ("/forensic TCS INFY WIPRO",    "Forensic screen across multiple stocks"),
+            ("/canslim RELIANCE",           "William O'Neil CANSLIM growth-quality framework"),
+            ("/strength MANINDS THERMAX",   "Validate CANSLIM + RS + fundamentals + Piotroski without assumptions"),
             ("",                            "Beneish M > -1.78 = manipulation risk"),
             ("",                            "Piotroski F: 7+ = strong, 0–3 = weak"),
             ("",                            "Altman Z' < 1.1 = distress zone"),
@@ -183,10 +188,12 @@ SECTIONS: dict[str, dict] = {
         "title":  "Seasonal & Macro",
         "icon":   "🌡",
         "color":  "blue",
-        "aliases": ["heat", "cycle", "scenario", "narrative", "voice", "macro", "seasonal", "concall", "global", "dashboard", "dash"],
+        "aliases": ["heat", "cycle", "scenario", "narrative", "voice", "macro", "seasonal", "concall", "global", "dashboard", "dash", "us"],
         "entries": [
             ("/dashboard",              "Auto-refreshing stock-market-TV dashboard + LLM narrative, heatmap, news, movers"),
             ("/dash",                   "Alias for /dashboard"),
+            ("/recap",                  "Last 15-minute intraday market recap from PostgreSQL snapshots"),
+            ("/recap 30",               "Custom-window intraday market recap, e.g. last 30 minutes"),
             ("/heat",                   "Sector seasonal heatmap (current month)"),
             ("/heat 3",                 "Seasonal signals for March"),
             ("/cycle",                  "Economic cycle phase + sector positioning"),
@@ -200,6 +207,12 @@ SECTIONS: dict[str, dict] = {
             ("/ask-voice",              "Record a spoken question and speak the answer"),
             ("/concall TCS",            "Concall NLP: sentiment + themes + guidance"),
             ("/global",                 "Global risk regime and India read-through"),
+            ("/us",                     "US/global market summary + report"),
+            ("/us indices",             "US index tape: SPY, QQQ, Nasdaq, Dow, Russell, VIX"),
+            ("/us sectors",             "US sector ETF rotation"),
+            ("/us stage2",              "US Stage 2 leaders"),
+            ("/us vcp",                 "US VCP setups"),
+            ("/us stock NVDA",          "US stock technical context with report link"),
         ],
     },
     "monitors": {
@@ -248,29 +261,118 @@ SECTIONS: dict[str, dict] = {
             ("",                            "Edit data/holdings.csv: symbol, qty, avg_cost, buy_date"),
         ],
     },
-    "prompts": {
-        "title":  "Prompt Library",
-        "icon":   "📚",
-        "color":  "yellow",
-        "aliases": ["prompts", "prompt", "library", "p7", "p23"],
+    "company": {
+        "title":  "Company Intelligence",
+        "icon":   "🏢",
+        "color":  "cyan",
+        "aliases": ["company", "company-index", "company-xray", "xray", "website", "investor"],
         "entries": [
-            ("/prompts",                "Browse 60 curated prompts"),
-            ("/prompts intraday",       "Filter by category"),
-            ("p<number>",               "Run prompt by number  (e.g. p7, p23)"),
+            ("/company-index DMART",              "Index company website + official investor documents"),
+            ("/company-index DMART --include-documents", "Download discovered official investor documents"),
+            ("/company-index DMART --max-pages 10 --document-limit 5", "Bounded company website/document index run"),
+            ("/company-xray DMART",               "Company + Sector X-Ray from indexed evidence"),
+            ("/company-xray DMART --strict",      "Run X-Ray with strict evidence coverage"),
+            ("/ric company-xray DMART",           "9-step company intelligence workflow"),
         ],
     },
-    "refresh": {
-        "title":  "Data Refresh",
-        "icon":   "🔄",
-        "color":  "green",
-        "aliases": ["refresh", "pipeline", "data", "snapshot", "bhavcopy"],
+    "analyze": {
+        "title":  "Document & Stock Analysis",
+        "icon":   "📄",
+        "color":  "magenta",
+        "aliases": ["analyze", "document", "pdf", "docx", "webpage", "360"],
         "entries": [
+            ("/analyze RELIANCE",                 "Deep 360° stock analysis: technical, fundamental, forensic, news, sentiment"),
+            ("/analyze SWELECTES, SCHAEFFLER",    "Comparative multi-stock analysis"),
+            ("/analyze report.pdf",               "Read and summarize a local PDF document"),
+            ("/analyze annual_report.docx",       "Extract and summarize a Word document"),
+            ("/analyze https://example.com",      "Scrape and analyze a web page"),
+            ("/analyze ~/Downloads/concall.pdf",  "Analyze a concall transcript PDF"),
+        ],
+    },
+    "reports": {
+        "title":  "Reports",
+        "icon":   "📝",
+        "color":  "green",
+        "aliases": ["report", "reports", "markdown", "html", "research-report"],
+        "entries": [
+            ("/report",                    "Generate a formatted report: HTML, Markdown, or PDF"),
+            ("/report sector-rotation",    "Instant sector rotation dashboard from DB"),
+            ("/report stage2",             "Stage 2 universe tracker: leaders and new entrants"),
+            ("/report technical RELIANCE", "Technical analysis report"),
+            ("/report fundamental TCS pdf", "Fundamental report in PDF format"),
+            ("/report forensic INFY md",   "Forensic accounting report in Markdown"),
+            ("/report research HDFCBANK",  "Comprehensive 360° research report"),
+            ("/report intraday SBIN",      "Intraday analysis report"),
+            ("/report canslim TATAMOTORS", "CANSLIM quality report"),
+            ("/report ric ADANIENT pdf",   "RIC investigation report in PDF"),
+            ("/report sector IT",          "Sector analysis report"),
+        ],
+    },
+    "strategy_lab": {
+        "title":  "Strategy Lab & Council",
+        "icon":   "🧪",
+        "color":  "yellow",
+        "aliases": ["backtest", "strategy lab", "strategy-lab", "strategy council", "strategy-council", "council", "simulation"],
+        "entries": [
+            ("/backtest list",             "List EOD Strategy Lab strategies"),
+            ("/strategy-lab validate",     "Validate EOD backtesting data readiness"),
+            ("/strategy-council DMART",    "Iterative strategist + critic EOD simulation"),
+            ("/strategy-council DMART --iterations 3 --horizon 1w,2w,4w", "Run with explicit iterations and horizons"),
+            ("/strategy-council DMART --llm", "Use configured LLM strategist and critics with deterministic fallback"),
+        ],
+    },
+    "data": {
+        "title":  "Data Operations",
+        "icon":   "⚙️",
+        "color":  "green",
+        "aliases": ["refresh", "pipeline", "data", "snapshot", "bhavcopy", "doctor", "data status", "data-status", "refresh data", "refresh-data", "data coverage", "data-coverage", "load", "postgres", "postgresql"],
+        "entries": [
+            ("/data-status",             "Check technical/fundamental DB readiness"),
+            ("/doctor",                 "Check PostgreSQL process, DSN, socket, schemas, tables, and row counts"),
+            ("/doctor --repair",        "Create/repair core PostgreSQL schemas and rerun doctor checks"),
+            ("/refresh-data --check",   "Show readiness refresh plan without running it"),
+            ("/refresh-data",           "Run readiness refresh if DB is stale or partial"),
+            ("/data-coverage NIFTY500", "Audit EOD history coverage for an index"),
+            ("/data-coverage NIFTY500 --backfill", "Audit and yfinance-backfill symbols below threshold"),
+            ("/data-coverage NIFTY500 --details", "List worst-covered symbols"),
             ("/refresh",                "Fast snapshot refresh (stage DB, ~1–2 min)"),
             ("/refresh live",           "Live prices only (~30s)"),
             ("/refresh full",           "Full pipeline: R bhavcopy → analysis → snapshot"),
             ("/refresh analysis",       "Analysis + snapshot (skips aux fetch)"),
             ("/refresh status",         "Check if refresh is running"),
             ("/refresh stop",           "Cancel a running refresh"),
+        ],
+    },
+    "prompts": {
+        "title":  "Prompt Library",
+        "icon":   "📚",
+        "color":  "yellow",
+        "aliases": ["prompts", "prompt", "library", "p7", "p23", "market prompts", "intraday prompts", "technical prompts"],
+        "entries": [
+            ("/prompts",                "Browse 60 curated prompts"),
+            ("/prompts market",         "Market overview prompts"),
+            ("/prompts intraday",       "Filter by category"),
+            ("/prompts technical",      "Technical analysis prompts"),
+            ("/prompts sector",         "Sector analysis prompts"),
+            ("/prompts screener",       "Screener prompts"),
+            ("/prompts fundamentals",   "Fundamentals & valuation prompts"),
+            ("/prompts stock",          "Stock deep-dive prompts"),
+            ("/prompts news",           "News & catalysts prompts"),
+            ("/prompts portfolio",      "Portfolio prompts"),
+            ("/prompts global",         "Global & macro prompts"),
+            ("p<number>",               "Run prompt by number  (e.g. p7, p23)"),
+        ],
+    },
+    "commands": {
+        "title":  "Command Catalog",
+        "icon":   "❓",
+        "color":  "cyan",
+        "aliases": ["command", "commands", "catalog", "all commands"],
+        "entries": [
+            ("/commands",               "Browse every registered slash command by category"),
+            ("/commands alert",         "Filter the exhaustive command catalog by keyword"),
+            ("/help <section>",         "Open curated details for a command family"),
+            ("/help <keyword>",         "Search curated help plus the full slash-command catalog"),
         ],
     },
     "export": {
@@ -306,8 +408,17 @@ SECTIONS: dict[str, dict] = {
         "title":  "Session & Context",
         "icon":   "💬",
         "color":  "cyan",
-        "aliases": ["context", "new", "reset", "session", "clear", "history"],
+        "aliases": ["context", "new", "reset", "session", "clear", "history", "model", "commands", "help"],
         "entries": [
+            ("/commands",           "Browse all slash commands by category"),
+            ("/commands alert",     "Filter commands by keyword, e.g. /commands alert"),
+            ("/help",               "Show this help table of contents"),
+            ("/help charts",        "Open a detailed help section"),
+            ("/help rsi",           "Search help by keyword"),
+            ("/model",              "Show active main chat model/backend"),
+            ("/model gpt-4o",       "Switch main chat backend to OpenAI gpt-4o"),
+            ("/model ollama",       "Switch main chat backend to Ollama default model"),
+            ("/model keyword",      "Disable LLM backend and use deterministic keyword/tool routing"),
             ("/context",            "Show conversation history + token budget"),
             ("/new  or  /reset",    "Fresh session (clears history)"),
             ("/clear  or  cls",     "Clear terminal screen"),
@@ -326,6 +437,16 @@ def _all_entries() -> list[HelpEntry]:
     for key, sec in SECTIONS.items():
         for cmd, desc in sec["entries"]:
             entries.append(HelpEntry(cmd=cmd, desc=desc, section=key))
+    try:
+        import nse_agent
+
+        known = {(entry.cmd, entry.desc) for entry in entries}
+        for cmd, desc in nse_agent._SLASH_COMMANDS:
+            item = (cmd, desc)
+            if item not in known:
+                entries.append(HelpEntry(cmd=cmd, desc=desc, section="commands"))
+    except Exception:
+        pass
     return entries
 
 
