@@ -1,5 +1,7 @@
 from unittest.mock import patch
 
+import pytest
+
 from terminal.entity_resolution import (
     detect_non_symbol_terms,
     resolve_company_alias,
@@ -111,3 +113,57 @@ def test_entity_resolution_tools_are_registered():
     result = call_tool("detect_non_symbol_terms", {"text": "RSI ADX for SAKAR"})
 
     assert result["terms"] == ["ADX", "RSI"]
+
+
+# ---------------------------------------------------------------------------
+# Index-name phrase suppression
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("query", [
+    "lets analyze NIFTY SMALLCAP 100",
+    "how is NIFTY SMALLCAP 100 doing today",
+    "NIFTY SMALLCAP 100 trend",
+    "show me NIFTY SMALLCAP 100 performance",
+    "NIFTY MIDCAP 100",
+    "NIFTY MIDCAP 150 trend",
+    "NIFTY BANK",
+    "NIFTY IT performance",
+    "NIFTY PHARMA",
+    "NIFTY FMCG",
+    "NIFTY OIL & GAS",
+    "NIFTY FINANCIAL SERVICES",
+    "NIFTY NEXT 50",
+    "NIFTY 500",
+    "BANK NIFTY",
+])
+def test_index_name_does_not_surface_as_requested_symbol(query):
+    """Regression: 'lets analyze NIFTY SMALLCAP 100' must not surface
+    SMALLCAP (or any other index component word) as a 'requested' ticker
+    in the symbol-validation gate. The whole index phrase is stripped
+    before tokenization.
+    """
+    result = validate_requested_symbols(query, executed_symbols=[])
+    forbidden = {
+        "SMALLCAP", "MIDCAP", "LARGEMIDCAP", "MICROCAP", "MIDSMALLCAP",
+        "BANK", "IT", "PHARMA", "FMCG", "OIL", "GAS", "FINANCIAL",
+        "SERVICES", "NEXT",
+    }
+    leaked = forbidden & set(result["requested_symbols"])
+    assert not leaked, (
+        f"query={query!r} leaked index-component tokens "
+        f"{sorted(leaked)} into requested_symbols={result['requested_symbols']}"
+    )
+
+
+def test_index_phrase_strip_preserves_following_tickers():
+    """If the user genuinely mentions a ticker after an index phrase
+    (e.g. 'NIFTY 50 vs RELIANCE'), the ticker must survive stripping."""
+    result = validate_requested_symbols("NIFTY 50 vs RELIANCE", executed_symbols=[])
+    assert "RELIANCE" in result["requested_symbols"]
+
+
+def test_index_phrase_strip_preserves_following_ticker_after_and():
+    """'NIFTY AND RELIANCE' — closed-vocabulary stripping must NOT
+    consume the conjunction-gap up to RELIANCE."""
+    result = validate_requested_symbols("NIFTY AND RELIANCE", executed_symbols=[])
+    assert "RELIANCE" in result["requested_symbols"]

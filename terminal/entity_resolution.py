@@ -307,10 +307,57 @@ def resolve_index_or_stock(query: str) -> dict:
     return resolve_stock_entity(query)
 
 
+_INDEX_COMPONENT_WORDS = (
+    # Tier / cap segmentation
+    "50", "100", "200", "250", "500",
+    "NEXT", "TOTAL", "MARKET",
+    "LARGECAP", "MIDCAP", "SMALLCAP", "MICROCAP", "LARGEMIDCAP", "MIDSMALLCAP",
+    # Sectoral / thematic indices published by NSE
+    "BANK", "AUTO", "FMCG", "IT", "MEDIA", "METAL", "PHARMA", "REALTY",
+    "ENERGY", "INFRA", "PSU", "PVT", "PSE", "CPSE", "MNC", "FIN", "SERVICE",
+    "SERVICES", "HEALTHCARE", "COMMODITIES", "OIL", "GAS",
+    "CONSUMER", "DURABLES", "DEFENCE", "MANUFACTURING", "CONSUMPTION",
+    "TOURISM", "RAILWAYS", "CORE", "HOUSING", "MOBILITY", "EV", "AGE",
+    "AUTOMOTIVE", "TRANSPORTATION", "LOGISTICS", "TELECOM",
+    "DIVIDEND", "OPPORTUNITIES", "GROWTH", "SECTORS",
+    "HIGH", "LOW", "BETA", "ALPHA", "QUALITY", "VALUE", "VOLATILITY",
+    "FINANCIAL", "INDIA", "NEW",
+)
+
+
+_INDEX_PHRASE_RE = re.compile(
+    # Uppercase NSE index prefix + optional component words from a closed
+    # vocabulary + optional numeric tier. Closed-vocab matching protects
+    # legitimate tickers that may follow ("NIFTY 50 vs RELIANCE" keeps
+    # RELIANCE; "NIFTY OIL & GAS" is consumed entirely). Case-sensitive
+    # uppercase only — aligned with the upstream tokenizer.
+    r"\b(?:BANK\s+NIFTY|BANKNIFTY|FINNIFTY|MIDCPNIFTY|SENSEX|NIFTY)"
+    r"(?:\s+(?:" + "|".join(_INDEX_COMPONENT_WORDS) + r"|&))*"
+    r"(?:\s+\d{1,4})?"
+)
+
+
+def _strip_index_phrases(text: str) -> str:
+    """Remove NSE/BSE multi-word index names from a query so their component
+    words (SMALLCAP, MIDCAP, BANK, etc.) do not surface as fake tickers in
+    symbol-validation. This is intentionally permissive — extra trailing
+    words like "NIFTY SMALLCAP 100 trend" are partly consumed (trailing
+    'trend' has lowercase so stays). The goal is suppressing index-component
+    tokens, not full NLP parsing.
+    """
+    if not text:
+        return text
+    return _INDEX_PHRASE_RE.sub(" ", text)
+
+
 def _requested_symbol_tokens(text: str) -> list[str]:
     universe = _load_symbol_universe()
     symbols: list[str] = []
-    for raw in re.findall(r"\b[A-Z][A-Z0-9&-]{1,12}\b", text or ""):
+    # Strip well-known multi-word index names first so component tokens
+    # (SMALLCAP, MIDCAP, BANK, etc.) inside e.g. "NIFTY SMALLCAP 100" are
+    # not treated as user-requested tickers.
+    scrubbed = _strip_index_phrases(text or "")
+    for raw in re.findall(r"\b[A-Z][A-Z0-9&-]{1,12}\b", scrubbed):
         token = raw.strip().upper()
         if not re.fullmatch(r"[A-Z0-9&-]{2,12}", token):
             continue
