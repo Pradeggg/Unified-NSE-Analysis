@@ -32,3 +32,46 @@ def test_openai_tool_schemas_match_registry():
         function = schema["function"]
         assert function["description"].strip()
         assert function["parameters"]["type"] == "object"
+
+
+def test_call_tool_drops_unknown_kwargs_from_llm_plans(monkeypatch):
+    """Regression: an LLM-generated tool plan that passes a hallucinated
+    kwarg (e.g. ``get_live_market_overview(timeframe='30m')``) must not
+    crash the executor with a TypeError. ``call_tool`` should filter
+    kwargs to the target function's signature when the function does not
+    accept ``**kwargs``.
+    """
+    from terminal import tools as tools_mod
+
+    calls: list[dict] = []
+
+    def fake_overview():
+        calls.append({})
+        return {"ok": True, "indices": []}
+
+    original = tools_mod.TOOL_REGISTRY["get_live_market_overview"]
+    monkeypatch.setitem(
+        tools_mod.TOOL_REGISTRY,
+        "get_live_market_overview",
+        (fake_overview, original[1], original[2]),
+    )
+
+    result = tools_mod.call_tool(
+        "get_live_market_overview",
+        {"timeframe": "30m", "minutes": 30},
+    )
+
+    assert result == {"ok": True, "indices": []}
+    assert calls == [{}], "unknown kwargs must be dropped before invocation"
+
+
+def test_call_tool_preserves_known_kwargs():
+    """Sanity: known kwargs still flow through unchanged."""
+    from terminal.tools import call_tool
+
+    result = call_tool("get_intraday_market_recap", {"minutes": 30})
+    # The real tool may return data or an error dict depending on environment,
+    # but it must NOT be a TypeError about an unexpected keyword argument.
+    assert isinstance(result, dict)
+    err = result.get("error", "")
+    assert "unexpected keyword argument" not in err

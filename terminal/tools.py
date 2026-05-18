@@ -9041,12 +9041,37 @@ TOOL_REGISTRY.update({
 
 
 def call_tool(name: str, args: dict) -> dict:
-    """Execute a registered tool by name with given arguments."""
+    """Execute a registered tool by name with given arguments.
+
+    Defensively drops any kwargs not present in the target function's
+    signature (unless the function accepts **kwargs). This guards against
+    LLM-generated tool plans that pass extra/hallucinated kwargs
+    (e.g. ``get_live_market_overview(timeframe=...)``) which would
+    otherwise crash the executor with a TypeError.
+    """
+    import inspect
+
     if name not in TOOL_REGISTRY:
         return {"error": f"Unknown tool: {name}"}
     fn = TOOL_REGISTRY[name][0]
+    safe_args = dict(args or {})
     try:
-        return fn(**args)
+        sig = inspect.signature(fn)
+        params = sig.parameters
+        accepts_var_kw = any(
+            p.kind == inspect.Parameter.VAR_KEYWORD for p in params.values()
+        )
+        if not accepts_var_kw:
+            allowed = set(params.keys())
+            unknown = [k for k in safe_args if k not in allowed]
+            if unknown:
+                safe_args = {k: v for k, v in safe_args.items() if k in allowed}
+    except (TypeError, ValueError):
+        # Builtins or C-extension callables may not expose a signature; fall
+        # through and let the call surface its own error.
+        pass
+    try:
+        return fn(**safe_args)
     except Exception as e:
         return {"error": str(e), "tool": name}
 
