@@ -76,6 +76,37 @@ def test_validate_requested_symbols_ignores_indicator_terms():
     assert result["status"] == "ok"
 
 
+def test_validate_requested_symbols_drops_company_name_words():
+    """English words that show up inside multi-word company names — LEVER
+    in HINDUSTAN LEVER, BHARAT, INDIA, LIMITED, etc. — must not be treated
+    as requested tickers. The agent resolves the actual symbol via aliases.
+    """
+    result = validate_requested_symbols(
+        "p18 for HINDUSTAN LEVER",
+        executed_symbols=["HINDUNILVR"],
+    )
+
+    assert "LEVER" not in result["requested_symbols"]
+    assert "HINDUSTAN" not in result["requested_symbols"]
+    assert result["missing_symbols"] == []
+
+
+def test_validate_requested_symbols_still_flags_misspelled_tickers():
+    """If the user types a token that isn't a known ticker and isn't a
+    common English word (e.g. NAVABUPA), it must still surface as a
+    requested-but-not-executed mismatch so silent fuzzy substitutions
+    by the resolver are caught.
+    """
+    result = validate_requested_symbols(
+        "NAVABUPA technical setup",
+        executed_symbols=["TALBROAUTO"],
+    )
+
+    assert "NAVABUPA" in result["requested_symbols"]
+    assert "NAVABUPA" in result["missing_symbols"]
+    assert result["status"] == "mismatch"
+
+
 def test_entity_resolution_tools_are_registered():
     result = call_tool("detect_non_symbol_terms", {"text": "RSI ADX for SAKAR"})
 

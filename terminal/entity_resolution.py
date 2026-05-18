@@ -8,8 +8,17 @@ stock symbols.
 
 from __future__ import annotations
 
+import csv
+import os
 import re
+import threading
+import time
+from pathlib import Path
 from typing import Any
+
+
+_BASE = Path(__file__).resolve().parent.parent
+_DATA = _BASE / "data"
 
 
 TECHNICAL_NON_SYMBOL_TERMS: frozenset[str] = frozenset(
@@ -110,6 +119,75 @@ CONTEXT_NON_SYMBOL_TERMS: frozenset[str] = frozenset(
         "USE",
         "USING",
         "VERDICT",
+        # Common English uppercase words that appear inside company names
+        # (e.g. "HINDUSTAN LEVER", "BHARAT FORGE") but are themselves not
+        # NSE tickers. The agent resolves the actual ticker via aliases.
+        "ABOUT",
+        "AUTO",
+        "BANK",
+        "BEARISH",
+        "BHARAT",
+        "BIG",
+        "BOTTOM",
+        "BREAK",
+        "BREAKDOWN",
+        "BREAKOUT",
+        "BULLISH",
+        "CEMENT",
+        "COAL",
+        "COMPANIES",
+        "COMPANY",
+        "CORP",
+        "CORPORATION",
+        "DAILY",
+        "EVENING",
+        "FINANCE",
+        "FINANCIAL",
+        "GAP",
+        "GAS",
+        "GOOD",
+        "GROUP",
+        "HIGH",
+        "HINDUSTAN",
+        "HOLDINGS",
+        "HOTEL",
+        "HOTELS",
+        "INC",
+        "INDIA",
+        "INDIAN",
+        "INDUSTRIES",
+        "INTERNATIONAL",
+        "LAST",
+        "LEVER",
+        "LIMITED",
+        "LOW",
+        "LTD",
+        "MANUFACTURING",
+        "MARKET",
+        "MONTHLY",
+        "MORNING",
+        "MOTOR",
+        "NATIONAL",
+        "OLD",
+        "PEAK",
+        "PHARMA",
+        "PHARMACEUTICALS",
+        "PIVOT",
+        "POWER",
+        "PRICE",
+        "PRODUCTS",
+        "RANGE",
+        "RESISTANCE",
+        "SERVICES",
+        "STEEL",
+        "SUPPORT",
+        "TECHNOLOGIES",
+        "TECHNOLOGY",
+        "TOP",
+        "TRADING",
+        "TRENDING",
+        "VOLUME",
+        "WEEKLY",
     }
 )
 
@@ -230,18 +308,123 @@ def resolve_index_or_stock(query: str) -> dict:
 
 
 def _requested_symbol_tokens(text: str) -> list[str]:
+    universe = _load_symbol_universe()
     symbols: list[str] = []
     for raw in re.findall(r"\b[A-Z][A-Z0-9&-]{1,12}\b", text or ""):
         token = raw.strip().upper()
+        if not re.fullmatch(r"[A-Z0-9&-]{2,12}", token):
+            continue
+        # Positive ground truth: anything in the real NSE symbol universe is
+        # definitely a ticker — never drop it via skip-lists.
+        if universe and token in universe:
+            symbols.append(token)
+            continue
         if token in TECHNICAL_NON_SYMBOL_TERMS:
             continue
         if token in CONTEXT_NON_SYMBOL_TERMS:
             continue
         if token in {"NSE", "BSE", "PDF", "URL", "HTML", "EOD", "DB", "PG", "API", "LLM", "AI"}:
             continue
-        if re.fullmatch(r"[A-Z0-9&-]{2,12}", token):
-            symbols.append(token)
+        # Token isn't in the universe and isn't a known non-symbol word — keep
+        # it so misspelled tickers (e.g. NAVABUPA) still surface as
+        # "requested but never executed" mismatches downstream.
+        symbols.append(token)
     return list(dict.fromkeys(symbols))
+
+
+# ---------------------------------------------------------------------------
+# Symbol universe loader — preferred ground truth for `_requested_symbol_tokens`
+# ---------------------------------------------------------------------------
+
+_UNIVERSE_LOCK = threading.Lock()
+_UNIVERSE_CACHE: dict[str, Any] = {"symbols": None, "loaded_at": 0.0, "source": None}
+_UNIVERSE_TTL_SECONDS = 60 * 60 * 6  # 6 hours; PG-resident universe rarely changes
+_PG_DSN_DEFAULT = "dbname=nse_market user=nse_admin host=/tmp"
+
+
+def _load_symbol_universe() -> frozenset[str]:
+    """Return the set of valid NSE symbols, cached for 6h.
+
+    Resolution order:
+      1. Test override env var ``NSE_SYMBOL_UNIVERSE`` (comma-separated).
+      2. ``market.equity_eod`` in PostgreSQL (authoritative; ~2700 symbols).
+      3. ``data/nse_sec_full_data.csv`` (fallback when PG unavailable).
+      4. ``data/index_stock_mapping.csv`` (last-resort fallback).
+    Returns an empty set on total failure so callers degrade to legacy
+    skip-list behaviour.
+    """
+    override = os.environ.get("NSE_SYMBOL_UNIVERSE")
+    if override:
+        return frozenset(s.strip().upper() for s in override.split(",") if s.strip())
+
+    with _UNIVERSE_LOCK:
+        cached = _UNIVERSE_CACHE.get("symbols")
+        if cached is not None and (time.time() - _UNIVERSE_CACHE["loaded_at"]) < _UNIVERSE_TTL_SECONDS:
+            return cached
+
+        symbols: set[str] = set()
+        source = "none"
+
+        # 1. PostgreSQL
+        try:
+            import psycopg2  # type: ignore
+            dsn = os.environ.get("PG_DSN", _PG_DSN_DEFAULT)
+            with psycopg2.connect(dsn, connect_timeout=2) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT DISTINCT symbol FROM market.equity_eod")
+                    for (s,) in cur.fetchall():
+                        if s:
+                            symbols.add(str(s).strip().upper())
+            if symbols:
+                source = "market.equity_eod"
+        except Exception:
+            symbols = set()
+
+        # 2. CSV fallback
+        if not symbols:
+            csv_path = _DATA / "nse_sec_full_data.csv"
+            if csv_path.exists():
+                try:
+                    with csv_path.open() as f:
+                        reader = csv.DictReader(f)
+                        for row in reader:
+                            s = (row.get("SYMBOL") or row.get("symbol") or "").strip().upper()
+                            if s:
+                                symbols.add(s)
+                    if symbols:
+                        source = "nse_sec_full_data.csv"
+                except Exception:
+                    pass
+
+        # 3. Index-mapping fallback
+        if not symbols:
+            idx_path = _DATA / "index_stock_mapping.csv"
+            if idx_path.exists():
+                try:
+                    with idx_path.open() as f:
+                        reader = csv.DictReader(f)
+                        for row in reader:
+                            s = (row.get("STOCK_SYMBOL") or "").strip().upper()
+                            if s:
+                                symbols.add(s)
+                    if symbols:
+                        source = "index_stock_mapping.csv"
+                except Exception:
+                    pass
+
+        result = frozenset(symbols)
+        _UNIVERSE_CACHE["symbols"] = result
+        _UNIVERSE_CACHE["loaded_at"] = time.time()
+        _UNIVERSE_CACHE["source"] = source
+        return result
+
+
+def reset_symbol_universe_cache() -> None:
+    """Test hook — clear the cached universe so the next call reloads."""
+    with _UNIVERSE_LOCK:
+        _UNIVERSE_CACHE["symbols"] = None
+        _UNIVERSE_CACHE["loaded_at"] = 0.0
+        _UNIVERSE_CACHE["source"] = None
 
 
 def validate_requested_symbols(query: str, executed_symbols: list[str] | None = None) -> dict:
