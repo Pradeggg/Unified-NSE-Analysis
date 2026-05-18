@@ -1628,6 +1628,147 @@ def run_screener_query(screen_type: str = "stage2", top_n: int = 10) -> dict:
     }
 
 
+def _fetch_nse_index_constituents(index_name: str) -> list[str]:
+    """Fetch live NSE constituents for an equity index."""
+    s = _get_live_session()
+    idx_param = index_name.upper().replace(" ", "%20")
+    r = s.get(f"https://www.nseindia.com/api/equity-stockIndices?index={idx_param}", timeout=10)
+    r.raise_for_status()
+    symbols: list[str] = []
+    for row in r.json().get("data", []) or []:
+        sym = str(row.get("symbol") or "").strip().upper()
+        if sym and sym != index_name.upper() and row.get("priority") != 1:
+            symbols.append(sym)
+    return list(dict.fromkeys(symbols))
+
+
+def _growth_index_names(index_scope: str) -> list[str]:
+    scope = (index_scope or "MIDCAP").strip().upper()
+    if "MID" in scope:
+        return ["NIFTY MIDCAP 50", "NIFTY MIDCAP 100", "NIFTY MIDCAP 150", "NIFTY MIDCAP SELECT"]
+    if "SMALL" in scope:
+        return ["NIFTY SMALLCAP 50", "NIFTY SMALLCAP 100", "NIFTY SMALLCAP 250"]
+    if "500" in scope:
+        return ["NIFTY 500"]
+    return [index_scope.strip().upper() or "NIFTY MIDCAP 150"]
+
+
+def get_long_term_growth_candidates(index_scope: str = "MIDCAP", top_n: int = 12, include_research: bool = True) -> dict:
+    """Rank index constituents for long-term growth research using DB evidence."""
+    index_names = _growth_index_names(index_scope)
+    symbols: list[str] = []
+    warnings_list: list[str] = []
+    source_indices: list[str] = []
+
+    for index_name in index_names:
+        try:
+            fetched = _fetch_nse_index_constituents(index_name)
+            if fetched:
+                source_indices.append(index_name)
+                symbols.extend(fetched)
+        except Exception as exc:
+            warnings_list.append(f"Could not fetch NSE constituents for {index_name}: {exc}")
+
+    symbols = list(dict.fromkeys(symbols))
+    if not symbols:
+        return {
+            "error": f"No live NSE constituents available for {index_scope}",
+            "index_scope": index_scope,
+            "indices": index_names,
+            "warnings": warnings_list,
+        }
+
+    limit = max(1, min(int(top_n or 12), 30))
+    rows: list[tuple] = []
+    snapshot_date = _latest_snapshot_date()
+    try:
+        placeholders = ",".join(["%s"] * len(symbols))
+        rows = _pg_fetchall(
+            f"""
+            SELECT symbol, company_name, sector, stage, price,
+                   investment_score, technical_score, enhanced_fund_score,
+                   financial_strength, sales_growth, earnings_quality,
+                   can_slim_score, relative_strength, change_1m_pct,
+                   rsi, trading_signal
+            FROM scores.stage_snapshots
+            WHERE snapshot_date=(SELECT MAX(snapshot_date) FROM scores.stage_snapshots)
+              AND UPPER(symbol) IN ({placeholders})
+            ORDER BY
+              COALESCE(enhanced_fund_score, 0) DESC NULLS LAST,
+              COALESCE(financial_strength, 0) DESC NULLS LAST,
+              COALESCE(sales_growth, 0) DESC NULLS LAST,
+              COALESCE(investment_score, 0) DESC NULLS LAST,
+              COALESCE(relative_strength, 0) DESC NULLS LAST
+            LIMIT %s
+            """,
+            [*symbols, limit],
+        )
+    except Exception as exc:
+        return {
+            "error": f"PostgreSQL growth-candidate snapshot unavailable: {exc}",
+            "index_scope": index_scope,
+            "indices": source_indices or index_names,
+            "constituent_count": len(symbols),
+            "warnings": warnings_list,
+        }
+
+    cols = [
+        "symbol", "company_name", "sector", "stage", "price",
+        "investment_score", "technical_score", "enhanced_fund_score",
+        "financial_strength", "sales_growth", "earnings_quality",
+        "can_slim_score", "relative_strength", "change_1m_pct",
+        "rsi", "trading_signal",
+    ]
+    candidates: list[dict] = []
+    for row in rows:
+        item = dict(zip(cols, row))
+        item["rs_pct"] = normalize_relative_strength_pct(item.get("relative_strength"))
+        for key in (
+            "price", "investment_score", "technical_score", "enhanced_fund_score",
+            "financial_strength", "sales_growth", "earnings_quality", "can_slim_score",
+            "change_1m_pct", "rsi",
+        ):
+            item[key] = _safe_float(item.get(key), 2)
+        candidates.append(item)
+
+    research_items: list[dict] = []
+    if include_research:
+        for item in candidates[: min(5, len(candidates))]:
+            sym = str(item.get("symbol") or "").strip().upper()
+            if not sym:
+                continue
+            try:
+                sr = scrape_screener_in(sym)
+                if sr.get("error"):
+                    research_items.append({"symbol": sym, "error": sr.get("error"), "missing_evidence": ["screener_fundamentals"]})
+                    continue
+                ratios = sr.get("ratios") or {}
+                research_items.append({
+                    "symbol": sym,
+                    "source_url": sr.get("source_url"),
+                    "market_cap": ratios.get("Market Cap"),
+                    "stock_pe": ratios.get("Stock P/E"),
+                    "roe": ratios.get("ROE"),
+                    "roce": ratios.get("ROCE"),
+                    "pros": (sr.get("pros") or [])[:3],
+                    "cons": (sr.get("cons") or [])[:2],
+                })
+            except Exception as exc:
+                research_items.append({"symbol": sym, "error": str(exc), "missing_evidence": ["screener_fundamentals"]})
+
+    return {
+        "index_scope": index_scope,
+        "indices": source_indices or index_names,
+        "constituent_count": len(symbols),
+        "snapshot_date": snapshot_date,
+        "candidate_count": len(candidates),
+        "candidates": candidates,
+        "research_items": research_items,
+        "warnings": warnings_list,
+        "source_trail": ["NSE live index constituents", "PostgreSQL scores.stage_snapshots", *(["screener.in"] if include_research else [])],
+    }
+
+
 def normalize_relative_strength_pct(value: Any) -> float | None:
     """Normalize relative strength to percentage points without double scaling."""
     if value is None:
@@ -6794,6 +6935,23 @@ TOOL_REGISTRY: dict[str, Any] = {
                 "top_n": {"type": "integer", "default": 10},
             },
             "required": ["screen_type"],
+        },
+    ),
+    "get_long_term_growth_candidates": (
+        get_long_term_growth_candidates,
+        (
+            "Rank live NSE index constituents for long-term growth research using PostgreSQL "
+            "technical/fundamental scores and optional screener.in enrichment. Use for prompts "
+            "asking for long-term growth-potential stocks in midcap/smallcap/index universes."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "index_scope": {"type": "string", "default": "MIDCAP"},
+                "top_n": {"type": "integer", "default": 12},
+                "include_research": {"type": "boolean", "default": True},
+            },
+            "required": [],
         },
     ),
     "validate_strength_watchlist": (

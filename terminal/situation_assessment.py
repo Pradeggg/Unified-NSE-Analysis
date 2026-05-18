@@ -497,7 +497,7 @@ def assess_followup(user_input: str, previous_context: TurnContext | None) -> Si
     )
     if is_report_ref:
         report_path = report_path_for_implicit
-        wants_open = "open" in q or "show it" in q or q.strip() == "open it"
+        wants_open = "open" in q or "show it" in q or q.strip() == "open it" or "show me the report" in q or "show the report" in q
         wants_summarize = any(
             tok in q
             for tok in (
@@ -629,6 +629,19 @@ def assess_followup(user_input: str, previous_context: TurnContext | None) -> Si
             previous_context,
             "A live scan request, but the live analysis scope is ambiguous.",
             "Do you want live quotes, last-30-minute momentum, 15m intraday setups, or news/catalysts for these?",
+        )
+
+    if (
+        ("are these" in q or "were these" in q)
+        and ("stage 2" in q or "stage2" in q or "still" in q)
+        and previous_context.result_items
+    ):
+        # User asks whether the prior result list is still valid — this is
+        # ambiguous (vs. snapshot freshness vs. fresh stage scan vs. live).
+        return _clarify(
+            previous_context,
+            "A revalidation request, but the time-frame is ambiguous.",
+            "Do you want a fresh Stage 2 re-scan on the same symbols, an intraday momentum check, or just the source/freshness of the prior list?",
         )
 
     if _asks_last_window(q) and previous_context.result_type == "stage2_screener":

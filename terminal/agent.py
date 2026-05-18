@@ -1929,6 +1929,17 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
             ]
             return {"intent": "stock_brief", "plan": _with_dynamic_stock_evidence(plan, q, sym_q.upper().replace(" ", ""))}
 
+    growth_research_terms = (
+        "long term growth", "long-term growth", "growth potential", "compounder",
+        "compounders", "quality growth", "deep research", "deep dive research",
+    )
+    if any(term in q for term in growth_research_terms) and any(term in q for term in ("stock", "stocks", "index", "indices", "midcap", "smallcap")):
+        index_scope = "SMALLCAP" if "smallcap" in q or "small cap" in q else ("NIFTY 500" if "nifty 500" in q else "MIDCAP")
+        return {"intent": "long_term_growth_research", "plan": [
+            ("get_long_term_growth_candidates", {"index_scope": index_scope, "top_n": 12, "include_research": True}),
+            ("get_market_breadth", {}),
+        ]}
+
     if any(w in q for w in breadth_words) or q.strip() in {"overview", "market"}:
         plan = [
             ("get_live_market_overview", {}),
@@ -2548,6 +2559,7 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
     live = _get("get_live_market_overview")
     brd  = _get("get_market_breadth")
     scr  = _get("run_screener_query")
+    growth_research = _get("get_long_term_growth_candidates")
     strength = _get("validate_strength_watchlist")
     knowledge = _get("search_market_knowledge")
     cat  = _get("search_latest_catalysts")
@@ -4678,7 +4690,55 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
                     f"60d {c.get('corr_60d')} | {c.get('alert', '—')}"
                 )
 
-    # 5. Screener results
+    # 5. Long-term growth research
+    if growth_research:
+        lines.append("\n▶ LONG-TERM GROWTH RESEARCH")
+        if growth_research.get("error"):
+            lines.append(f"  Error: {growth_research.get('error')}")
+        else:
+            indices = ", ".join(growth_research.get("indices") or [])
+            lines.append(f"  Universe: {growth_research.get('index_scope', '—')}  |  Indices: {indices or '—'}")
+            lines.append(
+                f"  Constituents scanned: {growth_research.get('constituent_count', '—')}  |  "
+                f"Snapshot: {growth_research.get('snapshot_date', '—')}"
+            )
+            lines.append("  Candidate ranking uses enhanced fundamentals, financial strength, sales growth, investment score, and RS.")
+            candidates = growth_research.get("candidates") or []
+            if candidates:
+                lines.append("\n  Top candidates:")
+                for row in candidates[:10]:
+                    rs = row.get("rs_pct")
+                    rs_txt = f"{rs:+.0f}%" if isinstance(rs, (int, float)) else "—"
+                    lines.append(
+                        f"  {row.get('symbol', '—'):<12} {str(row.get('company_name') or '')[:24]:<24} "
+                        f"Stage {row.get('stage', '—'):<8} Inv {row.get('investment_score', '—')} "
+                        f"Fund {row.get('enhanced_fund_score', '—')} Growth {row.get('sales_growth', '—')} RS {rs_txt}"
+                    )
+            research_items = growth_research.get("research_items") or []
+            if research_items:
+                lines.append("\n  Fundamental evidence highlights:")
+                for item in research_items[:5]:
+                    if item.get("error"):
+                        lines.append(f"  - {item.get('symbol', '—')}: missing screener evidence ({item.get('error')})")
+                        continue
+                    ratios = []
+                    for label, key in (("P/E", "stock_pe"), ("ROE", "roe"), ("ROCE", "roce")):
+                        if item.get(key):
+                            ratios.append(f"{label} {item.get(key)}")
+                    lines.append(f"  - {item.get('symbol', '—')}: " + (" | ".join(ratios) if ratios else "ratios unavailable"))
+                    pros = item.get("pros") or []
+                    cons = item.get("cons") or []
+                    if pros:
+                        lines.append("    Pros: " + " | ".join(str(p)[:80] for p in pros[:2]))
+                    if cons:
+                        lines.append("    Cons: " + " | ".join(str(c)[:80] for c in cons[:2]))
+            warnings_list = growth_research.get("warnings") or []
+            if warnings_list:
+                lines.append("\n  Warnings:")
+                for warning in warnings_list[:4]:
+                    lines.append(f"  - {warning}")
+
+    # 5b. Screener results
     if scr:
         lines.append(f"\n▶ SCREENER: {scr.get('screen_type','').upper()}  ({scr.get('count',0)} results)")
         for s in (scr.get("results") or [])[:8]:
@@ -5936,6 +5996,13 @@ class Agent:
                 f"Market: {market_status.compact_label} | "
                 f"Clock: {market_status.clock_label}_"
             )
+        if intent_plan.get("intent") == "long_term_growth_research":
+            source_label = "NSE live index constituents + DB growth scores + screener.in"
+            mode_suffix = (
+                f"\n\n_Mode: Research | Sources: {source_label} | "
+                f"Market: {market_status.compact_label} | "
+                f"Clock: {market_status.clock_label}_"
+            )
         if intent_plan.get("intent") in {
             "youtube_video_analysis", "youtube_channel_latest",
             "youtube_video_transcription", "youtube_channel_transcription",
@@ -5959,6 +6026,7 @@ class Agent:
             "stock_comparison", "portfolio_review",
             "event_calendar",
             "fno_overview", "market_dashboard", "screener",
+            "long_term_growth_research",
             "market_overview", "intraday_index_scan", "intraday_screener",
             "intraday_market_recap", "intraday_setup", "intraday_levels",
             "data_health", "intraday_health",

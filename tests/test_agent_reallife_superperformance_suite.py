@@ -38,6 +38,12 @@ def test_real_life_prompt_routing_matrix_covers_core_workflows():
             [("get_live_market_overview", {}), ("get_market_breadth", {})],
         ),
         (
+            "midcap long-term growth research",
+            "research on long term growth potential stocks in MIDCAP indices, perform a deep research",
+            "long_term_growth_research",
+            [("get_long_term_growth_candidates", {"index_scope": "MIDCAP", "top_n": 12, "include_research": True}), ("get_market_breadth", {})],
+        ),
+        (
             "latest results feed",
             "results in last 2 weeks",
             "results_feed",
@@ -182,6 +188,73 @@ def test_real_life_complex_compound_query_runs_each_part_with_separate_evidence(
     assert "Part 1 of 2: Market overview" in result["answer"]
     assert "Part 2 of 2: latest results for DMART" in result["answer"]
     assert execute_plan.call_count == 2
+
+
+def test_real_life_midcap_growth_research_renders_candidate_evidence_not_movers():
+    agent = Agent()
+    agent.backend = object()
+    agent.backend_name = "TestBackend"
+
+    with patch("terminal.agent._execute_plan") as execute_plan:
+        execute_plan.return_value = [
+            {
+                "tool": "get_long_term_growth_candidates",
+                "args": {"index_scope": "MIDCAP", "top_n": 12, "include_research": True},
+                "result": {
+                    "index_scope": "MIDCAP",
+                    "indices": ["NIFTY MIDCAP 150", "NIFTY MIDCAP SELECT"],
+                    "constituent_count": 150,
+                    "snapshot_date": "2026-05-15",
+                    "candidate_count": 2,
+                    "candidates": [
+                        {
+                            "symbol": "KAYNES",
+                            "company_name": "Kaynes Technology",
+                            "stage": "STAGE_2",
+                            "investment_score": 88.5,
+                            "enhanced_fund_score": 82.0,
+                            "sales_growth": 31.4,
+                            "rs_pct": 24.0,
+                        },
+                        {
+                            "symbol": "KPITTECH",
+                            "company_name": "KPIT Technologies",
+                            "stage": "STAGE_1",
+                            "investment_score": 80.0,
+                            "enhanced_fund_score": 78.0,
+                            "sales_growth": 18.0,
+                            "rs_pct": 11.5,
+                        },
+                    ],
+                    "research_items": [
+                        {
+                            "symbol": "KAYNES",
+                            "stock_pe": "72.4",
+                            "roe": "18.2%",
+                            "roce": "22.1%",
+                            "pros": ["Strong sales growth"],
+                            "cons": ["Premium valuation"],
+                        }
+                    ],
+                },
+            },
+            {
+                "tool": "get_market_breadth",
+                "args": {},
+                "result": {"advances": 320, "declines": 560, "ad_ratio": 0.57, "avg_rs_pct": -0.4},
+            },
+        ]
+
+        result = agent.query("research on long term growth potential stocks in MIDCAP indices, perform a deep research")
+
+    assert result["intent"] == "long_term_growth_research"
+    assert execute_plan.call_args.args[0][0] == (
+        "get_long_term_growth_candidates",
+        {"index_scope": "MIDCAP", "top_n": 12, "include_research": True},
+    )
+    assert "LONG-TERM GROWTH RESEARCH" in result["answer"]
+    assert "KAYNES" in result["answer"]
+    assert "TOP STOCK MOVERS" not in result["answer"]
 
 
 def test_real_life_followup_after_screener_uses_prior_symbols_for_intraday_scan():
