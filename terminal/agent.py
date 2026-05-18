@@ -31,6 +31,7 @@ from .data_readiness import append_readiness_metadata
 from .entity_resolution import TECHNICAL_NON_SYMBOL_TERMS, validate_requested_symbols
 from .evidence_gate import validate_required_tools_executed
 from .situation_assessment import (
+    SituationAssessment,
     TurnContext,
     assess_entity_topic_request,
     assess_followup,
@@ -863,6 +864,7 @@ def _leading_company_phrase(raw_query: str) -> str:
         "analysis", "deep", "dive", "research", "forensic", "risk", "levels",
         "support", "resistance", "target", "targets", "today", "now", "live",
         "scan", "show", "tell", "give", "what", "is", "the", "of", "for",
+        "superperformance", "minervini", "sepa", "vcp", "canslim",
     }
     words: list[str] = []
     for token in re.findall(r"[A-Za-z][A-Za-z0-9&.-]*", raw_query):
@@ -2002,6 +2004,12 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
                     "plan": [("run_screener_query", {"screen_type": eod_screener_aliases[key]})],
                 }
 
+    if any(term in q for term in ("superperformance", "minervini", "sepa")) and any(
+        term in q for term in ("stock", "stocks", "screener", "screen", "find", "show", "scan")
+    ):
+        screen_type = "tight_range" if any(term in q for term in ("vcp", "contraction", "tight", "coiling")) else "high_rs"
+        return {"intent": "screener", "plan": [("run_screener_query", {"screen_type": screen_type})]}
+
     words = re.findall(r"[A-Za-z][A-Za-z0-9\-&\.]+", routing_text)
     skip  = {        "show","me","the","latest","on","for","in","by","during","over","what","is","how","tell",
               "about","give","setup","stock","stocks","sector","nse","india","market","today","brief","full",
@@ -2030,6 +2038,8 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
         w.upper()
         for w in candidates
         if re.fullmatch(r"[A-Z0-9&-]{2,12}", w.upper())
+        and w.upper() not in _SYMBOL_VALIDATION_SKIP
+        and w.upper() not in TECHNICAL_NON_SYMBOL_TERMS
         and (
             w == w.upper()
             or any(ch.isdigit() for ch in w)
@@ -5195,6 +5205,11 @@ class Agent:
         self._history: list[dict] = []
         self._last_symbols: list[str] = []
         self._last_turn_context: TurnContext | None = None
+        # Most recent assistant clarification (set when we render an
+        # ask_clarification turn). The next user input is matched against
+        # its options; the bound_action is executed verbatim without
+        # re-running symbol/entity resolution. Cleared after one turn.
+        self._pending_clarification: SituationAssessment | None = None
 
     @staticmethod
     def _tool_schema_name(schema: dict) -> str:
@@ -5697,6 +5712,97 @@ class Agent:
                 return answer
 
         trace: list[dict] = []
+
+        # ── Clarification reply binding ──────────────────────────────────────
+        # If the previous assistant turn rendered a structured clarification,
+        # match this reply against its options and execute the bound action
+        # verbatim. This bypasses entity/symbol resolution, so a reply like
+        # "B" or "summarize its recommendation" cannot be misread as a new
+        # ticker (e.g. the SWELECTES → TI bug).
+        pending_clarification = self._pending_clarification
+        if pending_clarification is not None:
+            from .situation_assessment import (
+                assessment_from_bound_action,
+                match_clarification_reply,
+            )
+            matched_option = match_clarification_reply(clean_input, pending_clarification)
+            if matched_option is not None:
+                trace.append({
+                    "step": "clarification_reply_binding",
+                    "matched_label": matched_option.label,
+                    "matched_text": matched_option.text,
+                })
+                bound = assessment_from_bound_action(
+                    matched_option.bound_action,
+                    previous_context=self._last_turn_context,
+                )
+                # Clear pending state — one-shot binding.
+                self._pending_clarification = None
+                previous_context = self._last_turn_context or self._conversation_fallback_context(
+                    mode=mode,
+                    source_label=source_label,
+                )
+                # Dispatch the bound assessment via the existing handlers.
+                if bound.decision == "ask_clarification":
+                    answer = render_context_answer(clean_input, bound, previous_context or TurnContext(
+                        user_input="", intent="unknown", mode=mode, tools=[], source_label=source_label,
+                    ))
+                    # New clarification round → store it.
+                    self._pending_clarification = bound
+                    self._remember_interaction(clean_input, answer, [])
+                    return {
+                        "answer": answer,
+                        "trace": trace,
+                        "backend": self.backend_name,
+                        "intent": "clarification_reply_binding",
+                    }
+                if bound.decision == "answer_from_context":
+                    answer = render_context_answer(clean_input, bound, previous_context or TurnContext(
+                        user_input="", intent="unknown", mode=mode, tools=[], source_label=source_label,
+                    ))
+                    self._remember_interaction(clean_input, answer, [])
+                    return {
+                        "answer": answer,
+                        "trace": trace,
+                        "backend": self.backend_name,
+                        "intent": "clarification_reply_binding",
+                    }
+                if bound.decision == "run_tool_plan" and bound.tool_plan:
+                    tool_results = _execute_plan(bound.tool_plan)
+                    trace.extend(tool_results)
+                    synthesis_intent = (
+                        "report_lookup"
+                        if any(name in {"open_report", "read_report", "summarize_report", "get_last_report", "list_generated_reports"} for name, _ in bound.tool_plan)
+                        else "intraday_symbol_scan"
+                    )
+                    answer_body = (
+                        render_assessment_block(bound)
+                        + "\n\n"
+                        + _synthesize_no_llm(synthesis_intent, tool_results)
+                    )
+                    answer_body = _apply_response_guardrails(clean_input, synthesis_intent, tool_results, answer_body)
+                    answer = answer_body + mode_suffix
+                    turn_context = build_turn_context(
+                        user_input=clean_input,
+                        intent="clarification_reply_binding",
+                        mode=mode,
+                        source_label=source_label,
+                        tool_results=tool_results,
+                        answer=answer,
+                    )
+                    self._remember_interaction(clean_input, answer, tool_results, turn_context=turn_context)
+                    return {
+                        "answer": answer,
+                        "trace": trace,
+                        "backend": self.backend_name,
+                        "intent": "clarification_reply_binding",
+                    }
+            else:
+                # User did not pick an option; clear the pending state so we
+                # don't keep trying to bind future replies. Continue with
+                # normal routing.
+                self._pending_clarification = None
+
         entity_assessment = assess_entity_topic_request(clean_input)
         if entity_assessment.applies and entity_assessment.decision == "route_with_entity_topic":
             trace.append({"step": "entity_topic_assessment", "result": entity_assessment.__dict__})
@@ -5744,6 +5850,14 @@ class Agent:
                     source_label=source_label,
                 )
                 answer = render_context_answer(clean_input, assessment, previous_context)
+                # Store the clarification so the next user reply can be
+                # bound to its options instead of re-running symbol/entity
+                # resolution on the reply text.
+                if (
+                    assessment.decision == "ask_clarification"
+                    and assessment.clarification_questions
+                ):
+                    self._pending_clarification = assessment
                 self._remember_interaction(clean_input, answer, [])
                 return {
                     "answer": answer,

@@ -518,6 +518,48 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
         self.assertIn("Global Overnight Context", result["answer"])
         self.assertIn("Current Market Status", result["answer"])
 
+    def test_agent_startup_briefing_prompt_does_not_ask_for_prior_context(self):
+        agent = Agent()
+        agent.backend = object()
+        agent.backend_name = "TestBackend"
+        query = """
+        You are starting a new trading session on Monday, 18 May 2026 at 10:51 IST (live market).
+        NSE equity market is OPEN.
+        Give a comprehensive, investigative morning briefing in this EXACT order:
+
+        ## Good Morning — Market Intelligence Briefing
+
+        ### Global Overnight Context
+        ### Previous Trading Day Recap (NSE)
+        ### Current Market Status
+        """
+
+        with patch("terminal.agent._execute_plan") as execute_plan:
+            execute_plan.return_value = [
+                {"tool": "get_global_market_assessment", "args": {}, "result": {"risk_regime": "mixed"}},
+                {"tool": "get_index_snapshot", "args": {"index_name": "NIFTY 50"}, "result": {"index": "NIFTY 50", "close": 23415.35, "chg_pct": -0.96}},
+                {"tool": "get_index_snapshot", "args": {"index_name": "NIFTY BANK"}, "result": {"index": "NIFTY BANK", "close": 52934.25, "chg_pct": -1.44}},
+                {
+                    "tool": "get_live_market_overview",
+                    "args": {},
+                    "result": {
+                        "source": "NSE live API",
+                        "as_of": "2026-05-18 10:51:31",
+                        "indices": {"NIFTY 50": {"last": 23415.35, "pct_change": -0.96}},
+                        "adv_dec": {"advances": 41, "declines": 460},
+                    },
+                },
+                {"tool": "get_market_breadth", "args": {}, "result": {"advances": 41, "declines": 460, "ad_ratio": 0.09}},
+                {"tool": "get_top_gainers_losers", "args": {"index": "NIFTY 50", "top_n": 3, "direction": "both"}, "result": {"gainers": [], "losers": []}},
+                {"tool": "get_fii_dii_activity", "args": {}, "result": {"data": []}},
+            ]
+            result = agent.query(query)
+
+        self.assertEqual(result["intent"], "startup_morning_briefing")
+        self.assertNotIn("CLARIFICATION NEEDED", result["answer"])
+        self.assertNotIn("Which result should I use", result["answer"])
+        self.assertIn("Current Market Status", result["answer"])
+
     def test_agent_executes_morning_briefing_without_llm_knowledge_lookup(self):
         agent = Agent()
         agent.backend = object()

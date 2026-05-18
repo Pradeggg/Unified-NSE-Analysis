@@ -70,6 +70,14 @@ class MarketDashboardViewTests(unittest.TestCase):
         self.assertIn("Basis 42", line)
         self.assertIn("CoC 8.4%", line)
 
+    def test_dashboard_live_ticker_colors_positive_and_negative_moves(self):
+        ticker = nse_agent._dashboard_ticker(_dashboard_snapshot(), width=220)
+
+        self.assertIn("[green]NIFTY 50 23,600 +0.42%[/]", ticker)
+        self.assertIn("[red]NIFTY IT 28,200 -0.55%[/]", ticker)
+        self.assertIn("[green]▲ AAA +6.10%[/]", ticker)
+        self.assertIn("[red]▼ ZZZ -5.40%[/]", ticker)
+
     def test_dashboard_renderable_includes_recommendations_and_derivatives_context(self):
         text = _render_text(nse_agent._market_dashboard_renderable(_dashboard_snapshot(), width=160, height=44))
 

@@ -2023,21 +2023,57 @@ def _dashboard_ticker(snapshot: dict, width: int) -> str:
     live = snapshot.get("get_live_market_overview") or {}
     movers = snapshot.get("get_top_gainers_losers") or {}
     indices = live.get("indices") or {}
-    parts = []
+
+    def _ticker_item(text: str, pct: object, *, direction: str | None = None) -> str:
+        if isinstance(pct, (int, float)):
+            if pct > 0:
+                return f"[green]{text}[/]"
+            if pct < 0:
+                return f"[red]{text}[/]"
+            return f"[yellow]{text}[/]"
+        if direction == "up":
+            return f"[green]{text}[/]"
+        if direction == "down":
+            return f"[red]{text}[/]"
+        return f"[dim]{text}[/]"
+
+    entries: list[tuple[str, str]] = []
     for name in ("NIFTY 50", "NIFTY BANK", "NIFTY IT", "NIFTY METAL"):
         row = indices.get(name) or {}
         if row:
-            parts.append(f"{name} {_dashboard_fmt_num(row.get('last', row.get('close')), 0)} {_dashboard_fmt_pct(row.get('pct_change', row.get('chg_pct')))}")
+            pct = row.get("pct_change", row.get("chg_pct"))
+            text = f"{name} {_dashboard_fmt_num(row.get('last', row.get('close')), 0)} {_dashboard_fmt_pct(pct)}"
+            entries.append((_ticker_item(text, pct), text))
     for row in (movers.get("gainers") or [])[:2]:
-        parts.append(f"▲ {row.get('symbol')} {_dashboard_fmt_pct(row.get('pct_change'))}")
+        pct = row.get("pct_change")
+        text = f"▲ {row.get('symbol')} {_dashboard_fmt_pct(pct)}"
+        entries.append((_ticker_item(text, pct, direction="up"), text))
     for row in (movers.get("losers") or [])[:2]:
-        parts.append(f"▼ {row.get('symbol')} {_dashboard_fmt_pct(row.get('pct_change'))}")
-    tape = "  •  ".join(parts) or "waiting for live tape"
-    if len(tape) <= max(20, width - 20):
-        return tape
-    offset = int(time.time() / 2) % len(tape)
-    rolled = (tape + "  •  " + tape)[offset: offset + max(20, width - 20)]
-    return rolled
+        pct = row.get("pct_change")
+        text = f"▼ {row.get('symbol')} {_dashboard_fmt_pct(pct)}"
+        entries.append((_ticker_item(text, pct, direction="down"), text))
+
+    if not entries:
+        return "[dim]waiting for live tape[/dim]"
+
+    visible_budget = max(20, width - 20)
+    plain_tape = "  •  ".join(plain for _styled, plain in entries)
+    if len(plain_tape) <= visible_budget:
+        return "  •  ".join(styled for styled, _plain in entries)
+
+    offset = int(time.time() / 2) % len(entries)
+    rotated = entries[offset:] + entries[:offset]
+    styled_parts: list[str] = []
+    visible_len = 0
+    for styled, plain in rotated:
+        sep_len = 5 if styled_parts else 0
+        next_len = visible_len + sep_len + len(plain)
+        if styled_parts and next_len > visible_budget:
+            break
+        styled_parts.append(styled)
+        visible_len = next_len
+
+    return "  •  ".join(styled_parts or [rotated[0][0]])
 
 
 def _dashboard_breadth_flow_line(snapshot: dict, flows: list[str], *, compact: bool = False) -> str:

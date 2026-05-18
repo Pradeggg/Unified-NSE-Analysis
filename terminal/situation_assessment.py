@@ -23,6 +23,28 @@ class TurnContext:
 
 
 @dataclass(frozen=True)
+class ClarificationOption:
+    """One selectable answer in a structured clarification question.
+
+    `bound_action` is an opaque payload the agent executes verbatim when
+    the user picks this option — typically `{"decision": "run_tool_plan",
+    "tool_plan": [...], "resolved_entities": [...]}`. The agent must NOT
+    re-resolve symbols or topics from the reply text; this binding is the
+    authoritative routing.
+    """
+    label: str
+    text: str
+    bound_action: dict = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class ClarificationQuestion:
+    prompt: str
+    options: tuple[ClarificationOption, ...] = ()
+    default_label: str = ""
+
+
+@dataclass(frozen=True)
 class SituationAssessment:
     applies: bool
     decision: str
@@ -30,7 +52,8 @@ class SituationAssessment:
     user_is_asking: str = ""
     context_found: str = ""
     source_assessment: str = ""
-    clarification_question: str = ""
+    clarification_question: str = ""  # legacy single-line; kept for back-compat
+    clarification_questions: tuple[ClarificationQuestion, ...] = ()
     resolved_entities: list[str] = field(default_factory=list)
     evidence_plan: list[str] = field(default_factory=list)
     tool_plan: list[tuple[str, dict[str, Any]]] = field(default_factory=list)
@@ -82,6 +105,21 @@ _CONTEXTUAL_PATTERNS = (
     "the report",
     "previous conversation",
     "same for",
+    # Implicit prior-report references — only meaningful when the previous
+    # turn produced a report, but cheap enough to always include in the
+    # trigger so the deterministic chain gets a chance to bind context.
+    "summarize",
+    "summarise",
+    "summary",
+    "recap",
+    "tldr",
+    "tl;dr",
+    "its recommendation",
+    "the recommendation",
+    "its conclusion",
+    "the conclusion",
+    "what does it say",
+    "what does the report say",
 )
 _AFFIRMATIVE_FOLLOWUPS = {
     "yes",
@@ -132,6 +170,16 @@ def needs_situation_assessment(user_input: str) -> bool:
     # Bypass: agent-generated tool-execution prompts (e.g. /analyze expansion) are
     # not contextual follow-ups even when they reference "the report" in instructions.
     if "analyze_document tool with source=" in q or "use the analyze_document tool" in q:
+        return False
+    # Bypass: the startup/session briefing prompt is a first-class direct
+    # request. It contains words such as "previous trading day" and "today",
+    # which are contextual in ordinary follow-ups but not here.
+    if (
+        "morning briefing" in q
+        or "startup briefing" in q
+        or "market intelligence briefing" in q
+        or ("starting a new trading session" in q and "global overnight context" in q)
+    ):
         return False
     return q in _AFFIRMATIVE_FOLLOWUPS or q.startswith("search ") or any(pattern in q for pattern in _CONTEXTUAL_PATTERNS) or any(
         q.startswith(command + " ") for command in _ENTITY_TOPIC_COMMANDS
@@ -443,9 +491,29 @@ def assess_followup(user_input: str, previous_context: TurnContext | None) -> Si
             ],
         )
 
-    if _asks_report_reference(q):
-        report_path = _report_path_from_context(previous_context)
-        if report_path and ("open" in q or "show" in q):
+    report_path_for_implicit = _report_path_from_context(previous_context)
+    is_report_ref = _asks_report_reference(q) or (
+        bool(report_path_for_implicit) and _refers_to_prior_report_implicitly(q)
+    )
+    if is_report_ref:
+        report_path = report_path_for_implicit
+        wants_open = "open" in q or "show it" in q or q.strip() == "open it"
+        wants_summarize = any(
+            tok in q
+            for tok in (
+                "summarize",
+                "summarise",
+                "summary",
+                "recap",
+                "tl;dr",
+                "tldr",
+                "recommendation",
+                "conclusion",
+                "what does it say",
+                "what does the report say",
+            )
+        )
+        if report_path and wants_open and not wants_summarize:
             return SituationAssessment(
                 applies=True,
                 decision="run_tool_plan",
@@ -461,7 +529,7 @@ def assess_followup(user_input: str, previous_context: TurnContext | None) -> Si
                     "Open that exact report rather than searching unrelated report types.",
                 ],
             )
-        if report_path and "result" in q:
+        if report_path and (wants_summarize or "result" in q):
             return SituationAssessment(
                 applies=True,
                 decision="run_tool_plan",
@@ -476,11 +544,62 @@ def assess_followup(user_input: str, previous_context: TurnContext | None) -> Si
                     ("summarize_report", {"path": report_path}),
                 ],
                 plan=[
-                    "Resolve 'the report' to the prior report path from conversation context.",
+                    "Resolve the implicit report reference to the prior report path from conversation context.",
                     "Read and summarize the report before making any statement about its result.",
-                    "If price-performance evaluation is needed, ask for the evaluation window.",
+                    "Do not re-resolve any words from the reply as new tickers.",
                 ],
             )
+        # Genuinely ambiguous — ask with structured options. Each option
+        # carries a bound_action so the reply binds straight to the tool
+        # plan without re-running symbol resolution.
+        options: list[ClarificationOption] = []
+        if report_path:
+            options = [
+                ClarificationOption(
+                    label="A",
+                    text="Open the report",
+                    bound_action={
+                        "decision": "run_tool_plan",
+                        "tool_plan": [("open_report", {"path": report_path})],
+                        "evidence_plan": ["open_report"],
+                        "resolved_entities": list(previous_context.symbols),
+                        "user_is_asking": "Open the prior report referenced by the previous conversation.",
+                        "context_found": _report_context_found(previous_context, report_path),
+                    },
+                ),
+                ClarificationOption(
+                    label="B",
+                    text="Summarize its recommendation",
+                    bound_action={
+                        "decision": "run_tool_plan",
+                        "tool_plan": [
+                            ("read_report", {"path": report_path, "max_chars": 12000}),
+                            ("summarize_report", {"path": report_path}),
+                        ],
+                        "evidence_plan": ["read_report", "summarize_report"],
+                        "resolved_entities": list(previous_context.symbols),
+                        "user_is_asking": "Summarize the prior report's recommendation.",
+                        "context_found": _report_context_found(previous_context, report_path),
+                    },
+                ),
+                ClarificationOption(
+                    label="C",
+                    text="Compare report result against later price action",
+                    bound_action={
+                        "decision": "ask_clarification",
+                        "clarification_questions": (
+                            ClarificationQuestion(
+                                prompt="What evaluation window should I use?",
+                                options=(
+                                    ClarificationOption(label="A", text="1 week"),
+                                    ClarificationOption(label="B", text="1 month"),
+                                    ClarificationOption(label="C", text="3 months"),
+                                ),
+                            ),
+                        ),
+                    },
+                ),
+            ]
         return SituationAssessment(
             applies=True,
             decision="ask_clarification",
@@ -492,6 +611,13 @@ def assess_followup(user_input: str, previous_context: TurnContext | None) -> Si
                 "Do you want me to open the report, summarize its recommendation, "
                 "or compare the report result against later price action?"
             ),
+            clarification_questions=(
+                ClarificationQuestion(
+                    prompt="What would you like me to do with the prior report?",
+                    options=tuple(options),
+                    default_label="B" if options else "",
+                ),
+            ) if options else (),
             plan=[
                 "Use prior conversation/report context.",
                 "Ask for the desired report evaluation before running new tools.",
@@ -537,6 +663,24 @@ def assess_followup(user_input: str, previous_context: TurnContext | None) -> Si
                 "Do not infer unsupported live, historical, or derivative evidence.",
             ],
         )
+
+    # Deterministic chain exhausted. If there's genuine prior context
+    # (symbols, a report path, or a result list) to bind to, escalate
+    # to the premium LLM tier. It returns applies=False on any error so
+    # the caller falls through to the normal LLM router safely.
+    has_prior_context = bool(
+        previous_context.symbols
+        or previous_context.result_items
+        or previous_context.result_summary
+    )
+    if has_prior_context:
+        try:
+            from .assessment_llm import llm_assess_followup
+            llm_assessment = llm_assess_followup(user_input, previous_context)
+        except Exception:
+            llm_assessment = SituationAssessment(applies=False, decision="fallback_to_router")
+        if llm_assessment.applies:
+            return llm_assessment
 
     return SituationAssessment(applies=False, decision="fallback_to_router")
 
@@ -668,6 +812,123 @@ def request_clarification(question: str, reason: str = "") -> dict:
     }
 
 
+def match_clarification_reply(
+    user_input: str,
+    pending: SituationAssessment | None,
+) -> ClarificationOption | None:
+    """Match a user's reply against the pending clarification's options.
+
+    Accepts:
+      - Single-letter (case-insensitive): "A", "b", "C."
+      - Exact option text (case-insensitive substring): "summarize its recommendation"
+      - Numeric index: "1", "2"
+
+    Returns the matched ClarificationOption (with its bound_action) or
+    None if no clean match. Returning None lets the caller fall through
+    to normal routing, e.g. when the user ignores the clarification and
+    types a completely new query.
+    """
+    if not pending or pending.decision != "ask_clarification" or not pending.clarification_questions:
+        return None
+    text = (user_input or "").strip()
+    if not text:
+        return None
+
+    # Flatten options across all questions; in practice we ask one at a
+    # time but the data model permits multi-question rounds.
+    all_options: list[ClarificationOption] = []
+    for q in pending.clarification_questions:
+        all_options.extend(q.options)
+    if not all_options:
+        return None
+
+    text_norm = text.lower().strip().rstrip(".!?,")
+
+    # 1. Single letter match (most common reply).
+    if len(text_norm) == 1 and text_norm.isalpha():
+        for opt in all_options:
+            if opt.label.lower() == text_norm:
+                return opt
+
+    # 2. Letter followed by punctuation/word: "A.", "A — open report"
+    first_token = re.split(r"[\s\W]+", text_norm, maxsplit=1)[0]
+    if first_token and len(first_token) == 1 and first_token.isalpha():
+        for opt in all_options:
+            if opt.label.lower() == first_token:
+                return opt
+
+    # 3. Numeric index "1" / "2" → A / B / C.
+    if text_norm.isdigit():
+        idx = int(text_norm) - 1
+        if 0 <= idx < len(all_options):
+            return all_options[idx]
+
+    # 4. Substring match against option text (longest-first to avoid
+    #    "summarize" partially matching multiple options).
+    by_text_len = sorted(all_options, key=lambda o: -len(o.text))
+    for opt in by_text_len:
+        opt_norm = opt.text.lower().strip()
+        if opt_norm and opt_norm in text_norm:
+            return opt
+    # Loose token overlap: at least 2 distinctive option words present.
+    for opt in by_text_len:
+        opt_tokens = {t for t in re.findall(r"[a-z]{4,}", opt.text.lower())}
+        if not opt_tokens:
+            continue
+        reply_tokens = set(re.findall(r"[a-z]{4,}", text_norm))
+        if len(opt_tokens & reply_tokens) >= max(2, len(opt_tokens) // 2):
+            return opt
+    return None
+
+
+def assessment_from_bound_action(
+    bound_action: dict,
+    previous_context: TurnContext | None = None,
+) -> SituationAssessment:
+    """Convert a ClarificationOption.bound_action payload into a SituationAssessment.
+
+    The payload is the authoritative routing for the user's clarification
+    reply; we wrap it so the agent's existing execution paths
+    (run_tool_plan / answer_from_context / ask_clarification) can dispatch
+    it without changes.
+    """
+    decision = str(bound_action.get("decision") or "answer_from_context")
+    raw_plan = bound_action.get("tool_plan") or []
+    tool_plan: list[tuple[str, dict[str, Any]]] = []
+    for item in raw_plan:
+        if isinstance(item, tuple) and len(item) == 2:
+            tool_plan.append((str(item[0]), dict(item[1] or {})))
+        elif isinstance(item, list) and len(item) == 2:
+            tool_plan.append((str(item[0]), dict(item[1] or {})))
+        elif isinstance(item, dict) and "tool" in item:
+            tool_plan.append((str(item["tool"]), dict(item.get("args") or {})))
+
+    raw_questions = bound_action.get("clarification_questions") or ()
+    questions: tuple[ClarificationQuestion, ...]
+    if raw_questions and all(isinstance(q, ClarificationQuestion) for q in raw_questions):
+        questions = tuple(raw_questions)
+    else:
+        questions = ()
+
+    return SituationAssessment(
+        applies=True,
+        decision=decision,
+        confidence=str(bound_action.get("confidence") or "high"),
+        user_is_asking=str(bound_action.get("user_is_asking") or "Clarification reply executed."),
+        context_found=str(bound_action.get("context_found") or (previous_context.result_summary if previous_context else "")),
+        source_assessment=str(bound_action.get("source_assessment") or ""),
+        clarification_question=str(bound_action.get("clarification_question") or ""),
+        clarification_questions=questions,
+        resolved_entities=list(bound_action.get("resolved_entities") or (previous_context.symbols if previous_context else [])),
+        evidence_plan=list(bound_action.get("evidence_plan") or []),
+        tool_plan=tool_plan,
+        plan=list(bound_action.get("plan") or [
+            "Executed the user's clarification choice via the bound action.",
+            "Did not re-resolve any symbols/topics from the reply text.",
+        ]),
+    )
+
+
 def render_assessment_block(assessment: SituationAssessment) -> str:
     lines = ["▶ SITUATION ASSESSMENT"]
     lines.append(f"  User is asking:   {assessment.user_is_asking or 'Unclear contextual follow-up.'}")
@@ -677,6 +938,32 @@ def render_assessment_block(assessment: SituationAssessment) -> str:
     if assessment.plan:
         lines.append("  Plan:")
         lines.extend(f"    {idx}. {step}" for idx, step in enumerate(assessment.plan, start=1))
+    return "\n".join(lines)
+
+
+def _render_structured_clarifications(
+    questions: tuple[ClarificationQuestion, ...],
+    legacy_question: str = "",
+) -> str:
+    """Render numbered questions with [A]/[B]/[C] options.
+
+    Falls back to the legacy single-line clarification if no structured
+    questions are present.
+    """
+    if not questions:
+        if legacy_question:
+            return f"▶ CLARIFICATION NEEDED\n  {legacy_question}"
+        return "▶ CLARIFICATION NEEDED\n  (no question provided)"
+
+    lines: list[str] = ["▶ CLARIFICATION NEEDED"]
+    for q_idx, q in enumerate(questions, start=1):
+        lines.append(f"  Q{q_idx}. {q.prompt}")
+        for opt in q.options:
+            marker = "*" if opt.label == q.default_label else " "
+            lines.append(f"      [{opt.label}]{marker} {opt.text}")
+        if len(questions) > 1:
+            lines.append("")
+    lines.append("  Reply with the option letter (e.g. \"A\") or the option text.")
     return "\n".join(lines)
 
 
@@ -690,8 +977,7 @@ def render_context_answer(
     if assessment.decision == "ask_clarification":
         return (
             f"{block}\n\n"
-            f"▶ CLARIFICATION NEEDED\n"
-            f"  {assessment.clarification_question}\n\n"
+            f"{_render_structured_clarifications(assessment.clarification_questions, assessment.clarification_question)}\n\n"
             f"━━━ Not investment advice. For research and learning only. ━━━"
         )
 
@@ -750,6 +1036,38 @@ def _asks_report_reference(q: str) -> bool:
         or "the report" in q
         or "last report" in q
         or "previous report" in q
+    )
+
+
+def _refers_to_prior_report_implicitly(q: str) -> bool:
+    """Match phrasings that imply the prior report without saying 'the report'.
+
+    Used when previous_context has a report_path. Examples:
+      'summarize its recommendation'
+      'what does it say'
+      'recap the recommendation'
+      'open it'
+    """
+    return any(
+        phrase in q
+        for phrase in (
+            "summarize",
+            "summarise",
+            "summary",
+            "recap",
+            "recapitulate",
+            "tl;dr",
+            "tldr",
+            "what does it say",
+            "what does the report say",
+            "what did it conclude",
+            "its recommendation",
+            "the recommendation",
+            "its conclusion",
+            "the conclusion",
+            "open it",
+            "show it",
+        )
     )
 
 

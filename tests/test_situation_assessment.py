@@ -64,6 +64,15 @@ def test_contextual_source_questions_trigger_assessment():
 def test_direct_queries_do_not_trigger_assessment():
     assert not needs_situation_assessment("show Stage 2 stocks")
     assert not needs_situation_assessment("RELIANCE technical setup")
+    assert not needs_situation_assessment(
+        """
+        You are starting a new trading session.
+        Give a comprehensive, investigative morning briefing.
+        Global Overnight Context.
+        Previous Trading Day Recap.
+        Current Market Status.
+        """
+    )
 
 
 def test_entity_topic_assessment_resolves_search_alias_before_topic():
@@ -543,3 +552,160 @@ def test_request_clarification_contract():
 
     assert result["decision"] == "ask_clarification"
     assert result["clarification_question"] == "Which report should I use?"
+
+
+# ─── Phase 1/2: structured clarifications + reply binding ───────────────────
+
+
+def _report_context() -> TurnContext:
+    """Realistic prior turn context: /analyze SWELECTES produced a report."""
+    return TurnContext(
+        user_input="/analyze SWELECTES",
+        intent="entity_topic_command",
+        mode="research",
+        tools=["comprehensive_stock_research"],
+        source_label="EOD CSV + DB snapshot",
+        symbols=["SWELECTES"],
+        result_items=[
+            "/Users/x/reports/generated/SWELECTES_research_20260518_103059.html",
+        ],
+        result_summary="Report saved.",
+    )
+
+
+def test_summarize_its_recommendation_routes_to_prior_report_not_a_new_ticker():
+    """Regression for SWELECTES → TI: implicit prior-report references must
+    bind to the previous report path and NEVER trigger fresh symbol
+    resolution on words like 'its' / 'summarize' / 'recommendation'."""
+    ctx = _report_context()
+    assessment = assess_followup("summarize its recommendation", ctx)
+    assert assessment.decision == "run_tool_plan"
+    tools = [name for name, _ in assessment.tool_plan]
+    assert tools == ["read_report", "summarize_report"]
+    # Crucial: the bound args use the SWELECTES report path verbatim.
+    assert all(
+        args.get("path", "").endswith("SWELECTES_research_20260518_103059.html")
+        for _, args in assessment.tool_plan
+    )
+    assert assessment.resolved_entities == ["SWELECTES"]
+
+
+def test_implicit_report_followup_phrasings_all_resolve_to_summarize():
+    ctx = _report_context()
+    for phrasing in (
+        "summarize",
+        "summary",
+        "recap",
+        "tl;dr",
+        "what does it say",
+        "its conclusion",
+        "the recommendation",
+    ):
+        a = assess_followup(phrasing, ctx)
+        assert a.decision == "run_tool_plan", f"phrasing={phrasing!r}"
+        assert [n for n, _ in a.tool_plan] == ["read_report", "summarize_report"]
+
+
+def test_open_it_routes_to_open_report():
+    ctx = _report_context()
+    a = assess_followup("open it", ctx)
+    assert a.decision == "run_tool_plan"
+    assert [n for n, _ in a.tool_plan] == ["open_report"]
+
+
+def test_ambiguous_report_followup_emits_structured_options_with_bound_actions():
+    """When the user query is too vague to bind, emit Q1 with [A]/[B]/[C]
+    options whose bound_actions encode the full tool plan — so the next
+    reply skips entity resolution."""
+    ctx = _report_context()
+    # Use a query that triggers _asks_report_reference but neither summarize
+    # nor open intent — for example, just "the report".
+    a = assess_followup("the report", ctx)
+    assert a.decision == "ask_clarification"
+    assert len(a.clarification_questions) == 1
+    q = a.clarification_questions[0]
+    assert len(q.options) >= 3
+    labels = [opt.label for opt in q.options]
+    assert labels[:3] == ["A", "B", "C"]
+    # B (summarize) must carry a bound tool plan against the same report.
+    summarize_opt = next(o for o in q.options if o.label == "B")
+    assert summarize_opt.bound_action["decision"] == "run_tool_plan"
+    plan = summarize_opt.bound_action["tool_plan"]
+    assert plan[0][0] == "read_report"
+    assert plan[0][1]["path"].endswith("SWELECTES_research_20260518_103059.html")
+
+
+def test_structured_clarification_renders_numbered_questions_with_options():
+    from terminal.situation_assessment import (
+        ClarificationOption,
+        ClarificationQuestion,
+    )
+
+    a = SituationAssessment(
+        applies=True,
+        decision="ask_clarification",
+        confidence="medium",
+        clarification_questions=(
+            ClarificationQuestion(
+                prompt="What would you like me to do?",
+                options=(
+                    ClarificationOption(label="A", text="Open the report"),
+                    ClarificationOption(label="B", text="Summarize its recommendation"),
+                ),
+                default_label="B",
+            ),
+        ),
+    )
+    rendered = render_context_answer("the report", a, _report_context())
+    assert "Q1. What would you like me to do?" in rendered
+    assert "[A]  Open the report" in rendered
+    assert "[B]* Summarize its recommendation" in rendered
+    assert "Reply with the option letter" in rendered
+
+
+def test_match_clarification_reply_accepts_letter_text_and_numeric():
+    from terminal.situation_assessment import (
+        ClarificationOption,
+        ClarificationQuestion,
+        match_clarification_reply,
+    )
+
+    opts = (
+        ClarificationOption(label="A", text="Open the report"),
+        ClarificationOption(label="B", text="Summarize its recommendation"),
+        ClarificationOption(label="C", text="Compare result"),
+    )
+    pending = SituationAssessment(
+        applies=True,
+        decision="ask_clarification",
+        clarification_questions=(
+            ClarificationQuestion(prompt="?", options=opts),
+        ),
+    )
+    assert match_clarification_reply("A", pending).label == "A"
+    assert match_clarification_reply("b.", pending).label == "B"
+    assert match_clarification_reply("2", pending).label == "B"
+    assert match_clarification_reply(
+        "summarize its recommendation", pending
+    ).label == "B"
+    assert match_clarification_reply("nope", pending) is None
+    assert match_clarification_reply("", pending) is None
+
+
+def test_assessment_from_bound_action_preserves_tool_plan():
+    from terminal.situation_assessment import assessment_from_bound_action
+
+    asm = assessment_from_bound_action(
+        {
+            "decision": "run_tool_plan",
+            "tool_plan": [
+                ("read_report", {"path": "/tmp/x.html", "max_chars": 12000}),
+                ("summarize_report", {"path": "/tmp/x.html"}),
+            ],
+            "resolved_entities": ["SWELECTES"],
+        },
+        previous_context=_report_context(),
+    )
+    assert asm.decision == "run_tool_plan"
+    assert asm.tool_plan[0] == ("read_report", {"path": "/tmp/x.html", "max_chars": 12000})
+    assert asm.resolved_entities == ["SWELECTES"]
