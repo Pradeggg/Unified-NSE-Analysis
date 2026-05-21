@@ -1,10 +1,12 @@
 import json
 from datetime import date, datetime
+from pathlib import Path
 
 import pandas as pd
 
 from terminal.recommendation_report import (
     GroundedRecommendation,
+    RecommendationReportOptions,
     RecommendationLabel,
     RecommendationInputData,
     SubjectEvidence,
@@ -13,7 +15,9 @@ from terminal.recommendation_report import (
     build_recommendation_evidence_pack,
     build_technical_profile,
     classify_fundamentals,
+    generate_recommendation_report,
     make_recommendation,
+    parse_recommendation_report_args,
     pct_change_from_lookback,
     render_recommendation_markdown,
     save_evidence_json,
@@ -65,6 +69,16 @@ def test_build_technical_profile_computes_grounded_fields():
     assert profile.missing_evidence == []
 
 
+def test_parse_recommendation_report_args_supports_format_watchlist_and_top():
+    opts = parse_recommendation_report_args(
+        ["recommendation", "--watchlist", "AAA,BBB", "--top", "12", "--format", "md"]
+    )
+
+    assert opts.output_format == "md"
+    assert opts.watchlist == ["AAA", "BBB"]
+    assert opts.top_n == 12
+
+
 def _history(symbol: str, start: float = 100.0, rows: int = 240) -> pd.DataFrame:
     return pd.DataFrame(
         [
@@ -80,6 +94,38 @@ def _history(symbol: str, start: float = 100.0, rows: int = 240) -> pd.DataFrame
             for idx in range(rows)
         ]
     )
+
+
+def test_generate_recommendation_report_with_injected_data_writes_report_and_evidence(tmp_path):
+    data = RecommendationInputData(
+        index_history=_history("NIFTY 50"),
+        equity_history=_history("AAA"),
+        snapshots=pd.DataFrame(
+            [
+                {
+                    "symbol": "AAA",
+                    "sector": "Capital Goods",
+                    "stage": "STAGE_2",
+                    "technical_score": 88,
+                    "relative_strength": 32,
+                    "trading_signal": "BUY",
+                    "investment_score": 82,
+                }
+            ]
+        ),
+        fundamentals=pd.DataFrame(
+            [{"symbol": "AAA", "roe": 18, "roce": 24, "stock_pe": 22, "interest_coverage": 9}]
+        ),
+    )
+    opts = RecommendationReportOptions(output_format="md", output_dir=tmp_path)
+
+    result = generate_recommendation_report(options=opts, input_data=data, persist=False)
+
+    assert result["success"] is True
+    assert result["format"] == "md"
+    assert Path(result["path"]).exists()
+    assert Path(result["evidence_path"]).exists()
+    assert result["recommendation_count"] >= 1
 
 
 def test_build_evidence_pack_contains_indices_sectors_stocks_and_portfolio():

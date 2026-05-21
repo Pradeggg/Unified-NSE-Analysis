@@ -314,6 +314,74 @@ class RecommendationInputData:
 
 
 @dataclass
+class RecommendationReportOptions:
+    output_format: str = "html"
+    top_n: int = 25
+    include_portfolio: bool = False
+    watchlist: list[str] = field(default_factory=list)
+    output_dir: Path | None = None
+
+
+def _normalize_report_format(output_format: str) -> str:
+    fmt = str(output_format or "").lower().strip()
+    if fmt == "markdown":
+        return "md"
+    if fmt in {"html", "pdf", "md"}:
+        return fmt
+    return "html"
+
+
+def parse_recommendation_report_args(args: list[str]) -> RecommendationReportOptions:
+    tokens = list(args or [])
+    if tokens and tokens[0].lower().strip() == "recommendation":
+        tokens = tokens[1:]
+
+    options = RecommendationReportOptions()
+    idx = 0
+    while idx < len(tokens):
+        token = str(tokens[idx]).strip()
+        lower = token.lower()
+
+        if lower in {"html", "pdf", "md", "markdown"}:
+            options.output_format = _normalize_report_format(lower)
+        elif lower == "--portfolio":
+            options.include_portfolio = True
+        elif lower == "--format" and idx + 1 < len(tokens):
+            idx += 1
+            options.output_format = _normalize_report_format(tokens[idx])
+        elif lower.startswith("--format="):
+            options.output_format = _normalize_report_format(token.split("=", 1)[1])
+        elif lower == "--top" and idx + 1 < len(tokens):
+            idx += 1
+            try:
+                options.top_n = int(tokens[idx])
+            except (TypeError, ValueError):
+                pass
+        elif lower.startswith("--top="):
+            try:
+                options.top_n = int(token.split("=", 1)[1])
+            except (TypeError, ValueError):
+                pass
+        elif lower == "--watchlist" and idx + 1 < len(tokens):
+            idx += 1
+            options.watchlist = [
+                symbol.upper().strip()
+                for symbol in str(tokens[idx]).split(",")
+                if symbol.strip()
+            ]
+        elif lower.startswith("--watchlist="):
+            options.watchlist = [
+                symbol.upper().strip()
+                for symbol in token.split("=", 1)[1].split(",")
+                if symbol.strip()
+            ]
+        idx += 1
+
+    options.output_format = _normalize_report_format(options.output_format)
+    return options
+
+
+@dataclass
 class RecommendationEvidencePack:
     run_id: str
     as_of: str
@@ -1226,6 +1294,113 @@ def render_recommendation_markdown(
     return "\n".join(lines)
 
 
+def _load_postgres_frame(sql: str) -> pd.DataFrame:
+    conn = None
+    try:
+        import psycopg2
+        from psycopg2.extras import RealDictCursor
+
+        conn = psycopg2.connect(PG_DSN)
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(sql)
+            rows = cur.fetchall()
+        return pd.DataFrame(rows)
+    except Exception:
+        return pd.DataFrame()
+    finally:
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+
+def _read_csv_frame(path: Path) -> pd.DataFrame:
+    try:
+        if path.exists():
+            return pd.read_csv(path)
+    except Exception:
+        pass
+    return pd.DataFrame()
+
+
+def _has_history_columns(frame: pd.DataFrame) -> bool:
+    if frame is None or frame.empty:
+        return False
+    columns = set(_normalize_columns(frame).columns)
+    return "symbol" in columns and "close" in columns and bool({"trade_date", "timestamp", "date"} & columns)
+
+
+def _normalize_index_history_frame(frame: pd.DataFrame) -> pd.DataFrame:
+    if frame is None or frame.empty:
+        return pd.DataFrame()
+    df = frame.copy()
+    normalized_columns = _normalize_columns(df).columns
+    rename_map = {
+        original: normalized
+        for original, normalized in zip(df.columns, normalized_columns, strict=False)
+        if normalized == "index_symbol"
+    }
+    if rename_map and "symbol" not in set(normalized_columns):
+        df = df.rename(columns={next(iter(rename_map)): "symbol"})
+    return df
+
+
+def load_recommendation_input_data(options: RecommendationReportOptions) -> RecommendationInputData:
+    index_history = _load_postgres_frame(
+        """
+        SELECT index_symbol, trade_date, open, high, low, close, volume
+        FROM market.index_eod
+        ORDER BY trade_date
+        """
+    )
+    if index_history.empty:
+        index_history = _read_csv_frame(ROOT / "data" / "nse_index_data.csv")
+    index_history = _normalize_index_history_frame(index_history)
+
+    equity_history = _load_postgres_frame(
+        """
+        SELECT symbol, trade_date, open, high, low, close, volume
+        FROM market.equity_eod
+        ORDER BY symbol, trade_date
+        """
+    )
+    if equity_history.empty:
+        equity_history = _read_csv_frame(ROOT / "data" / "nse_sec_full_data.csv")
+    if not _has_history_columns(equity_history):
+        universe_history = _read_csv_frame(ROOT / "data" / "nse_universe_stock_data.csv")
+        equity_history = universe_history if _has_history_columns(universe_history) else pd.DataFrame()
+
+    snapshots = _load_postgres_frame("SELECT * FROM scores.mv_latest_snapshot")
+    fundamentals = _load_postgres_frame("SELECT * FROM scores.fundamentals")
+    if fundamentals.empty:
+        fundamentals = _load_postgres_frame("SELECT * FROM scores.mv_latest_fundamentals")
+
+    portfolio = (
+        _read_csv_frame(ROOT / "data" / "holdings.csv")
+        if options.include_portfolio
+        else pd.DataFrame()
+    )
+
+    return RecommendationInputData(
+        index_history=index_history,
+        equity_history=equity_history,
+        snapshots=snapshots,
+        fundamentals=fundamentals,
+        portfolio=portfolio,
+        watchlist=list(options.watchlist),
+    )
+
+
+def persist_recommendation_run(
+    pack: RecommendationEvidencePack,
+    recommendations: list[GroundedRecommendation],
+    report_path: str | Path,
+    evidence_path: str | Path,
+) -> dict[str, str]:
+    return {"status": "skipped", "reason": "persistence not configured"}
+
+
 def save_evidence_json(
     pack: RecommendationEvidencePack,
     recommendations: list[GroundedRecommendation],
@@ -1240,6 +1415,50 @@ def save_evidence_json(
     return path
 
 
+def generate_recommendation_report(
+    options: RecommendationReportOptions | None = None,
+    input_data: RecommendationInputData | None = None,
+    persist: bool = True,
+) -> dict[str, Any]:
+    opts = options or RecommendationReportOptions()
+    opts.output_format = _normalize_report_format(opts.output_format)
+    data = input_data or load_recommendation_input_data(opts)
+    pack = build_recommendation_evidence_pack(data, top_n=opts.top_n)
+    recommendations = build_recommendations(pack)
+    markdown = render_recommendation_markdown(pack, recommendations)
+    title = "Grounded EOD Recommendation Report"
+
+    from terminal.reports import generate_report
+
+    report_result = generate_report(
+        markdown,
+        report_type="research",
+        symbol="Market",
+        output_format=opts.output_format,
+        title=title,
+        filename=f"grounded_recommendation_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+    )
+    evidence_path = save_evidence_json(pack, recommendations, output_dir=opts.output_dir)
+    report_path = report_result.get("path", "")
+    persistence = (
+        persist_recommendation_run(pack, recommendations, report_path, evidence_path)
+        if persist
+        else {"status": "skipped", "reason": "persistence disabled"}
+    )
+
+    return {
+        **report_result,
+        "success": bool(report_result.get("success")),
+        "path": report_path,
+        "format": report_result.get("format", opts.output_format),
+        "title": report_result.get("title", title),
+        "evidence_path": str(evidence_path),
+        "recommendation_count": len(recommendations),
+        "run_id": pack.run_id,
+        "persistence": persistence,
+    }
+
+
 __all__ = [
     "GroundedRecommendation",
     "PG_DSN",
@@ -1247,6 +1466,7 @@ __all__ = [
     "RecommendationEvidencePack",
     "RecommendationInputData",
     "RecommendationLabel",
+    "RecommendationReportOptions",
     "ROOT",
     "SubjectEvidence",
     "TechnicalProfile",
@@ -1254,8 +1474,12 @@ __all__ = [
     "build_technical_profile",
     "build_recommendation_evidence_pack",
     "classify_fundamentals",
+    "generate_recommendation_report",
+    "load_recommendation_input_data",
     "make_recommendation",
+    "parse_recommendation_report_args",
     "pct_change_from_lookback",
+    "persist_recommendation_run",
     "render_recommendation_markdown",
     "save_evidence_json",
 ]
