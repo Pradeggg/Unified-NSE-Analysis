@@ -1,6 +1,7 @@
 import json
 from datetime import date, datetime
 from pathlib import Path
+from unittest.mock import patch
 
 import pandas as pd
 
@@ -21,6 +22,7 @@ from terminal.recommendation_report import (
     make_recommendation,
     parse_recommendation_report_args,
     pct_change_from_lookback,
+    persist_recommendation_run,
     render_recommendation_markdown,
     save_evidence_json,
 )
@@ -592,6 +594,17 @@ def test_save_evidence_json_writes_replayable_payload(tmp_path):
     payload = json.loads(path.read_text())
     assert payload["pack"]["run_id"] == pack.run_id
     assert payload["recommendations"] == []
+
+
+def test_persist_recommendation_run_falls_back_when_postgres_unavailable(tmp_path):
+    pack = build_recommendation_evidence_pack(RecommendationInputData(index_history=_history("NIFTY 50")))
+    evidence_path = save_evidence_json(pack, [], output_dir=tmp_path)
+
+    with patch("terminal.recommendation_report._connect_pg", side_effect=RuntimeError("pg down")):
+        result = persist_recommendation_run(pack, [], "/tmp/report.md", str(evidence_path))
+
+    assert result["status"] == "fallback_json"
+    assert result["evidence_path"] == str(evidence_path)
 
 
 def test_save_evidence_json_converts_non_finite_numbers_and_timestamps(tmp_path):

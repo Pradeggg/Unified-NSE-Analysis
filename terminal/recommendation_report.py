@@ -22,6 +22,46 @@ PG_DSN = (
     or os.environ.get("PG_DSN")
     or "dbname=nse_market user=nse_admin host=/tmp"
 )
+SCHEMA_SQL = """
+CREATE SCHEMA IF NOT EXISTS recommendation_reports;
+
+CREATE TABLE IF NOT EXISTS recommendation_reports.runs (
+    run_id TEXT PRIMARY KEY,
+    generated_at TIMESTAMPTZ NOT NULL,
+    as_of TEXT,
+    report_path TEXT,
+    evidence_path TEXT,
+    recommendation_count INTEGER NOT NULL DEFAULT 0,
+    market_regime JSONB NOT NULL DEFAULT '{}'::jsonb,
+    source_trail JSONB NOT NULL DEFAULT '{}'::jsonb,
+    missing_evidence JSONB NOT NULL DEFAULT '{}'::jsonb
+);
+
+CREATE TABLE IF NOT EXISTS recommendation_reports.evidence (
+    run_id TEXT NOT NULL REFERENCES recommendation_reports.runs(run_id) ON DELETE CASCADE,
+    scope TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    evidence JSONB NOT NULL,
+    PRIMARY KEY (run_id, scope, subject)
+);
+
+CREATE TABLE IF NOT EXISTS recommendation_reports.recommendations (
+    run_id TEXT NOT NULL REFERENCES recommendation_reports.runs(run_id) ON DELETE CASCADE,
+    subject TEXT NOT NULL,
+    scope TEXT NOT NULL,
+    label TEXT NOT NULL,
+    confidence TEXT NOT NULL,
+    score NUMERIC,
+    policy JSONB NOT NULL,
+    PRIMARY KEY (run_id, subject, scope)
+);
+
+CREATE INDEX IF NOT EXISTS idx_recommendation_reports_runs_generated_at
+    ON recommendation_reports.runs (generated_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_recommendation_reports_recommendations_label
+    ON recommendation_reports.recommendations (label);
+"""
 
 
 @dataclass
@@ -1294,13 +1334,18 @@ def render_recommendation_markdown(
     return "\n".join(lines)
 
 
+def _connect_pg():
+    import psycopg2
+
+    return psycopg2.connect(PG_DSN)
+
+
 def _load_postgres_frame(sql: str) -> pd.DataFrame:
     conn = None
     try:
-        import psycopg2
         from psycopg2.extras import RealDictCursor
 
-        conn = psycopg2.connect(PG_DSN)
+        conn = _connect_pg()
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(sql)
             rows = cur.fetchall()
@@ -1422,7 +1467,116 @@ def persist_recommendation_run(
     report_path: str | Path,
     evidence_path: str | Path,
 ) -> dict[str, str]:
-    return {"status": "skipped", "reason": "persistence not configured"}
+    conn = None
+    try:
+        from psycopg2.extras import Json
+
+        conn = _connect_pg()
+        with conn.cursor() as cur:
+            cur.execute(SCHEMA_SQL)
+            cur.execute(
+                """
+                INSERT INTO recommendation_reports.runs (
+                    run_id,
+                    generated_at,
+                    as_of,
+                    report_path,
+                    evidence_path,
+                    recommendation_count,
+                    market_regime,
+                    source_trail,
+                    missing_evidence
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (run_id) DO UPDATE SET
+                    generated_at = EXCLUDED.generated_at,
+                    as_of = EXCLUDED.as_of,
+                    report_path = EXCLUDED.report_path,
+                    evidence_path = EXCLUDED.evidence_path,
+                    recommendation_count = EXCLUDED.recommendation_count,
+                    market_regime = EXCLUDED.market_regime,
+                    source_trail = EXCLUDED.source_trail,
+                    missing_evidence = EXCLUDED.missing_evidence
+                """,
+                (
+                    pack.run_id,
+                    pack.generated_at,
+                    pack.as_of,
+                    str(report_path),
+                    str(evidence_path),
+                    len(recommendations),
+                    Json(_jsonable(pack.market_regime)),
+                    Json(_jsonable(pack.source_trail)),
+                    Json(_jsonable(pack.missing_evidence)),
+                ),
+            )
+
+            evidence_rows: list[tuple[str, str, Any]] = []
+            evidence_rows.extend(("index", subject, evidence) for subject, evidence in pack.indices.items())
+            evidence_rows.extend(("stock", subject, evidence) for subject, evidence in pack.stocks.items())
+            evidence_rows.extend(("portfolio", subject, evidence) for subject, evidence in pack.portfolio.items())
+            evidence_rows.extend(("sector", subject, evidence) for subject, evidence in pack.sectors.items())
+            for scope, subject, evidence in evidence_rows:
+                cur.execute(
+                    """
+                    INSERT INTO recommendation_reports.evidence (run_id, scope, subject, evidence)
+                    VALUES (%s, %s, %s, %s)
+                    ON CONFLICT (run_id, scope, subject) DO UPDATE SET
+                        evidence = EXCLUDED.evidence
+                    """,
+                    (pack.run_id, scope, subject, Json(_jsonable(evidence))),
+                )
+
+            for rec in recommendations:
+                cur.execute(
+                    """
+                    INSERT INTO recommendation_reports.recommendations (
+                        run_id,
+                        subject,
+                        scope,
+                        label,
+                        confidence,
+                        score,
+                        policy
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (run_id, subject, scope) DO UPDATE SET
+                        label = EXCLUDED.label,
+                        confidence = EXCLUDED.confidence,
+                        score = EXCLUDED.score,
+                        policy = EXCLUDED.policy
+                    """,
+                    (
+                        pack.run_id,
+                        rec.subject,
+                        rec.scope,
+                        rec.label,
+                        rec.confidence,
+                        _jsonable(rec.score),
+                        Json(_jsonable(rec)),
+                    ),
+                )
+
+        conn.commit()
+        return {"status": "postgres", "schema": "recommendation_reports", "run_id": pack.run_id}
+    except Exception as exc:
+        if conn is not None:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+        return {
+            "status": "fallback_json",
+            "run_id": pack.run_id,
+            "evidence_path": str(evidence_path),
+            "error": str(exc),
+        }
+    finally:
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
 
 
 def save_evidence_json(
