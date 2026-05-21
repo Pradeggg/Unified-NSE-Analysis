@@ -957,7 +957,7 @@ def _jsonable(value: Any) -> Any:
         return [_jsonable(item) for item in value]
     if isinstance(value, pd.Timestamp):
         return value.isoformat()
-    if isinstance(value, float) and math.isnan(value):
+    if isinstance(value, float) and not math.isfinite(value):
         return None
     try:
         if pd.isna(value):
@@ -1027,6 +1027,16 @@ def render_recommendation_markdown(
     pack: RecommendationEvidencePack,
     recommendations: list[GroundedRecommendation],
 ) -> str:
+    label_counts: dict[str, int] = {}
+    for rec in recommendations:
+        label_counts[rec.label] = label_counts.get(rec.label, 0) + 1
+    label_summary = ", ".join(f"{label}: {count}" for label, count in sorted(label_counts.items())) or "none"
+    subject_missing = {
+        symbol: evidence.missing_evidence
+        for symbol, evidence in sorted(_combined_subjects(pack).items())
+        if evidence.missing_evidence
+    }
+
     lines: list[str] = []
     lines.append("# Grounded EOD Recommendation Report")
     lines.append("")
@@ -1040,20 +1050,7 @@ def render_recommendation_markdown(
     lines.append("")
     lines.append(f"- Market regime: `{pack.market_regime.get('label', 'unknown')}`.")
     lines.append(f"- Recommendations generated: {len(recommendations)}.")
-    lines.append(
-        "- Policy labels: "
-        + ", ".join(
-            [
-                RecommendationLabel.ADD_ON_CONFIRMATION,
-                RecommendationLabel.HOLD,
-                RecommendationLabel.TRIM_INTO_STRENGTH,
-                RecommendationLabel.AVOID_FRESH_ENTRY,
-                RecommendationLabel.WATCHLIST,
-                RecommendationLabel.REVIEW_MANUALLY,
-            ]
-        )
-        + "."
-    )
+    lines.append(f"- Recommendation labels: {label_summary}.")
     lines.append(
         "- Missing evidence scopes: "
         + (", ".join(sorted(pack.missing_evidence)) if pack.missing_evidence else "none")
@@ -1208,13 +1205,8 @@ def render_recommendation_markdown(
     if pack.missing_evidence:
         for scope, fields in sorted(pack.missing_evidence.items()):
             lines.append(f"- `{scope}`: {', '.join(fields)}")
-    else:
+    if not pack.missing_evidence and not subject_missing:
         lines.append("- none")
-    subject_missing = {
-        symbol: evidence.missing_evidence
-        for symbol, evidence in sorted(_combined_subjects(pack).items())
-        if evidence.missing_evidence
-    }
     for symbol, fields in subject_missing.items():
         lines.append(f"- `{symbol}`: {', '.join(fields)}")
     lines.append("")
@@ -1235,7 +1227,7 @@ def save_evidence_json(
     target_dir.mkdir(parents=True, exist_ok=True)
     path = target_dir / f"recommendation_evidence_{pack.run_id}.json"
     payload = {"pack": _jsonable(pack), "recommendations": _jsonable(recommendations)}
-    path.write_text(json.dumps(payload, indent=2, default=str))
+    path.write_text(json.dumps(payload, indent=2, allow_nan=False))
     return path
 
 

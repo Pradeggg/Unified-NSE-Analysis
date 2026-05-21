@@ -3,6 +3,7 @@ import json
 import pandas as pd
 
 from terminal.recommendation_report import (
+    GroundedRecommendation,
     RecommendationLabel,
     RecommendationInputData,
     SubjectEvidence,
@@ -378,38 +379,84 @@ def test_fundamental_classification_marks_unscoreable_fields_as_unknown():
     assert classify_fundamentals({"symbol": "AAA", "company_name": "AAA Ltd"}) == "quality_unknown"
 
 
-def test_markdown_report_contains_grounding_and_conflicts(tmp_path):
-    data = RecommendationInputData(
-        index_history=_history("NIFTY 50"),
-        equity_history=_history("AAA"),
-        snapshots=pd.DataFrame(
-            [
-                {
-                    "symbol": "AAA",
-                    "sector": "Capital Goods",
-                    "stage": "STAGE_2",
-                    "technical_score": 88,
-                    "relative_strength": 32,
-                    "trading_signal": "BUY",
-                    "investment_score": 82,
-                }
-            ]
-        ),
-        fundamentals=pd.DataFrame(
-            [{"symbol": "AAA", "roe": 18, "roce": 24, "stock_pe": 22, "interest_coverage": 9}]
-        ),
+def _markdown_section(markdown: str, heading: str) -> str:
+    start = markdown.index(heading)
+    next_heading = markdown.find("\n##", start + len(heading))
+    if next_heading == -1:
+        next_heading = len(markdown)
+    return markdown[start:next_heading]
+
+
+def test_markdown_report_contains_required_sections_grounding_and_actual_label_counts(tmp_path):
+    pack = build_recommendation_evidence_pack(
+        RecommendationInputData(
+            index_history=_history("NIFTY 50"),
+            equity_history=_history("AAA"),
+            snapshots=pd.DataFrame([{"symbol": "AAA", "sector": "Capital Goods"}]),
+            fundamentals=pd.DataFrame([{"symbol": "AAA", "roe": 18}]),
+        )
     )
-    pack = build_recommendation_evidence_pack(data)
-    recommendations = build_recommendations(pack)
+    recommendations = [
+        GroundedRecommendation(
+            subject="AAA",
+            scope="stock",
+            label=RecommendationLabel.ADD_ON_CONFIRMATION,
+            confidence="high",
+            score=82,
+            why="Constructive setup.",
+            technical_evidence=["Stage STAGE_2"],
+            fundamental_evidence=["ROE 18"],
+            trigger="Confirm above resistance.",
+            invalidation="Lose support.",
+            risk="Size for regime.",
+            missing_evidence=[],
+        ),
+        GroundedRecommendation(
+            subject="BBB",
+            scope="stock",
+            label=RecommendationLabel.WATCHLIST,
+            confidence="low",
+            score=61,
+            why="Evidence conflict.",
+            technical_evidence=["Trend constructive"],
+            fundamental_evidence=["ROE 12"],
+            trigger="Wait for conflict to clear.",
+            invalidation="Lose support.",
+            risk="Conflict risk.",
+            missing_evidence=[],
+            conflicts=["trend constructive but RSI extended"],
+        ),
+    ]
 
     markdown = render_recommendation_markdown(pack, recommendations)
 
     assert "# Grounded EOD Recommendation Report" in markdown
-    assert "Market Regime" in markdown
-    assert "Stock Opportunity Map" in markdown
-    assert "Grounding & Audit Trail" in markdown
-    assert "ADD_ON_CONFIRMATION" in markdown
-    assert "Source Trail" in markdown
+    assert "## Executive Summary" in markdown
+    assert "## Market Regime" in markdown
+    assert "## Sector Rotation" in markdown
+    assert "## Stock Opportunity Map" in markdown
+    assert "## Technical Detail Appendix" in markdown
+    assert "## Fundamental Detail Appendix" in markdown
+    assert "## Grounding & Audit Trail" in markdown
+    assert "### Source Trail" in markdown
+    assert "### Missing Evidence" in markdown
+    assert "ADD_ON_CONFIRMATION: 1" in markdown
+    assert "WATCHLIST: 1" in markdown
+    assert "trend constructive but RSI extended" in markdown
+
+
+def test_missing_evidence_section_does_not_print_none_when_subject_missing_exists():
+    pack = build_recommendation_evidence_pack(
+        RecommendationInputData(index_history=_history("NIFTY 50"), equity_history=_history("AAA"))
+    )
+    pack.missing_evidence = {}
+    pack.stocks["AAA"].missing_evidence = ["fundamentals"]
+
+    markdown = render_recommendation_markdown(pack, [])
+    missing_section = _markdown_section(markdown, "### Missing Evidence")
+
+    assert "- none" not in missing_section
+    assert "`AAA`: fundamentals" in missing_section
 
 
 def test_save_evidence_json_writes_replayable_payload(tmp_path):
@@ -421,3 +468,36 @@ def test_save_evidence_json_writes_replayable_payload(tmp_path):
     payload = json.loads(path.read_text())
     assert payload["pack"]["run_id"] == pack.run_id
     assert payload["recommendations"] == []
+
+
+def test_save_evidence_json_converts_non_finite_numbers_and_timestamps(tmp_path):
+    pack = build_recommendation_evidence_pack(RecommendationInputData(index_history=_history("NIFTY 50")))
+    pack.market_regime["inf"] = float("inf")
+    pack.market_regime["neg_inf"] = float("-inf")
+    pack.market_regime["nan"] = float("nan")
+    pack.market_regime["timestamp"] = pd.Timestamp("2026-05-22 09:15:00")
+    recommendation = GroundedRecommendation(
+        subject="AAA",
+        scope="stock",
+        label=RecommendationLabel.REVIEW_MANUALLY,
+        confidence="low",
+        score=float("inf"),
+        why="Replay edge case.",
+        technical_evidence=[pd.Timestamp("2026-05-22")],
+        fundamental_evidence=[],
+        trigger="Collect evidence.",
+        invalidation="Missing evidence remains.",
+        risk="Manual review.",
+        missing_evidence=["eod_price_history"],
+    )
+
+    path = save_evidence_json(pack, [recommendation], output_dir=tmp_path)
+
+    assert path.name == f"recommendation_evidence_{pack.run_id}.json"
+    payload = json.loads(path.read_text())
+    assert payload["pack"]["market_regime"]["inf"] is None
+    assert payload["pack"]["market_regime"]["neg_inf"] is None
+    assert payload["pack"]["market_regime"]["nan"] is None
+    assert payload["pack"]["market_regime"]["timestamp"] == "2026-05-22T09:15:00"
+    assert payload["recommendations"][0]["score"] is None
+    assert payload["recommendations"][0]["technical_evidence"] == ["2026-05-22T00:00:00"]
