@@ -1,4 +1,5 @@
 import json
+from datetime import date, datetime
 
 import pandas as pd
 
@@ -501,3 +502,33 @@ def test_save_evidence_json_converts_non_finite_numbers_and_timestamps(tmp_path)
     assert payload["pack"]["market_regime"]["timestamp"] == "2026-05-22T09:15:00"
     assert payload["recommendations"][0]["score"] is None
     assert payload["recommendations"][0]["technical_evidence"] == ["2026-05-22T00:00:00"]
+
+
+def test_save_evidence_json_serializes_python_dates_from_fundamentals(tmp_path):
+    pack = build_recommendation_evidence_pack(
+        RecommendationInputData(
+            index_history=_history("NIFTY 50"),
+            equity_history=_history("AAA"),
+            fundamentals=pd.DataFrame(
+                [
+                    {
+                        "symbol": "AAA",
+                        "roe": 18,
+                        "report_date": date(2026, 5, 22),
+                        "updated_at": datetime(2026, 5, 22, 15, 30),
+                    }
+                ]
+            ),
+        )
+    )
+    pack.stocks["AAA"].fundamentals["manual_date"] = date(2026, 5, 23)
+    pack.stocks["AAA"].fundamentals["manual_datetime"] = datetime(2026, 5, 23, 15, 30)
+
+    path = save_evidence_json(pack, [], output_dir=tmp_path)
+
+    payload = json.loads(path.read_text())
+    fundamentals = payload["pack"]["stocks"]["AAA"]["fundamentals"]
+    assert fundamentals["report_date"] == "2026-05-22"
+    assert fundamentals["updated_at"] == "2026-05-22T15:30:00"
+    assert fundamentals["manual_date"] == "2026-05-23"
+    assert fundamentals["manual_datetime"] == "2026-05-23T15:30:00"

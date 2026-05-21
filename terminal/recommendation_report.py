@@ -7,7 +7,7 @@ import math
 import os
 import re
 from dataclasses import asdict, dataclass, field
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -345,7 +345,7 @@ def _record_value(value: Any) -> Any:
     except (TypeError, ValueError):
         pass
     if isinstance(value, pd.Timestamp):
-        return str(value.date())
+        return value.isoformat()
     return value
 
 
@@ -957,8 +957,17 @@ def _jsonable(value: Any) -> Any:
         return [_jsonable(item) for item in value]
     if isinstance(value, pd.Timestamp):
         return value.isoformat()
+    if isinstance(value, (date, datetime)):
+        return value.isoformat()
     if isinstance(value, float) and not math.isfinite(value):
         return None
+    if hasattr(value, "item") and callable(value.item):
+        try:
+            item = value.item()
+        except (TypeError, ValueError):
+            item = value
+        if item is not value:
+            return _jsonable(item)
     try:
         if pd.isna(value):
             return None
