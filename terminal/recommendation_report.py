@@ -8,6 +8,7 @@ import os
 import re
 from dataclasses import asdict, dataclass, field
 from datetime import date, datetime
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -1091,6 +1092,8 @@ def _jsonable(value: Any) -> Any:
         return value.isoformat()
     if isinstance(value, (date, datetime)):
         return value.isoformat()
+    if isinstance(value, Decimal):
+        return float(value) if value.is_finite() else None
     if isinstance(value, float) and not math.isfinite(value):
         return None
     if hasattr(value, "item") and callable(value.item):

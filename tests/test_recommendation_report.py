@@ -1,5 +1,6 @@
 import json
 from datetime import date, datetime
+from decimal import Decimal
 from pathlib import Path
 from unittest.mock import patch
 
@@ -785,6 +786,20 @@ def test_save_evidence_json_serializes_pandas_nat_as_null(tmp_path):
     payload = json.loads(path.read_text())
     assert payload["pack"]["stocks"]["AAA"]["fundamentals"]["missing_date"] is None
     assert payload["pack"]["market_regime"]["missing_timestamp"] is None
+
+
+def test_save_evidence_json_serializes_decimal_values(tmp_path):
+    pack = build_recommendation_evidence_pack(
+        RecommendationInputData(index_history=_history("NIFTY 50"), equity_history=_history("AAA"))
+    )
+    pack.stocks["AAA"].fundamentals["decimal_pe"] = Decimal("22.5")
+    pack.market_regime["decimal_nan"] = Decimal("NaN")
+
+    path = save_evidence_json(pack, [], output_dir=tmp_path)
+
+    payload = json.loads(path.read_text())
+    assert payload["pack"]["stocks"]["AAA"]["fundamentals"]["decimal_pe"] == 22.5
+    assert payload["pack"]["market_regime"]["decimal_nan"] is None
 
 
 def test_every_recommendation_has_required_grounding_fields():
