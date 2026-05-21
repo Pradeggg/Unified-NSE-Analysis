@@ -1,3 +1,5 @@
+import json
+
 import pandas as pd
 
 from terminal.recommendation_report import (
@@ -5,11 +7,14 @@ from terminal.recommendation_report import (
     RecommendationInputData,
     SubjectEvidence,
     TechnicalProfile,
+    build_recommendations,
     build_recommendation_evidence_pack,
     build_technical_profile,
     classify_fundamentals,
     make_recommendation,
     pct_change_from_lookback,
+    render_recommendation_markdown,
+    save_evidence_json,
 )
 
 
@@ -371,3 +376,48 @@ def test_fundamental_classification_marks_missing_as_unknown():
 
 def test_fundamental_classification_marks_unscoreable_fields_as_unknown():
     assert classify_fundamentals({"symbol": "AAA", "company_name": "AAA Ltd"}) == "quality_unknown"
+
+
+def test_markdown_report_contains_grounding_and_conflicts(tmp_path):
+    data = RecommendationInputData(
+        index_history=_history("NIFTY 50"),
+        equity_history=_history("AAA"),
+        snapshots=pd.DataFrame(
+            [
+                {
+                    "symbol": "AAA",
+                    "sector": "Capital Goods",
+                    "stage": "STAGE_2",
+                    "technical_score": 88,
+                    "relative_strength": 32,
+                    "trading_signal": "BUY",
+                    "investment_score": 82,
+                }
+            ]
+        ),
+        fundamentals=pd.DataFrame(
+            [{"symbol": "AAA", "roe": 18, "roce": 24, "stock_pe": 22, "interest_coverage": 9}]
+        ),
+    )
+    pack = build_recommendation_evidence_pack(data)
+    recommendations = build_recommendations(pack)
+
+    markdown = render_recommendation_markdown(pack, recommendations)
+
+    assert "# Grounded EOD Recommendation Report" in markdown
+    assert "Market Regime" in markdown
+    assert "Stock Opportunity Map" in markdown
+    assert "Grounding & Audit Trail" in markdown
+    assert "ADD_ON_CONFIRMATION" in markdown
+    assert "Source Trail" in markdown
+
+
+def test_save_evidence_json_writes_replayable_payload(tmp_path):
+    pack = build_recommendation_evidence_pack(RecommendationInputData(index_history=_history("NIFTY 50")))
+
+    path = save_evidence_json(pack, [], output_dir=tmp_path)
+
+    assert path.exists()
+    payload = json.loads(path.read_text())
+    assert payload["pack"]["run_id"] == pack.run_id
+    assert payload["recommendations"] == []

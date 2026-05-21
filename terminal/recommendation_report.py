@@ -946,6 +946,299 @@ def make_recommendation(
     )
 
 
+def _jsonable(value: Any) -> Any:
+    if hasattr(value, "to_dict") and callable(value.to_dict):
+        return _jsonable(value.to_dict())
+    if hasattr(value, "__dataclass_fields__"):
+        return {key: _jsonable(val) for key, val in asdict(value).items()}
+    if isinstance(value, dict):
+        return {str(key): _jsonable(val) for key, val in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_jsonable(item) for item in value]
+    if isinstance(value, pd.Timestamp):
+        return value.isoformat()
+    if isinstance(value, float) and math.isnan(value):
+        return None
+    try:
+        if pd.isna(value):
+            return None
+    except (TypeError, ValueError):
+        pass
+    return value
+
+
+def build_recommendations(pack: RecommendationEvidencePack) -> list[GroundedRecommendation]:
+    recommendations: list[GroundedRecommendation] = []
+    for _symbol, evidence in pack.stocks.items():
+        sector = pack.sectors.get(evidence.sector or "Unknown", {})
+        recommendations.append(make_recommendation(evidence, market_regime=pack.market_regime, sector=sector))
+    for symbol, evidence in pack.portfolio.items():
+        if symbol in pack.stocks:
+            continue
+        sector = pack.sectors.get(evidence.sector or "Unknown", {})
+        recommendations.append(make_recommendation(evidence, market_regime=pack.market_regime, sector=sector))
+
+    label_rank = {
+        RecommendationLabel.ADD_ON_CONFIRMATION: 0,
+        RecommendationLabel.HOLD: 1,
+        RecommendationLabel.WATCHLIST: 2,
+        RecommendationLabel.AVOID_FRESH_ENTRY: 3,
+        RecommendationLabel.TRIM_INTO_STRENGTH: 4,
+        RecommendationLabel.REVIEW_MANUALLY: 5,
+    }
+    confidence_rank = {"high": 0, "medium": 1, "low": 2}
+    return sorted(
+        recommendations,
+        key=lambda rec: (
+            label_rank.get(rec.label, 99),
+            confidence_rank.get(rec.confidence, 99),
+            -rec.score,
+            rec.subject,
+        ),
+    )
+
+
+def _md_table(headers: list[str], rows: list[list[Any]]) -> str:
+    def cell(value: Any) -> str:
+        text = "" if value is None else str(value)
+        return text.replace("\n", " ").replace("|", "\\|")
+
+    lines = [
+        "| " + " | ".join(cell(header) for header in headers) + " |",
+        "| " + " | ".join("---" for _ in headers) + " |",
+    ]
+    for row in rows:
+        lines.append("| " + " | ".join(cell(item) for item in row) + " |")
+    return "\n".join(lines)
+
+
+def _joined(items: list[str]) -> str:
+    return "; ".join(items) if items else ""
+
+
+def _combined_subjects(pack: RecommendationEvidencePack) -> dict[str, SubjectEvidence]:
+    subjects = dict(pack.stocks)
+    for symbol, evidence in pack.portfolio.items():
+        subjects.setdefault(symbol, evidence)
+    return subjects
+
+
+def render_recommendation_markdown(
+    pack: RecommendationEvidencePack,
+    recommendations: list[GroundedRecommendation],
+) -> str:
+    lines: list[str] = []
+    lines.append("# Grounded EOD Recommendation Report")
+    lines.append("")
+    lines.append(f"Generated: {pack.generated_at}")
+    lines.append(f"As of: {pack.as_of or 'unavailable'}")
+    lines.append(f"Run ID: `{pack.run_id}`")
+    lines.append("")
+    lines.append("Research and learning only. Not investment advice.")
+    lines.append("")
+    lines.append("## Executive Summary")
+    lines.append("")
+    lines.append(f"- Market regime: `{pack.market_regime.get('label', 'unknown')}`.")
+    lines.append(f"- Recommendations generated: {len(recommendations)}.")
+    lines.append(
+        "- Policy labels: "
+        + ", ".join(
+            [
+                RecommendationLabel.ADD_ON_CONFIRMATION,
+                RecommendationLabel.HOLD,
+                RecommendationLabel.TRIM_INTO_STRENGTH,
+                RecommendationLabel.AVOID_FRESH_ENTRY,
+                RecommendationLabel.WATCHLIST,
+                RecommendationLabel.REVIEW_MANUALLY,
+            ]
+        )
+        + "."
+    )
+    lines.append(
+        "- Missing evidence scopes: "
+        + (", ".join(sorted(pack.missing_evidence)) if pack.missing_evidence else "none")
+        + "."
+    )
+    conflict_count = sum(1 for rec in recommendations if rec.conflicts)
+    lines.append(f"- Recommendations with conflicts: {conflict_count}.")
+    lines.append("")
+    lines.append("## Market Regime")
+    lines.append("")
+    index_rows = []
+    for subject, evidence in sorted(pack.indices.items()):
+        technical = evidence.technical
+        index_rows.append(
+            [
+                subject,
+                technical.latest_close if technical else "",
+                technical.trend_label if technical else "",
+                technical.ret_1m if technical else "",
+                technical.rsi14 if technical else "",
+                _joined(evidence.missing_evidence),
+            ]
+        )
+    lines.append(
+        _md_table(
+            ["Index", "Close", "Trend", "1M %", "RSI", "Missing"],
+            index_rows or [["No index evidence", "", "", "", "", "index data missing"]],
+        )
+    )
+    lines.append("")
+    lines.append("## Sector Rotation")
+    lines.append("")
+    sector_rows = [
+        [
+            name,
+            row.get("rotation_label"),
+            row.get("stage2_count"),
+            row.get("buy_signal_count"),
+            row.get("avg_relative_strength"),
+            ", ".join(row.get("top_symbols") or []),
+        ]
+        for name, row in sorted(pack.sectors.items())
+    ]
+    lines.append(
+        _md_table(
+            ["Sector", "Rotation", "Stage2", "Buy", "Avg RS", "Top Symbols"],
+            sector_rows or [["No sector evidence", "", "", "", "", ""]],
+        )
+    )
+    lines.append("")
+    lines.append("## Stock Opportunity Map")
+    lines.append("")
+    rec_rows = [
+        [
+            rec.subject,
+            rec.scope,
+            rec.label,
+            rec.confidence,
+            rec.score,
+            rec.why,
+            rec.trigger,
+            rec.invalidation,
+            rec.risk,
+            _joined(rec.conflicts),
+            _joined(rec.missing_evidence),
+        ]
+        for rec in recommendations
+    ]
+    lines.append(
+        _md_table(
+            [
+                "Subject",
+                "Scope",
+                "Label",
+                "Confidence",
+                "Score",
+                "Why",
+                "Trigger",
+                "Invalidation",
+                "Risk",
+                "Conflicts",
+                "Missing",
+            ],
+            rec_rows or [["No recommendations", "", "", "", "", "", "", "", "", "", ""]],
+        )
+    )
+    lines.append("")
+    lines.append("## Technical Detail Appendix")
+    lines.append("")
+    tech_rows = []
+    for symbol, evidence in sorted(_combined_subjects(pack).items()):
+        technical = evidence.technical
+        tech_rows.append(
+            [
+                symbol,
+                evidence.scope,
+                technical.trend_label if technical else "",
+                technical.ret_1w if technical else "",
+                technical.ret_1m if technical else "",
+                technical.ret_3m if technical else "",
+                technical.rsi14 if technical else "",
+                technical.macd_hist if technical else "",
+                _joined(technical.conflicts if technical else []),
+                _joined(technical.missing_evidence if technical else []),
+            ]
+        )
+    lines.append(
+        _md_table(
+            ["Symbol", "Scope", "Trend", "1W %", "1M %", "3M %", "RSI", "MACD Hist", "Conflicts", "Missing"],
+            tech_rows or [["No stock technicals", "", "", "", "", "", "", "", "", ""]],
+        )
+    )
+    lines.append("")
+    lines.append("## Fundamental Detail Appendix")
+    lines.append("")
+    fund_rows = [
+        [
+            symbol,
+            evidence.scope,
+            classify_fundamentals(evidence.fundamentals),
+            _joined(_fundamental_evidence(evidence.fundamentals)),
+            _joined(evidence.missing_evidence),
+        ]
+        for symbol, evidence in sorted(_combined_subjects(pack).items())
+    ]
+    lines.append(
+        _md_table(
+            ["Symbol", "Scope", "Quality", "Evidence", "Missing"],
+            fund_rows or [["No fundamentals", "", "", "", "fundamentals missing"]],
+        )
+    )
+    lines.append("")
+    lines.append("## Grounding & Audit Trail")
+    lines.append("")
+    lines.append("### Source Trail")
+    lines.append("")
+    source_rows = [
+        [
+            name,
+            row.get("source"),
+            row.get("rows"),
+            row.get("latest"),
+            row.get("status"),
+            ", ".join(row.get("missing_columns") or []),
+        ]
+        for name, row in sorted(pack.source_trail.items())
+    ]
+    lines.append(_md_table(["Source", "Label", "Rows", "Latest", "Status", "Missing Columns"], source_rows))
+    lines.append("")
+    lines.append("### Missing Evidence")
+    lines.append("")
+    if pack.missing_evidence:
+        for scope, fields in sorted(pack.missing_evidence.items()):
+            lines.append(f"- `{scope}`: {', '.join(fields)}")
+    else:
+        lines.append("- none")
+    subject_missing = {
+        symbol: evidence.missing_evidence
+        for symbol, evidence in sorted(_combined_subjects(pack).items())
+        if evidence.missing_evidence
+    }
+    for symbol, fields in subject_missing.items():
+        lines.append(f"- `{symbol}`: {', '.join(fields)}")
+    lines.append("")
+    lines.append("### Conflicts")
+    lines.append("")
+    conflict_rows = [[rec.subject, rec.label, _joined(rec.conflicts)] for rec in recommendations if rec.conflicts]
+    lines.append(_md_table(["Subject", "Label", "Conflicts"], conflict_rows or [["No conflicts", "", ""]]))
+    return "\n".join(lines)
+
+
+def save_evidence_json(
+    pack: RecommendationEvidencePack,
+    recommendations: list[GroundedRecommendation],
+    *,
+    output_dir: Path | None = None,
+) -> Path:
+    target_dir = output_dir or REPORT_DIR
+    target_dir.mkdir(parents=True, exist_ok=True)
+    path = target_dir / f"recommendation_evidence_{pack.run_id}.json"
+    payload = {"pack": _jsonable(pack), "recommendations": _jsonable(recommendations)}
+    path.write_text(json.dumps(payload, indent=2, default=str))
+    return path
+
+
 __all__ = [
     "GroundedRecommendation",
     "PG_DSN",
@@ -956,9 +1249,12 @@ __all__ = [
     "ROOT",
     "SubjectEvidence",
     "TechnicalProfile",
+    "build_recommendations",
     "build_technical_profile",
     "build_recommendation_evidence_pack",
     "classify_fundamentals",
     "make_recommendation",
     "pct_change_from_lookback",
+    "render_recommendation_markdown",
+    "save_evidence_json",
 ]
