@@ -1376,11 +1376,11 @@ def load_recommendation_input_data(options: RecommendationReportOptions) -> Reco
     if fundamentals.empty:
         fundamentals = _load_postgres_frame("SELECT * FROM scores.mv_latest_fundamentals")
 
-    portfolio = (
-        _read_csv_frame(ROOT / "data" / "holdings.csv")
-        if options.include_portfolio
-        else pd.DataFrame()
-    )
+    portfolio = pd.DataFrame()
+    if options.include_portfolio:
+        portfolio = _load_postgres_frame("SELECT * FROM portfolio.holdings")
+        if portfolio.empty:
+            portfolio = _read_csv_frame(ROOT / "data" / "holdings.csv")
 
     return RecommendationInputData(
         index_history=index_history,

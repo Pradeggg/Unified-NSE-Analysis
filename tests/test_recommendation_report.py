@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 
+import terminal.recommendation_report as recommendation_report
 from terminal.recommendation_report import (
     GroundedRecommendation,
     RecommendationReportOptions,
@@ -16,6 +17,7 @@ from terminal.recommendation_report import (
     build_technical_profile,
     classify_fundamentals,
     generate_recommendation_report,
+    load_recommendation_input_data,
     make_recommendation,
     parse_recommendation_report_args,
     pct_change_from_lookback,
@@ -126,6 +128,30 @@ def test_generate_recommendation_report_with_injected_data_writes_report_and_evi
     assert Path(result["path"]).exists()
     assert Path(result["evidence_path"]).exists()
     assert result["recommendation_count"] >= 1
+
+
+def test_load_recommendation_input_data_loads_portfolio_from_postgres_first(monkeypatch):
+    postgres_portfolio = pd.DataFrame([{"symbol": "PGHOLD", "qty": 7, "avg_cost": 123.45}])
+    postgres_queries = []
+
+    def fake_load_postgres_frame(sql: str) -> pd.DataFrame:
+        postgres_queries.append(sql)
+        if "holding" in sql.lower() or "portfolio" in sql.lower():
+            return postgres_portfolio
+        return pd.DataFrame()
+
+    def fake_read_csv_frame(path: Path) -> pd.DataFrame:
+        if path.name == "holdings.csv":
+            raise AssertionError("portfolio CSV fallback should not be used when PostgreSQL has holdings")
+        return pd.DataFrame()
+
+    monkeypatch.setattr(recommendation_report, "_load_postgres_frame", fake_load_postgres_frame)
+    monkeypatch.setattr(recommendation_report, "_read_csv_frame", fake_read_csv_frame)
+
+    data = load_recommendation_input_data(RecommendationReportOptions(include_portfolio=True))
+
+    assert data.portfolio.to_dict("records") == [{"symbol": "PGHOLD", "qty": 7, "avg_cost": 123.45}]
+    assert any("holding" in sql.lower() or "portfolio" in sql.lower() for sql in postgres_queries)
 
 
 def test_build_evidence_pack_contains_indices_sectors_stocks_and_portfolio():
