@@ -34,6 +34,7 @@ import itertools
 import os
 import re
 import shutil
+import subprocess
 import sys
 import threading
 import time
@@ -546,6 +547,56 @@ _BOX_MID = _BOX_W - 4  # usable interior (after 2-space left + 2-space right mar
 def _separator(title: str = "") -> None:
     """Thin horizontal rule, optional centred title."""
     console.rule(title, style="dim")
+
+def _open_report_path(path: str, report_console=None) -> bool:
+    """Best-effort viewer launch for generated reports."""
+    try:
+        subprocess.Popen(["open", path])
+        return True
+    except Exception as exc:
+        target_console = report_console or console
+        try:
+            target_console.print(f"  [dim]Could not open report automatically: {exc}[/dim]")
+        except Exception:
+            pass
+        return False
+
+
+def _handle_recommendation_report_command(parts: list[str], report_console=None) -> bool:
+    """Run `/report recommendation ...` without letting parser/viewer failures escape."""
+    target_console = report_console or console
+    try:
+        from terminal.recommendation_report import generate_recommendation_report, parse_recommendation_report_args
+
+        _opts = parse_recommendation_report_args(parts[1:])
+    except SystemExit as exc:
+        target_console.print(f"  [bold red]❌  Recommendation report argument error[/bold red] [dim]{exc}[/dim]")
+        return True
+    except Exception as exc:
+        target_console.print(f"  [bold red]❌  Recommendation report argument error:[/bold red] {exc}")
+        return True
+
+    try:
+        _r = generate_recommendation_report(options=_opts)
+    except Exception as exc:
+        target_console.print(f"  [bold red]❌  Recommendation report failed:[/bold red] {exc}")
+        return True
+
+    if _r.get("success"):
+        target_console.print(
+            f"  [bold green]✅  Recommendation report saved![/bold green]  "
+            f"[cyan]{_r['path']}[/cyan]"
+        )
+        target_console.print(f"  [dim]Evidence: {_r.get('evidence_path', '')}[/dim]")
+        target_console.print(f"  [dim]Recommendations: {_r.get('recommendation_count', 0)} · Run ID: {_r.get('run_id', '')}[/dim]")
+        for _warning in _r.get("warnings", []):
+            target_console.print(f"  [yellow]⚠ {_warning}[/yellow]")
+        _open_report_path(_r["path"], target_console)
+    else:
+        target_console.print(f"  [bold red]❌  Recommendation report failed[/bold red]")
+    return True
+
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -5570,23 +5621,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
                 )
                 try:
                     if rpt_type == "recommendation":
-                        from terminal.recommendation_report import generate_recommendation_report, parse_recommendation_report_args
-
-                        _opts = parse_recommendation_report_args(parts[1:])
-                        _r = generate_recommendation_report(options=_opts)
-                        if _r.get("success"):
-                            console.print(
-                                f"  [bold green]✅  Recommendation report saved![/bold green]  "
-                                f"[cyan]{_r['path']}[/cyan]"
-                            )
-                            console.print(f"  [dim]Evidence: {_r.get('evidence_path', '')}[/dim]")
-                            console.print(f"  [dim]Recommendations: {_r.get('recommendation_count', 0)} · Run ID: {_r.get('run_id', '')}[/dim]")
-                            for _warning in _r.get("warnings", []):
-                                console.print(f"  [yellow]⚠ {_warning}[/yellow]")
-                            import subprocess
-                            subprocess.Popen(["open", _r["path"]])
-                        else:
-                            console.print(f"  [bold red]❌  Recommendation report failed[/bold red]")
+                        _handle_recommendation_report_command(parts, console)
                         _separator()
                         continue
 

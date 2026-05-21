@@ -12,6 +12,71 @@ def test_report_recommendation_is_recognized_as_preset_type():
     assert "recommendation" in nse_agent._REPORT_PRESET_TYPES_FOR_TEST
 
 
+def test_recommendation_report_command_forwards_args_and_options(monkeypatch):
+    import nse_agent
+    import terminal.recommendation_report as recommendation_report
+
+    calls = {}
+    parsed_options = object()
+
+    def fake_parse(args):
+        calls["parse_args"] = list(args)
+        return parsed_options
+
+    def fake_generate(*, options):
+        calls["options"] = options
+        return {
+            "success": True,
+            "path": "/tmp/recommendation.html",
+            "evidence_path": "/tmp/evidence.json",
+            "recommendation_count": 2,
+            "run_id": "run-1",
+            "warnings": ["partial data"],
+        }
+
+    monkeypatch.setattr(recommendation_report, "parse_recommendation_report_args", fake_parse)
+    monkeypatch.setattr(recommendation_report, "generate_recommendation_report", fake_generate)
+    monkeypatch.setattr(nse_agent, "_open_report_path", lambda path, console=None: calls.setdefault("opened", path))
+
+    handled = nse_agent._handle_recommendation_report_command(
+        ["/report", "recommendation", "--watchlist", "RELIANCE,TCS", "--format", "md"],
+        nse_agent.console,
+    )
+
+    assert handled is True
+    assert calls["parse_args"] == ["recommendation", "--watchlist", "RELIANCE,TCS", "--format", "md"]
+    assert calls["options"] is parsed_options
+    assert calls["opened"] == "/tmp/recommendation.html"
+
+
+def test_recommendation_report_command_handles_parser_system_exit(monkeypatch):
+    import nse_agent
+    import terminal.recommendation_report as recommendation_report
+
+    def fake_parse(args):
+        raise SystemExit(2)
+
+    monkeypatch.setattr(recommendation_report, "parse_recommendation_report_args", fake_parse)
+
+    handled = nse_agent._handle_recommendation_report_command(
+        ["/report", "recommendation", "--bad-flag"],
+        nse_agent.console,
+    )
+
+    assert handled is True
+
+
+def test_open_report_path_swallows_viewer_failures(monkeypatch):
+    import nse_agent
+
+    def fake_popen(args):
+        raise OSError("viewer missing")
+
+    monkeypatch.setattr(nse_agent.subprocess, "Popen", fake_popen)
+
+    assert nse_agent._open_report_path("/tmp/report.html", nse_agent.console) is False
+
+
 class TerminalReportsTests(unittest.TestCase):
     def test_markdown_converter_handles_loose_tables_indented_bullets_and_angle_links(self):
         html = reports._md_to_html_basic(
