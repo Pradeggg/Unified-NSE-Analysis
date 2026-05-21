@@ -532,3 +532,17 @@ def test_save_evidence_json_serializes_python_dates_from_fundamentals(tmp_path):
     assert fundamentals["updated_at"] == "2026-05-22T15:30:00"
     assert fundamentals["manual_date"] == "2026-05-23"
     assert fundamentals["manual_datetime"] == "2026-05-23T15:30:00"
+
+
+def test_save_evidence_json_serializes_pandas_nat_as_null(tmp_path):
+    pack = build_recommendation_evidence_pack(
+        RecommendationInputData(index_history=_history("NIFTY 50"), equity_history=_history("AAA"))
+    )
+    pack.stocks["AAA"].fundamentals["missing_date"] = pd.NaT
+    pack.market_regime["missing_timestamp"] = pd.NaT
+
+    path = save_evidence_json(pack, [], output_dir=tmp_path)
+
+    payload = json.loads(path.read_text())
+    assert payload["pack"]["stocks"]["AAA"]["fundamentals"]["missing_date"] is None
+    assert payload["pack"]["market_regime"]["missing_timestamp"] is None

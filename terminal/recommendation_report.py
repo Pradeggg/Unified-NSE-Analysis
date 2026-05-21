@@ -955,6 +955,11 @@ def _jsonable(value: Any) -> Any:
         return {str(key): _jsonable(val) for key, val in value.items()}
     if isinstance(value, (list, tuple)):
         return [_jsonable(item) for item in value]
+    try:
+        if pd.isna(value):
+            return None
+    except (TypeError, ValueError):
+        pass
     if isinstance(value, pd.Timestamp):
         return value.isoformat()
     if isinstance(value, (date, datetime)):
@@ -968,11 +973,6 @@ def _jsonable(value: Any) -> Any:
             item = value
         if item is not value:
             return _jsonable(item)
-    try:
-        if pd.isna(value):
-            return None
-    except (TypeError, ValueError):
-        pass
     return value
 
 
