@@ -785,3 +785,50 @@ def test_save_evidence_json_serializes_pandas_nat_as_null(tmp_path):
     payload = json.loads(path.read_text())
     assert payload["pack"]["stocks"]["AAA"]["fundamentals"]["missing_date"] is None
     assert payload["pack"]["market_regime"]["missing_timestamp"] is None
+
+
+def test_every_recommendation_has_required_grounding_fields():
+    data = RecommendationInputData(
+        index_history=_history("NIFTY 50"),
+        equity_history=pd.concat([_history("AAA"), _history("BBB", 80.0)]),
+        snapshots=pd.DataFrame(
+            [
+                {
+                    "symbol": "AAA",
+                    "sector": "Capital Goods",
+                    "stage": "STAGE_2",
+                    "technical_score": 88,
+                    "relative_strength": 32,
+                    "trading_signal": "BUY",
+                    "investment_score": 82,
+                },
+                {
+                    "symbol": "BBB",
+                    "sector": "Chemicals",
+                    "stage": "STAGE_4",
+                    "technical_score": 18,
+                    "relative_strength": -20,
+                    "trading_signal": "SELL",
+                    "investment_score": 25,
+                },
+            ]
+        ),
+        fundamentals=pd.DataFrame(
+            [
+                {"symbol": "AAA", "roe": 18, "roce": 24, "stock_pe": 22, "interest_coverage": 9},
+                {"symbol": "BBB", "roe": 4, "roce": 6, "stock_pe": 60, "interest_coverage": 1.1},
+            ]
+        ),
+    )
+    pack = build_recommendation_evidence_pack(data)
+    recommendations = build_recommendations(pack)
+
+    assert recommendations
+    for recommendation in recommendations:
+        assert recommendation.why
+        assert recommendation.technical_evidence
+        assert recommendation.fundamental_evidence
+        assert recommendation.trigger
+        assert recommendation.invalidation
+        assert recommendation.risk
+        assert recommendation.confidence in {"high", "medium", "low"}
