@@ -1331,6 +1331,30 @@ def _has_history_columns(frame: pd.DataFrame) -> bool:
     return "symbol" in columns and "close" in columns and bool({"trade_date", "timestamp", "date"} & columns)
 
 
+def _has_usable_history_depth(frame: pd.DataFrame, minimum_dates: int = 60) -> bool:
+    if not _has_history_columns(frame):
+        return False
+
+    df = _normalize_columns(frame)
+    date_col = next((col for col in ("trade_date", "timestamp", "date") if col in df.columns), None)
+    if date_col is None:
+        return False
+
+    dates = pd.to_datetime(df[date_col], errors="coerce")
+    if dates.dropna().dt.normalize().nunique() >= minimum_dates:
+        return True
+
+    if "symbol" not in df.columns:
+        return False
+    depth = (
+        df.assign(_history_date=dates.dt.normalize())
+        .dropna(subset=["_history_date"])
+        .groupby("symbol")["_history_date"]
+        .nunique()
+    )
+    return bool(not depth.empty and int(depth.max()) >= minimum_dates)
+
+
 def _normalize_index_history_frame(frame: pd.DataFrame) -> pd.DataFrame:
     if frame is None or frame.empty:
         return pd.DataFrame()
@@ -1367,9 +1391,9 @@ def load_recommendation_input_data(options: RecommendationReportOptions) -> Reco
     )
     if equity_history.empty:
         equity_history = _read_csv_frame(ROOT / "data" / "nse_sec_full_data.csv")
-    if not _has_history_columns(equity_history):
+    if not _has_usable_history_depth(equity_history):
         universe_history = _read_csv_frame(ROOT / "data" / "nse_universe_stock_data.csv")
-        equity_history = universe_history if _has_history_columns(universe_history) else pd.DataFrame()
+        equity_history = universe_history if _has_usable_history_depth(universe_history) else pd.DataFrame()
 
     snapshots = _load_postgres_frame("SELECT * FROM scores.mv_latest_snapshot")
     fundamentals = _load_postgres_frame("SELECT * FROM scores.fundamentals")
@@ -1415,6 +1439,26 @@ def save_evidence_json(
     return path
 
 
+def _recommendation_report_warnings(
+    pack: RecommendationEvidencePack,
+    recommendations: list[GroundedRecommendation],
+) -> list[str]:
+    warnings: list[str] = []
+    index_status = str(pack.source_trail.get("index_history", {}).get("status") or "")
+    equity_status = str(pack.source_trail.get("equity_history", {}).get("status") or "")
+    weak_statuses = {"missing", "degraded"}
+
+    if index_status in weak_statuses and equity_status in weak_statuses:
+        warnings.append(
+            "critical_data_warning: index_history and equity_history are missing or degraded"
+        )
+    if not recommendations and (not pack.indices or not pack.stocks):
+        warnings.append(
+            "critical_data_warning: no recommendations produced because market or equity evidence is missing"
+        )
+    return warnings
+
+
 def generate_recommendation_report(
     options: RecommendationReportOptions | None = None,
     input_data: RecommendationInputData | None = None,
@@ -1427,6 +1471,7 @@ def generate_recommendation_report(
     recommendations = build_recommendations(pack)
     markdown = render_recommendation_markdown(pack, recommendations)
     title = "Grounded EOD Recommendation Report"
+    warnings = _recommendation_report_warnings(pack, recommendations)
 
     from terminal.reports import generate_report
 
@@ -1436,7 +1481,7 @@ def generate_recommendation_report(
         symbol="Market",
         output_format=opts.output_format,
         title=title,
-        filename=f"grounded_recommendation_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+        filename=f"grounded_recommendation_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{pack.run_id[:8]}",
     )
     evidence_path = save_evidence_json(pack, recommendations, output_dir=opts.output_dir)
     report_path = report_result.get("path", "")
@@ -1456,6 +1501,7 @@ def generate_recommendation_report(
         "recommendation_count": len(recommendations),
         "run_id": pack.run_id,
         "persistence": persistence,
+        "warnings": warnings,
     }
 
 

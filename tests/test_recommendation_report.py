@@ -154,6 +154,57 @@ def test_load_recommendation_input_data_loads_portfolio_from_postgres_first(monk
     assert any("holding" in sql.lower() or "portfolio" in sql.lower() for sql in postgres_queries)
 
 
+def test_load_recommendation_input_data_skips_shallow_primary_equity_csv(monkeypatch):
+    shallow = _history("SHALLOW", rows=5)
+    deep = _history("DEEP", rows=80)
+    csv_reads = []
+
+    monkeypatch.setattr(recommendation_report, "_load_postgres_frame", lambda sql: pd.DataFrame())
+
+    def fake_read_csv_frame(path: Path) -> pd.DataFrame:
+        csv_reads.append(path.name)
+        if path.name == "nse_sec_full_data.csv":
+            return shallow
+        if path.name == "nse_universe_stock_data.csv":
+            return deep
+        return pd.DataFrame()
+
+    monkeypatch.setattr(recommendation_report, "_read_csv_frame", fake_read_csv_frame)
+
+    data = load_recommendation_input_data(RecommendationReportOptions())
+
+    assert data.equity_history["symbol"].unique().tolist() == ["DEEP"]
+    assert "nse_sec_full_data.csv" in csv_reads
+    assert "nse_universe_stock_data.csv" in csv_reads
+
+
+def test_generate_recommendation_report_with_empty_data_returns_evidence_warning(tmp_path):
+    opts = RecommendationReportOptions(output_format="md", output_dir=tmp_path)
+
+    result = generate_recommendation_report(
+        options=opts,
+        input_data=RecommendationInputData(),
+        persist=False,
+    )
+
+    assert result["success"] is True
+    assert result["warnings"]
+    assert any("critical" in warning.lower() or "missing" in warning.lower() for warning in result["warnings"])
+
+
+def test_generate_recommendation_report_filename_includes_run_id(tmp_path):
+    data = RecommendationInputData(
+        index_history=_history("NIFTY 50"),
+        equity_history=_history("AAA"),
+        snapshots=pd.DataFrame([{"symbol": "AAA"}]),
+    )
+    opts = RecommendationReportOptions(output_format="md", output_dir=tmp_path)
+
+    result = generate_recommendation_report(options=opts, input_data=data, persist=False)
+
+    assert result["run_id"][:8] in Path(result["path"]).name
+
+
 def test_build_evidence_pack_contains_indices_sectors_stocks_and_portfolio():
     data = RecommendationInputData(
         index_history=pd.concat([_history("NIFTY 50"), _history("NIFTY BANK", 120.0)]),
