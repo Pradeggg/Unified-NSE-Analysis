@@ -694,8 +694,20 @@ def test_persist_recommendation_run_replaces_child_rows_and_uses_payload_column(
     assert conn.closed is True
     assert evidence_delete_idx < evidence_insert_idx
     assert recommendation_delete_idx < recommendation_insert_idx
+    recommendation_insert_sql = normalized_sql[recommendation_insert_idx]
     assert "recommendation_reports.recommendations ( run_id, subject, scope, label, confidence, score, payload )" in joined_sql
-    assert "policy" not in joined_sql
+    assert "payload" in recommendation_insert_sql
+    assert "policy" not in recommendation_insert_sql
+
+
+def test_schema_sql_upgrades_legacy_policy_column_to_payload():
+    normalized_schema_sql = " ".join(recommendation_report.SCHEMA_SQL.split()).lower()
+
+    assert "information_schema.columns" in normalized_schema_sql
+    assert "column_name = 'policy'" in normalized_schema_sql
+    assert "column_name = 'payload'" in normalized_schema_sql
+    assert "alter table recommendation_reports.recommendations rename column policy to payload" in normalized_schema_sql
+    assert "insert into recommendation_reports.recommendations" not in normalized_schema_sql
 
 
 def test_save_evidence_json_converts_non_finite_numbers_and_timestamps(tmp_path):

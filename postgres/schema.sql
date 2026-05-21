@@ -1100,6 +1100,25 @@ CREATE TABLE IF NOT EXISTS recommendation_reports.recommendations (
     PRIMARY KEY (run_id, subject, scope)
 );
 
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'recommendation_reports'
+          AND table_name = 'recommendations'
+          AND column_name = 'policy'
+    ) AND NOT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'recommendation_reports'
+          AND table_name = 'recommendations'
+          AND column_name = 'payload'
+    ) THEN
+        ALTER TABLE recommendation_reports.recommendations RENAME COLUMN policy TO payload;
+    END IF;
+END $$;
+
 CREATE INDEX IF NOT EXISTS idx_recommendation_reports_runs_generated_at
     ON recommendation_reports.runs (generated_at DESC);
 
