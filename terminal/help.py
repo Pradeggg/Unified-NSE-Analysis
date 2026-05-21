@@ -298,6 +298,8 @@ SECTIONS: dict[str, dict] = {
             ("/report",                    "Generate a formatted report: HTML, Markdown, or PDF"),
             ("/report sector-rotation",    "Instant sector rotation dashboard from DB"),
             ("/report stage2",             "Stage 2 universe tracker: leaders and new entrants"),
+            ("/report recommendation", "Grounded EOD recommendation report: market, sectors, stocks, portfolio/watchlist"),
+            ("/report recommendation --watchlist RELIANCE,TCS --format md", "Grounded recommendation report for a watchlist"),
             ("/report technical RELIANCE", "Technical analysis report"),
             ("/report fundamental TCS pdf", "Fundamental report in PDF format"),
             ("/report forensic INFY md",   "Forensic accounting report in Markdown"),

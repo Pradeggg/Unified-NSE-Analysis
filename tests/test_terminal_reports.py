@@ -6,6 +6,12 @@ from pathlib import Path
 from terminal import reports
 
 
+def test_report_recommendation_is_recognized_as_preset_type():
+    import nse_agent
+
+    assert "recommendation" in nse_agent._REPORT_PRESET_TYPES_FOR_TEST
+
+
 class TerminalReportsTests(unittest.TestCase):
     def test_markdown_converter_handles_loose_tables_indented_bullets_and_angle_links(self):
         html = reports._md_to_html_basic(

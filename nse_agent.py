@@ -553,6 +553,8 @@ def _separator(title: str = "") -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 # All slash commands with a brief hint shown in the completion menu
+_REPORT_PRESET_TYPES_FOR_TEST = {"sector-rotation", "stage2", "recommendation"}
+
 _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/prompts",          "Browse 60 curated research prompts"),
     ("/prompts market",   "Market overview prompts"),
@@ -757,6 +759,7 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/report sector-rotation pdf",       "⚡ Sector rotation report as PDF"),
     ("/report stage2",                    "⚡ Stage 2 universe tracker — top 30 leaders + new entrants (instant)"),
     ("/report stage2 md",                 "⚡ Stage 2 tracker as Markdown"),
+    ("/report recommendation",            "Grounded EOD recommendation report — indices, sectors, stocks, portfolio/watchlist"),
     ("/report technical RELIANCE",        "Technical analysis report for RELIANCE"),
     ("/report fundamental TCS pdf",       "Fundamental report for TCS in PDF format"),
     ("/report forensic INFY md",          "Forensic accounting report in Markdown"),
@@ -5499,7 +5502,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
             # Examples: /report technical RELIANCE pdf
             #           /report sector-rotation html
             #           /report stage2
-            _preset_types  = {"sector-rotation", "stage2"}
+            _preset_types  = set(_REPORT_PRESET_TYPES_FOR_TEST)
             _report_types  = {"technical", "fundamental", "forensic", "research",
                               "intraday", "canslim", "ric", "sector"} | _preset_types
 
@@ -5512,6 +5515,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
                     "[dim]  ─── Market Reports (Instant — direct from DB) ────────────────[/dim]\n"
                     "[dim]  Types:  sector-rotation   → Full sector breadth & rotation dashboard[/dim]\n"
                     "[dim]          stage2            → Stage 2 universe tracker (top 30 + new entrants)[/dim]\n"
+                    "[dim]          recommendation    → Grounded EOD recommendations across market, sectors, stocks[/dim]\n"
                     "[dim]  ─── Format ──────────────────────────────────────────────────────[/dim]\n"
                     "[dim]  Format: html (default) | pdf | md[/dim]\n"
                     "[dim]  ─── Examples ────────────────────────────────────────────────────[/dim]\n"
@@ -5519,6 +5523,8 @@ def _chat_loop(agent, show_trace: bool) -> None:
                     "[dim]    /report sector-rotation pdf       → PDF  (instant)[/dim]\n"
                     "[dim]    /report stage2                    → HTML (instant)[/dim]\n"
                     "[dim]    /report stage2 md                 → Markdown[/dim]\n"
+                    "[dim]    /report recommendation             → HTML grounded recommendations[/dim]\n"
+                    "[dim]    /report recommendation --watchlist RELIANCE,TCS --format md[/dim]\n"
                     "[dim]    /report technical RELIANCE        → LLM analysis → HTML[/dim]\n"
                     "[dim]    /report fundamental TCS pdf       → LLM analysis → PDF[/dim]\n"
                     "[dim]    /report forensic INFY md[/dim]\n"
@@ -5563,6 +5569,27 @@ def _chat_loop(agent, show_trace: bool) -> None:
                     f"pulling from DB snapshot... (no LLM needed)[/dim]"
                 )
                 try:
+                    if rpt_type == "recommendation":
+                        from terminal.recommendation_report import generate_recommendation_report, parse_recommendation_report_args
+
+                        _opts = parse_recommendation_report_args(parts[1:])
+                        _r = generate_recommendation_report(options=_opts)
+                        if _r.get("success"):
+                            console.print(
+                                f"  [bold green]✅  Recommendation report saved![/bold green]  "
+                                f"[cyan]{_r['path']}[/cyan]"
+                            )
+                            console.print(f"  [dim]Evidence: {_r.get('evidence_path', '')}[/dim]")
+                            console.print(f"  [dim]Recommendations: {_r.get('recommendation_count', 0)} · Run ID: {_r.get('run_id', '')}[/dim]")
+                            for _warning in _r.get("warnings", []):
+                                console.print(f"  [yellow]⚠ {_warning}[/yellow]")
+                            import subprocess
+                            subprocess.Popen(["open", _r["path"]])
+                        else:
+                            console.print(f"  [bold red]❌  Recommendation report failed[/bold red]")
+                        _separator()
+                        continue
+
                     from terminal.reports import generate_preset_report as _gen_preset
                     _r = _gen_preset(rpt_type, rpt_fmt)
                     if _r.get("success"):
