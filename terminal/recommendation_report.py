@@ -828,7 +828,10 @@ def _score(evidence: SubjectEvidence, market_regime: dict[str, Any], sector: dic
     score += {"risk_on": 4.0, "neutral": 0.0, "risk_off": -7.0}.get(str(market_regime.get("label") or ""), 0.0)
     score += {"leader": 4.0, "neutral": 0.0, "laggard": -5.0}.get(str(sector.get("rotation_label") or ""), 0.0)
 
-    return _round(max(0.0, min(100.0, score)))
+    score = max(0.0, min(100.0, score))
+    if "eod_price_history" in evidence.missing_evidence:
+        score = min(score, 40.0)
+    return _round(score)
 
 
 def _policy_conflicts(evidence: SubjectEvidence, quality: str) -> list[str]:
@@ -854,14 +857,14 @@ def _confidence(label: str, score: float, missing_evidence: list[str], conflicts
         return "low"
     if len(missing_evidence) >= 3:
         return "low"
-    if label == RecommendationLabel.ADD_ON_CONFIRMATION and score >= 75:
-        return "medium" if conflicts else "high"
-    if label == RecommendationLabel.AVOID_FRESH_ENTRY and score <= 35:
-        return "medium" if conflicts else "high"
-    if conflicts:
-        return "low"
     if missing_evidence:
         return "medium"
+    if conflicts:
+        return "low"
+    if label == RecommendationLabel.ADD_ON_CONFIRMATION and score >= 75:
+        return "high"
+    if label == RecommendationLabel.AVOID_FRESH_ENTRY and score <= 35:
+        return "high"
     return "medium"
 
 
@@ -885,7 +888,7 @@ def make_recommendation(
     if "eod_price_history" in missing_evidence:
         label = RecommendationLabel.REVIEW_MANUALLY
         why = "Price history is missing, so the recommendation requires manual review."
-    elif stage == "STAGE_4" or signal == "SELL" or trend == "bearish" or quality == "quality_weak":
+    elif stage == "STAGE_4" or signal == "SELL" or trend in {"weak", "bearish"} or quality == "quality_weak":
         label = RecommendationLabel.AVOID_FRESH_ENTRY
         why = "Risk controls block fresh entry because the setup has weak trend, signal, stage, or fundamentals."
     elif conflicts:

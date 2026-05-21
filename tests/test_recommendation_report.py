@@ -243,6 +243,92 @@ def test_policy_assigns_watchlist_when_strong_setup_has_conflict():
     assert rec.label == RecommendationLabel.WATCHLIST
 
 
+def test_policy_review_manually_for_missing_eod_caps_score_and_confidence():
+    evidence = SubjectEvidence(
+        subject="AAA",
+        scope="stock",
+        sector="Capital Goods",
+        technical=TechnicalProfile(subject="AAA", trend_label="constructive"),
+        snapshot={
+            "symbol": "AAA",
+            "sector": "Capital Goods",
+            "stage": "STAGE_2",
+            "technical_score": 95,
+            "relative_strength": 40,
+            "trading_signal": "BUY",
+            "investment_score": 90,
+        },
+        fundamentals={"symbol": "AAA", "roe": 20, "roce": 26, "stock_pe": 22, "interest_coverage": 10},
+        missing_evidence=["eod_price_history"],
+    )
+
+    rec = make_recommendation(
+        evidence,
+        market_regime={"label": "risk_on"},
+        sector={"rotation_label": "leader"},
+    )
+
+    assert rec.label == RecommendationLabel.REVIEW_MANUALLY
+    assert rec.confidence == "low"
+    assert rec.score <= 40
+
+
+def test_policy_missing_ordinary_evidence_prevents_high_confidence():
+    evidence = SubjectEvidence(
+        subject="BBB",
+        scope="stock",
+        sector="Chemicals",
+        technical=TechnicalProfile(subject="BBB", trend_label="bearish"),
+        snapshot={
+            "symbol": "BBB",
+            "sector": "Chemicals",
+            "stage": "STAGE_4",
+            "technical_score": 12,
+            "relative_strength": -25,
+            "trading_signal": "SELL",
+            "investment_score": 18,
+        },
+        fundamentals={},
+        missing_evidence=["fundamentals"],
+    )
+
+    rec = make_recommendation(
+        evidence,
+        market_regime={"label": "risk_off"},
+        sector={"rotation_label": "laggard"},
+    )
+
+    assert rec.label == RecommendationLabel.AVOID_FRESH_ENTRY
+    assert rec.confidence != "high"
+
+
+def test_policy_assigns_avoid_for_weak_technical_trend():
+    evidence = SubjectEvidence(
+        subject="CCC",
+        scope="stock",
+        sector="Industrials",
+        technical=TechnicalProfile(subject="CCC", trend_label="weak"),
+        snapshot={
+            "symbol": "CCC",
+            "sector": "Industrials",
+            "stage": "STAGE_1",
+            "technical_score": 48,
+            "relative_strength": -5,
+            "trading_signal": "HOLD",
+            "investment_score": 60,
+        },
+        fundamentals={"symbol": "CCC", "roe": 15, "roce": 18, "interest_coverage": 5},
+    )
+
+    rec = make_recommendation(
+        evidence,
+        market_regime={"label": "neutral"},
+        sector={"rotation_label": "neutral"},
+    )
+
+    assert rec.label == RecommendationLabel.AVOID_FRESH_ENTRY
+
+
 def test_policy_assigns_avoid_for_weak_stage_and_fundamentals():
     data = RecommendationInputData(
         index_history=_history("NIFTY 50"),
