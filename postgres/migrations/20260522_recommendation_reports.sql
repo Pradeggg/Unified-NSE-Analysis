@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS recommendation_reports.recommendations (
     label TEXT NOT NULL,
     confidence TEXT NOT NULL,
     score NUMERIC,
-    policy JSONB NOT NULL,
+    payload JSONB NOT NULL,
     PRIMARY KEY (run_id, subject, scope)
 );
 

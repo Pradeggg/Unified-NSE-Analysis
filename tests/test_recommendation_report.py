@@ -607,6 +607,97 @@ def test_persist_recommendation_run_falls_back_when_postgres_unavailable(tmp_pat
     assert result["evidence_path"] == str(evidence_path)
 
 
+def test_persist_recommendation_run_replaces_child_rows_and_uses_payload_column():
+    class FakeCursor:
+        def __init__(self):
+            self.executed = []
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def execute(self, sql, params=None):
+            self.executed.append((str(sql), params))
+
+    class FakeConnection:
+        def __init__(self, cursor):
+            self.cursor_instance = cursor
+            self.committed = False
+            self.closed = False
+
+        def cursor(self):
+            return self.cursor_instance
+
+        def commit(self):
+            self.committed = True
+
+        def rollback(self):
+            raise AssertionError("success path should not roll back")
+
+        def close(self):
+            self.closed = True
+
+    cursor = FakeCursor()
+    conn = FakeConnection(cursor)
+    pack = build_recommendation_evidence_pack(
+        RecommendationInputData(
+            index_history=_history("NIFTY 50"),
+            equity_history=_history("AAA"),
+            snapshots=pd.DataFrame([{"symbol": "AAA", "sector": "Capital Goods"}]),
+        )
+    )
+    recommendation = GroundedRecommendation(
+        subject="AAA",
+        scope="stock",
+        label=RecommendationLabel.HOLD,
+        confidence="medium",
+        score=55,
+        why="Evidence is balanced.",
+        technical_evidence=["Trend constructive"],
+        fundamental_evidence=[],
+        trigger="Wait for confirmation.",
+        invalidation="Lose support.",
+        risk="Position size conservatively.",
+        missing_evidence=[],
+    )
+
+    with patch("terminal.recommendation_report._connect_pg", return_value=conn):
+        result = persist_recommendation_run(pack, [recommendation], "/tmp/report.md", "/tmp/evidence.json")
+
+    normalized_sql = [" ".join(sql.split()).lower() for sql, _params in cursor.executed]
+    joined_sql = "\n".join(normalized_sql)
+    recommendation_delete_idx = next(
+        idx
+        for idx, sql in enumerate(normalized_sql)
+        if "delete from recommendation_reports.recommendations where run_id=%s" in sql
+    )
+    evidence_delete_idx = next(
+        idx
+        for idx, sql in enumerate(normalized_sql)
+        if "delete from recommendation_reports.evidence where run_id=%s" in sql
+    )
+    recommendation_insert_idx = next(
+        idx
+        for idx, sql in enumerate(normalized_sql)
+        if "insert into recommendation_reports.recommendations" in sql
+    )
+    evidence_insert_idx = next(
+        idx
+        for idx, sql in enumerate(normalized_sql)
+        if "insert into recommendation_reports.evidence" in sql
+    )
+
+    assert result == {"status": "postgres", "schema": "recommendation_reports", "run_id": pack.run_id}
+    assert conn.committed is True
+    assert conn.closed is True
+    assert evidence_delete_idx < evidence_insert_idx
+    assert recommendation_delete_idx < recommendation_insert_idx
+    assert "recommendation_reports.recommendations ( run_id, subject, scope, label, confidence, score, payload )" in joined_sql
+    assert "policy" not in joined_sql
+
+
 def test_save_evidence_json_converts_non_finite_numbers_and_timestamps(tmp_path):
     pack = build_recommendation_evidence_pack(RecommendationInputData(index_history=_history("NIFTY 50")))
     pack.market_regime["inf"] = float("inf")

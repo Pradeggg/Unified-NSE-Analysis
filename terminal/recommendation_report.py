@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS recommendation_reports.recommendations (
     label TEXT NOT NULL,
     confidence TEXT NOT NULL,
     score NUMERIC,
-    policy JSONB NOT NULL,
+    payload JSONB NOT NULL,
     PRIMARY KEY (run_id, subject, scope)
 );
 
@@ -1510,6 +1510,14 @@ def persist_recommendation_run(
                     Json(_jsonable(pack.missing_evidence)),
                 ),
             )
+            cur.execute(
+                "DELETE FROM recommendation_reports.recommendations WHERE run_id=%s",
+                (pack.run_id,),
+            )
+            cur.execute(
+                "DELETE FROM recommendation_reports.evidence WHERE run_id=%s",
+                (pack.run_id,),
+            )
 
             evidence_rows: list[tuple[str, str, Any]] = []
             evidence_rows.extend(("index", subject, evidence) for subject, evidence in pack.indices.items())
@@ -1537,14 +1545,14 @@ def persist_recommendation_run(
                         label,
                         confidence,
                         score,
-                        policy
+                        payload
                     )
                     VALUES (%s, %s, %s, %s, %s, %s, %s)
                     ON CONFLICT (run_id, subject, scope) DO UPDATE SET
                         label = EXCLUDED.label,
                         confidence = EXCLUDED.confidence,
                         score = EXCLUDED.score,
-                        policy = EXCLUDED.policy
+                        payload = EXCLUDED.payload
                     """,
                     (
                         pack.run_id,
