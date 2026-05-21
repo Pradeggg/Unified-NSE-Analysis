@@ -1,10 +1,13 @@
 import pandas as pd
 
 from terminal.recommendation_report import (
+    RecommendationLabel,
     RecommendationInputData,
     TechnicalProfile,
     build_recommendation_evidence_pack,
     build_technical_profile,
+    classify_fundamentals,
+    make_recommendation,
     pct_change_from_lookback,
 )
 
@@ -173,3 +176,85 @@ def test_portfolio_symbol_outside_top_n_uses_stock_missing_evidence_rules():
     assert "BBB" in pack.portfolio
     assert "fundamentals" in pack.portfolio["BBB"].missing_evidence
     assert "snapshot" not in pack.portfolio["BBB"].missing_evidence
+
+
+def test_policy_assigns_add_on_confirmation_for_grounded_strength():
+    data = RecommendationInputData(
+        index_history=_history("NIFTY 50"),
+        equity_history=_history("AAA"),
+        snapshots=pd.DataFrame(
+            [
+                {
+                    "symbol": "AAA",
+                    "sector": "Capital Goods",
+                    "stage": "STAGE_2",
+                    "technical_score": 88,
+                    "relative_strength": 32,
+                    "trading_signal": "BUY",
+                    "investment_score": 82,
+                }
+            ]
+        ),
+        fundamentals=pd.DataFrame(
+            [{"symbol": "AAA", "roe": 18, "roce": 24, "stock_pe": 22, "interest_coverage": 9}]
+        ),
+    )
+    pack = build_recommendation_evidence_pack(data)
+
+    rec = make_recommendation(
+        pack.stocks["AAA"],
+        market_regime=pack.market_regime,
+        sector=pack.sectors["Capital Goods"],
+    )
+
+    assert rec.label == RecommendationLabel.ADD_ON_CONFIRMATION
+    assert rec.confidence in {"high", "medium"}
+    assert rec.technical_evidence
+    assert rec.fundamental_evidence
+    assert rec.trigger
+    assert rec.invalidation
+    assert rec.risk
+
+
+def test_policy_assigns_avoid_for_weak_stage_and_fundamentals():
+    data = RecommendationInputData(
+        index_history=_history("NIFTY 50"),
+        equity_history=_history("BBB", start=300.0).assign(
+            close=lambda df: list(reversed(df["close"].tolist()))
+        ),
+        snapshots=pd.DataFrame(
+            [
+                {
+                    "symbol": "BBB",
+                    "sector": "Chemicals",
+                    "stage": "STAGE_4",
+                    "technical_score": 18,
+                    "relative_strength": -20,
+                    "trading_signal": "SELL",
+                    "investment_score": 25,
+                }
+            ]
+        ),
+        fundamentals=pd.DataFrame(
+            [{"symbol": "BBB", "roe": 4, "roce": 6, "stock_pe": 60, "interest_coverage": 1.1}]
+        ),
+    )
+    pack = build_recommendation_evidence_pack(data)
+
+    rec = make_recommendation(
+        pack.stocks["BBB"],
+        market_regime=pack.market_regime,
+        sector=pack.sectors["Chemicals"],
+    )
+
+    assert rec.label == RecommendationLabel.AVOID_FRESH_ENTRY
+    assert "STAGE_4" in " ".join(rec.technical_evidence)
+    assert rec.confidence in {"medium", "high"}
+
+
+def test_fundamental_classification_marks_missing_as_unknown():
+    assert classify_fundamentals({}) == "quality_unknown"
+
+
+def test_fundamental_classification_marks_unscoreable_fields_as_unknown():
+    assert classify_fundamentals({"symbol": "AAA", "company_name": "AAA Ltd"}) == "quality_unknown"

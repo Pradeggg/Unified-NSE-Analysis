@@ -665,15 +665,297 @@ def build_recommendation_evidence_pack(
     )
 
 
+class RecommendationLabel:
+    ADD_ON_CONFIRMATION = "ADD_ON_CONFIRMATION"
+    HOLD = "HOLD"
+    TRIM_INTO_STRENGTH = "TRIM_INTO_STRENGTH"
+    AVOID_FRESH_ENTRY = "AVOID_FRESH_ENTRY"
+    WATCHLIST = "WATCHLIST"
+    REVIEW_MANUALLY = "REVIEW_MANUALLY"
+
+
+@dataclass
+class GroundedRecommendation:
+    subject: str
+    scope: str
+    label: str
+    confidence: str
+    score: float
+    why: str
+    technical_evidence: list[str]
+    fundamental_evidence: list[str]
+    trigger: str
+    invalidation: str
+    risk: str
+    missing_evidence: list[str]
+    conflicts: list[str] = field(default_factory=list)
+
+
+_FUNDAMENTAL_ALIASES = {
+    "roe": ("roe", "return_on_equity", "return_on_equity_pct"),
+    "roce": ("roce", "return_on_capital_employed", "return_on_capital_employed_pct"),
+    "interest_coverage": ("interest_coverage", "interest_coverage_ratio", "interest_cover"),
+}
+
+
+def _aliased_num(record: dict[str, Any], field_name: str) -> float | None:
+    for alias in _FUNDAMENTAL_ALIASES[field_name]:
+        value = _num(record.get(alias))
+        if value is not None:
+            return value
+    return None
+
+
+def classify_fundamentals(fundamentals: dict[str, Any]) -> str:
+    roe = _aliased_num(fundamentals, "roe")
+    roce = _aliased_num(fundamentals, "roce")
+    interest_coverage = _aliased_num(fundamentals, "interest_coverage")
+    scoreable = [value for value in (roe, roce, interest_coverage) if value is not None]
+    if not scoreable:
+        return "quality_unknown"
+
+    supportive = 0
+    supportive += int(roe is not None and roe >= 12)
+    supportive += int(roce is not None and roce >= 15)
+    supportive += int(interest_coverage is not None and interest_coverage >= 3)
+
+    weak = 0
+    weak += int(roe is not None and roe < 8)
+    weak += int(roce is not None and roce < 10)
+    weak += int(interest_coverage is not None and interest_coverage < 1.5)
+
+    if weak >= 2:
+        return "quality_weak"
+    if supportive >= 2 and weak == 0:
+        return "quality_supportive"
+    return "quality_mixed"
+
+
+def _technical_evidence(evidence: SubjectEvidence) -> list[str]:
+    snapshot = evidence.snapshot or {}
+    technical = evidence.technical
+    items: list[str] = []
+
+    stage = str(snapshot.get("stage") or "").upper().strip()
+    if stage:
+        items.append(f"Stage {stage}")
+    signal = str(snapshot.get("trading_signal") or "").upper().strip()
+    if signal:
+        items.append(f"Signal {signal}")
+
+    technical_score = _num(snapshot.get("technical_score"))
+    if technical_score is not None:
+        items.append(f"Technical score {_round(technical_score)}")
+    relative_strength = _num(snapshot.get("relative_strength"))
+    if relative_strength is not None:
+        items.append(f"Relative strength {_round(relative_strength)}")
+
+    if technical is not None:
+        if technical.trend_label:
+            items.append(f"Trend {technical.trend_label}")
+        if technical.latest_close is not None:
+            items.append(f"Close {_round(technical.latest_close)}")
+        if technical.price_above_sma20 is not None:
+            items.append(f"Above SMA20 {technical.price_above_sma20}")
+        if technical.price_above_sma50 is not None:
+            items.append(f"Above SMA50 {technical.price_above_sma50}")
+        if technical.price_above_sma200 is not None:
+            items.append(f"Above SMA200 {technical.price_above_sma200}")
+        if technical.rsi14 is not None:
+            items.append(f"RSI14 {_round(technical.rsi14)}")
+
+    return items or ["Technical evidence unavailable"]
+
+
+def _fundamental_evidence(fundamentals: dict[str, Any]) -> list[str]:
+    classification = classify_fundamentals(fundamentals)
+    items = [f"Fundamental quality {classification}"]
+
+    roe = _aliased_num(fundamentals, "roe")
+    roce = _aliased_num(fundamentals, "roce")
+    interest_coverage = _aliased_num(fundamentals, "interest_coverage")
+    stock_pe = _num(fundamentals.get("stock_pe") or fundamentals.get("pe") or fundamentals.get("price_to_earnings"))
+
+    if roe is not None:
+        items.append(f"ROE {_round(roe)}")
+    if roce is not None:
+        items.append(f"ROCE {_round(roce)}")
+    if interest_coverage is not None:
+        items.append(f"Interest coverage {_round(interest_coverage)}")
+    if stock_pe is not None:
+        items.append(f"Stock PE {_round(stock_pe)}")
+
+    return items
+
+
+def _score(evidence: SubjectEvidence, market_regime: dict[str, Any], sector: dict[str, Any]) -> float:
+    snapshot = evidence.snapshot or {}
+    technical = evidence.technical
+    quality = classify_fundamentals(evidence.fundamentals or {})
+
+    score = 50.0
+    technical_score = _num(snapshot.get("technical_score"))
+    if technical_score is not None:
+        score += (technical_score - 50.0) * 0.35
+
+    investment_score = _num(snapshot.get("investment_score"))
+    if investment_score is not None:
+        score += (investment_score - 50.0) * 0.20
+
+    relative_strength = _num(snapshot.get("relative_strength"))
+    if relative_strength is not None:
+        score += max(-15.0, min(15.0, relative_strength * 0.35))
+
+    stage = str(snapshot.get("stage") or "").upper()
+    score += {"STAGE_2": 8.0, "STAGE_1": 3.0, "STAGE_3": -6.0, "STAGE_4": -14.0}.get(stage, 0.0)
+
+    signal = str(snapshot.get("trading_signal") or "").upper()
+    score += {"BUY": 7.0, "HOLD": 0.0, "SELL": -12.0}.get(signal, 0.0)
+
+    trend = technical.trend_label if technical is not None else ""
+    score += {"bullish": 8.0, "constructive": 5.0, "neutral": 0.0, "weak": -7.0, "bearish": -12.0}.get(
+        trend,
+        0.0,
+    )
+
+    score += {
+        "quality_supportive": 8.0,
+        "quality_mixed": 2.0,
+        "quality_unknown": -3.0,
+        "quality_weak": -12.0,
+    }[quality]
+
+    score += {"risk_on": 4.0, "neutral": 0.0, "risk_off": -7.0}.get(str(market_regime.get("label") or ""), 0.0)
+    score += {"leader": 4.0, "neutral": 0.0, "laggard": -5.0}.get(str(sector.get("rotation_label") or ""), 0.0)
+
+    return _round(max(0.0, min(100.0, score)))
+
+
+def _policy_conflicts(evidence: SubjectEvidence, quality: str) -> list[str]:
+    snapshot = evidence.snapshot or {}
+    technical = evidence.technical
+    conflicts = list(technical.conflicts if technical is not None else [])
+    signal = str(snapshot.get("trading_signal") or "").upper()
+    stage = str(snapshot.get("stage") or "").upper()
+    trend = technical.trend_label if technical is not None else ""
+
+    if signal == "BUY" and trend in {"weak", "bearish"}:
+        conflicts.append("BUY signal conflicts with weak technical trend")
+    if signal == "SELL" and trend in {"bullish", "constructive"}:
+        conflicts.append("SELL signal conflicts with constructive technical trend")
+    if stage == "STAGE_2" and quality == "quality_weak":
+        conflicts.append("Stage 2 setup conflicts with weak fundamentals")
+
+    return list(dict.fromkeys(conflicts))
+
+
+def _confidence(label: str, score: float, missing_evidence: list[str], conflicts: list[str]) -> str:
+    if "eod_price_history" in missing_evidence:
+        return "low"
+    if len(missing_evidence) >= 3:
+        return "low"
+    if label == RecommendationLabel.ADD_ON_CONFIRMATION and score >= 75:
+        return "medium" if conflicts else "high"
+    if label == RecommendationLabel.AVOID_FRESH_ENTRY and score <= 35:
+        return "medium" if conflicts else "high"
+    if conflicts:
+        return "low"
+    if missing_evidence:
+        return "medium"
+    return "medium"
+
+
+def make_recommendation(
+    evidence: SubjectEvidence,
+    *,
+    market_regime: dict[str, Any],
+    sector: dict[str, Any],
+) -> GroundedRecommendation:
+    missing_evidence = list(dict.fromkeys(evidence.missing_evidence))
+    technical = evidence.technical
+    snapshot = evidence.snapshot or {}
+    quality = classify_fundamentals(evidence.fundamentals or {})
+    score = _score(evidence, market_regime, sector)
+    conflicts = _policy_conflicts(evidence, quality)
+
+    stage = str(snapshot.get("stage") or "").upper()
+    signal = str(snapshot.get("trading_signal") or "").upper()
+    trend = technical.trend_label if technical is not None else ""
+
+    if "eod_price_history" in missing_evidence:
+        label = RecommendationLabel.REVIEW_MANUALLY
+        why = "Price history is missing, so the recommendation requires manual review."
+    elif stage == "STAGE_4" or signal == "SELL" or trend == "bearish" or quality == "quality_weak":
+        label = RecommendationLabel.AVOID_FRESH_ENTRY
+        why = "Risk controls block fresh entry because the setup has weak trend, signal, stage, or fundamentals."
+    elif (
+        stage == "STAGE_2"
+        and signal == "BUY"
+        and trend in {"bullish", "constructive"}
+        and quality in {"quality_supportive", "quality_mixed"}
+        and score >= 60
+    ):
+        label = RecommendationLabel.ADD_ON_CONFIRMATION
+        why = "Stage 2, BUY signal, constructive trend, and acceptable fundamentals support adding on confirmation."
+    elif conflicts:
+        label = RecommendationLabel.WATCHLIST
+        why = "Evidence is not aligned enough for action; keep it on watchlist until conflicts resolve."
+    elif evidence.scope == "portfolio":
+        label = RecommendationLabel.HOLD
+        why = "Existing holding has no fresh add or exit trigger from the grounded policy."
+    else:
+        label = RecommendationLabel.WATCHLIST
+        why = "Setup is incomplete for action; monitor for clearer technical and fundamental confirmation."
+
+    technical_evidence = _technical_evidence(evidence)
+    fundamental_evidence = _fundamental_evidence(evidence.fundamentals or {})
+
+    trigger = "Wait for price action to confirm above resistance or a fresh BUY/Stage 2 continuation signal."
+    if label == RecommendationLabel.AVOID_FRESH_ENTRY:
+        trigger = "Reconsider only after trend stabilizes and Stage/SELL/quality weakness clears."
+    elif label == RecommendationLabel.REVIEW_MANUALLY:
+        trigger = "Collect valid EOD price history before issuing an actionable view."
+
+    invalidation = "Invalidate if price loses key moving averages or the evidence pack adds material conflicts."
+    if technical is not None and technical.support is not None:
+        invalidation = f"Invalidate on a decisive close below support near {_round(technical.support)}."
+
+    risk = "Position sizing should reflect market regime, sector rotation, and missing evidence."
+    if str(market_regime.get("label") or "") == "risk_off":
+        risk = "Market regime is risk-off; require smaller sizing and stronger confirmation."
+    elif label == RecommendationLabel.AVOID_FRESH_ENTRY:
+        risk = "Primary risk is continued downside or opportunity cost from entering a weak setup."
+
+    return GroundedRecommendation(
+        subject=evidence.subject,
+        scope=evidence.scope,
+        label=label,
+        confidence=_confidence(label, score, missing_evidence, conflicts),
+        score=score,
+        why=why,
+        technical_evidence=technical_evidence,
+        fundamental_evidence=fundamental_evidence,
+        trigger=trigger,
+        invalidation=invalidation,
+        risk=risk,
+        missing_evidence=missing_evidence,
+        conflicts=conflicts,
+    )
+
+
 __all__ = [
+    "GroundedRecommendation",
     "PG_DSN",
     "REPORT_DIR",
     "RecommendationEvidencePack",
     "RecommendationInputData",
+    "RecommendationLabel",
     "ROOT",
     "SubjectEvidence",
     "TechnicalProfile",
     "build_technical_profile",
     "build_recommendation_evidence_pack",
+    "classify_fundamentals",
+    "make_recommendation",
     "pct_change_from_lookback",
 ]
