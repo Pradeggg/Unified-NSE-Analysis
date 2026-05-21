@@ -1,7 +1,9 @@
 import pandas as pd
 
 from terminal.recommendation_report import (
+    RecommendationInputData,
     TechnicalProfile,
+    build_recommendation_evidence_pack,
     build_technical_profile,
     pct_change_from_lookback,
 )
@@ -50,3 +52,69 @@ def test_build_technical_profile_computes_grounded_fields():
     assert profile.macd_hist is not None
     assert profile.trend_label in {"bullish", "constructive"}
     assert profile.missing_evidence == []
+
+
+def _history(symbol: str, start: float = 100.0, rows: int = 240) -> pd.DataFrame:
+    return pd.DataFrame(
+        [
+            {
+                "symbol": symbol,
+                "trade_date": pd.Timestamp("2025-09-01") + pd.Timedelta(days=idx),
+                "open": start + idx - 1,
+                "high": start + idx + 2,
+                "low": start + idx - 2,
+                "close": start + idx,
+                "volume": 1000 + idx,
+            }
+            for idx in range(rows)
+        ]
+    )
+
+
+def test_build_evidence_pack_contains_indices_sectors_stocks_and_portfolio():
+    data = RecommendationInputData(
+        index_history=pd.concat([_history("NIFTY 50"), _history("NIFTY BANK", 120.0)]),
+        equity_history=pd.concat([_history("AAA"), _history("BBB", 80.0)]),
+        snapshots=pd.DataFrame(
+            [
+                {
+                    "symbol": "AAA",
+                    "sector": "Capital Goods",
+                    "stage": "STAGE_2",
+                    "technical_score": 82,
+                    "relative_strength": 24,
+                    "trading_signal": "BUY",
+                    "investment_score": 76,
+                },
+                {
+                    "symbol": "BBB",
+                    "sector": "Chemicals",
+                    "stage": "STAGE_4",
+                    "technical_score": 18,
+                    "relative_strength": -12,
+                    "trading_signal": "SELL",
+                    "investment_score": 30,
+                },
+            ]
+        ),
+        fundamentals=pd.DataFrame(
+            [
+                {"symbol": "AAA", "roe": 18, "roce": 22, "stock_pe": 24, "interest_coverage": 8},
+                {"symbol": "BBB", "roe": 5, "roce": 7, "stock_pe": 55, "interest_coverage": 1.2},
+            ]
+        ),
+        portfolio=pd.DataFrame([{"symbol": "AAA", "qty": 10, "avg_cost": 150.0}]),
+        watchlist=["BBB"],
+    )
+
+    pack = build_recommendation_evidence_pack(data, top_n=10)
+
+    assert pack.as_of
+    assert "NIFTY 50" in pack.indices
+    assert "Capital Goods" in pack.sectors
+    assert "AAA" in pack.stocks
+    assert "BBB" in pack.stocks
+    assert "AAA" in pack.portfolio
+    assert "BBB" in pack.portfolio
+    assert pack.source_trail["equity_history"]["rows"] == 480
+    assert pack.missing_evidence == {}

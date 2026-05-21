@@ -291,11 +291,351 @@ def build_technical_profile(
     )
 
 
+@dataclass
+class SubjectEvidence:
+    subject: str
+    scope: str
+    sector: str = ""
+    technical: TechnicalProfile | None = None
+    snapshot: dict[str, Any] = field(default_factory=dict)
+    fundamentals: dict[str, Any] = field(default_factory=dict)
+    portfolio: dict[str, Any] = field(default_factory=dict)
+    missing_evidence: list[str] = field(default_factory=list)
+
+
+@dataclass
+class RecommendationInputData:
+    index_history: pd.DataFrame = field(default_factory=pd.DataFrame)
+    equity_history: pd.DataFrame = field(default_factory=pd.DataFrame)
+    snapshots: pd.DataFrame = field(default_factory=pd.DataFrame)
+    fundamentals: pd.DataFrame = field(default_factory=pd.DataFrame)
+    portfolio: pd.DataFrame = field(default_factory=pd.DataFrame)
+    watchlist: list[str] = field(default_factory=list)
+
+
+@dataclass
+class RecommendationEvidencePack:
+    run_id: str
+    as_of: str
+    generated_at: str
+    indices: dict[str, SubjectEvidence] = field(default_factory=dict)
+    sectors: dict[str, dict[str, Any]] = field(default_factory=dict)
+    stocks: dict[str, SubjectEvidence] = field(default_factory=dict)
+    portfolio: dict[str, SubjectEvidence] = field(default_factory=dict)
+    market_regime: dict[str, Any] = field(default_factory=dict)
+    source_trail: dict[str, dict[str, Any]] = field(default_factory=dict)
+    missing_evidence: dict[str, list[str]] = field(default_factory=dict)
+
+
+def _normalize_columns(frame: pd.DataFrame) -> pd.DataFrame:
+    df = frame.copy()
+    df.columns = [
+        re.sub(r"_+", "_", re.sub(r"[^0-9a-zA-Z]+", "_", str(col).strip().lower())).strip("_")
+        for col in df.columns
+    ]
+    return df
+
+
+def _record_value(value: Any) -> Any:
+    if value is None:
+        return None
+    try:
+        if pd.isna(value):
+            return None
+    except (TypeError, ValueError):
+        pass
+    if isinstance(value, pd.Timestamp):
+        return str(value.date())
+    return value
+
+
+def _records_by_symbol(frame: pd.DataFrame) -> dict[str, dict[str, Any]]:
+    if frame is None or frame.empty:
+        return {}
+
+    df = _normalize_columns(frame)
+    if "symbol" not in df.columns:
+        return {}
+
+    records: dict[str, dict[str, Any]] = {}
+    for row in df.to_dict("records"):
+        symbol = str(row.get("symbol") or "").upper().strip()
+        if symbol:
+            records[symbol] = {str(key): _record_value(value) for key, value in row.items()}
+    return records
+
+
+def _history_groups(frame: pd.DataFrame, symbol_col: str = "symbol") -> dict[str, pd.DataFrame]:
+    if frame is None or frame.empty:
+        return {}
+
+    df = _normalize_columns(frame)
+    normalized_symbol_col = re.sub(
+        r"_+",
+        "_",
+        re.sub(r"[^0-9a-zA-Z]+", "_", str(symbol_col).strip().lower()),
+    ).strip("_")
+    if normalized_symbol_col not in df.columns:
+        return {}
+
+    groups: dict[str, pd.DataFrame] = {}
+    for symbol, group in df.groupby(normalized_symbol_col, dropna=True):
+        normalized_symbol = str(symbol).upper().strip()
+        if normalized_symbol:
+            groups[normalized_symbol] = group.copy().reset_index(drop=True)
+    return groups
+
+
+def _source_entry(name: str, frame: pd.DataFrame, source: str) -> dict[str, Any]:
+    rows = 0 if frame is None else int(len(frame))
+    latest = ""
+
+    if frame is not None and not frame.empty:
+        df = _normalize_columns(frame)
+        date_col = next(
+            (col for col in ("trade_date", "timestamp", "date", "as_of", "updated_at") if col in df.columns),
+            None,
+        )
+        if date_col is not None:
+            dates = pd.to_datetime(df[date_col], errors="coerce").dropna()
+            if not dates.empty:
+                latest = str(dates.max().date())
+
+    return {
+        "name": name,
+        "source": source,
+        "rows": rows,
+        "latest": latest,
+        "status": "primary" if rows else "missing",
+    }
+
+
+def _sector_rollup(stocks: dict[str, SubjectEvidence]) -> dict[str, dict[str, Any]]:
+    grouped: dict[str, list[SubjectEvidence]] = {}
+    for evidence in stocks.values():
+        sector = evidence.sector or "Unknown"
+        grouped.setdefault(sector, []).append(evidence)
+
+    sectors: dict[str, dict[str, Any]] = {}
+    for sector, members in grouped.items():
+        rs_values = [_num(member.snapshot.get("relative_strength")) for member in members]
+        rs_values = [value for value in rs_values if value is not None]
+        stage2_count = sum(1 for member in members if str(member.snapshot.get("stage") or "").upper() == "STAGE_2")
+        buy_signal_count = sum(
+            1 for member in members if str(member.snapshot.get("trading_signal") or "").upper() == "BUY"
+        )
+        avg_relative_strength = _round(sum(rs_values) / len(rs_values)) if rs_values else None
+        if avg_relative_strength is not None and avg_relative_strength >= 10 and buy_signal_count:
+            rotation_label = "leader"
+        elif avg_relative_strength is not None and avg_relative_strength <= -10:
+            rotation_label = "laggard"
+        else:
+            rotation_label = "neutral"
+
+        sectors[sector] = {
+            "stock_count": len(members),
+            "stage2_count": stage2_count,
+            "buy_signal_count": buy_signal_count,
+            "avg_relative_strength": avg_relative_strength,
+            "rotation_label": rotation_label,
+            "top_symbols": [
+                member.subject
+                for member in sorted(
+                    members,
+                    key=lambda member: (
+                        _num(member.snapshot.get("technical_score")) or 0,
+                        _num(member.snapshot.get("investment_score")) or 0,
+                        _num(member.snapshot.get("relative_strength")) or 0,
+                    ),
+                    reverse=True,
+                )[:5]
+            ],
+        }
+    return sectors
+
+
+def _market_regime(indices: dict[str, SubjectEvidence]) -> dict[str, Any]:
+    trends = [
+        evidence.technical.trend_label
+        for evidence in indices.values()
+        if evidence.technical is not None and evidence.technical.trend_label
+    ]
+    constructive_count = sum(1 for trend in trends if trend in {"bullish", "constructive"})
+    weak_count = sum(1 for trend in trends if trend in {"weak", "bearish"})
+
+    if constructive_count > weak_count:
+        label = "risk_on"
+    elif weak_count > constructive_count:
+        label = "risk_off"
+    else:
+        label = "neutral"
+
+    return {
+        "label": label,
+        "constructive_count": constructive_count,
+        "weak_count": weak_count,
+        "index_count": len(trends),
+        "trend_labels": trends,
+    }
+
+
+def _stock_sort_key(symbol: str, snapshots: dict[str, dict[str, Any]]) -> tuple[float, float, float, str]:
+    snapshot = snapshots.get(symbol, {})
+    return (
+        _num(snapshot.get("technical_score")) or 0.0,
+        _num(snapshot.get("investment_score")) or 0.0,
+        _num(snapshot.get("relative_strength")) or 0.0,
+        symbol,
+    )
+
+
+def build_recommendation_evidence_pack(
+    data: RecommendationInputData,
+    *,
+    top_n: int = 25,
+) -> RecommendationEvidencePack:
+    index_groups = _history_groups(data.index_history)
+    equity_groups = _history_groups(data.equity_history)
+    snapshots = _records_by_symbol(data.snapshots)
+    fundamentals = _records_by_symbol(data.fundamentals)
+    portfolio_records = _records_by_symbol(data.portfolio)
+
+    if "NIFTY 50" in index_groups:
+        benchmark = index_groups["NIFTY 50"]
+    elif index_groups:
+        benchmark = next(iter(index_groups.values()))
+    else:
+        benchmark = pd.DataFrame()
+
+    indices: dict[str, SubjectEvidence] = {}
+    for symbol, frame in index_groups.items():
+        technical = build_technical_profile(symbol, frame, benchmark_frame=benchmark)
+        indices[symbol] = SubjectEvidence(
+            subject=symbol,
+            scope="index",
+            technical=technical,
+            missing_evidence=list(technical.missing_evidence),
+        )
+
+    candidate_symbols = set(equity_groups) | set(snapshots) | set(fundamentals)
+    ordered_symbols = sorted(candidate_symbols, key=lambda symbol: _stock_sort_key(symbol, snapshots), reverse=True)
+    if top_n > 0:
+        ordered_symbols = ordered_symbols[:top_n]
+
+    stocks: dict[str, SubjectEvidence] = {}
+    for symbol in ordered_symbols:
+        frame = equity_groups.get(symbol, pd.DataFrame())
+        technical = build_technical_profile(symbol, frame, benchmark_frame=benchmark)
+        snapshot = snapshots.get(symbol, {})
+        stock_fundamentals = fundamentals.get(symbol, {})
+        missing = list(technical.missing_evidence)
+        if not snapshot:
+            missing.append("snapshot")
+        if not stock_fundamentals:
+            missing.append("fundamentals")
+
+        stocks[symbol] = SubjectEvidence(
+            subject=symbol,
+            scope="stock",
+            sector=str(snapshot.get("sector") or stock_fundamentals.get("sector") or ""),
+            technical=technical,
+            snapshot=dict(snapshot),
+            fundamentals=dict(stock_fundamentals),
+            missing_evidence=list(dict.fromkeys(missing)),
+        )
+
+    watchlist_symbols = {str(symbol).upper().strip() for symbol in data.watchlist if str(symbol).strip()}
+    portfolio_symbols = sorted(set(portfolio_records) | watchlist_symbols)
+    portfolio: dict[str, SubjectEvidence] = {}
+    for symbol in portfolio_symbols:
+        source = stocks.get(symbol)
+        if source is None:
+            frame = equity_groups.get(symbol, pd.DataFrame())
+            technical = build_technical_profile(symbol, frame, benchmark_frame=benchmark)
+            snapshot = snapshots.get(symbol, {})
+            stock_fundamentals = fundamentals.get(symbol, {})
+            source = SubjectEvidence(
+                subject=symbol,
+                scope="stock",
+                sector=str(snapshot.get("sector") or stock_fundamentals.get("sector") or ""),
+                technical=technical,
+                snapshot=dict(snapshot),
+                fundamentals=dict(stock_fundamentals),
+                missing_evidence=list(technical.missing_evidence),
+            )
+
+        portfolio_record = dict(portfolio_records.get(symbol, {}))
+        if not portfolio_record:
+            portfolio_record = {"symbol": symbol, "watchlist": True}
+        elif symbol in watchlist_symbols:
+            portfolio_record["watchlist"] = True
+
+        portfolio[symbol] = SubjectEvidence(
+            subject=symbol,
+            scope="portfolio",
+            sector=source.sector,
+            technical=source.technical,
+            snapshot=dict(source.snapshot),
+            fundamentals=dict(source.fundamentals),
+            portfolio=portfolio_record,
+            missing_evidence=list(source.missing_evidence),
+        )
+
+    source_trail = {
+        "index_history": _source_entry(
+            "index_history",
+            data.index_history,
+            "PostgreSQL market index history or CSV fallback",
+        ),
+        "equity_history": _source_entry(
+            "equity_history",
+            data.equity_history,
+            "PostgreSQL market equity history or CSV fallback",
+        ),
+        "snapshots": _source_entry(
+            "snapshots",
+            data.snapshots,
+            "scores latest snapshot or CSV fallback",
+        ),
+        "fundamentals": _source_entry(
+            "fundamentals",
+            data.fundamentals,
+            "screener fundamentals or cache fallback",
+        ),
+        "portfolio": _source_entry(
+            "portfolio",
+            data.portfolio,
+            "portfolio holdings source",
+        ),
+    }
+    missing_evidence = {
+        name: ["source_missing"] for name, entry in source_trail.items() if entry.get("status") == "missing"
+    }
+    as_of = str(source_trail["equity_history"].get("latest") or source_trail["index_history"].get("latest") or "")
+
+    return RecommendationEvidencePack(
+        run_id=str(uuid4()),
+        as_of=as_of,
+        generated_at=datetime.now().isoformat(timespec="seconds"),
+        indices=indices,
+        sectors=_sector_rollup(stocks),
+        stocks=stocks,
+        portfolio=portfolio,
+        market_regime=_market_regime(indices),
+        source_trail=source_trail,
+        missing_evidence=missing_evidence,
+    )
+
+
 __all__ = [
     "PG_DSN",
     "REPORT_DIR",
+    "RecommendationEvidencePack",
+    "RecommendationInputData",
     "ROOT",
+    "SubjectEvidence",
     "TechnicalProfile",
     "build_technical_profile",
+    "build_recommendation_evidence_pack",
     "pct_change_from_lookback",
 ]
