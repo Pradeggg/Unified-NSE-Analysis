@@ -888,6 +888,9 @@ def make_recommendation(
     elif stage == "STAGE_4" or signal == "SELL" or trend == "bearish" or quality == "quality_weak":
         label = RecommendationLabel.AVOID_FRESH_ENTRY
         why = "Risk controls block fresh entry because the setup has weak trend, signal, stage, or fundamentals."
+    elif conflicts:
+        label = RecommendationLabel.WATCHLIST
+        why = "Evidence is not aligned enough for action; keep it on watchlist until conflicts resolve."
     elif (
         stage == "STAGE_2"
         and signal == "BUY"
@@ -897,9 +900,6 @@ def make_recommendation(
     ):
         label = RecommendationLabel.ADD_ON_CONFIRMATION
         why = "Stage 2, BUY signal, constructive trend, and acceptable fundamentals support adding on confirmation."
-    elif conflicts:
-        label = RecommendationLabel.WATCHLIST
-        why = "Evidence is not aligned enough for action; keep it on watchlist until conflicts resolve."
     elif evidence.scope == "portfolio":
         label = RecommendationLabel.HOLD
         why = "Existing holding has no fresh add or exit trigger from the grounded policy."

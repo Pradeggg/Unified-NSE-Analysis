@@ -3,6 +3,7 @@ import pandas as pd
 from terminal.recommendation_report import (
     RecommendationLabel,
     RecommendationInputData,
+    SubjectEvidence,
     TechnicalProfile,
     build_recommendation_evidence_pack,
     build_technical_profile,
@@ -179,32 +180,27 @@ def test_portfolio_symbol_outside_top_n_uses_stock_missing_evidence_rules():
 
 
 def test_policy_assigns_add_on_confirmation_for_grounded_strength():
-    data = RecommendationInputData(
-        index_history=_history("NIFTY 50"),
-        equity_history=_history("AAA"),
-        snapshots=pd.DataFrame(
-            [
-                {
-                    "symbol": "AAA",
-                    "sector": "Capital Goods",
-                    "stage": "STAGE_2",
-                    "technical_score": 88,
-                    "relative_strength": 32,
-                    "trading_signal": "BUY",
-                    "investment_score": 82,
-                }
-            ]
-        ),
-        fundamentals=pd.DataFrame(
-            [{"symbol": "AAA", "roe": 18, "roce": 24, "stock_pe": 22, "interest_coverage": 9}]
-        ),
+    evidence = SubjectEvidence(
+        subject="AAA",
+        scope="stock",
+        sector="Capital Goods",
+        technical=TechnicalProfile(subject="AAA", trend_label="constructive"),
+        snapshot={
+            "symbol": "AAA",
+            "sector": "Capital Goods",
+            "stage": "STAGE_2",
+            "technical_score": 88,
+            "relative_strength": 32,
+            "trading_signal": "BUY",
+            "investment_score": 82,
+        },
+        fundamentals={"symbol": "AAA", "roe": 18, "roce": 24, "stock_pe": 22, "interest_coverage": 9},
     )
-    pack = build_recommendation_evidence_pack(data)
 
     rec = make_recommendation(
-        pack.stocks["AAA"],
-        market_regime=pack.market_regime,
-        sector=pack.sectors["Capital Goods"],
+        evidence,
+        market_regime={"label": "risk_on"},
+        sector={"rotation_label": "leader"},
     )
 
     assert rec.label == RecommendationLabel.ADD_ON_CONFIRMATION
@@ -214,6 +210,37 @@ def test_policy_assigns_add_on_confirmation_for_grounded_strength():
     assert rec.trigger
     assert rec.invalidation
     assert rec.risk
+
+
+def test_policy_assigns_watchlist_when_strong_setup_has_conflict():
+    evidence = SubjectEvidence(
+        subject="AAA",
+        scope="stock",
+        sector="Capital Goods",
+        technical=TechnicalProfile(
+            subject="AAA",
+            trend_label="constructive",
+            conflicts=["trend constructive but RSI extended"],
+        ),
+        snapshot={
+            "symbol": "AAA",
+            "sector": "Capital Goods",
+            "stage": "STAGE_2",
+            "technical_score": 88,
+            "relative_strength": 32,
+            "trading_signal": "BUY",
+            "investment_score": 82,
+        },
+        fundamentals={"symbol": "AAA", "roe": 18, "roce": 24, "stock_pe": 22, "interest_coverage": 9},
+    )
+
+    rec = make_recommendation(
+        evidence,
+        market_regime={"label": "risk_on"},
+        sector={"rotation_label": "leader"},
+    )
+
+    assert rec.label == RecommendationLabel.WATCHLIST
 
 
 def test_policy_assigns_avoid_for_weak_stage_and_fundamentals():
