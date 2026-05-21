@@ -386,12 +386,24 @@ def _history_groups(frame: pd.DataFrame, symbol_col: str = "symbol") -> dict[str
     return groups
 
 
-def _source_entry(name: str, frame: pd.DataFrame, source: str) -> dict[str, Any]:
+def _source_entry(
+    name: str,
+    frame: pd.DataFrame,
+    source: str,
+    *,
+    required_columns: tuple[str, ...] = (),
+) -> dict[str, Any]:
     rows = 0 if frame is None else int(len(frame))
     latest = ""
+    missing_columns: list[str] = []
 
     if frame is not None and not frame.empty:
         df = _normalize_columns(frame)
+        normalized_required = {
+            re.sub(r"_+", "_", re.sub(r"[^0-9a-zA-Z]+", "_", col.strip().lower())).strip("_")
+            for col in required_columns
+        }
+        missing_columns = sorted(normalized_required - set(df.columns))
         date_col = next(
             (col for col in ("trade_date", "timestamp", "date", "as_of", "updated_at") if col in df.columns),
             None,
@@ -401,12 +413,32 @@ def _source_entry(name: str, frame: pd.DataFrame, source: str) -> dict[str, Any]
             if not dates.empty:
                 latest = str(dates.max().date())
 
+    status = "missing"
+    if rows and missing_columns:
+        status = "degraded"
+    elif rows:
+        status = "primary"
+
     return {
         "name": name,
         "source": source,
         "rows": rows,
         "latest": latest,
-        "status": "primary" if rows else "missing",
+        "status": status,
+        "missing_columns": missing_columns,
+    }
+
+
+def _watchlist_source_entry(watchlist: list[str]) -> dict[str, Any]:
+    symbols = sorted({str(symbol).upper().strip() for symbol in watchlist if str(symbol).strip()})
+    return {
+        "name": "watchlist",
+        "source": "command-provided watchlist symbols",
+        "rows": len(symbols),
+        "latest": "",
+        "status": "primary" if symbols else "missing",
+        "missing_columns": [],
+        "symbols": symbols,
     }
 
 
@@ -489,6 +521,34 @@ def _stock_sort_key(symbol: str, snapshots: dict[str, dict[str, Any]]) -> tuple[
     )
 
 
+def _build_stock_evidence(
+    symbol: str,
+    equity_groups: dict[str, pd.DataFrame],
+    snapshots: dict[str, dict[str, Any]],
+    fundamentals: dict[str, dict[str, Any]],
+    benchmark: pd.DataFrame,
+) -> SubjectEvidence:
+    frame = equity_groups.get(symbol, pd.DataFrame())
+    technical = build_technical_profile(symbol, frame, benchmark_frame=benchmark)
+    snapshot = snapshots.get(symbol, {})
+    stock_fundamentals = fundamentals.get(symbol, {})
+    missing = list(technical.missing_evidence)
+    if not snapshot:
+        missing.append("snapshot")
+    if not stock_fundamentals:
+        missing.append("fundamentals")
+
+    return SubjectEvidence(
+        subject=symbol,
+        scope="stock",
+        sector=str(snapshot.get("sector") or stock_fundamentals.get("sector") or ""),
+        technical=technical,
+        snapshot=dict(snapshot),
+        fundamentals=dict(stock_fundamentals),
+        missing_evidence=list(dict.fromkeys(missing)),
+    )
+
+
 def build_recommendation_evidence_pack(
     data: RecommendationInputData,
     *,
@@ -524,25 +584,7 @@ def build_recommendation_evidence_pack(
 
     stocks: dict[str, SubjectEvidence] = {}
     for symbol in ordered_symbols:
-        frame = equity_groups.get(symbol, pd.DataFrame())
-        technical = build_technical_profile(symbol, frame, benchmark_frame=benchmark)
-        snapshot = snapshots.get(symbol, {})
-        stock_fundamentals = fundamentals.get(symbol, {})
-        missing = list(technical.missing_evidence)
-        if not snapshot:
-            missing.append("snapshot")
-        if not stock_fundamentals:
-            missing.append("fundamentals")
-
-        stocks[symbol] = SubjectEvidence(
-            subject=symbol,
-            scope="stock",
-            sector=str(snapshot.get("sector") or stock_fundamentals.get("sector") or ""),
-            technical=technical,
-            snapshot=dict(snapshot),
-            fundamentals=dict(stock_fundamentals),
-            missing_evidence=list(dict.fromkeys(missing)),
-        )
+        stocks[symbol] = _build_stock_evidence(symbol, equity_groups, snapshots, fundamentals, benchmark)
 
     watchlist_symbols = {str(symbol).upper().strip() for symbol in data.watchlist if str(symbol).strip()}
     portfolio_symbols = sorted(set(portfolio_records) | watchlist_symbols)
@@ -550,19 +592,7 @@ def build_recommendation_evidence_pack(
     for symbol in portfolio_symbols:
         source = stocks.get(symbol)
         if source is None:
-            frame = equity_groups.get(symbol, pd.DataFrame())
-            technical = build_technical_profile(symbol, frame, benchmark_frame=benchmark)
-            snapshot = snapshots.get(symbol, {})
-            stock_fundamentals = fundamentals.get(symbol, {})
-            source = SubjectEvidence(
-                subject=symbol,
-                scope="stock",
-                sector=str(snapshot.get("sector") or stock_fundamentals.get("sector") or ""),
-                technical=technical,
-                snapshot=dict(snapshot),
-                fundamentals=dict(stock_fundamentals),
-                missing_evidence=list(technical.missing_evidence),
-            )
+            source = _build_stock_evidence(symbol, equity_groups, snapshots, fundamentals, benchmark)
 
         portfolio_record = dict(portfolio_records.get(symbol, {}))
         if not portfolio_record:
@@ -586,30 +616,38 @@ def build_recommendation_evidence_pack(
             "index_history",
             data.index_history,
             "PostgreSQL market index history or CSV fallback",
+            required_columns=("symbol", "trade_date", "close"),
         ),
         "equity_history": _source_entry(
             "equity_history",
             data.equity_history,
             "PostgreSQL market equity history or CSV fallback",
+            required_columns=("symbol", "trade_date", "close"),
         ),
         "snapshots": _source_entry(
             "snapshots",
             data.snapshots,
             "scores latest snapshot or CSV fallback",
+            required_columns=("symbol",),
         ),
         "fundamentals": _source_entry(
             "fundamentals",
             data.fundamentals,
             "screener fundamentals or cache fallback",
+            required_columns=("symbol",),
         ),
         "portfolio": _source_entry(
             "portfolio",
             data.portfolio,
             "portfolio holdings source",
+            required_columns=("symbol",),
         ),
+        "watchlist": _watchlist_source_entry(data.watchlist),
     }
     missing_evidence = {
-        name: ["source_missing"] for name, entry in source_trail.items() if entry.get("status") == "missing"
+        name: [f"source_{entry['status']}"]
+        for name, entry in source_trail.items()
+        if entry.get("status") in {"missing", "degraded"}
     }
     as_of = str(source_trail["equity_history"].get("latest") or source_trail["index_history"].get("latest") or "")
 

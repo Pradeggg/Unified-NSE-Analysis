@@ -118,3 +118,58 @@ def test_build_evidence_pack_contains_indices_sectors_stocks_and_portfolio():
     assert "BBB" in pack.portfolio
     assert pack.source_trail["equity_history"]["rows"] == 480
     assert pack.missing_evidence == {}
+
+
+def test_watchlist_only_symbol_reports_missing_snapshot_and_fundamentals():
+    data = RecommendationInputData(
+        index_history=_history("NIFTY 50"),
+        equity_history=_history("ZZZ"),
+        watchlist=["ZZZ"],
+    )
+
+    pack = build_recommendation_evidence_pack(data)
+
+    assert "ZZZ" in pack.portfolio
+    assert "snapshot" in pack.portfolio["ZZZ"].missing_evidence
+    assert "fundamentals" in pack.portfolio["ZZZ"].missing_evidence
+    assert pack.source_trail["watchlist"]["rows"] == 1
+    assert pack.source_trail["watchlist"]["status"] == "primary"
+
+
+def test_malformed_snapshot_source_is_not_reported_as_primary():
+    data = RecommendationInputData(
+        index_history=_history("NIFTY 50"),
+        equity_history=_history("AAA"),
+        snapshots=pd.DataFrame([{"ticker": "AAA", "technical_score": 82}]),
+        fundamentals=pd.DataFrame([{"symbol": "AAA", "roe": 18}]),
+    )
+
+    pack = build_recommendation_evidence_pack(data)
+
+    assert pack.source_trail["snapshots"]["rows"] == 1
+    assert pack.source_trail["snapshots"]["status"] == "degraded"
+    assert pack.source_trail["snapshots"]["missing_columns"] == ["symbol"]
+    assert pack.missing_evidence["snapshots"] == ["source_degraded"]
+
+
+def test_portfolio_symbol_outside_top_n_uses_stock_missing_evidence_rules():
+    data = RecommendationInputData(
+        index_history=_history("NIFTY 50"),
+        equity_history=pd.concat([_history("AAA"), _history("BBB", 80.0)]),
+        snapshots=pd.DataFrame(
+            [
+                {"symbol": "AAA", "technical_score": 90, "investment_score": 80},
+                {"symbol": "BBB", "technical_score": 10, "investment_score": 5},
+            ]
+        ),
+        fundamentals=pd.DataFrame([{"symbol": "AAA", "roe": 18}]),
+        portfolio=pd.DataFrame([{"symbol": "BBB", "qty": 3, "avg_cost": 75.0}]),
+    )
+
+    pack = build_recommendation_evidence_pack(data, top_n=1)
+
+    assert "AAA" in pack.stocks
+    assert "BBB" not in pack.stocks
+    assert "BBB" in pack.portfolio
+    assert "fundamentals" in pack.portfolio["BBB"].missing_evidence
+    assert "snapshot" not in pack.portfolio["BBB"].missing_evidence
