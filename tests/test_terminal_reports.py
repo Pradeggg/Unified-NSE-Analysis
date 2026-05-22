@@ -85,6 +85,33 @@ def test_open_report_path_swallows_viewer_failures(monkeypatch):
 
 
 class TerminalReportsTests(unittest.TestCase):
+    def test_generated_html_uses_agent_adda_standard_theme(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            original_reports_dir = reports.REPORTS_DIR
+            try:
+                reports.REPORTS_DIR = Path(tmp)
+                result = reports.generate_report(
+                    "# Market Recommendation\n\n| Symbol | View |\n|---|---|\n| ABC | Watch |",
+                    report_type="research",
+                    symbol="MARKET",
+                    output_format="html",
+                    title="Theme Contract Report",
+                    filename="theme_contract",
+                )
+            finally:
+                reports.REPORTS_DIR = original_reports_dir
+
+            html = Path(result["path"]).read_text(encoding="utf-8")
+
+        self.assertIn('data-agent-theme="sector-rotation-standard"', html)
+        self.assertIn("site-hdr", html)
+        self.assertIn("metrics-row", html)
+        self.assertIn("metric-card", html)
+        self.assertIn("summary-card", html)
+        self.assertIn("tbl-wrap", html)
+        self.assertIn("data-table", html)
+        self.assertIn("Theme Contract Report", html)
+
     def test_markdown_converter_handles_loose_tables_indented_bullets_and_angle_links(self):
         html = reports._md_to_html_basic(
             "\n".join(

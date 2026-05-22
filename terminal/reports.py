@@ -579,6 +579,10 @@ def _md_to_html_basic(md_text: str) -> str:
 # HTML Report Template — Premium design with logo, interactive tables, TOC
 # ─────────────────────────────────────────────────────────────────────────────
 
+AGENT_ADDA_REPORT_THEME_ID = "sector-rotation-standard"
+AGENT_ADDA_REPORT_ENGINE = "Agent Adda Report Shell"
+
+
 REPORT_HTML_TEMPLATE = '''<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -588,22 +592,24 @@ REPORT_HTML_TEMPLATE = '''<!DOCTYPE html>
 <style>
 /* ── Reset & variables ─────────────────────────────────────────────── */
 :root {{
-  --bg:       #07070f;
-  --surface:  #0f0f1a;
-  --card:     #14142a;
-  --border:   #252545;
-  --border2:  #1e1e38;
-  --text:     #e2e2f0;
-  --dim:      #6868a0;
-  --accent:   #7c6fff;
-  --accent2:  #22d3ee;
+  --bg:       #f0f4f8;
+  --surface:  #f8fafc;
+  --card:     #ffffff;
+  --border:   #e2e8f0;
+  --border2:  #dbe3ef;
+  --text:     #1a2332;
+  --dim:      #64748b;
+  --primary:  #1e3a5f;
+  --primary-alt:#2563eb;
+  --accent:   #1e3a5f;
+  --accent2:  #2563eb;
   --green:    #4ade80;
   --red:      #f87171;
   --yellow:   #fbbf24;
   --orange:   #fb923c;
   --purple:   #c084fc;
   --radius:   10px;
-  --shadow:   0 4px 24px rgba(0,0,0,.45);
+  --shadow:   0 1px 3px rgba(0,0,0,.08);
 }}
 *,*::before,*::after {{ box-sizing:border-box; margin:0; padding:0; }}
 html {{ scroll-behavior:smooth; }}
@@ -620,12 +626,32 @@ a:hover {{ text-decoration:underline; }}
 
 /* ── Top nav bar ───────────────────────────────────────────────────── */
 .topbar {{
-  background: var(--surface);
+  background: var(--primary);
   border-bottom: 1px solid var(--border);
   padding: 0 32px;
   height: 52px;
   display:flex; align-items:center; justify-content:space-between;
   position: sticky; top:0; z-index:99;
+}}
+.site-hdr {{
+  color:#fff; box-shadow:0 4px 8px rgba(0,0,0,.10);
+}}
+.hdr-inner {{
+  width:100%; display:flex; align-items:center; justify-content:space-between; gap:12px;
+}}
+.hdr-brand {{
+  display:flex; align-items:center; gap:10px; min-width:0;
+}}
+.hdr-title {{
+  font-size:1.05rem; font-weight:700; letter-spacing:0; white-space:nowrap; color:#fff;
+}}
+.hdr-meta {{
+  display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+}}
+.mbadge {{
+  display:inline-block; padding:3px 10px; border-radius:20px;
+  font-size:11px; font-weight:600; white-space:nowrap;
+  background:rgba(255,255,255,.14); color:#fff;
 }}
 .topbar-brand {{ display:flex; align-items:center; gap:12px; }}
 .topbar-brand img {{
@@ -634,9 +660,7 @@ a:hover {{ text-decoration:underline; }}
 }}
 .topbar-brand .brand-name {{
   font-size:15px; font-weight:800; letter-spacing:.02em;
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color:#fff;
 }}
 .topbar-actions {{ display:flex; align-items:center; gap:12px; }}
 .btn {{
@@ -644,12 +668,12 @@ a:hover {{ text-decoration:underline; }}
   cursor:pointer; border:none; transition: all .15s;
 }}
 .btn-outline {{
-  background:transparent; border:1px solid var(--border);
-  color:var(--dim);
+  background:transparent; border:1px solid rgba(255,255,255,.32);
+  color:rgba(255,255,255,.82);
 }}
-.btn-outline:hover {{ border-color:var(--accent); color:var(--accent); }}
+.btn-outline:hover {{ border-color:#fff; color:#fff; }}
 .btn-primary {{
-  background: var(--accent); color:#fff;
+  background: var(--primary-alt); color:#fff;
 }}
 .btn-primary:hover {{ opacity:.88; }}
 
@@ -743,6 +767,9 @@ mark.srch-hl {{
 /* ── Layout ────────────────────────────────────────────────────────── */
 .page-layout {{
   max-width:1440px; margin:0 auto; padding:28px 32px;
+}}
+.content {{
+  max-width:1440px; margin:0 auto; padding:20px 32px;
 }}
 
 /* ── TOC — collapsible right-side drawer ───────────────────────────── */
@@ -849,6 +876,30 @@ mark.srch-hl {{
 
 /* ── Content area ──────────────────────────────────────────────────── */
 .content-area {{ min-width:0; }}
+
+/* ── Sector-rotation-standard summary cards ───────────────────────── */
+.metrics-row {{
+  display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px;
+}}
+.metric-card {{
+  flex:1; min-width:160px; background:var(--card); border-radius:8px;
+  border:1px solid var(--border); padding:14px 16px; box-shadow:var(--shadow);
+}}
+.metric-label {{
+  font-size:10px; text-transform:uppercase; letter-spacing:.08em;
+  color:var(--dim); margin-bottom:5px; font-weight:700;
+}}
+.metric-value {{
+  font-size:1.25rem; font-weight:800; color:var(--primary); line-height:1.15;
+}}
+.metric-sub {{
+  font-size:11px; color:var(--dim); margin-top:3px;
+}}
+.summary-card {{
+  background:var(--card); border-radius:8px; border:1px solid var(--border);
+  box-shadow:var(--shadow); padding:0; min-width:0; max-width:100%;
+  overflow-wrap:anywhere;
+}}
 
 /* ── Section cards ─────────────────────────────────────────────────── */
 .section {{
@@ -1136,7 +1187,7 @@ mark.srch-hl {{
 }}
 </style>
 </head>
-<body>
+<body data-agent-theme="{theme_id}">
 
 <!-- ── Right-side TOC drawer ──────────────────────────────────────────────── -->
 <div class="toc-overlay" id="toc-overlay" onclick="closeTOC()"></div>
@@ -1149,13 +1200,14 @@ mark.srch-hl {{
 </div>
 
 <!-- ── Top navigation bar ─────────────────────────────────────────────────── -->
-<div class="topbar">
-  <div class="topbar-brand">
+<header class="site-hdr topbar">
+  <div class="hdr-inner">
+  <div class="hdr-brand topbar-brand">
     {logo_img_nav}
-    <span class="brand-name">Agent Adda</span>
-    <span style="color:var(--dim);font-size:12px;">NSE Market Intelligence Terminal</span>
+    <span class="brand-name hdr-title">Agent Adda</span>
+    <span class="mbadge">NSE Market Intelligence Terminal</span>
   </div>
-  <div class="topbar-actions">
+  <div class="hdr-meta topbar-actions">
     <div class="search-wrap">
       <input class="topbar-search" id="srch" type="search" placeholder="🔍 Search report…"
              oninput="filterContent(this.value)" onkeydown="if(event.key==='Escape'){{clearSearch();}}" autocomplete="off">
@@ -1165,7 +1217,8 @@ mark.srch-hl {{
     <button class="btn btn-outline" onclick="toggleTOC()" title="Table of Contents">📑 Contents</button>
     <button class="btn btn-primary" onclick="window.print()">🖨 Print / PDF</button>
   </div>
-</div>
+  </div>
+</header>
 
 <!-- ── Report header ───────────────────────────────────────────────────────── -->
 <div class="report-header">
@@ -1200,11 +1253,33 @@ mark.srch-hl {{
 </div>
 
 <!-- ── Main layout ─────────────────────────────────────────────────────────── -->
-<div class="page-layout">
+<main class="content page-layout">
+  <section class="metrics-row standard-report-kpis" aria-label="Report details">
+    <div class="metric-card">
+      <div class="metric-label">Report Type</div>
+      <div class="metric-value">{badge_label}</div>
+      <div class="metric-sub">Standard Agent Adda theme</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Subject</div>
+      <div class="metric-value">{report_subject}</div>
+      <div class="metric-sub">Symbol or market scope</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Generated</div>
+      <div class="metric-value">{date}</div>
+      <div class="metric-sub">{time} IST</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Engine</div>
+      <div class="metric-value">Agent Adda</div>
+      <div class="metric-sub">{engine}</div>
+    </div>
+  </section>
   <div class="content-area">
 
     <!-- Report body -->
-    <div class="section" id="main-section">
+    <div class="summary-card section" id="main-section">
       <div class="section-header" onclick="toggleSection(this.parentElement)">
         <span>📑 Analysis</span>
         <span class="section-toggle">▾</span>
@@ -1232,7 +1307,7 @@ mark.srch-hl {{
     </div>
 
   </div><!-- end content-area -->
-</div><!-- end page-layout -->
+</main><!-- end page-layout -->
 
 <!-- ── Footer ─────────────────────────────────────────────────────────────── -->
 <div class="report-footer">
@@ -2227,8 +2302,11 @@ def _generate_html_report(
 
     html = REPORT_HTML_TEMPLATE.format(
         title           = _html.escape(title),
+        theme_id        = AGENT_ADDA_REPORT_THEME_ID,
+        engine          = AGENT_ADDA_REPORT_ENGINE,
         badge_class     = badge_class,
         badge_label     = badge_label,
+        report_subject  = _html.escape(symbol.upper() if symbol else "Market"),
         date            = now.strftime("%d %b %Y"),
         time            = now.strftime("%H:%M"),
         symbol_meta     = symbol_meta,
