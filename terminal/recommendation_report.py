@@ -830,11 +830,29 @@ _FUNDAMENTAL_ALIASES = {
 }
 
 
+def _summary_metric_num(record: dict[str, Any], label: str) -> float | None:
+    pattern = rf"\b{re.escape(label)}\s*:\s*([-+]?\d+(?:\.\d+)?)\s*%?"
+    for field_name in ("ratios_summary", "investor_summary", "pnl_summary"):
+        value = record.get(field_name)
+        if not isinstance(value, str):
+            continue
+        match = re.search(pattern, value, flags=re.IGNORECASE)
+        if match:
+            return _num(match.group(1))
+    return None
+
+
 def _aliased_num(record: dict[str, Any], field_name: str) -> float | None:
     for alias in _FUNDAMENTAL_ALIASES[field_name]:
         value = _num(record.get(alias))
         if value is not None:
             return value
+    if field_name == "roce":
+        return _summary_metric_num(record, "ROCE")
+    if field_name == "roe":
+        return _summary_metric_num(record, "ROE")
+    if field_name == "interest_coverage":
+        return _summary_metric_num(record, "Interest coverage")
     return None
 
 

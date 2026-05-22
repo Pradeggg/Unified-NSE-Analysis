@@ -420,6 +420,40 @@ def test_policy_assigns_add_on_confirmation_for_grounded_strength():
     assert rec.risk
 
 
+def test_policy_uses_screener_ratio_summary_when_numeric_fundamental_fields_are_null():
+    evidence = SubjectEvidence(
+        subject="SHAILY",
+        scope="stock",
+        sector="Capital Goods",
+        technical=TechnicalProfile(subject="SHAILY", trend_label="bullish"),
+        snapshot={
+            "symbol": "SHAILY",
+            "sector": "Capital Goods",
+            "stage": "STAGE_2",
+            "technical_score": 77.3,
+            "relative_strength": 44.46,
+            "trading_signal": "BUY",
+            "investment_score": 70,
+        },
+        fundamentals={
+            "symbol": "SHAILY",
+            "roe": None,
+            "roce": None,
+            "ratios_summary": "ROCE: 17%; EPS: 34.45; NPM: 16.26%",
+        },
+    )
+
+    rec = make_recommendation(
+        evidence,
+        market_regime={"label": "risk_off"},
+        sector={"rotation_label": "leader"},
+    )
+
+    assert classify_fundamentals(evidence.fundamentals) == "quality_mixed"
+    assert rec.label == RecommendationLabel.ADD_ON_CONFIRMATION
+    assert "ROCE 17.0" in rec.fundamental_evidence
+
+
 def test_policy_assigns_watchlist_when_strong_setup_has_conflict():
     evidence = SubjectEvidence(
         subject="AAA",
