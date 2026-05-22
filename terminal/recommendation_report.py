@@ -707,18 +707,22 @@ def build_recommendation_evidence_pack(
 
     candidate_symbols = set(equity_groups) | set(snapshots) | set(fundamentals)
     ordered_symbols = sorted(candidate_symbols, key=lambda symbol: _stock_sort_key(symbol, snapshots), reverse=True)
-    if top_n > 0:
-        ordered_symbols = ordered_symbols[:top_n]
+
+    universe_stocks: dict[str, SubjectEvidence] = {}
+    for symbol in ordered_symbols:
+        universe_stocks[symbol] = _build_stock_evidence(symbol, equity_groups, snapshots, fundamentals, benchmark)
+
+    display_symbols = ordered_symbols[:top_n] if top_n > 0 else ordered_symbols
 
     stocks: dict[str, SubjectEvidence] = {}
-    for symbol in ordered_symbols:
-        stocks[symbol] = _build_stock_evidence(symbol, equity_groups, snapshots, fundamentals, benchmark)
+    for symbol in display_symbols:
+        stocks[symbol] = universe_stocks[symbol]
 
     watchlist_symbols = {str(symbol).upper().strip() for symbol in data.watchlist if str(symbol).strip()}
     portfolio_symbols = sorted(set(portfolio_records) | watchlist_symbols)
     portfolio: dict[str, SubjectEvidence] = {}
     for symbol in portfolio_symbols:
-        source = stocks.get(symbol)
+        source = universe_stocks.get(symbol)
         if source is None:
             source = _build_stock_evidence(symbol, equity_groups, snapshots, fundamentals, benchmark)
 
@@ -784,7 +788,7 @@ def build_recommendation_evidence_pack(
         as_of=as_of,
         generated_at=datetime.now().isoformat(timespec="seconds"),
         indices=indices,
-        sectors=_sector_rollup(stocks),
+        sectors=_sector_rollup(universe_stocks),
         stocks=stocks,
         portfolio=portfolio,
         market_regime=_market_regime(indices),
@@ -1111,9 +1115,7 @@ def build_recommendations(pack: RecommendationEvidencePack) -> list[GroundedReco
     for _symbol, evidence in pack.stocks.items():
         sector = pack.sectors.get(evidence.sector or "Unknown", {})
         recommendations.append(make_recommendation(evidence, market_regime=pack.market_regime, sector=sector))
-    for symbol, evidence in pack.portfolio.items():
-        if symbol in pack.stocks:
-            continue
+    for _symbol, evidence in pack.portfolio.items():
         sector = pack.sectors.get(evidence.sector or "Unknown", {})
         recommendations.append(make_recommendation(evidence, market_regime=pack.market_regime, sector=sector))
 

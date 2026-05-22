@@ -312,6 +312,79 @@ def test_portfolio_symbol_outside_top_n_uses_stock_missing_evidence_rules():
     assert "snapshot" not in pack.portfolio["BBB"].missing_evidence
 
 
+def test_sector_rollup_uses_full_universe_even_when_stock_recommendations_are_limited():
+    data = RecommendationInputData(
+        index_history=_history("NIFTY 50"),
+        equity_history=pd.concat([_history("LEADER"), _history("LAGGARD", 80.0)]),
+        snapshots=pd.DataFrame(
+            [
+                {
+                    "symbol": "LEADER",
+                    "sector": "Capital Goods",
+                    "technical_score": 95,
+                    "investment_score": 80,
+                    "relative_strength": 30,
+                    "stage": "STAGE_2",
+                    "trading_signal": "BUY",
+                },
+                {
+                    "symbol": "LAGGARD",
+                    "sector": "Chemicals",
+                    "technical_score": 10,
+                    "investment_score": 20,
+                    "relative_strength": -25,
+                    "stage": "STAGE_4",
+                    "trading_signal": "SELL",
+                },
+            ]
+        ),
+        fundamentals=pd.DataFrame(
+            [
+                {"symbol": "LEADER", "roe": 18, "roce": 24, "interest_coverage": 8},
+                {"symbol": "LAGGARD", "roe": 4, "roce": 6, "interest_coverage": 1.1},
+            ]
+        ),
+    )
+
+    pack = build_recommendation_evidence_pack(data, top_n=1)
+
+    assert list(pack.stocks) == ["LEADER"]
+    assert "Capital Goods" in pack.sectors
+    assert "Chemicals" in pack.sectors
+    assert pack.sectors["Chemicals"]["rotation_label"] == "laggard"
+
+
+def test_portfolio_recommendation_is_retained_when_symbol_also_has_stock_recommendation():
+    data = RecommendationInputData(
+        index_history=_history("NIFTY 50"),
+        equity_history=_history("AAA"),
+        snapshots=pd.DataFrame(
+            [
+                {
+                    "symbol": "AAA",
+                    "sector": "Capital Goods",
+                    "stage": "STAGE_2",
+                    "technical_score": 88,
+                    "relative_strength": 32,
+                    "trading_signal": "BUY",
+                    "investment_score": 82,
+                }
+            ]
+        ),
+        fundamentals=pd.DataFrame(
+            [{"symbol": "AAA", "roe": 18, "roce": 24, "stock_pe": 22, "interest_coverage": 9}]
+        ),
+        portfolio=pd.DataFrame([{"symbol": "AAA", "qty": 10, "avg_cost": 150.0}]),
+        watchlist=["AAA"],
+    )
+    pack = build_recommendation_evidence_pack(data)
+
+    recommendations = build_recommendations(pack)
+
+    assert [rec.scope for rec in recommendations if rec.subject == "AAA"].count("stock") == 1
+    assert [rec.scope for rec in recommendations if rec.subject == "AAA"].count("portfolio") == 1
+
+
 def test_policy_assigns_add_on_confirmation_for_grounded_strength():
     evidence = SubjectEvidence(
         subject="AAA",
