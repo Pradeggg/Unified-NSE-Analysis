@@ -1059,6 +1059,293 @@ mark.srch-hl {{
 .footer-text {{ font-size:11.5px; color:var(--dim); }}
 .footer-right {{ font-size:11px; color:#444460; text-align:right; }}
 
+/* ── Stage 2 tracker visual standard overrides ────────────────────── */
+body {{
+  background:#f1f5f9;
+  color:#0f172a;
+  font-family:'Segoe UI', system-ui, sans-serif;
+  line-height:1.6;
+}}
+.topbar.app-bar {{
+  background:linear-gradient(135deg,#065f46,#059669);
+  color:#fff;
+  padding:18px 24px;
+  height:auto;
+  min-height:86px;
+  position:static;
+  border:0;
+  box-shadow:none;
+  align-items:flex-start;
+}}
+.topbar.app-bar .hdr-inner {{
+  max-width:1600px;
+  margin:0 auto;
+  align-items:flex-start;
+}}
+.topbar.app-bar .topbar-brand img {{ display:none; }}
+.topbar.app-bar .hdr-brand {{
+  flex-direction:column;
+  align-items:flex-start;
+  gap:4px;
+}}
+.topbar.app-bar .hdr-title {{
+  font-size:1.4rem;
+  font-weight:700;
+  line-height:1.15;
+}}
+.hdr-subtitle {{
+  font-size:.82rem;
+  opacity:.86;
+  color:#ecfdf5;
+  font-weight:600;
+}}
+.topbar.app-bar .topbar-actions {{
+  gap:8px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+  padding-top:1px;
+}}
+.topbar.app-bar .btn {{
+  padding:5px 12px;
+  border-radius:6px;
+  font-size:12px;
+  font-weight:600;
+}}
+.topbar.app-bar .btn-outline {{
+  background:rgba(255,255,255,.08);
+  border-color:rgba(255,255,255,.28);
+  color:#fff;
+}}
+.topbar.app-bar .btn-outline:hover {{
+  background:rgba(255,255,255,.16);
+  border-color:rgba(255,255,255,.55);
+}}
+.topbar.app-bar .btn-primary {{
+  background:#fff;
+  color:#047857;
+}}
+.topbar.app-bar .search-wrap.active {{ display:flex; }}
+.topbar.app-bar .topbar-search {{
+  border-color:rgba(255,255,255,.65);
+  width:200px;
+}}
+.topbar.app-bar .topbar-search:focus {{
+  border-color:#fff;
+  width:240px;
+  box-shadow:0 0 0 2px rgba(255,255,255,.18);
+}}
+.report-header,
+.summary-strip {{
+  display:none;
+}}
+.page-layout,
+.content {{
+  max-width:1600px;
+  padding:20px 16px;
+}}
+.metrics-row.summary-grid {{
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+  margin-bottom:20px;
+}}
+.metric-card.sum-card {{
+  background:#fff;
+  border-radius:8px;
+  padding:14px 20px;
+  box-shadow:0 1px 3px rgba(0,0,0,.08);
+  min-width:140px;
+  border:1px solid #e2e8f0;
+  border-top:3px solid transparent;
+  flex:1;
+}}
+.standard-report-kpis .sum-card:nth-child(1) {{ border-top-color:#059669; }}
+.standard-report-kpis .sum-card:nth-child(2) {{ border-top-color:#2563eb; }}
+.standard-report-kpis .sum-card:nth-child(3) {{ border-top-color:#ca8a04; }}
+.standard-report-kpis .sum-card:nth-child(4) {{ border-top-color:#64748b; }}
+.metric-label {{
+  font-size:.75rem;
+  color:#64748b;
+  margin-top:4px;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+  font-weight:500;
+}}
+.metric-value {{
+  font-size:1.55rem;
+  font-weight:700;
+  line-height:1;
+  color:#059669;
+}}
+.metric-sub {{
+  font-size:.72rem;
+  color:#94a3b8;
+  margin-top:5px;
+}}
+.section,
+.summary-card {{
+  background:#fff;
+  border-radius:8px;
+  border:0;
+  box-shadow:0 1px 3px rgba(0,0,0,.08);
+  margin-bottom:20px;
+  overflow:hidden;
+}}
+.section:hover {{ border-color:transparent; }}
+.section-header.sec-hdr {{
+  padding:14px 18px;
+  border-bottom:1px solid #e2e8f0;
+  background:#fff;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  color:#0f172a;
+  font-size:1rem;
+  font-weight:600;
+}}
+.section-header.sec-hdr:hover {{
+  background:#f8fafc;
+}}
+.section-toggle {{
+  margin-left:auto;
+  color:#64748b;
+  font-size:.9rem;
+}}
+.section-body {{
+  padding:16px 22px;
+  font-size:13.5px;
+  line-height:1.65;
+}}
+.section-body h1 {{
+  font-size:1.05rem;
+  color:#0f172a;
+  margin:18px 0 10px;
+}}
+.section-body h2 {{
+  font-size:.95rem;
+  color:#059669;
+  margin:18px 0 8px;
+}}
+.section-body h3 {{
+  font-size:.9rem;
+  color:#0f172a;
+  margin:14px 0 6px;
+}}
+.section-body strong {{
+  color:#0f172a;
+}}
+.section-body blockquote {{
+  border-left:3px solid #059669;
+  background:#f8fafc;
+  color:#334155;
+}}
+.arrow-header {{
+  background:#f8fafc;
+  border-left-color:#059669;
+  color:#059669;
+}}
+.part-divider {{
+  color:#64748b;
+}}
+.kv-list {{
+  background:#f8fafc;
+  border-color:#e2e8f0;
+  font-size:12.5px;
+}}
+.tbl-wrap {{
+  overflow-x:auto;
+  margin:14px 0;
+  border:0;
+  border-radius:0;
+}}
+.data-table {{
+  width:100%;
+  min-width:100%;
+  border-collapse:collapse;
+  font-size:13px;
+}}
+.data-table thead tr {{
+  background:#f8fafc;
+}}
+.data-table th {{
+  background:#f8fafc;
+  padding:8px 12px;
+  color:#64748b;
+  font-size:.72rem;
+  font-weight:600;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+  border-bottom:2px solid #e2e8f0;
+}}
+.data-table th:hover {{
+  background:#eef2ff;
+  color:#3730a3;
+}}
+.data-table th.sort-asc::after,
+.data-table th.sort-desc::after {{
+  color:#059669;
+}}
+.data-table td {{
+  padding:7px 12px;
+  border-bottom:1px solid #f1f5f9;
+  color:#0f172a;
+}}
+.data-table tbody tr:hover td {{
+  background:rgba(5,150,105,.04);
+}}
+.disclaimer-box {{
+  background:#fff8e1;
+  border:1px solid #ffe082;
+  color:#5d4037;
+  border-radius:8px;
+  padding:14px 18px;
+}}
+.disclaimer-box h4 {{
+  color:#92400e;
+}}
+.report-footer {{
+  max-width:1600px;
+  padding:16px 24px 28px;
+  border-top:1px solid #e2e8f0;
+}}
+
+@media(max-width:720px) {{
+  .topbar.app-bar {{
+    padding:18px 24px;
+  }}
+  .topbar.app-bar .hdr-inner {{
+    flex-direction:column;
+    gap:12px;
+  }}
+  .topbar.app-bar .hdr-title {{
+    white-space:normal;
+    overflow-wrap:anywhere;
+    font-size:1.25rem;
+  }}
+  .hdr-subtitle {{
+    line-height:1.45;
+  }}
+  .topbar.app-bar .topbar-actions {{
+    width:100%;
+    justify-content:flex-start;
+  }}
+  .topbar.app-bar .search-wrap,
+  .topbar.app-bar .search-wrap.active,
+  .topbar.app-bar .topbar-search {{
+    width:100%;
+  }}
+  .page-layout,
+  .content {{
+    padding:20px 16px;
+  }}
+  .metric-card.sum-card {{
+    min-width:150px;
+  }}
+  .section-body {{
+    padding:14px 18px;
+  }}
+}}
+
 /* ── Print styles ──────────────────────────────────────────────────── */
 @media print {{
   @page {{ size:A4; margin:12mm 15mm; }}
@@ -1200,12 +1487,12 @@ mark.srch-hl {{
 </div>
 
 <!-- ── Top navigation bar ─────────────────────────────────────────────────── -->
-<header class="site-hdr topbar">
+<header class="app-bar site-hdr topbar">
   <div class="hdr-inner">
   <div class="hdr-brand topbar-brand">
     {logo_img_nav}
-    <span class="brand-name hdr-title">Agent Adda</span>
-    <span class="mbadge">NSE Market Intelligence Terminal</span>
+    <span class="brand-name hdr-title">{title}</span>
+    <span class="hdr-subtitle">{badge_label} · {report_subject} · Generated: {date} {time} IST · Agent Adda</span>
   </div>
   <div class="hdr-meta topbar-actions">
     <div class="search-wrap">
@@ -1254,23 +1541,23 @@ mark.srch-hl {{
 
 <!-- ── Main layout ─────────────────────────────────────────────────────────── -->
 <main class="content page-layout">
-  <section class="metrics-row standard-report-kpis" aria-label="Report details">
-    <div class="metric-card">
+  <section class="summary-grid metrics-row standard-report-kpis" aria-label="Report details">
+    <div class="sum-card metric-card">
       <div class="metric-label">Report Type</div>
       <div class="metric-value">{badge_label}</div>
       <div class="metric-sub">Standard Agent Adda theme</div>
     </div>
-    <div class="metric-card">
+    <div class="sum-card metric-card">
       <div class="metric-label">Subject</div>
       <div class="metric-value">{report_subject}</div>
       <div class="metric-sub">Symbol or market scope</div>
     </div>
-    <div class="metric-card">
+    <div class="sum-card metric-card">
       <div class="metric-label">Generated</div>
       <div class="metric-value">{date}</div>
       <div class="metric-sub">{time} IST</div>
     </div>
-    <div class="metric-card">
+    <div class="sum-card metric-card">
       <div class="metric-label">Engine</div>
       <div class="metric-value">Agent Adda</div>
       <div class="metric-sub">{engine}</div>
@@ -1280,7 +1567,7 @@ mark.srch-hl {{
 
     <!-- Report body -->
     <div class="summary-card section" id="main-section">
-      <div class="section-header" onclick="toggleSection(this.parentElement)">
+      <div class="sec-hdr section-header" onclick="toggleSection(this.parentElement)">
         <span>📑 Analysis</span>
         <span class="section-toggle">▾</span>
       </div>

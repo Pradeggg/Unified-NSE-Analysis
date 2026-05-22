@@ -104,6 +104,10 @@ class TerminalReportsTests(unittest.TestCase):
             html = Path(result["path"]).read_text(encoding="utf-8")
 
         self.assertIn('data-agent-theme="sector-rotation-standard"', html)
+        self.assertIn("app-bar", html)
+        self.assertIn("summary-grid", html)
+        self.assertIn("sum-card", html)
+        self.assertIn("sec-hdr", html)
         self.assertIn("site-hdr", html)
         self.assertIn("metrics-row", html)
         self.assertIn("metric-card", html)
