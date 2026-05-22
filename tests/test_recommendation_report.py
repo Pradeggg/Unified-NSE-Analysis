@@ -131,6 +131,8 @@ def test_generate_recommendation_report_with_injected_data_writes_report_and_evi
     assert Path(result["path"]).exists()
     assert Path(result["evidence_path"]).exists()
     assert result["recommendation_count"] >= 1
+    assert "# Grounded EOD Recommendation Report" in result["markdown"]
+    assert "## Stock Opportunity Map" in result["markdown"]
 
 
 def test_load_recommendation_input_data_loads_portfolio_from_postgres_first(monkeypatch):

@@ -591,6 +591,9 @@ def _handle_recommendation_report_command(parts: list[str], report_console=None)
         target_console.print(f"  [dim]Recommendations: {_r.get('recommendation_count', 0)} · Run ID: {_r.get('run_id', '')}[/dim]")
         for _warning in _r.get("warnings", []):
             target_console.print(f"  [yellow]⚠ {_warning}[/yellow]")
+        if _r.get("markdown"):
+            target_console.print("")
+            target_console.print(Markdown(_linkify_markdown(str(_r["markdown"]))))
         _open_report_path(_r["path"], target_console)
     else:
         target_console.print(f"  [bold red]❌  Recommendation report failed[/bold red]")

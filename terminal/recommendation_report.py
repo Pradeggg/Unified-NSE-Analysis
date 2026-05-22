@@ -1688,6 +1688,7 @@ def generate_recommendation_report(
         "run_id": pack.run_id,
         "persistence": persistence,
         "warnings": warnings,
+        "markdown": markdown,
     }
 
 

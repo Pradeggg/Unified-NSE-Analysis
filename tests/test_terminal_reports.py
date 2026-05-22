@@ -17,7 +17,12 @@ def test_recommendation_report_command_forwards_args_and_options(monkeypatch):
     import terminal.recommendation_report as recommendation_report
 
     calls = {}
+    printed = []
     parsed_options = object()
+
+    class FakeConsole:
+        def print(self, value="", *args, **kwargs):
+            printed.append(value)
 
     def fake_parse(args):
         calls["parse_args"] = list(args)
@@ -32,6 +37,7 @@ def test_recommendation_report_command_forwards_args_and_options(monkeypatch):
             "recommendation_count": 2,
             "run_id": "run-1",
             "warnings": ["partial data"],
+            "markdown": "# Grounded EOD Recommendation Report\n\n## Stock Opportunity Map\n\n| Subject | Label |\n| --- | --- |\n| AAA | WATCHLIST |",
         }
 
     monkeypatch.setattr(recommendation_report, "parse_recommendation_report_args", fake_parse)
@@ -40,13 +46,14 @@ def test_recommendation_report_command_forwards_args_and_options(monkeypatch):
 
     handled = nse_agent._handle_recommendation_report_command(
         ["/report", "recommendation", "--watchlist", "RELIANCE,TCS", "--format", "md"],
-        nse_agent.console,
+        FakeConsole(),
     )
 
     assert handled is True
     assert calls["parse_args"] == ["recommendation", "--watchlist", "RELIANCE,TCS", "--format", "md"]
     assert calls["options"] is parsed_options
     assert calls["opened"] == "/tmp/recommendation.html"
+    assert any(isinstance(item, nse_agent.Markdown) for item in printed)
 
 
 def test_recommendation_report_command_handles_parser_system_exit(monkeypatch):
