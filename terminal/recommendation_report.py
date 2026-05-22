@@ -1043,7 +1043,7 @@ def make_recommendation(
         why = "Risk controls block fresh entry because the setup has weak trend, signal, stage, or fundamentals."
     elif conflicts:
         label = RecommendationLabel.WATCHLIST
-        why = "Evidence is not aligned enough for action; keep it on watchlist until conflicts resolve."
+        why = "Signals are mixed, so keep it on the watchlist until the listed conflicts resolve."
     elif (
         stage == "STAGE_2"
         and signal == "BUY"
@@ -1058,7 +1058,7 @@ def make_recommendation(
         why = "Existing holding has no fresh add or exit trigger from the grounded policy."
     else:
         label = RecommendationLabel.WATCHLIST
-        why = "Setup is incomplete for action; monitor for clearer technical and fundamental confirmation."
+        why = "No actionable entry case yet; wait for clearer technical and fundamental confirmation."
 
     technical_evidence = _technical_evidence(evidence)
     fundamental_evidence = _fundamental_evidence(evidence.fundamentals or {})
@@ -1175,6 +1175,102 @@ def _joined(items: list[str]) -> str:
     return "; ".join(items) if items else ""
 
 
+def _human_missing(value: str) -> str:
+    normalized = str(value or "").strip().lower()
+    mapping = {
+        "source_missing": "source missing",
+        "fundamentals": "missing fundamentals",
+        "portfolio": "portfolio source missing",
+        "watchlist": "watchlist not provided",
+        "eod_price_history": "price history missing",
+        "sma20_history": "not enough SMA20 history",
+        "sma50_history": "not enough SMA50 history",
+        "sma200_history": "not enough SMA200 history",
+        "rsi14_history": "not enough RSI history",
+        "macd_history": "not enough MACD history",
+        "volume_ratio": "volume history missing",
+    }
+    return mapping.get(normalized, normalized.replace("_", " ") or "missing evidence")
+
+
+def _human_missing_join(items: list[str]) -> str:
+    return "; ".join(_human_missing(item) for item in items if str(item or "").strip())
+
+
+def _human_quality(value: str) -> str:
+    normalized = str(value or "").strip().lower()
+    mapping = {
+        "quality_supportive": "Fundamentals supportive",
+        "quality_mixed": "Fundamentals mixed",
+        "quality_unknown": "Fundamentals unavailable",
+        "quality_weak": "Fundamentals weak",
+    }
+    return mapping.get(normalized, normalized.replace("_", " ").title() if normalized else "Fundamentals unavailable")
+
+
+def _human_scope(value: str) -> str:
+    normalized = str(value or "").strip().lower()
+    mapping = {
+        "stock": "Stock candidate",
+        "portfolio": "Existing holding",
+        "watchlist": "Watchlist item",
+        "index": "Index",
+        "sector": "Sector",
+    }
+    return mapping.get(normalized, normalized.replace("_", " ").title() if normalized else "Candidate")
+
+
+def _human_label(value: str) -> str:
+    normalized = str(value or "").strip().upper()
+    mapping = {
+        RecommendationLabel.ADD_ON_CONFIRMATION: "Add only on confirmation",
+        RecommendationLabel.WATCHLIST: "Watchlist / wait for confirmation",
+        RecommendationLabel.AVOID_FRESH_ENTRY: "Avoid fresh entry",
+        RecommendationLabel.HOLD: "Hold existing position",
+        RecommendationLabel.REVIEW_MANUALLY: "Review manually before action",
+    }
+    return mapping.get(normalized, normalized.replace("_", " ").title() if normalized else "Review")
+
+
+def _human_trend(value: str) -> str:
+    normalized = str(value or "").strip().lower()
+    mapping = {
+        "bullish": "Bullish",
+        "constructive": "Constructive",
+        "neutral": "Neutral",
+        "weak": "Weak",
+        "bearish": "Bearish",
+    }
+    return mapping.get(normalized, normalized.replace("_", " ").title() if normalized else "Unavailable")
+
+
+def _human_sector(value: str) -> str:
+    text = str(value or "").strip()
+    return "Sector unavailable" if not text or text.lower() == "unknown" else text
+
+
+def _human_source_status(value: Any) -> str:
+    normalized = str(value or "").strip().lower()
+    mapping = {
+        "primary": "Available",
+        "fallback": "Fallback data",
+        "missing": "Missing",
+        "degraded": "Partial",
+    }
+    return mapping.get(normalized, normalized.replace("_", " ").title() if normalized else "Unavailable")
+
+
+def _looks_like_placeholder_symbol(symbol: str) -> bool:
+    text = str(symbol or "").strip().upper()
+    return bool(re.fullmatch(r"([A-Z])\1\1", text)) or text in {"TEST", "DEMO", "SAMPLE"}
+
+
+def _placeholder_symbols(pack: RecommendationEvidencePack, recommendations: list[GroundedRecommendation]) -> list[str]:
+    subjects = set(_combined_subjects(pack))
+    subjects.update(rec.subject for rec in recommendations)
+    return sorted(symbol for symbol in subjects if _looks_like_placeholder_symbol(symbol))
+
+
 def _combined_subjects(pack: RecommendationEvidencePack) -> dict[str, SubjectEvidence]:
     subjects = dict(pack.stocks)
     for symbol, evidence in pack.portfolio.items():
@@ -1195,6 +1291,7 @@ def render_recommendation_markdown(
         for symbol, evidence in sorted(_combined_subjects(pack).items())
         if evidence.missing_evidence
     }
+    placeholder_symbols = _placeholder_symbols(pack, recommendations)
 
     lines: list[str] = []
     lines.append("# Grounded EOD Recommendation Report")
@@ -1205,14 +1302,36 @@ def render_recommendation_markdown(
     lines.append("")
     lines.append("Research and learning only. Not investment advice.")
     lines.append("")
+    lines.append("## How to Read This Report")
+    lines.append("")
+    lines.append("- **View** is the research stance, not a buy/sell instruction.")
+    lines.append("- **Add only on confirmation** means wait for the stated trigger before considering action.")
+    lines.append("- **Watchlist / wait for confirmation** means the setup is interesting but not clean enough yet.")
+    lines.append("- **Avoid fresh entry** means the current evidence blocks a new position.")
+    lines.append("- **Missing data** and **Conflicts** reduce confidence; treat those rows as lower quality.")
+    lines.append("")
+    if placeholder_symbols or "Unknown" in pack.sectors:
+        lines.append("## Data Quality Notice")
+        lines.append("")
+        if placeholder_symbols:
+            joined = ", ".join(f"`{symbol}`" for symbol in placeholder_symbols)
+            lines.append(
+                f"- {joined} looks like a placeholder/test ticker. If this came from a live run, rerun the report with actual NSE symbols before using it."
+            )
+        if "Unknown" in pack.sectors:
+            lines.append("- One or more stocks have no sector mapping, so their sector is shown as **Sector unavailable**.")
+        if pack.missing_evidence:
+            missing_scopes = ", ".join(_human_missing(scope) for scope in sorted(pack.missing_evidence))
+            lines.append(f"- Report-level missing data: {missing_scopes}.")
+        lines.append("")
     lines.append("## Executive Summary")
     lines.append("")
-    lines.append(f"- Market regime: `{pack.market_regime.get('label', 'unknown')}`.")
+    lines.append(f"- Market backdrop: **{_human_trend(pack.market_regime.get('label', 'unknown'))}**.")
     lines.append(f"- Recommendations generated: {len(recommendations)}.")
     lines.append(f"- Recommendation labels: {label_summary}.")
     lines.append(
-        "- Missing evidence scopes: "
-        + (", ".join(sorted(pack.missing_evidence)) if pack.missing_evidence else "none")
+        "- Missing data areas: "
+        + (", ".join(_human_missing(scope) for scope in sorted(pack.missing_evidence)) if pack.missing_evidence else "none")
         + "."
     )
     conflict_count = sum(1 for rec in recommendations if rec.conflicts)
@@ -1227,10 +1346,10 @@ def render_recommendation_markdown(
             [
                 subject,
                 technical.latest_close if technical else "",
-                technical.trend_label if technical else "",
+                _human_trend(technical.trend_label if technical else ""),
                 technical.ret_1m if technical else "",
                 technical.rsi14 if technical else "",
-                _joined(evidence.missing_evidence),
+                _human_missing_join(evidence.missing_evidence),
             ]
         )
     lines.append(
@@ -1244,8 +1363,8 @@ def render_recommendation_markdown(
     lines.append("")
     sector_rows = [
         [
-            name,
-            row.get("rotation_label"),
+            _human_sector(name),
+            _human_trend(row.get("rotation_label")),
             row.get("stage2_count"),
             row.get("buy_signal_count"),
             row.get("avg_relative_strength"),
@@ -1265,35 +1384,31 @@ def render_recommendation_markdown(
     rec_rows = [
         [
             rec.subject,
-            rec.scope,
-            rec.label,
-            rec.confidence,
+            _human_scope(rec.scope),
+            _human_label(rec.label),
+            str(rec.confidence or "").title(),
             rec.score,
             rec.why,
             rec.trigger,
             rec.invalidation,
-            rec.risk,
-            _joined(rec.conflicts),
-            _joined(rec.missing_evidence),
+            "; ".join(item for item in [rec.risk, _joined(rec.conflicts), _human_missing_join(rec.missing_evidence)] if item),
         ]
         for rec in recommendations
     ]
     lines.append(
         _md_table(
             [
-                "Subject",
-                "Scope",
-                "Label",
+                "Symbol",
+                "Universe",
+                "View",
                 "Confidence",
                 "Score",
                 "Why",
                 "Trigger",
                 "Invalidation",
-                "Risk",
-                "Conflicts",
-                "Missing",
+                "Risk / Caveats",
             ],
-            rec_rows or [["No recommendations", "", "", "", "", "", "", "", "", "", ""]],
+            rec_rows or [["No recommendations", "", "", "", "", "", "", "", ""]],
         )
     )
     lines.append("")
@@ -1305,15 +1420,15 @@ def render_recommendation_markdown(
         tech_rows.append(
             [
                 symbol,
-                evidence.scope,
-                technical.trend_label if technical else "",
+                _human_scope(evidence.scope),
+                _human_trend(technical.trend_label if technical else ""),
                 technical.ret_1w if technical else "",
                 technical.ret_1m if technical else "",
                 technical.ret_3m if technical else "",
                 technical.rsi14 if technical else "",
                 technical.macd_hist if technical else "",
                 _joined(technical.conflicts if technical else []),
-                _joined(technical.missing_evidence if technical else []),
+                _human_missing_join(technical.missing_evidence if technical else []),
             ]
         )
     lines.append(
@@ -1328,10 +1443,16 @@ def render_recommendation_markdown(
     fund_rows = [
         [
             symbol,
-            evidence.scope,
-            classify_fundamentals(evidence.fundamentals),
-            _joined(_fundamental_evidence(evidence.fundamentals)),
-            _joined(evidence.missing_evidence),
+            _human_scope(evidence.scope),
+            _human_quality(classify_fundamentals(evidence.fundamentals)),
+            _joined(
+                item.replace("Fundamental quality quality_unknown", "Fundamentals unavailable")
+                .replace("Fundamental quality quality_mixed", "Fundamentals mixed")
+                .replace("Fundamental quality quality_supportive", "Fundamentals supportive")
+                .replace("Fundamental quality quality_weak", "Fundamentals weak")
+                for item in _fundamental_evidence(evidence.fundamentals)
+            ),
+            _human_missing_join(evidence.missing_evidence),
         ]
         for symbol, evidence in sorted(_combined_subjects(pack).items())
     ]
@@ -1352,8 +1473,8 @@ def render_recommendation_markdown(
             row.get("source"),
             row.get("rows"),
             row.get("latest"),
-            row.get("status"),
-            ", ".join(row.get("missing_columns") or []),
+            _human_source_status(row.get("status")),
+            _human_missing_join(row.get("missing_columns") or []),
         ]
         for name, row in sorted(pack.source_trail.items())
     ]
@@ -1363,16 +1484,16 @@ def render_recommendation_markdown(
     lines.append("")
     if pack.missing_evidence:
         for scope, fields in sorted(pack.missing_evidence.items()):
-            lines.append(f"- `{scope}`: {', '.join(fields)}")
+            lines.append(f"- `{scope}`: {', '.join(_human_missing(field) for field in fields)}")
     if not pack.missing_evidence and not subject_missing:
         lines.append("- none")
     for symbol, fields in subject_missing.items():
-        lines.append(f"- `{symbol}`: {', '.join(fields)}")
+        lines.append(f"- `{symbol}`: {', '.join(_human_missing(field) for field in fields)}")
     lines.append("")
     lines.append("### Conflicts")
     lines.append("")
-    conflict_rows = [[rec.subject, rec.label, _joined(rec.conflicts)] for rec in recommendations if rec.conflicts]
-    lines.append(_md_table(["Subject", "Label", "Conflicts"], conflict_rows or [["No conflicts", "", ""]]))
+    conflict_rows = [[rec.subject, _human_label(rec.label), _joined(rec.conflicts)] for rec in recommendations if rec.conflicts]
+    lines.append(_md_table(["Symbol", "View", "Conflicts"], conflict_rows or [["No conflicts", "", ""]]))
     return "\n".join(lines)
 
 

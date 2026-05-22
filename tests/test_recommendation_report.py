@@ -483,6 +483,7 @@ def test_policy_assigns_watchlist_when_strong_setup_has_conflict():
     )
 
     assert rec.label == RecommendationLabel.WATCHLIST
+    assert rec.why == "Signals are mixed, so keep it on the watchlist until the listed conflicts resolve."
 
 
 def test_policy_review_manually_for_missing_eod_caps_score_and_confidence():
@@ -513,6 +514,35 @@ def test_policy_review_manually_for_missing_eod_caps_score_and_confidence():
     assert rec.label == RecommendationLabel.REVIEW_MANUALLY
     assert rec.confidence == "low"
     assert rec.score <= 40
+
+
+def test_policy_watchlist_why_explains_non_actionable_setup_without_incomplete_jargon():
+    evidence = SubjectEvidence(
+        subject="AAA",
+        scope="stock",
+        sector="Capital Goods",
+        technical=TechnicalProfile(subject="AAA", trend_label="neutral"),
+        snapshot={
+            "symbol": "AAA",
+            "sector": "Capital Goods",
+            "stage": "STAGE_1",
+            "technical_score": 52,
+            "relative_strength": 3,
+            "trading_signal": "HOLD",
+            "investment_score": 55,
+        },
+        fundamentals={"symbol": "AAA", "roe": 10, "roce": 12, "interest_coverage": 4},
+    )
+
+    rec = make_recommendation(
+        evidence,
+        market_regime={"label": "neutral"},
+        sector={"rotation_label": "neutral"},
+    )
+
+    assert rec.label == RecommendationLabel.WATCHLIST
+    assert rec.why == "No actionable entry case yet; wait for clearer technical and fundamental confirmation."
+    assert "incomplete" not in rec.why.lower()
 
 
 def test_policy_missing_ordinary_evidence_prevents_high_confidence():
@@ -681,6 +711,48 @@ def test_markdown_report_contains_required_sections_grounding_and_actual_label_c
     assert "trend constructive but RSI extended" in markdown
 
 
+def test_markdown_report_uses_reader_friendly_language_for_placeholders_unknowns_and_labels():
+    pack = build_recommendation_evidence_pack(
+        RecommendationInputData(
+            index_history=_history("NIFTY 50"),
+            equity_history=_history("AAA"),
+            snapshots=pd.DataFrame([{"symbol": "AAA", "sector": "Unknown"}]),
+        )
+    )
+    pack.stocks["AAA"].missing_evidence = ["fundamentals"]
+    recommendations = [
+        GroundedRecommendation(
+            subject="AAA",
+            scope="stock",
+            label=RecommendationLabel.WATCHLIST,
+            confidence="medium",
+            score=59,
+            why="Evidence is not aligned enough for action.",
+            technical_evidence=["Trend constructive"],
+            fundamental_evidence=["Fundamental quality quality_unknown"],
+            trigger="Wait for confirmation.",
+            invalidation="Lose support.",
+            risk="Missing fundamentals.",
+            missing_evidence=["fundamentals"],
+            conflicts=["trend constructive but RSI extended"],
+        )
+    ]
+
+    markdown = render_recommendation_markdown(pack, recommendations)
+
+    assert "## How to Read This Report" in markdown
+    assert "## Data Quality Notice" in markdown
+    assert "`AAA` looks like a placeholder/test ticker" in markdown
+    assert "Symbol | Universe | View | Confidence" in markdown
+    assert "Watchlist / wait for confirmation" in markdown
+    assert "Sector unavailable" in markdown
+    assert "Fundamentals unavailable" in markdown
+    assert "missing fundamentals" in markdown
+    assert "quality_unknown" not in markdown
+    assert "source_missing" not in markdown
+    assert "| AAA | stock | WATCHLIST |" not in markdown
+
+
 def test_missing_evidence_section_does_not_print_none_when_subject_missing_exists():
     pack = build_recommendation_evidence_pack(
         RecommendationInputData(index_history=_history("NIFTY 50"), equity_history=_history("AAA"))
@@ -692,7 +764,7 @@ def test_missing_evidence_section_does_not_print_none_when_subject_missing_exist
     missing_section = _markdown_section(markdown, "### Missing Evidence")
 
     assert "- none" not in missing_section
-    assert "`AAA`: fundamentals" in missing_section
+    assert "`AAA`: missing fundamentals" in missing_section
 
 
 def test_save_evidence_json_writes_replayable_payload(tmp_path):
