@@ -316,3 +316,212 @@ def test_seed_script_idempotent_executes_upsert_with_conflict_clause():
 
     assert "ON CONFLICT (symbol, name, kind)" in UPSERT_SQL
     assert "DO UPDATE" in UPSERT_SQL
+
+
+# ---------------------------------------------------------------------------
+# AA-HSR-3 — trigram retriever v1
+# ---------------------------------------------------------------------------
+
+from terminal.symbol_search import trigram_index
+from terminal.symbol_search.trigram_index import (
+    DEFAULT_TOP_N,
+    MID_WORD_REJECT_BELOW,
+    ORDER_BY_CLAUSE,
+    SIMILARITY_THRESHOLD,
+    benchmark,
+)
+from terminal.symbol_search.trigram_index import lookup as trigram_lookup
+
+
+class _FakeCursor:
+    """Minimal psycopg2-style cursor that records the executed SQL."""
+
+    def __init__(self, *, rows=None, raise_exc=None):
+        self._rows = list(rows or [])
+        self._raise = raise_exc
+        self.last_sql = None
+        self.last_params = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def execute(self, sql, params=None):
+        self.last_sql = sql
+        self.last_params = params
+        if self._raise is not None:
+            raise self._raise
+
+    def fetchall(self):
+        return list(self._rows)
+
+
+class _FakeConn:
+    def __init__(self, cursor):
+        self._cursor = cursor
+        self.closed = False
+
+    def cursor(self):
+        return self._cursor
+
+    def close(self):
+        self.closed = True
+
+
+def _install_fake_conn(monkeypatch, conn):
+    from contextlib import contextmanager as _cm
+
+    @_cm
+    def _ctx():
+        yield conn
+
+    monkeypatch.setattr(trigram_index, "_open_connection", _ctx)
+
+
+def test_trigram_lookup_returns_empty_for_blank_query():
+    assert trigram_lookup("") == []
+    assert trigram_lookup("   ") == []
+
+
+def test_trigram_lookup_returns_empty_when_pg_unavailable(monkeypatch):
+    """``_open_connection`` yields None → lookup returns [] without raising."""
+    from contextlib import contextmanager as _cm
+
+    @_cm
+    def _none():
+        yield None
+
+    monkeypatch.setattr(trigram_index, "_open_connection", _none)
+    assert trigram_lookup("reliance") == []
+
+
+def test_trigram_lookup_returns_empty_on_missing_pg_trgm(monkeypatch):
+    """SQLSTATE 42883 (undefined_function) → graceful degrade."""
+
+    class _MissingFunc(Exception):
+        pgcode = "42883"
+
+    cursor = _FakeCursor(raise_exc=_MissingFunc("function similarity does not exist"))
+    _install_fake_conn(monkeypatch, _FakeConn(cursor))
+    assert trigram_lookup("reliance") == []
+
+
+def test_trigram_lookup_returns_empty_on_missing_table(monkeypatch):
+    """SQLSTATE 42P01 (undefined_table) → graceful degrade."""
+
+    class _MissingTable(Exception):
+        pgcode = "42P01"
+
+    cursor = _FakeCursor(raise_exc=_MissingTable("relation does not exist"))
+    _install_fake_conn(monkeypatch, _FakeConn(cursor))
+    assert trigram_lookup("reliance") == []
+
+
+def test_trigram_lookup_returns_empty_on_empty_table(monkeypatch):
+    """No rows returned → empty list (no exceptions)."""
+    cursor = _FakeCursor(rows=[])
+    _install_fake_conn(monkeypatch, _FakeConn(cursor))
+    assert trigram_lookup("reliance") == []
+
+
+def test_trigram_lookup_happy_path_returns_ranked_candidates(monkeypatch):
+    rows = [
+        # symbol, name, kind, weight, raw_score, weighted_score
+        ("RELIANCE", "RELIANCE INDUSTRIES", "official", 1.0, 0.85, 0.85),
+        ("RELIANCE", "RELIANCE",            "symbol",   0.9, 0.95, 0.855),
+        ("RELAXO",   "RELAXO FOOTWEARS",    "official", 1.0, 0.40, 0.40),
+    ]
+    cursor = _FakeCursor(rows=rows)
+    _install_fake_conn(monkeypatch, _FakeConn(cursor))
+
+    results = trigram_lookup("reliance")
+
+    # Dedup on symbol: RELIANCE appears once (best row kept).
+    symbols = [c.symbol for c in results]
+    assert symbols == ["RELIANCE", "RELAXO"]
+    assert results[0].methods == ("trigram",)
+    assert 0.0 <= results[0].score <= 1.0
+    # raw_score on the kept RELIANCE candidate is the one from the first row
+    # (query already ordered upstream — we keep first).
+    assert results[0].raw_score == 0.85
+    assert results[0].matched == "RELIANCE INDUSTRIES"
+
+
+def test_trigram_lookup_passes_parameterised_sql(monkeypatch):
+    """Verify the SQL is parameterised (no string interpolation of user query)."""
+    cursor = _FakeCursor(rows=[])
+    _install_fake_conn(monkeypatch, _FakeConn(cursor))
+
+    trigram_lookup("'); DROP TABLE users; --", top_n=5)
+
+    assert cursor.last_params is not None
+    assert cursor.last_params["q"] == "'); DROP TABLE users; --"
+    assert cursor.last_params["limit"] == 5
+    assert cursor.last_params["min_raw"] == MID_WORD_REJECT_BELOW
+    # The raw query string must not contain the injected payload.
+    assert "DROP TABLE" not in cursor.last_sql
+    assert "%(q)s" in cursor.last_sql
+
+
+def test_trigram_query_has_locked_ordering_clause():
+    """Acceptance: ORDER BY weighted DESC, raw DESC, kind ASC, symbol ASC."""
+    import re as _re
+    assert ORDER_BY_CLAUSE == "weighted_score DESC, raw_score DESC, kind ASC, symbol ASC"
+    # Normalise whitespace because the formatted SQL aligns columns.
+    normalised_sql = _re.sub(r"\s+", " ", trigram_index._QUERY_SQL)
+    assert ORDER_BY_CLAUSE in normalised_sql
+
+
+def test_trigram_lookup_rejects_negative_top_n():
+    assert trigram_lookup("reliance", top_n=0) == []
+    assert trigram_lookup("reliance", top_n=-3) == []
+
+
+def test_trigram_lookup_clamps_score_into_unit_interval(monkeypatch):
+    """ResolveCandidate validates 0<=score<=1; weighted >1 must be clamped."""
+    rows = [
+        ("X", "X CO LIMITED", "official", 1.0, 1.0, 1.0),
+    ]
+    cursor = _FakeCursor(rows=rows)
+    _install_fake_conn(monkeypatch, _FakeConn(cursor))
+
+    cands = trigram_lookup("x co")
+    assert cands and cands[0].score == 1.0
+
+
+def test_trigram_benchmark_returns_summary_when_degraded(monkeypatch):
+    """When PG is unavailable benchmark still returns a well-formed summary."""
+    from contextlib import contextmanager as _cm
+
+    @_cm
+    def _none():
+        yield None
+
+    monkeypatch.setattr(trigram_index, "_open_connection", _none)
+
+    summary = benchmark(["reliance", "tcs", "hdfc bank"])
+    assert summary["n"] == 3.0
+    # Each lookup is O(microseconds) when degraded.
+    assert summary["p95_ms"] < 80.0
+
+
+def test_trigram_benchmark_handles_empty_input():
+    assert benchmark([]) == {"n": 0, "p50_ms": 0.0, "p95_ms": 0.0, "max_ms": 0.0}
+
+
+def test_trigram_migration_file_is_idempotent():
+    """The HSR-3 migration must use IF NOT EXISTS for every object."""
+    from pathlib import Path
+
+    sql = (Path(__file__).resolve().parents[1]
+           / "postgres" / "migrations"
+           / "20260523_symbol_resolution_trgm.sql").read_text()
+
+    assert "CREATE EXTENSION IF NOT EXISTS pg_trgm" in sql
+    assert "CREATE TABLE IF NOT EXISTS market.symbol_aliases" in sql
+    assert "CREATE INDEX IF NOT EXISTS idx_symbol_aliases_name_trgm" in sql
+    assert "gin_trgm_ops" in sql
+    # PK matches the seed script's ON CONFLICT target.
+    assert "PRIMARY KEY (symbol, name, kind)" in sql
