@@ -545,3 +545,53 @@ def test_trigram_migration_file_is_idempotent():
     assert "gin_trgm_ops" in sql
     # PK matches the seed script's ON CONFLICT target.
     assert "PRIMARY KEY (symbol, name, kind)" in sql
+
+
+# ---------------------------------------------------------------------------
+# AA-HSR-4 — hybrid resolver entrypoint
+# ---------------------------------------------------------------------------
+
+
+def test_hybrid_resolve_returns_exact_dict_result_from_alias_map():
+    from terminal.symbol_search import resolve as hybrid_resolve
+
+    result = hybrid_resolve(
+        "Premier Energies",
+        alias_map={
+            "PREMIERENE": "PREMIERENE",
+            "PREMIER ENERGIES": "PREMIERENE",
+        },
+        use_trigram=False,
+    )
+
+    assert result.symbol == "PREMIERENE"
+    assert result.legacy_confidence == "exact"
+    assert result.confidence_band == "exact"
+    assert result.score == 1.0
+    assert result.method == "dict"
+    assert result.candidates[0].symbol == "PREMIERENE"
+
+
+def test_hybrid_resolve_does_not_promote_low_confidence_prose_match(monkeypatch):
+    from terminal.symbol_search import resolve as hybrid_resolve
+
+    monkeypatch.setattr(
+        trigram_index,
+        "lookup",
+        lambda *_args, **_kwargs: [
+            ResolveCandidate(
+                symbol="GNA",
+                score=0.42,
+                raw_score=0.42,
+                methods=("trigram",),
+                matched="GNA Axles Limited",
+            )
+        ],
+    )
+
+    result = hybrid_resolve("intraday signals", alias_map={}, use_trigram=True)
+
+    assert result.symbol is None
+    assert result.legacy_confidence == "none"
+    assert result.confidence_band == "low"
+    assert result.candidates == ()

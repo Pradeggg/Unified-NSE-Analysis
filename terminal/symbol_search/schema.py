@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
-LEGACY_CONFIDENCE_VALUES = {"exact", "fuzzy", "none"}
+LEGACY_CONFIDENCE_VALUES = {"exact", "near-match", "fuzzy", "none"}
 CONFIDENCE_BANDS = {"exact", "high", "medium", "low", "none"}
 RESOLUTION_METHODS = {"dict", "trigram", "embedding", "hybrid", "live_api", "none"}
 

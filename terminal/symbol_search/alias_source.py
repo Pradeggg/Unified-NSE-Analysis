@@ -126,6 +126,8 @@ _MANUAL_STOCK_ALIASES: dict[str, str] = {
     "SUN PHARMA":                     "SUNPHARMA",
     "DR REDDY":                       "DRREDDY",
     "DR REDDYS":                      "DRREDDY",
+    "DIXON TECH":                     "DIXON",
+    "DIXON TECHNOLOGIES":             "DIXON",
     "LARSEN AND TOUBRO":              "LT",
     "LARSEN & TOUBRO":                "LT",
     "PREMIER ENERGIES":               "PREMIERENE",

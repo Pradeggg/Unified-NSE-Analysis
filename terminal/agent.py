@@ -831,6 +831,31 @@ def _is_document_link_followup(q: str) -> bool:
     )
 
 
+def _is_trusted_symbol_resolution(resolved: dict | None) -> bool:
+    if not isinstance(resolved, dict) or not resolved.get("symbol"):
+        return False
+    band = str(resolved.get("confidence_band") or "").lower()
+    if band in {"exact", "high"}:
+        return True
+    try:
+        if float(resolved.get("score") or 0.0) >= 0.85:
+            return True
+    except Exception:
+        pass
+    return resolved.get("confidence") in {"exact", "near-match"}
+
+
+def _trusted_symbol_from_phrase_tokens(phrase: str) -> str:
+    for token in re.findall(r"\b[A-Z][A-Z0-9&-]{1,12}\b", phrase or ""):
+        try:
+            resolved = resolve_symbol(token)
+        except Exception:
+            continue
+        if _is_trusted_symbol_resolution(resolved):
+            return str(resolved.get("symbol") or token).upper()
+    return ""
+
+
 def _primary_symbol_query(candidates: list[str], symbol_candidates: list[str], raw_query: str = "") -> str:
     """Choose the most explicit stock entity from a routed user query.
 
@@ -855,7 +880,7 @@ def _primary_symbol_query(candidates: list[str], symbol_candidates: list[str], r
             try:
                 resolved = resolve_symbol(phrase)
                 canonical = resolved.get("symbol") if isinstance(resolved, dict) else None
-                if canonical and (resolved or {}).get("confidence") in {"exact", "near-match"}:
+                if canonical and _is_trusted_symbol_resolution(resolved):
                     return canonical
             except Exception:
                 pass
@@ -864,10 +889,13 @@ def _primary_symbol_query(candidates: list[str], symbol_candidates: list[str], r
             try:
                 resolved = resolve_symbol(phrase)
                 canonical = resolved.get("symbol") if isinstance(resolved, dict) else None
-                if canonical:
+                if canonical and _is_trusted_symbol_resolution(resolved):
                     return canonical
             except Exception:
                 pass
+            token_symbol = _trusted_symbol_from_phrase_tokens(phrase)
+            if token_symbol:
+                return token_symbol
             # Only fall back to the raw phrase when the caller has no better
             # explicit candidate. Otherwise we end up shipping prose like
             # "intraday signals" downstream as if it were a ticker.
@@ -878,7 +906,7 @@ def _primary_symbol_query(candidates: list[str], symbol_candidates: list[str], r
             try:
                 resolved = resolve_symbol(phrase)
                 canonical = resolved.get("symbol") if isinstance(resolved, dict) else None
-                if canonical:
+                if canonical and _is_trusted_symbol_resolution(resolved):
                     return canonical
             except Exception:
                 pass
@@ -900,7 +928,7 @@ def _primary_symbol_query(candidates: list[str], symbol_candidates: list[str], r
                 try:
                     resolved = resolve_symbol(phrase)
                     canonical = resolved.get("symbol") if isinstance(resolved, dict) else None
-                    if canonical:
+                    if canonical and _is_trusted_symbol_resolution(resolved):
                         return canonical
                 except Exception:
                     pass
@@ -1078,11 +1106,7 @@ def _explicit_requested_symbols(query: str) -> list[str]:
         phrase = _leading_company_phrase(scrubbed_for_phrase)
         if phrase and " " in phrase.strip():
             phrase_resolution = resolve_symbol(phrase)
-            if (
-                isinstance(phrase_resolution, dict)
-                and phrase_resolution.get("symbol")
-                and phrase_resolution.get("confidence") in {"exact", "near-match"}
-            ):
+            if _is_trusted_symbol_resolution(phrase_resolution):
                 return [str(phrase_resolution["symbol"]).upper()]
     except Exception:
         pass
@@ -1118,11 +1142,7 @@ def _explicit_requested_symbols(query: str) -> list[str]:
             phrase = _leading_company_phrase(query or "")
             if phrase:
                 phrase_resolution = resolve_symbol(phrase)
-                if (
-                    isinstance(phrase_resolution, dict)
-                    and phrase_resolution.get("symbol")
-                    and phrase_resolution.get("confidence") in {"exact", "near-match"}
-                ):
+                if _is_trusted_symbol_resolution(phrase_resolution):
                     requested = [str(phrase_resolution["symbol"]).upper()]
         except Exception:
             pass
@@ -1137,7 +1157,7 @@ def _explicit_requested_symbols(query: str) -> list[str]:
             canonical = clean
             try:
                 resolved = resolve_symbol(clean)
-                if isinstance(resolved, dict) and resolved.get("symbol") and resolved.get("confidence") in {"exact", "near-match"}:
+                if _is_trusted_symbol_resolution(resolved):
                     canonical = str(resolved["symbol"]).upper()
             except Exception:
                 canonical = clean
