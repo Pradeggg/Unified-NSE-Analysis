@@ -1106,11 +1106,7 @@ def _explicit_requested_symbols(query: str) -> list[str]:
         phrase = _leading_company_phrase(scrubbed_for_phrase)
         if phrase and " " in phrase.strip():
             phrase_resolution = resolve_symbol(phrase)
-            if (
-                isinstance(phrase_resolution, dict)
-                and phrase_resolution.get("symbol")
-                and phrase_resolution.get("confidence") in {"exact", "near-match"}
-            ):
+            if _is_trusted_symbol_resolution(phrase_resolution):
                 return [str(phrase_resolution["symbol"]).upper()]
     except Exception:
         pass
@@ -1146,11 +1142,7 @@ def _explicit_requested_symbols(query: str) -> list[str]:
             phrase = _leading_company_phrase(query or "")
             if phrase:
                 phrase_resolution = resolve_symbol(phrase)
-                if (
-                    isinstance(phrase_resolution, dict)
-                    and phrase_resolution.get("symbol")
-                    and phrase_resolution.get("confidence") in {"exact", "near-match"}
-                ):
+                if _is_trusted_symbol_resolution(phrase_resolution):
                     requested = [str(phrase_resolution["symbol"]).upper()]
         except Exception:
             pass
@@ -1165,7 +1157,7 @@ def _explicit_requested_symbols(query: str) -> list[str]:
             canonical = clean
             try:
                 resolved = resolve_symbol(clean)
-                if isinstance(resolved, dict) and resolved.get("symbol") and resolved.get("confidence") in {"exact", "near-match"}:
+                if _is_trusted_symbol_resolution(resolved):
                     canonical = str(resolved["symbol"]).upper()
             except Exception:
                 canonical = clean
