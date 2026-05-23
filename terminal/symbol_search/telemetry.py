@@ -77,3 +77,57 @@ def _payload(result: ResolveResult, *, latency_ms: float, fallback_reason: str) 
         "fallback_reason": fallback_reason,
         "clarification_emitted": bool(result.needs_clarification),
     }
+
+
+# ---------------------------------------------------------------------------
+# AA-HSR-5: latency benchmark helper
+# ---------------------------------------------------------------------------
+
+
+import time as _time
+from typing import Callable, Iterable
+
+
+def benchmark(
+    queries: Iterable[str],
+    resolver: Callable[[str], Any],
+) -> dict[str, float | int]:
+    """Run *resolver* against *queries* and return latency summary in ms.
+
+    Keys: ``n``, ``p50``, ``p95``, ``p99``, ``max``, ``mean``. Returns
+    zeros for an empty input. Resolver exceptions are swallowed so a
+    single bad query does not break the whole benchmark run; the call
+    still contributes its latency to the summary.
+    """
+    latencies: list[float] = []
+    for q in queries:
+        start = _time.perf_counter()
+        try:
+            resolver(q)
+        except Exception:
+            pass
+        latencies.append((_time.perf_counter() - start) * 1000.0)
+    if not latencies:
+        return {"n": 0, "p50": 0.0, "p95": 0.0, "p99": 0.0, "max": 0.0, "mean": 0.0}
+    latencies.sort()
+    return {
+        "n": len(latencies),
+        "p50": _percentile(latencies, 50.0),
+        "p95": _percentile(latencies, 95.0),
+        "p99": _percentile(latencies, 99.0),
+        "max": latencies[-1],
+        "mean": sum(latencies) / len(latencies),
+    }
+
+
+def _percentile(sorted_values: list[float], pct: float) -> float:
+    if not sorted_values:
+        return 0.0
+    if len(sorted_values) == 1:
+        return float(sorted_values[0])
+    k = (len(sorted_values) - 1) * (pct / 100.0)
+    f = int(k)
+    c = min(f + 1, len(sorted_values) - 1)
+    if f == c:
+        return float(sorted_values[f])
+    return float(sorted_values[f] + (sorted_values[c] - sorted_values[f]) * (k - f))

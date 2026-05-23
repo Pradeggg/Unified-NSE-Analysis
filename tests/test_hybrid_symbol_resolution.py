@@ -711,3 +711,26 @@ def test_hybrid_resolve_emits_telemetry_when_enabled(monkeypatch, tmp_path):
     assert payload["query"] == "TRENT"
     assert payload["winner"] == "TRENT"
     assert payload["latency_ms"] >= 0.0
+
+
+def test_symbol_resolution_benchmark_helper_reports_latency_percentiles():
+    from terminal.symbol_search import telemetry
+    from terminal.symbol_search import resolve as hybrid_resolve
+
+    alias_map = build_alias_map(include_pg=False)
+    queries = ["RELIANCE", "HDFC BANK", "TCS", "INFY", "DIXON TECH"]
+    summary = telemetry.benchmark(
+        queries,
+        lambda q: hybrid_resolve(q, alias_map=alias_map, use_trigram=False),
+    )
+    assert summary["n"] == len(queries)
+    for key in ("p50", "p95", "p99", "max", "mean"):
+        assert summary[key] >= 0.0
+    assert summary["max"] >= summary["p95"] >= summary["p50"]
+
+
+def test_symbol_resolution_benchmark_handles_empty_input():
+    from terminal.symbol_search import telemetry
+
+    summary = telemetry.benchmark([], lambda q: None)
+    assert summary == {"n": 0, "p50": 0.0, "p95": 0.0, "p99": 0.0, "max": 0.0, "mean": 0.0}
