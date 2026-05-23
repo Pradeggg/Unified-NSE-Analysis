@@ -157,13 +157,33 @@ from terminal.symbol_search.alias_source import (
 
 
 def test_alias_source_does_not_import_terminal_tools():
-    """The neutral module must not pull in terminal.tools (cycle hazard)."""
-    sys.modules.pop("terminal.tools", None)
-    sys.modules.pop("terminal.symbol_search.alias_source", None)
-    importlib.import_module("terminal.symbol_search.alias_source")
-    assert "terminal.tools" not in sys.modules, (
-        "terminal.symbol_search.alias_source must not import terminal.tools"
-    )
+    """The neutral module must not pull in terminal.tools (cycle hazard).
+
+    NOTE: We must restore ``terminal.tools`` and ``terminal.symbol_search.alias_source``
+    in ``sys.modules`` after the probe. Other test modules (e.g.
+    ``tests/test_terminal_symbol_resolution.py``) do ``from terminal.tools import
+    resolve_symbol`` at collection time and then later ``mock.patch("terminal.tools.
+    _all_symbols_map", ...)``. If we leave the pop in place, mock.patch re-imports
+    a *new* ``terminal.tools`` module instance, attaches the patch to that new
+    instance, while ``resolve_symbol``'s globals still reference the *original*
+    module — so the patch becomes a silent no-op and real PG data leaks in.
+    """
+    saved_tools = sys.modules.pop("terminal.tools", None)
+    saved_alias = sys.modules.pop("terminal.symbol_search.alias_source", None)
+    try:
+        importlib.import_module("terminal.symbol_search.alias_source")
+        assert "terminal.tools" not in sys.modules, (
+            "terminal.symbol_search.alias_source must not import terminal.tools"
+        )
+    finally:
+        # Restore in deterministic order: alias_source first (so re-importing
+        # it does not accidentally re-trigger terminal.tools import), then tools.
+        if saved_alias is not None:
+            sys.modules["terminal.symbol_search.alias_source"] = saved_alias
+        else:
+            sys.modules.pop("terminal.symbol_search.alias_source", None)
+        if saved_tools is not None:
+            sys.modules["terminal.tools"] = saved_tools
 
 
 def test_kind_weights_match_backlog():
