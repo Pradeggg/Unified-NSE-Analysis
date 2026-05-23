@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import logging
 import re
+import time
 from difflib import SequenceMatcher
 
 from . import alias_source
 from .schema import ResolveCandidate, ResolveResult
+from .telemetry import emit as _emit_telemetry
 
 log = logging.getLogger(__name__)
 
@@ -48,20 +50,21 @@ def resolve(
     fast, deterministic, and safe for routing.
     """
     raw = str(query or "").strip()
+    started = time.perf_counter()
     if not raw:
-        return _empty_result(query or "")
+        return _finalize(_empty_result(query or ""), started, fallback_reason="empty_query")
 
     mapping = alias_map if alias_map is not None else alias_source.build_alias_map()
     dict_result = _dict_lookup(raw, mapping)
     if dict_result.symbol:
-        return dict_result
+        return _finalize(dict_result, started, fallback_reason="dict_hit")
 
     typo_result = _prefix8_typo_lookup(raw, mapping)
     if typo_result.symbol:
-        return typo_result
+        return _finalize(typo_result, started, fallback_reason="typo_hit")
 
     if not use_trigram:
-        return dict_result
+        return _finalize(dict_result, started, fallback_reason="trigram_disabled")
 
     try:
         from . import trigram_index
@@ -69,9 +72,15 @@ def resolve(
         hits = trigram_index.lookup(raw, top_n=top_n)
     except Exception as exc:  # pragma: no cover - defensive degrade
         log.info("symbol_search.resolve: trigram lookup degraded for %r: %s", raw, exc)
-        return dict_result
+        return _finalize(dict_result, started, fallback_reason="trigram_error")
 
-    return _from_trigram_hits(raw, hits, top_n=top_n) if hits else dict_result
+    if hits:
+        return _finalize(
+            _from_trigram_hits(raw, hits, top_n=top_n),
+            started,
+            fallback_reason="trigram_hit",
+        )
+    return _finalize(dict_result, started, fallback_reason="no_match")
 
 
 def _dict_lookup(query: str, alias_map: dict[str, str]) -> ResolveResult:
@@ -233,6 +242,12 @@ def _empty_result(query: str) -> ResolveResult:
         method="none",
         matched="",
     )
+
+
+def _finalize(result: ResolveResult, started: float, *, fallback_reason: str) -> ResolveResult:
+    latency_ms = (time.perf_counter() - started) * 1000.0
+    _emit_telemetry(result, latency_ms=latency_ms, fallback_reason=fallback_reason)
+    return result
 
 
 def _normalized_aliases(alias_map: dict[str, str]) -> dict[str, tuple[str, str]]:

@@ -1,3 +1,5 @@
+import json
+
 from terminal.symbol_search import (
     ResolveCandidate,
     ResolveResult,
@@ -595,3 +597,117 @@ def test_hybrid_resolve_does_not_promote_low_confidence_prose_match(monkeypatch)
     assert result.legacy_confidence == "none"
     assert result.confidence_band == "low"
     assert result.candidates == ()
+
+
+# ---------------------------------------------------------------------------
+# AA-HSR-5 — eval fixtures + telemetry
+# ---------------------------------------------------------------------------
+
+
+_FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "symbol_resolution"
+
+
+def _read_jsonl(path: Path) -> list[dict]:
+    return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+
+
+def test_symbol_resolution_eval_fixtures_have_required_sizes():
+    in_vocab = _read_jsonl(_FIXTURE_DIR / "in_vocab.jsonl")
+    adversarial = _read_jsonl(_FIXTURE_DIR / "adversarial.jsonl")
+
+    assert len(in_vocab) >= 200
+    assert len(adversarial) >= 50
+    assert all("query" in row and "expected_symbol" in row for row in in_vocab)
+    assert all("query" in row and "expected_symbol" in row for row in adversarial)
+
+
+def test_symbol_resolution_in_vocab_eval_top1_recall_without_pg():
+    from terminal.symbol_search import resolve as hybrid_resolve
+
+    alias_map = build_alias_map(include_pg=False)
+    rows = _read_jsonl(_FIXTURE_DIR / "in_vocab.jsonl")
+    failures = []
+    for row in rows:
+        result = hybrid_resolve(row["query"], alias_map=alias_map, use_trigram=False)
+        if result.symbol != row["expected_symbol"]:
+            failures.append((row["query"], row["expected_symbol"], result.symbol))
+
+    recall = (len(rows) - len(failures)) / len(rows)
+    assert recall >= 0.98, failures[:10]
+
+
+def test_symbol_resolution_adversarial_eval_false_symbol_rate_without_pg():
+    from terminal.symbol_search import resolve as hybrid_resolve
+
+    base_alias_map = build_alias_map(include_pg=False)
+    rows = _read_jsonl(_FIXTURE_DIR / "adversarial.jsonl")
+    false_symbols = []
+    positive_failures = []
+    null_cases = 0
+    for row in rows:
+        alias_map = {**base_alias_map, **row.get("alias_map", {})}
+        result = hybrid_resolve(row["query"], alias_map=alias_map, use_trigram=False)
+        expected = row["expected_symbol"]
+        if expected is None:
+            null_cases += 1
+            if result.symbol is not None:
+                false_symbols.append((row["query"], result.symbol))
+        elif result.symbol != expected:
+            positive_failures.append((row["query"], expected, result.symbol))
+
+    assert not positive_failures
+    assert null_cases > 0
+    assert len(false_symbols) / null_cases <= 0.02, false_symbols
+
+
+def test_symbol_resolution_telemetry_writes_jsonl(tmp_path):
+    from terminal.symbol_search import telemetry
+
+    result = ResolveResult(
+        symbol="TRENT",
+        legacy_confidence="exact",
+        confidence_band="exact",
+        score=1.0,
+        raw_score=1.0,
+        query="TRENT",
+        candidates=(
+            ResolveCandidate(
+                symbol="TRENT",
+                score=1.0,
+                raw_score=1.0,
+                methods=("dict",),
+                matched="TRENT",
+            ),
+        ),
+        method="dict",
+        matched="TRENT",
+    )
+    path = tmp_path / "symbol_resolution.jsonl"
+
+    telemetry.emit(result, latency_ms=3.2, fallback_reason="dict_hit", path=path, enabled=True)
+
+    payload = json.loads(path.read_text().strip())
+    assert payload["query"] == "TRENT"
+    assert payload["winner"] == "TRENT"
+    assert payload["method"] == "dict"
+    assert payload["score"] == 1.0
+    assert payload["confidence_band"] == "exact"
+    assert payload["fallback_reason"] == "dict_hit"
+    assert payload["clarification_emitted"] is False
+    assert payload["candidates"][0]["sym"] == "TRENT"
+
+
+def test_hybrid_resolve_emits_telemetry_when_enabled(monkeypatch, tmp_path):
+    from terminal.symbol_search import telemetry
+    from terminal.symbol_search import resolve as hybrid_resolve
+
+    path = tmp_path / "symbol_resolution.jsonl"
+    monkeypatch.setattr(telemetry, "TELEMETRY_PATH", path)
+    monkeypatch.setenv("NSE_SYMBOL_RESOLUTION_TELEMETRY", "1")
+
+    hybrid_resolve("TRENT", alias_map={"TRENT": "TRENT"}, use_trigram=False)
+
+    payload = json.loads(path.read_text().strip())
+    assert payload["query"] == "TRENT"
+    assert payload["winner"] == "TRENT"
+    assert payload["latency_ms"] >= 0.0
