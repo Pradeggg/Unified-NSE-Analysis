@@ -13,6 +13,9 @@ def _set_env_defaults() -> None:
     # Never call the premium-LLM situation assessor during tests; the
     # deterministic chain + main router are the contract we pin.
     os.environ.setdefault("ASSESSMENT_LLM_ENABLED", "0")
+    # Unit tests use fake connections when exercising conversation memory.
+    # Agent construction must not attempt local PostgreSQL connections.
+    os.environ.setdefault("AGENT_ADDA_MEMORY_PG", "0")
 
 
 _set_env_defaults()

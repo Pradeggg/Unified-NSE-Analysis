@@ -21,6 +21,7 @@ import importlib
 import os
 import sys
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -233,6 +234,38 @@ class TestRecapToolEndToEnd(unittest.TestCase):
                 self.assertIn(key, sample, f"missing recap key: {key}")
         # Source string should be NSE-live (the upstream source for the tape).
         self.assertIsInstance(result.get("source", ""), str)
+
+    def test_recap_falls_back_to_pg_tape_when_nse_live_overview_times_out(self):
+        from terminal.tools import get_intraday_market_recap
+
+        fallback_overview = {
+            "indices": {
+                "NIFTY 50": {
+                    "last": 24500.0,
+                    "change": -25.0,
+                    "pct_change": -0.1,
+                    "day_high": 24650.0,
+                    "day_low": 24450.0,
+                }
+            },
+            "adv_dec": {},
+            "as_of": "2026-05-22 10:00:00",
+            "source": "PG intraday.quote_snapshots fallback",
+            "degraded": True,
+            "fallback_reason": "NSE live overview unavailable: timeout",
+        }
+
+        with patch("terminal.tools.get_live_market_overview", return_value={"error": "timeout"}), patch(
+            "terminal.tools._intraday_market_overview_from_pg",
+            return_value=fallback_overview,
+        ):
+            result = get_intraday_market_recap(minutes=15)
+
+        self.assertNotIn("error", result)
+        self.assertEqual(result["source"], "PG intraday.quote_snapshots fallback")
+        self.assertTrue(result["degraded"])
+        self.assertIn("narrative", result)
+        self.assertEqual(result["rows"][0]["symbol"], "NIFTY 50")
 
 
 # ─────────────────────────────────────────────────────────────────────────────

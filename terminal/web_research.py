@@ -239,6 +239,40 @@ def scrape_screener_in(symbol: str) -> dict:
                     annual_pl[cells[0]] = values[-len(yr_headers):] if yr_headers else values
             annual_pl["_headers"] = yr_headers
 
+    # ── Balance sheet (latest 5 columns) ────────────────────────────────────
+    balance_sheet: dict[str, Any] = {}
+    bs_section = soup.select_one("#balance-sheet")
+    if bs_section:
+        bs_rows = bs_section.select("tr")
+        if bs_rows:
+            all_headers = [td.get_text(strip=True) for td in bs_rows[0].select("td,th")][1:]
+            bs_headers = all_headers[-5:]
+            for row in bs_rows[1:]:
+                cells = [td.get_text(strip=True) for td in row.select("td,th")]
+                if cells and len(cells) > 1:
+                    values = cells[1:]
+                    if bs_headers and len(values) < len(bs_headers):
+                        continue
+                    balance_sheet[cells[0]] = values[-len(bs_headers):] if bs_headers else values
+            balance_sheet["_headers"] = bs_headers
+
+    # ── Cash flow (latest 5 columns) ────────────────────────────────────────
+    cash_flow: dict[str, Any] = {}
+    cf_section = soup.select_one("#cash-flow")
+    if cf_section:
+        cf_rows = cf_section.select("tr")
+        if cf_rows:
+            all_headers = [td.get_text(strip=True) for td in cf_rows[0].select("td,th")][1:]
+            cf_headers = all_headers[-5:]
+            for row in cf_rows[1:]:
+                cells = [td.get_text(strip=True) for td in row.select("td,th")]
+                if cells and len(cells) > 1:
+                    values = cells[1:]
+                    if cf_headers and len(values) < len(cf_headers):
+                        continue
+                    cash_flow[cells[0]] = values[-len(cf_headers):] if cf_headers else values
+            cash_flow["_headers"] = cf_headers
+
     # ── Peer comparison ──────────────────────────────────────────────────────
     peers: list[dict] = []
     peer_sec = soup.select_one("#peers")
@@ -345,6 +379,8 @@ def scrape_screener_in(symbol: str) -> dict:
         "cons":           cons,
         "quarterly":      quarterly,
         "annual_pl":      annual_pl,
+        "balance_sheet":  balance_sheet,
+        "cash_flow":      cash_flow,
         "peers":          peers,
         "shareholding":   shareholding,
         "announcements":  announcements,

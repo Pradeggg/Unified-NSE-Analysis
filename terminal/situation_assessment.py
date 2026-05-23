@@ -64,6 +64,75 @@ class SituationAssessment:
     evidence_plan: list[str] = field(default_factory=list)
     tool_plan: list[tuple[str, dict[str, Any]]] = field(default_factory=list)
     plan: list[str] = field(default_factory=list)
+    # PG-HALL-GUARD: When True, this turn MUST be answered from a grounded
+    # tool_plan (real symbols/data). Used to block prose hallucination on
+    # data-grounded asks such as RS/screener/gainers/intraday scans when
+    # confidence is low/medium or tool_plan is empty/ungrounded.
+    requires_grounding: bool = False
+    # PG-HALL-GUARD: Tag identifying the grounded intent family, e.g.
+    # "intraday_rs", "index_scan", "screener", "gainers_losers".
+    grounded_intent: str = ""
+
+
+# PG-HALL-GUARD: Phrase fragments that signal a data-grounded scan/ranking
+# ask. Any of these in the user input should set requires_grounding=True
+# in downstream assessments so the renderer cannot emit prose without a
+# real tool_plan binding.
+_GROUNDED_INTENT_PATTERNS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("intraday_rs", (
+        "relative strength",
+        "high rs",
+        "rs scan",
+        "rs leaders",
+        "highest rs",
+        "top rs",
+    )),
+    ("gainers_losers", (
+        "top gainers",
+        "top losers",
+        "biggest movers",
+        "highest gainers",
+        "highest losers",
+    )),
+    ("screener", (
+        "screener",
+        "screen for",
+        "screen the",
+        "stage 2 scan",
+        "breakout scan",
+        "vcp scan",
+    )),
+    ("index_scan", (
+        "scan nifty",
+        "scan the nifty",
+        "scan all nse",
+        "scan f&o",
+        "scan fno",
+    )),
+    ("intraday_scan", (
+        "intraday scan",
+        "intraday setup",
+        # PG-HALL-GUARD: deliberately NOT matching "last 30 min" alone —
+        # that phrase is also used for source-audit follow-ups
+        # ("are these from the last 30 minutes"), which must remain
+        # answer_from_context. We require an action verb upstream.
+    )),
+)
+
+
+def classify_grounded_intent(text: str) -> str:
+    """Return a grounded-intent tag if the text matches a data-grounded
+    scan/ranking ask, else ''. PG-HALL-GUARD: used to set
+    SituationAssessment.requires_grounding for hallucination gating.
+    """
+    if not text:
+        return ""
+    low = text.lower()
+    for tag, needles in _GROUNDED_INTENT_PATTERNS:
+        for n in needles:
+            if n in low:
+                return tag
+    return ""
 
 
 @dataclass(frozen=True)
@@ -105,6 +174,10 @@ _CONTEXTUAL_PATTERNS = (
     "above financial analysis",
     "above analysis",
     "previous analysis",
+    "what should be our approach",
+    "what should our approach",
+    "how should we approach",
+    "our approach",
     "your recommendation",
     "what would be your recommendation",
     "what is your recommendation",
@@ -198,7 +271,13 @@ def needs_situation_assessment(user_input: str) -> bool:
         or ("starting a new trading session" in q and "global overnight context" in q)
     ):
         return False
-    return q in _AFFIRMATIVE_FOLLOWUPS or q.startswith("search ") or any(pattern in q for pattern in _CONTEXTUAL_PATTERNS) or any(
+    # Bypass: "what happened in the market in the last 30 minutes" is a
+    # direct intraday market-recap request, not a follow-up about prior
+    # results. Keep contextual variants like "were these pulled from last
+    # 30mins" in the assessment path.
+    if _is_direct_market_recap_request(q):
+        return False
+    return q in _AFFIRMATIVE_FOLLOWUPS or q.startswith("search ") or _looks_like_contextual_approach_request(q) or any(pattern in q for pattern in _CONTEXTUAL_PATTERNS) or any(
         q.startswith(command + " ") for command in _ENTITY_TOPIC_COMMANDS
     )
 
@@ -431,15 +510,24 @@ def build_turn_context(
 
 
 def assess_followup(user_input: str, previous_context: TurnContext | None) -> SituationAssessment:
+    # PG-HALL-GUARD: Pre-compute grounded-intent tag for this turn so
+    # every return path can propagate it. The dispatch layer uses
+    # requires_grounding to refuse prose answers when no tool_plan is
+    # produced (prevents the "Stock A/B/C/D" hallucination failure).
+    _grounded_tag = classify_grounded_intent(user_input)
+    _requires_grounding = bool(_grounded_tag)
+
     if not previous_context:
         return SituationAssessment(
             applies=True,
             decision="ask_clarification",
-            confidence="medium",
+            confidence="medium" if not _requires_grounding else "low",
             user_is_asking="A contextual follow-up, but no prior result context is available.",
             context_found="No previous turn context was found.",
             clarification_question="Which result should I use as the context for this follow-up?",
             plan=["Ask for the missing reference before running tools."],
+            requires_grounding=_requires_grounding,
+            grounded_intent=_grounded_tag,
         )
 
     q = _normalize(user_input)
@@ -506,11 +594,18 @@ def assess_followup(user_input: str, previous_context: TurnContext | None) -> Si
         )
 
     if _asks_contextual_recommendation(q):
+        explicit_subject = _explicit_analysis_subject(q)
+        if (
+            explicit_subject
+            and previous_context.symbols
+            and explicit_subject.upper() not in {s.upper() for s in previous_context.symbols}
+        ):
+            return SituationAssessment(applies=False, decision="fallback_to_router")
         return SituationAssessment(
             applies=True,
             decision="answer_from_context",
             confidence="high",
-            user_is_asking="A recommendation based on the prior financial/market analysis.",
+            user_is_asking="A recommended approach based on the prior financial/market analysis.",
             context_found=_context_found(previous_context),
             source_assessment=_source_assessment(previous_context),
             resolved_entities=previous_context.symbols,
@@ -540,6 +635,10 @@ def assess_followup(user_input: str, previous_context: TurnContext | None) -> Si
                 "tldr",
                 "recommendation",
                 "conclusion",
+                "analyze",
+                "analyse",
+                "analysis",
+                "review",
                 "what does it say",
                 "what does the report say",
             )
@@ -615,19 +714,16 @@ def assess_followup(user_input: str, previous_context: TurnContext | None) -> Si
                 ),
                 ClarificationOption(
                     label="C",
-                    text="Compare report result against later price action",
+                    text="Read report contents",
                     bound_action={
-                        "decision": "ask_clarification",
-                        "clarification_questions": (
-                            ClarificationQuestion(
-                                prompt="What evaluation window should I use?",
-                                options=(
-                                    ClarificationOption(label="A", text="1 week"),
-                                    ClarificationOption(label="B", text="1 month"),
-                                    ClarificationOption(label="C", text="3 months"),
-                                ),
-                            ),
-                        ),
+                        "decision": "run_tool_plan",
+                        "tool_plan": [
+                            ("read_report", {"path": report_path, "max_chars": 12000}),
+                        ],
+                        "evidence_plan": ["read_report"],
+                        "resolved_entities": list(previous_context.symbols),
+                        "user_is_asking": "Read the prior report contents.",
+                        "context_found": _report_context_found(previous_context, report_path),
                     },
                 ),
             ]
@@ -640,7 +736,7 @@ def assess_followup(user_input: str, previous_context: TurnContext | None) -> Si
             source_assessment=_source_assessment(previous_context),
             clarification_question=(
                 "Do you want me to open the report, summarize its recommendation, "
-                "or compare the report result against later price action?"
+                "or read the report contents?"
             ),
             clarification_questions=(
                 ClarificationQuestion(
@@ -660,6 +756,37 @@ def assess_followup(user_input: str, previous_context: TurnContext | None) -> Si
             previous_context,
             "A live scan request, but the live analysis scope is ambiguous.",
             "Do you want live quotes, last-30-minute momentum, 15m intraday setups, or news/catalysts for these?",
+        )
+
+    # Implicit prior-report follow-up ("summarize", "tldr", "the recommendation",
+    # …) without an explicit report path on disk. We still have prior context
+    # (e.g. a /analyze RELIANCE turn carrying symbols=['RELIANCE']) — bind the
+    # follow-up to that symbol and answer from context rather than letting the
+    # LLM router re-resolve reply words like "its" / "summary" as a brand-new
+    # ticker (observed: '/analyze RELIANCE' → 'summarize its recommendation' →
+    # TILAKNAGAR (TI) Market Brief).
+    if (
+        _refers_to_prior_report_implicitly(q)
+        and previous_context.symbols
+    ):
+        symbols = list(previous_context.symbols)
+        return SituationAssessment(
+            applies=True,
+            decision="answer_from_context",
+            confidence="high",
+            user_is_asking=(
+                f"Summarize the prior analysis of "
+                f"{', '.join(symbols[:3])}."
+            ),
+            context_found=_context_found(previous_context),
+            source_assessment=_source_assessment(previous_context),
+            resolved_entities=symbols,
+            evidence_plan=list(previous_context.tools),
+            plan=[
+                "Bind the follow-up to the prior symbol context — do not re-resolve reply words as a new ticker.",
+                "Summarise the prior turn's conclusions from the existing evidence.",
+                "Surface the source/freshness so the user can audit.",
+            ],
         )
 
     if (
@@ -715,9 +842,11 @@ def assess_followup(user_input: str, previous_context: TurnContext | None) -> Si
             )
 
     if _asks_last_window(q) and previous_context.result_type == "stage2_screener":
+        symbols = _dedupe(list(previous_context.result_items or previous_context.symbols))[:20]
+        top_n = max(10, len(symbols) or 10)
         return SituationAssessment(
             applies=True,
-            decision="answer_from_context",
+            decision="ask_clarification",
             confidence="high",
             user_is_asking="Whether the prior Stage 2 screener results were pulled from the last 30 minutes.",
             context_found=_context_found(previous_context),
@@ -726,10 +855,56 @@ def assess_followup(user_input: str, previous_context: TurnContext | None) -> Si
                 f"It used {previous_context.source_label}"
                 f"{_freshness_suffix(previous_context)}."
             ),
+            clarification_question="What should I check next for the prior Stage 2 stocks?",
+            clarification_questions=(
+                ClarificationQuestion(
+                    prompt="What should I check next for the prior Stage 2 stocks?",
+                    options=(
+                        ClarificationOption(
+                            label="A",
+                            text="Check last-30-minute intraday movement",
+                            bound_action={
+                                "decision": "run_tool_plan",
+                                "tool_plan": [("scan_symbols_intraday", {"symbols": symbols, "interval": "5m"})],
+                                "evidence_plan": ["scan_symbols_intraday"],
+                                "resolved_entities": symbols,
+                                "user_is_asking": "Check last-30-minute intraday movement for the prior Stage 2 stocks.",
+                                "context_found": _context_found(previous_context),
+                            },
+                        ),
+                        ClarificationOption(
+                            label="B",
+                            text="Run 15m intraday setups",
+                            bound_action={
+                                "decision": "run_tool_plan",
+                                "tool_plan": [("scan_symbols_intraday", {"symbols": symbols, "interval": "15m"})],
+                                "evidence_plan": ["scan_symbols_intraday"],
+                                "resolved_entities": symbols,
+                                "user_is_asking": "Run 15m intraday setups for the prior Stage 2 stocks.",
+                                "context_found": _context_found(previous_context),
+                            },
+                        ),
+                        ClarificationOption(
+                            label="C",
+                            text="Refresh Stage 2 EOD scan",
+                            bound_action={
+                                "decision": "run_tool_plan",
+                                "tool_plan": [("run_screener_query", {"screen_type": "stage2", "top_n": top_n})],
+                                "evidence_plan": ["run_screener_query"],
+                                "resolved_entities": symbols,
+                                "user_is_asking": "Refresh the Stage 2 EOD scan and compare it with the prior list.",
+                                "context_found": _context_found(previous_context),
+                            },
+                        ),
+                    ),
+                    default_label="B",
+                ),
+            ),
+            resolved_entities=symbols,
             plan=[
                 "Answer directly from the previous turn context.",
                 "Do not route to a generic market recap.",
-                "Offer the correct next action if the user wants a live 30-minute scan.",
+                "Offer bound next-step options for intraday or refreshed EOD checks.",
             ],
         )
 
@@ -765,7 +940,17 @@ def assess_followup(user_input: str, previous_context: TurnContext | None) -> Si
         if llm_assessment.applies:
             return llm_assessment
 
-    return SituationAssessment(applies=False, decision="fallback_to_router")
+    # PG-HALL-GUARD: Even when no prior context exists, tag the final
+    # fallback with grounded-intent metadata so the agent's dispatch
+    # layer can refuse to emit free-text prose for data-grounded asks
+    # (RS scan, screener, gainers, intraday scan) that lack a tool_plan.
+    grounded_tag = classify_grounded_intent(user_input)
+    return SituationAssessment(
+        applies=False,
+        decision="fallback_to_router",
+        requires_grounding=bool(grounded_tag),
+        grounded_intent=grounded_tag,
+    )
 
 
 def assess_user_situation(
@@ -893,6 +1078,49 @@ def request_clarification(question: str, reason: str = "") -> dict:
         "clarification_question": question,
         "evidence_plan": [],
     }
+
+
+def validate_next_options(assessment: SituationAssessment) -> list[str]:
+    """Validate that rendered NEXT OPTIONS can be executed without rerouting.
+
+    This is intentionally conservative: structured options should carry a
+    bound_action, and run_tool_plan options should name tools that exist in the
+    current tool registry. Legacy one-line clarifications are ignored because
+    they do not render selectable NEXT OPTIONS.
+    """
+    if not assessment.clarification_questions:
+        return []
+
+    try:
+        from terminal.tools import TOOL_REGISTRY
+    except Exception:
+        TOOL_REGISTRY = {}
+
+    errors: list[str] = []
+    for question in assessment.clarification_questions:
+        for option in question.options:
+            prefix = f"Option {option.label}"
+            action = option.bound_action or {}
+            if not action:
+                errors.append(f"{prefix} has no bound_action")
+                continue
+            decision = str(action.get("decision") or "")
+            if decision not in {"run_tool_plan", "answer_from_context"}:
+                errors.append(f"{prefix} has non-executable decision {decision or 'missing'}")
+                continue
+            if decision == "run_tool_plan":
+                tool_plan = action.get("tool_plan") or []
+                if not tool_plan:
+                    errors.append(f"{prefix} has no tool_plan")
+                    continue
+                for item in tool_plan:
+                    if not isinstance(item, (list, tuple)) or not item:
+                        errors.append(f"{prefix} has malformed tool_plan item {item!r}")
+                        continue
+                    tool_name = str(item[0])
+                    if tool_name not in TOOL_REGISTRY:
+                        errors.append(f"{prefix} references unknown tool {tool_name}")
+    return errors
 
 
 def match_clarification_reply(
@@ -1036,17 +1264,17 @@ def _render_structured_clarifications(
     if not questions:
         if legacy_question:
             return f"▶ CLARIFICATION NEEDED\n  {legacy_question}"
-        return "▶ CLARIFICATION NEEDED\n  (no question provided)"
+        return "▶ NEXT OPTIONS\n  (no question provided)"
 
-    lines: list[str] = ["▶ CLARIFICATION NEEDED"]
+    lines: list[str] = ["▶ NEXT OPTIONS"]
     for q_idx, q in enumerate(questions, start=1):
         lines.append(f"  Q{q_idx}. {q.prompt}")
         for opt in q.options:
             marker = "*" if opt.label == q.default_label else " "
-            lines.append(f"      [{opt.label}]{marker} {opt.text}")
+            lines.append(f"      [{opt.label}]{marker} {opt.text} — Use: `{opt.label}` or `{opt.text}`")
         if len(questions) > 1:
             lines.append("")
-    lines.append("  Reply with the option letter (e.g. \"A\") or the option text.")
+    lines.append("  Reply with A, B, or C, or use the option text.")
     return "\n".join(lines)
 
 
@@ -1058,8 +1286,26 @@ def render_context_answer(
     block = render_assessment_block(assessment)
 
     if assessment.decision == "ask_clarification":
+        validation_errors = validate_next_options(assessment)
+        if validation_errors:
+            return (
+                f"{block}\n\n"
+                f"▶ NEXT OPTIONS\n"
+                f"  I could not safely bind the next options to executable actions.\n"
+                + "\n".join(f"  - {error}" for error in validation_errors)
+                + "\n\n━━━ Not investment advice. For research and learning only. ━━━"
+            )
+        answer = ""
+        if _asks_last_window(_normalize(user_input)) and previous_context.result_type == "stage2_screener":
+            answer = (
+                f"▶ ANSWER\n"
+                f"  No. The prior Stage 2 list came from {previous_context.source_label}"
+                f"{_freshness_suffix(previous_context)}, not from the last 30 minutes.\n"
+                f"  It is valid as an EOD Stage 2 context list, but it is not evidence of what happened intraday.\n\n"
+            )
         return (
             f"{block}\n\n"
+            f"{answer}"
             f"{_render_structured_clarifications(assessment.clarification_questions, assessment.clarification_question)}\n\n"
             f"━━━ Not investment advice. For research and learning only. ━━━"
         )
@@ -1070,7 +1316,12 @@ def render_context_answer(
             f"▶ ANSWER\n"
             f"  No. The prior Stage 2 list came from {previous_context.source_label}"
             f"{_freshness_suffix(previous_context)}, not from the last 30 minutes.\n"
-            f"  To evaluate the same names over the last 30 minutes, run a live intraday scan for the listed symbols.\n\n"
+            f"  It is valid as an EOD Stage 2 context list, but it is not evidence of what happened intraday.\n\n"
+            f"▶ NEXT OPTIONS\n"
+            f"  [A] Check last-30-minute intraday movement for these stocks.\n"
+            f"  [B] Run 15m intraday setups for these stocks.\n"
+            f"  [C] Refresh Stage 2 EOD scan and compare with the prior list.\n"
+            f"  Reply with A, B, or C.\n\n"
             f"━━━ Not investment advice. For research and learning only. ━━━"
         )
 
@@ -1078,7 +1329,8 @@ def render_context_answer(
         return (
             f"{block}\n\n"
             f"{_render_contextual_recommendation(previous_context)}\n\n"
-            f"━━━ Not investment advice. For research and learning only. ━━━"
+            f"━━━ Not investment advice. For research and learning only. ━━━\n\n"
+            f"{_render_contextual_followups(previous_context)}"
         )
 
     return (
@@ -1091,6 +1343,38 @@ def render_context_answer(
 
 def _normalize(text: str) -> str:
     return " ".join((text or "").strip().lower().split())
+
+
+def _is_direct_market_recap_request(q: str) -> bool:
+    """True for first-class recent-market recap questions.
+
+    These requests often contain contextual-looking words such as "last
+    30", but they ask for fresh market tape, not prior-turn interpretation.
+    """
+    has_recap_phrase = any(
+        phrase in q
+        for phrase in (
+            "what happened",
+            "what changed",
+            "market recap",
+            "market update",
+            "recent market",
+        )
+    )
+    has_time_window = bool(
+        re.search(r"\blast\s+(?:\d+|few|thirty|fifteen|five)\s*(?:min|mins|minute|minutes)\b", q)
+        or "last 30" in q
+        or "last-30" in q
+    )
+    has_market_scope = any(
+        term in q
+        for term in ("market", "nifty", "bank", "index", "indices", "breadth")
+    )
+    contextual_pronouns = any(
+        term in q
+        for term in ("these", "those", "this list", "above", "prior", "previous result")
+    )
+    return has_recap_phrase and has_time_window and has_market_scope and not contextual_pronouns
 
 
 def _asks_last_window(q: str) -> bool:
@@ -1120,6 +1404,86 @@ def _asks_report_reference(q: str) -> bool:
         or "last report" in q
         or "previous report" in q
     )
+
+
+def _looks_like_contextual_approach_request(q: str) -> bool:
+    """Detect follow-ups asking for an approach based on a prior analysis."""
+    return _has_analysis_reference(q) and _has_approach_or_recommendation_intent(q)
+
+
+def _has_analysis_reference(q: str) -> bool:
+    if any(
+        phrase in q
+        for phrase in (
+            "based on the above",
+            "based on above",
+            "above financial analysis",
+            "above analysis",
+            "previous analysis",
+            "based on this analysis",
+            "based on the analysis",
+            "based on financial analysis",
+        )
+    ):
+        return True
+    return bool(
+        re.search(
+            r"\b(?:based on|basis of|from)\s+(?:the\s+)?[a-z0-9&-]{2,20}\s+"
+            r"(?:analysis|brief|view|setup|report)\b",
+            q,
+        )
+    )
+
+
+def _has_approach_or_recommendation_intent(q: str) -> bool:
+    return any(
+        phrase in q
+        for phrase in (
+            "recommendation",
+            "recommend",
+            "what would you do",
+            "what should i do",
+            "what should we do",
+            "what should be our approach",
+            "what should our approach",
+            "how should we approach",
+            "our approach",
+            "approach",
+            "stance",
+            "action",
+            "next step",
+            "next steps",
+            "strategy",
+            "buy",
+            "sell",
+            "hold",
+            "avoid",
+        )
+    )
+
+
+def _explicit_analysis_subject(q: str) -> str:
+    match = re.search(
+        r"\b(?:based on|basis of|from)\s+(?:the\s+)?([a-z0-9&-]{2,20})\s+"
+        r"(?:analysis|brief|view|setup|report)\b",
+        q,
+    )
+    if not match:
+        return ""
+    subject = match.group(1).strip().upper()
+    # Referential/contextual words point back to the prior turn; they are
+    # not explicit ticker subjects and must not trigger the mismatch guard.
+    if subject in {
+        "ABOVE",
+        "THIS",
+        "THAT",
+        "PREVIOUS",
+        "PRIOR",
+        "FINANCIAL",
+        "THE",
+    }:
+        return ""
+    return subject
 
 
 def _refers_to_prior_report_implicitly(q: str) -> bool:
@@ -1155,33 +1519,7 @@ def _refers_to_prior_report_implicitly(q: str) -> bool:
 
 
 def _asks_contextual_recommendation(q: str) -> bool:
-    contextual = any(
-        phrase in q
-        for phrase in (
-            "based on the above",
-            "based on above",
-            "above financial analysis",
-            "above analysis",
-            "previous analysis",
-            "based on this analysis",
-            "based on the analysis",
-            "based on financial analysis",
-        )
-    )
-    asks_recommendation = any(
-        phrase in q
-        for phrase in (
-            "recommendation",
-            "recommend",
-            "what would you do",
-            "what should i do",
-            "buy",
-            "sell",
-            "hold",
-            "avoid",
-        )
-    )
-    return contextual and asks_recommendation
+    return _has_analysis_reference(q) and _has_approach_or_recommendation_intent(q)
 
 
 def _asks_scan_15m(q: str) -> bool:
@@ -1254,15 +1592,35 @@ def _render_contextual_recommendation(context: TurnContext) -> str:
     symbol_text = ", ".join(context.symbols[:3]) if context.symbols else "the prior subject"
     caution_terms = ("sell", "weak", "not in stage 2", "unknown", "bearish", "missing evidence", "low interest coverage")
     positive_terms = ("buy", "stage 2", "strong", "bullish", "high rs")
+    has_positive = any(term in lower for term in positive_terms)
+    has_caution = any(term in lower for term in caution_terms) or "short_setup" in lower
+    is_ric_sequence = context.result_type == "ric_sequence" or context.intent.startswith("ric_")
 
-    lines = ["▶ CONTEXTUAL RECOMMENDATION"]
-    if any(term in lower for term in caution_terms):
+    lines = ["▶ PLAN OF THOUGHT (POT)"]
+    lines.append("  1. Bind the follow-up to the previous analysis context.")
+    lines.append("  2. Extract the decision-relevant evidence: trend/stage, signal, RS, fundamentals, and source freshness.")
+    lines.append("  3. Convert that evidence into an actionable research stance with invalidation conditions.")
+    lines.append("")
+    lines.append("▶ TREE OF THOUGHT (TOT)")
+    lines.append("  Bull branch: consider only if price strength, Stage 2/RS improvement, and fresh catalysts confirm.")
+    lines.append("  Bear branch: avoid or reduce attention when trend, signal, or fundamentals remain weak.")
+    lines.append("  Base branch: keep on watchlist only, with no fresh entry until evidence improves.")
+    lines.append("")
+    lines.append("▶ CONTEXTUAL RECOMMENDATION")
+    if is_ric_sequence and has_positive and has_caution:
+        stance = "Research stance: mixed / wait for confirmation, not a fresh chase."
+        rationale = (
+            "The EOD picture is constructive, but the intraday setup is bearish. Do not chase the EOD strength "
+            "while price remains below the intraday resistance or invalidation area; use the next session's trigger "
+            "to decide whether this is a pullback inside strength or a failed breakout."
+        )
+    elif has_caution:
         stance = "Research stance: cautious / avoid fresh entry until evidence improves."
         rationale = (
             "The prior analysis had negative or incomplete evidence, so the safer research conclusion is to wait for confirmation "
             "rather than infer a buy case."
         )
-    elif any(term in lower for term in positive_terms):
+    elif has_positive:
         stance = "Research stance: constructive, but only with confirmation and risk controls."
         rationale = (
             "The prior analysis had supportive signals, but this still needs price confirmation, source freshness, and position-risk checks."
@@ -1287,6 +1645,23 @@ def _render_contextual_recommendation(context: TurnContext) -> str:
     lines.append("  • Positive: Stage 2/price strength, improving RS, supportive fundamentals, and fresh catalysts.")
     lines.append("  • Negative: weak trend, SELL/UNKNOWN stage, deteriorating margins/coverage, or missing key evidence.")
     return "\n".join(lines)
+
+
+def _render_contextual_followups(context: TurnContext) -> str:
+    symbol = context.symbols[0] if context.symbols else "SYMBOL"
+    if context.result_type == "ric_sequence" or context.intent.startswith("ric_"):
+        return "\n".join([
+            "## 💬 What to explore next",
+            f"1. `/chart {symbol} 3mo` — Validate the EOD trend, breakout quality, and pullback structure for {symbol}.",
+            f"2. `show {symbol} 15m intraday` — Recheck whether the bearish intraday setup has reversed or confirmed.",
+            f"3. `/search {symbol} news` — Review the latest catalysts and filings behind the move.",
+        ])
+    return "\n".join([
+        "## 💬 What to explore next",
+        f"1. `/chart {symbol} 3mo` — Check the price structure and invalidation level for {symbol}.",
+        f"2. `show {symbol} 15m intraday` — Recheck the near-term entry setup and risk levels.",
+        f"3. `/search {symbol} news` — Look for catalysts that could change the research stance.",
+    ])
 
 
 def _report_path_from_context(context: TurnContext) -> str:

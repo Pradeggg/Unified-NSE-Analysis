@@ -111,7 +111,7 @@ def test_get_postgres_health_reports_missing_required_tables(monkeypatch):
     assert result["user"] == "nse_admin"
     assert result["host"] == "/tmp"
     assert result["socket_path"] == "/tmp/.s.PGSQL.5432"
-    assert result["missing_schemas"] == ["market", "scores"]
+    assert result["missing_schemas"] == ["market", "scores", "agent_memory"]
     assert result["migration_status"] == "schema_missing"
     assert result["tables"]["intraday.ohlcv_bars"]["exists"] is True
     assert result["tables"]["intraday.ohlcv_bars"]["row_count"] == 42
@@ -133,6 +133,9 @@ def test_ensure_postgres_schema_executes_idempotent_schema_sql(monkeypatch):
     executed = " ".join(sql for sql, _params in cursor.statements)
     assert "CREATE SCHEMA IF NOT EXISTS intraday" in executed
     assert "CREATE SCHEMA IF NOT EXISTS report" in executed
+    assert "CREATE SCHEMA IF NOT EXISTS agent_memory" in executed
+    assert "CREATE TABLE IF NOT EXISTS agent_memory.turn_events" in executed
+    assert "CREATE TABLE IF NOT EXISTS agent_memory.session_snapshots" in executed
 
 
 def test_tools_registry_exposes_postgres_tools():

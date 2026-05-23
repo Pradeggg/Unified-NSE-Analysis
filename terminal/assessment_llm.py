@@ -28,26 +28,58 @@ from .situation_assessment import (
     ClarificationQuestion,
     SituationAssessment,
     TurnContext,
+    classify_grounded_intent,
 )
 
 _log = logging.getLogger(__name__)
 
 # Premium-tier reasoning model (user choice). Override via env.
 # Fallback chain is used if the primary id is rejected by the API.
-ASSESSMENT_MODEL = os.getenv("ASSESSMENT_MODEL", "o1")
-ASSESSMENT_FALLBACK_MODELS = ("o1-mini", "gpt-4o")
+DEFAULT_ASSESSMENT_MODEL = "gpt-5.5"
+DEFAULT_ASSESSMENT_REASONING_EFFORT = "high"
+ASSESSMENT_MODEL = os.getenv("ASSESSMENT_MODEL", DEFAULT_ASSESSMENT_MODEL)
+ASSESSMENT_REASONING_EFFORT = os.getenv(
+    "ASSESSMENT_REASONING_EFFORT",
+    DEFAULT_ASSESSMENT_REASONING_EFFORT,
+)
+ASSESSMENT_FALLBACK_MODELS = ("gpt-5.2", "gpt-5.1", "gpt-5", "o3", "gpt-4o")
 ASSESSMENT_TIMEOUT_S = float(os.getenv("ASSESSMENT_LLM_TIMEOUT", "15"))
 ASSESSMENT_ENABLED = os.getenv("ASSESSMENT_LLM_ENABLED", "1") not in {"0", "false", "False"}
 
 _SYSTEM_PROMPT = """\
-You classify a user's follow-up message against the previous turn's context for an NSE market-research terminal.
+You are the situation-assessment layer for an NSE market-research terminal.
+
+Before choosing a route, first read the previous turn context and reflect on
+what the user is really asking. The user may be asking for an approach,
+verdict, recap, report action, source audit, or follow-up scan. Bind pronouns
+and phrases like "based on the analysis", "our approach", "it", "these", and
+"the report" to the previous turn whenever the context supports that binding.
+
+Assessment style:
+- Think like a senior market operator consolidating evidence before action.
+- Pull together available snapshot data, technical indicators, forensic or
+  fundamental details, sector context, source freshness, and catalysts.
+- Explicitly notice conflicts or mismatches in the evidence. For example, if
+  RSI values differ between snapshot and technical setup, treat that as a
+  source/timeframe conflict: the snapshot may reflect the most recent bar while
+  the technical setup may use a different timeframe or calculation window.
+- Decide whether the answer should be: answer from context, run a bound tool
+  plan, ask one clarification, or fall back to the normal router.
+- Use POT as the public plan-of-thought summary: what evidence to bind, what to
+  verify, and what response form is appropriate.
+- Use TOT as the public tree-of-thought summary: bull/base/bear or
+  open/summarize/compare branches, with the selected branch grounded in prior
+  context.
+- Do not expose private chain-of-thought. Return only concise structured JSON.
 
 Return STRICT JSON matching this schema:
 {
   "decision": "run_tool_plan" | "answer_from_context" | "ask_clarification" | "fallback_to_router",
   "confidence": "low" | "medium" | "high",
   "user_is_asking": "<one short sentence>",
+  "source_assessment": "<one short sentence on prior source/freshness/conflicts>",
   "carry_symbols": [<NSE tickers from prior context to keep>],
+  "plan": ["<POT/TOT-safe public step>", "..."],
   "tool_plan": [
     {"tool": "read_report" | "summarize_report" | "open_report" | "scan_symbols_intraday" | ..., "args": {...}}
   ],
@@ -67,6 +99,7 @@ Rules:
 - NEVER invent a ticker that wasn't in the previous turn's symbols.
 - If the user refers to "the report", "it", "summary", "recommendation" and the previous turn has a report path, set decision=run_tool_plan with read_report+summarize_report on that exact path.
 - If the user wants the report opened ("open it", "show me"), use open_report.
+- If the user asks for "our approach", "what should we do", "stance", or "verdict" based on the previous analysis, prefer decision=answer_from_context and carry the prior symbols.
 - If the user is genuinely ambiguous, set decision=ask_clarification and emit 2-4 numbered options with bound_action payloads (each bound_action MUST itself be a valid {decision, tool_plan} object so the agent can execute it directly).
 - If the user is asking something unrelated to prior context, set decision=fallback_to_router with empty tool_plan.
 - tool_plan args MUST use the actual paths/symbols from the previous turn context — do not paraphrase.
@@ -106,7 +139,7 @@ def llm_assess_followup(
             last_err = f"{model_id}: {exc}"
             _log.debug("LLM assessment call failed: %s", last_err)
             continue
-        parsed = _parse_response(raw, previous_context)
+        parsed = _parse_response(raw, previous_context, user_input)
         if parsed is not None:
             return parsed
         last_err = f"{model_id}: schema parse failed"
@@ -180,6 +213,15 @@ def _call_llm(client, model_id: str, payload: dict) -> str:
         {"role": "system", "content": _SYSTEM_PROMPT},
         {"role": "user", "content": json.dumps(payload, default=str)},
     ]
+    if _uses_responses_reasoning(model_id) and hasattr(client, "responses"):
+        resp = client.responses.create(
+            model=model_id,
+            input=messages,
+            reasoning={"effort": ASSESSMENT_REASONING_EFFORT},
+            text={"format": {"type": "json_object"}},
+        )
+        return _response_text(resp)
+
     # o1-class reasoning models reject `response_format`; we ask for JSON
     # in the system prompt and parse defensively.
     kwargs: dict[str, Any] = {"model": model_id, "messages": messages}
@@ -190,7 +232,37 @@ def _call_llm(client, model_id: str, payload: dict) -> str:
     return resp.choices[0].message.content or ""
 
 
-def _parse_response(raw: str, previous_context: TurnContext) -> SituationAssessment | None:
+def _uses_responses_reasoning(model_id: str) -> bool:
+    normalized = (model_id or "").lower()
+    return normalized.startswith("gpt-5")
+
+
+def _response_text(resp: Any) -> str:
+    output_text = getattr(resp, "output_text", None)
+    if isinstance(output_text, str):
+        return output_text
+
+    # Defensive extraction for SDKs that expose Responses output as nested
+    # content parts rather than the convenience `output_text` property.
+    for item in getattr(resp, "output", []) or []:
+        for content in getattr(item, "content", []) or []:
+            text = getattr(content, "text", None)
+            if isinstance(text, str):
+                return text
+            if isinstance(content, dict) and isinstance(content.get("text"), str):
+                return content["text"]
+        if isinstance(item, dict):
+            for content in item.get("content") or []:
+                if isinstance(content, dict) and isinstance(content.get("text"), str):
+                    return content["text"]
+    return ""
+
+
+def _parse_response(
+    raw: str,
+    previous_context: TurnContext,
+    user_input: str = "",
+) -> SituationAssessment | None:
     if not raw:
         return None
     # o1 sometimes wraps JSON in fenced code blocks.
@@ -228,6 +300,14 @@ def _parse_response(raw: str, previous_context: TurnContext) -> SituationAssessm
 
     questions = _parse_questions(data.get("clarification_questions") or [])
 
+    if decision == "run_tool_plan" and not tool_plan:
+        _log.debug("LLM assessment rejected: run_tool_plan without tools.")
+        return None
+
+    if tool_plan and not _tool_plan_has_required_args(tool_plan):
+        _log.debug("LLM tool_plan rejected: missing required tool args.")
+        return None
+
     # Safety: if the LLM returns a tool_plan referencing a symbol or path
     # absent from the prior context, drop the plan and downgrade to
     # ask_clarification or fallback. Prevents hallucinated tickers
@@ -240,19 +320,41 @@ def _parse_response(raw: str, previous_context: TurnContext) -> SituationAssessm
         else:
             return None
 
+    # PG-HALL-GUARD: Detect data-grounded intents (RS scan, screener,
+    # gainers, intraday scan). For these, prose is not an acceptable
+    # output — only a real tool_plan binding is. We OR-merge the current
+    # input with the previous turn's user_input so multi-turn flows
+    # (clarification reply -> new intent) inherit grounding.
+    grounded_tag = classify_grounded_intent(user_input) or classify_grounded_intent(
+        previous_context.user_input
+    )
+    requires_grounding = bool(grounded_tag)
+
+    # PG-HALL-GUARD: If grounding is required but the LLM returned no
+    # tool_plan (or it's been stripped above), do NOT let this turn fall
+    # through to free-text prose. Force ask_clarification (or fallback
+    # with low confidence) so the renderer's hallucination gate fires.
+    if requires_grounding and not tool_plan:
+        confidence = "low"
+        if decision in {"answer_from_context", "run_tool_plan"}:
+            decision = "ask_clarification" if questions else "fallback_to_router"
+
     return SituationAssessment(
         applies=decision != "fallback_to_router",
         decision=decision,
         confidence=confidence,
         user_is_asking=str(data.get("user_is_asking") or ""),
         context_found=(previous_context.result_summary or ""),
+        source_assessment=str(data.get("source_assessment") or ""),
         resolved_entities=list(data.get("carry_symbols") or previous_context.symbols),
         tool_plan=tool_plan,
         clarification_questions=questions,
-        plan=[
+        plan=list(data.get("plan") or [
             "LLM-tier situation assessment.",
             "Routing bound to prior turn context; no fresh symbol resolution.",
-        ],
+        ]),
+        requires_grounding=requires_grounding,
+        grounded_intent=grounded_tag,
     )
 
 
@@ -278,6 +380,20 @@ def _parse_questions(raw: list) -> tuple[ClarificationQuestion, ...]:
             default_label=str(q.get("default_label") or ""),
         ))
     return tuple(out)
+
+
+def _tool_plan_has_required_args(tool_plan: list[tuple[str, dict[str, Any]]]) -> bool:
+    """Reject structurally invalid LLM-generated tool calls."""
+    for tool, args in tool_plan:
+        if tool == "scan_symbols_intraday":
+            symbols = args.get("symbols")
+            if not isinstance(symbols, list) or not symbols:
+                return False
+        if tool in {"read_report", "summarize_report", "open_report"} and not (
+            args.get("path") or args.get("file") or args.get("report_path")
+        ):
+            return False
+    return True
 
 
 def _tool_plan_grounded(

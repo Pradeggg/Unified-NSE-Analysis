@@ -156,7 +156,7 @@ def build_evidence_pack(symbol: str, *, project_root: Path | None = None) -> Evi
     )
     pack.freshness["eod"] = "available"
 
-    for optional in ("fundamentals", "market_breadth", "news", "sentiment", "latest_results"):
+    for optional in ("fundamentals", "market_breadth", "news", "latest_results", "filing"):
         pack.missing.append(optional)
     return pack
 
@@ -183,6 +183,12 @@ def _fetch_latest_results(symbol: str) -> dict:
     from terminal.results_tools import get_latest_results
 
     return get_latest_results(symbol)
+
+
+def _fetch_filing_summary(symbol: str, project_root: Path | None = None) -> dict | None:
+    from backtesting.strategy_council.evidence_filings import summarise_filing
+
+    return summarise_filing(symbol, project_root=project_root)
 
 
 def _clear_missing(pack: EvidencePack, item: str) -> None:
@@ -238,6 +244,20 @@ def enrich_strategy_council_evidence(pack: EvidencePack) -> EvidencePack:
     except Exception as exc:
         pack.source_trail.append(f"get_latest_results: ERROR: {exc}")
 
+    try:
+        filing = _fetch_filing_summary(sym)
+        if filing and filing.get("available"):
+            pack.fundamental["filing"] = filing
+            _clear_missing(pack, "filing")
+            pack.source_trail.append(
+                f"filing: ok ({filing.get('page_count')} pages, "
+                f"{filing.get('table_count')} tables, period={filing.get('period')})"
+            )
+        else:
+            pack.source_trail.append("filing: no parsed filing on disk")
+    except Exception as exc:
+        pack.source_trail.append(f"filing: ERROR: {exc}")
+
     readiness = score_strategy_data_readiness(pack)
     pack.fundamental["readiness"] = readiness
     pack.freshness["strategy_evidence_readiness"] = readiness["status"]
@@ -275,6 +295,8 @@ def score_strategy_data_readiness(pack: EvidencePack) -> dict:
         score -= 10
     if "latest_results" in pack.missing or not pack.fundamental.get("latest_results"):
         score -= 15
+    if "filing" in pack.missing or not pack.fundamental.get("filing"):
+        score -= 10
     score = max(0, min(100, score))
     status = "ready" if score >= 80 else ("usable" if score >= 55 else "insufficient")
     return {

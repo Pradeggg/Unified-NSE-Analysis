@@ -27,6 +27,7 @@ import pandas as pd
 from backtesting.strategy_council.evidence import (
     build_strategy_council_evidence_pack,
 )
+from backtesting.strategy_council.evidence_fundamentals import enrich_with_fundamentals
 from backtesting.strategy_council.types import EvidencePack
 
 
@@ -266,7 +267,10 @@ def build_enriched_evidence_pack(
     """Build the base pack via existing helpers, then layer market signals."""
 
     pack = build_strategy_council_evidence_pack(symbol, project_root=project_root)
-    return enrich_with_market_signals(pack, eod, benchmark=benchmark)
+    pack = enrich_with_market_signals(pack, eod, benchmark=benchmark)
+    pack.missing = [m for m in pack.missing if m != "fundamentals"]
+    pack = enrich_with_fundamentals(pack, as_of=pack.as_of)
+    return pack
 
 
 __all__ = [
@@ -277,5 +281,6 @@ __all__ = [
     "compute_factor_exposure",
     "compute_microstructure",
     "enrich_with_market_signals",
+    "enrich_with_fundamentals",
     "build_enriched_evidence_pack",
 ]

@@ -9,7 +9,10 @@ from pathlib import Path
 import pandas as pd
 
 from backtesting.strategy_council.council import run_strategy_council
-from backtesting.strategy_council.evidence import build_evidence_pack, load_symbol_eod_history
+from backtesting.strategy_council.evidence import (
+    build_strategy_council_evidence_pack,
+    load_symbol_eod_history,
+)
 from backtesting.strategy_council.llm import build_default_agents
 from backtesting.strategy_council.postgres_storage import persist_council_result
 from backtesting.strategy_council.report import write_council_report
@@ -230,17 +233,11 @@ def handle_strategy_council_command(
         mode = _strategy_council_data_mode(parts, data_mode)
         config = parse_strategy_council_command(" ".join(shlex.quote(p) for p in _clean_mode_args(parts)))
         strategist, critics, agent_mode = resolve_strategy_council_agents(parts)
-        evidence = build_evidence_pack(config.symbol, project_root=root)
+        evidence = build_strategy_council_evidence_pack(config.symbol, project_root=root)
         intraday_summary = None
         if mode == "intraday":
             evidence, intraday_summary = _build_intraday_evidence(config.symbol, evidence)
         eod = _load_symbol_eod(config.symbol, root, config.from_date)
-        if config.include_enrichment:
-            try:
-                from backtesting.strategy_council.evidence_enrichment import enrich_with_market_signals
-                enrich_with_market_signals(evidence, eod)
-            except Exception:
-                pass
         if config.use_advanced_critics:
             try:
                 from backtesting.strategy_council.critics_advanced import build_advanced_critics
@@ -262,28 +259,213 @@ def handle_strategy_council_command(
         return f"Strategy Council failed: {exc}"
 
     header = f"### Strategy Council — {config.symbol}"
-    bullets = [
-        f"- **Recommendation:** {result.recommendation}",
-        f"- **Locked strategy:** {result.locked_strategy.strategy_id if result.locked_strategy else 'none'}",
-        f"- **Iterations:** {len(result.iterations)}",
-        f"- **Enhancements:** enrichment={'on' if config.include_enrichment else 'off'}, "
+    summary = _render_council_summary(
+        result=result,
+        evidence=evidence,
+        agent_mode=agent_mode,
+        config=config,
+        report_path=report,
+        intraday_summary=intraday_summary,
+        persisted=persisted,
+    )
+    return "\n".join([header, "", *summary])
+
+
+def _fmt_pct(value) -> str:
+    try:
+        return f"{float(value):+.2f}%"
+    except (TypeError, ValueError):
+        return "n/a"
+
+
+def _fmt_num(value) -> str:
+    try:
+        f = float(value)
+    except (TypeError, ValueError):
+        return "n/a"
+    if abs(f) >= 1000:
+        return f"{f:,.0f}"
+    return f"{f:.2f}"
+
+
+def _render_council_summary(
+    *,
+    result,
+    evidence: EvidencePack,
+    agent_mode: str,
+    config: CouncilConfig,
+    report_path: Path,
+    intraday_summary: dict | None,
+    persisted: dict | None,
+) -> list[str]:
+    """Produce a multi-section terminal-friendly summary of a council run.
+
+    Mirrors the structure of the markdown report so the agent answer is
+    self-contained without requiring the user to open the file.
+    """
+    lines: list[str] = []
+    fundamental = evidence.fundamental or {}
+    readiness = fundamental.get("readiness") or {}
+    tech = evidence.technical or {}
+    snapshot = fundamental.get("snapshot") or {}
+    filing = fundamental.get("filing") or {}
+    latest_results = fundamental.get("latest_results") or {}
+    breadth = (evidence.market or {}).get("breadth") or {}
+    factor_exposure = (evidence.market or {}).get("factor_exposure") or {}
+    regime = (evidence.market or {}).get("regime") or {}
+    microstructure = (evidence.market or {}).get("microstructure") or {}
+
+    lines.append(f"- **Recommendation:** {result.recommendation}")
+    locked = result.locked_strategy.strategy_id if result.locked_strategy else "none"
+    lines.append(f"- **Locked strategy:** {locked}")
+    lines.append(f"- **Iterations:** {len(result.iterations)}")
+    lines.append(
+        f"- **Readiness:** {readiness.get('score', 'n/a')} / "
+        f"{readiness.get('status', 'n/a')}"
+        + (
+            f" (missing: {', '.join(readiness.get('missing') or [])})"
+            if readiness.get("missing")
+            else ""
+        )
+    )
+    lines.append(
+        "- **Enhancements:** "
+        f"enrichment={'on' if config.include_enrichment else 'off'}, "
         f"advanced_critics={'on' if config.use_advanced_critics else 'off'}, "
-        f"dashboard={'on' if config.dashboard_output_dir else 'off'}",
-        f"- **Report:** `{report}`",
-    ]
+        f"dashboard={'on' if config.dashboard_output_dir else 'off'}"
+    )
+
+    lines.append("")
+    lines.append("#### Evidence Snapshot")
+    if tech:
+        lines.append(
+            f"- Close ₹{_fmt_num(tech.get('close'))} "
+            f"| O ₹{_fmt_num(tech.get('open'))} "
+            f"H ₹{_fmt_num(tech.get('high'))} "
+            f"L ₹{_fmt_num(tech.get('low'))} "
+            f"| Vol {_fmt_num(tech.get('volume'))} "
+            f"| Bars {tech.get('bars', 'n/a')}"
+        )
+    regime_label = regime.get("label") if isinstance(regime, dict) else None
+    if regime_label or regime:
+        bias = regime.get("bias_pct") if isinstance(regime, dict) else None
+        lines.append(
+            f"- Regime: **{regime_label or evidence.freshness.get('regime', 'n/a')}**"
+            + (f" (bias {_fmt_pct(bias)})" if bias is not None else "")
+        )
+    beta = factor_exposure.get("beta") if isinstance(factor_exposure, dict) else None
+    if beta is not None:
+        lines.append(f"- Factor β vs Nifty 50: {float(beta):+.2f}")
+    atr = microstructure.get("atr_pct") if isinstance(microstructure, dict) else None
+    if atr is not None:
+        lines.append(f"- Microstructure: ATR {_fmt_pct(atr)}")
+    if snapshot:
+        bits = []
+        if snapshot.get("stage"):
+            bits.append(str(snapshot["stage"]))
+        if snapshot.get("trading_signal"):
+            bits.append(f"signal {snapshot['trading_signal']}")
+        if snapshot.get("rsi") is not None:
+            bits.append(f"RSI {_fmt_num(snapshot['rsi'])}")
+        if snapshot.get("relative_strength") is not None:
+            bits.append(f"RS {_fmt_num(snapshot['relative_strength'])}")
+        if snapshot.get("sector"):
+            bits.append(str(snapshot["sector"]))
+        if bits:
+            lines.append("- Snapshot: " + " · ".join(bits))
+
+    facts = latest_results.get("facts") if isinstance(latest_results, dict) else None
+    if facts:
+        fact_bits = []
+        for key in ("revenue", "ebitda", "pat", "eps", "net_debt"):
+            if key in facts:
+                item = facts[key]
+                fact_bits.append(
+                    f"{key.upper()} {item.get('value')} ({item.get('period')})"
+                )
+        if fact_bits:
+            lines.append("- Latest results: " + " · ".join(fact_bits))
+
+    if filing.get("period"):
+        head = filing.get("headline_numbers") or {}
+        pages = filing.get("page_count") or len(filing.get("page_excerpts") or [])
+        tables = filing.get("table_count") or len(filing.get("tables") or [])
+        head_keys = ", ".join(head.keys()) if head else "no headline tables"
+        lines.append(
+            f"- Filing: {filing.get('period')} · {pages} pages · {tables} tables · {head_keys}"
+        )
+
+    if breadth:
+        lines.append(
+            f"- Market breadth: A/D {breadth.get('ad_ratio', 'n/a')} "
+            f"({breadth.get('advances', '?')}↑ / {breadth.get('declines', '?')}↓), "
+            f"avg RS {breadth.get('avg_rs_pct', 'n/a')}"
+        )
+
+    if evidence.news:
+        lines.append("")
+        lines.append("#### Top Catalysts")
+        for n in evidence.news[:5]:
+            title = n.get("title") if isinstance(n, dict) else str(n)
+            if title:
+                lines.append(f"- {title}")
+
+    if evidence.source_trail:
+        lines.append("")
+        lines.append("#### Source Trail")
+        for entry in evidence.source_trail:
+            lines.append(f"- {entry}")
+    if evidence.missing:
+        lines.append(f"- _Missing axes:_ {', '.join(evidence.missing)}")
+
+    if result.iterations:
+        lines.append("")
+        lines.append("#### Iteration Critique Highlights")
+        for it in result.iterations:
+            concerns = []
+            for crit in it.critiques or ():
+                if crit.issues:
+                    concerns.append(f"{crit.critic}: {crit.issues[0]}")
+            concern_str = "; ".join(concerns[:3]) if concerns else "no blocking concerns"
+            lines.append(
+                f"- Iter {it.index}: {len(it.candidates)} candidates → {concern_str}"
+            )
+            if it.strategist_revision:
+                lines.append(f"  - revision: {it.strategist_revision}")
+
+    if result.test_results:
+        lines.append("")
+        lines.append("#### Final One-Shot Test")
+        for slice_ in result.test_results:
+            metrics = slice_.metrics or {}
+            ret = metrics.get("return_pct") or metrics.get("return")
+            pnl = metrics.get("pnl") or metrics.get("p&l")
+            lines.append(
+                f"- {slice_.strategy_id} / {slice_.horizon_days}d / "
+                f"{slice_.trade_count} trades / return {_fmt_pct(ret) if ret is not None else 'n/a'}"
+                + (f" / P&L {_fmt_num(pnl)}" if pnl is not None else "")
+            )
+
+    if result.rationale:
+        lines.append("")
+        lines.append(f"_Rationale:_ {result.rationale}")
+
+    lines.append("")
+    lines.append(f"- **Report:** `{report_path}`")
     if result.dashboard_path:
-        bullets.append(f"- **Dashboard:** `{result.dashboard_path}`")
+        lines.append(f"- **Dashboard:** `{result.dashboard_path}`")
     if persisted:
-        bullets.append(f"- **PostgreSQL council run:** {persisted['run_id']}")
-        bullets.append(f"- **Persisted split results:** {persisted['split_results_inserted']}")
+        lines.append(f"- **PostgreSQL council run:** {persisted['run_id']}")
+        lines.append(f"- **Persisted split results:** {persisted['split_results_inserted']}")
+
     if intraday_summary:
         for line in _format_intraday_lines(intraday_summary):
-            bullets.append(f"- {line}")
-        bullets.append(
+            lines.append(f"- {line}")
+        lines.append(
             f"- _Mode: Intraday Strategy Council ({agent_mode}); research-only, not investment advice._"
         )
     else:
-        bullets.append(
+        lines.append(
             f"- _Mode: EOD Strategy Council simulation ({agent_mode}); research-only, not investment advice._"
         )
-    return "\n".join([header, ""] + bullets)
+    return lines

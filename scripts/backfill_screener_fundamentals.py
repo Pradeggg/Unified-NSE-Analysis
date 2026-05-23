@@ -46,6 +46,7 @@ if str(BASE) not in sys.path:
     sys.path.insert(0, str(BASE))
 
 from postgres.loader import pg, upsert  # noqa: E402
+from terminal.financials_cache import upsert_screener_payload  # noqa: E402
 from terminal.web_research import scrape_screener_in  # noqa: E402
 
 INDEX_CSV = BASE / "data" / "index_stock_mapping.csv"
@@ -211,6 +212,7 @@ class BackfillStats:
         self.skipped_fresh = 0
         self.empty = 0
         self.errors = 0
+        self.structured_rows = 0
         self.error_symbols: list[tuple[str, str]] = []
 
 
@@ -223,9 +225,9 @@ def fresh_symbols(cur, days: int) -> set[str]:
     return {r[0].upper() for r in cur.fetchall()}
 
 
-def upsert_symbol(cur, sym: str, payload: dict, source_tag: str) -> int:
+def upsert_symbol(cur, sym: str, payload: dict, source_tag: str) -> tuple[int, int]:
     if payload.get("error"):
-        return 0
+        return (0, 0)
     snap_date = date.today()
     row = {
         "snapshot_date": snap_date,
@@ -242,7 +244,7 @@ def upsert_symbol(cur, sym: str, payload: dict, source_tag: str) -> int:
         "pnl_summary", "quarterly_summary", "balance_sheet_summary",
         "cash_flow_summary", "investor_summary", "ratios_summary",
     )):
-        return 0
+        return (0, 0)
     upsert(
         cur, "scores.fundamental_snapshots", [row],
         ["snapshot_date", "symbol"],
@@ -295,7 +297,13 @@ def upsert_symbol(cur, sym: str, payload: dict, source_tag: str) -> int:
                 ["snapshot_date", "symbol", "section_name"],
                 ["section_summary", "source_file", "loaded_at"],
             )
-    return 1
+    structured_n = 0
+    try:
+        counts = upsert_screener_payload(sym, payload, conn=cur.connection)
+        structured_n = sum(counts.values())
+    except Exception as e:
+        print(f"        [structured-cache] {sym} WARN {e}")
+    return (1, structured_n)
 
 
 _STOP = False
@@ -358,15 +366,17 @@ def run(args) -> int:
             else:
                 stats.scraped += 1
                 try:
-                    n = upsert_symbol(cur, sym, payload, source_tag)
+                    n, structured_n = upsert_symbol(cur, sym, payload, source_tag)
                     if n:
                         stats.upserted += 1
+                        stats.structured_rows += structured_n
                         elapsed = time.time() - t0
                         bits = []
                         if build_pnl_summary(payload): bits.append("pnl")
                         if build_quarterly_summary(payload): bits.append("q")
                         if build_ratios_summary(payload): bits.append("ratios")
                         if build_investor_summary(payload): bits.append("shp")
+                        if structured_n: bits.append(f"struct={structured_n}")
                         print(f"[{i}/{len(pending)}] {sym:<14} ok  ({','.join(bits)})  {elapsed:.1f}s")
                     else:
                         stats.empty += 1
@@ -395,7 +405,8 @@ def run(args) -> int:
 
     print(
         f"\n[backfill] done  attempted={stats.attempted}  scraped={stats.scraped}  "
-        f"upserted={stats.upserted}  empty={stats.empty}  errors={stats.errors}  "
+        f"upserted={stats.upserted}  structured_rows={stats.structured_rows}  "
+        f"empty={stats.empty}  errors={stats.errors}  "
         f"skipped_fresh={stats.skipped_fresh}"
     )
     if stats.error_symbols:

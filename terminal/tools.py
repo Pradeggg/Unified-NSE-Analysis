@@ -141,6 +141,7 @@ from economic_cycle import detect_economic_cycle_phase
 
 # ── Chart module ─────────────────────────────────────────────────────────────
 from terminal.charts import render_chart, render_html_chart, chart_summary
+from terminal.visual_scan.command import run_visual_scan
 
 # ── Intraday screener engine ──────────────────────────────────────────────────
 from terminal.intraday import (
@@ -542,6 +543,39 @@ _COMMON_STOCK_ALIASES: dict[str, str] = {
     "UNITED SPIRITS": "UNITDSPR",
     "UNITED SPIRITS LIMITED": "UNITDSPR",
     "DIAGEO INDIA": "UNITDSPR",
+    # Frequently-typed alternative forms whose default fuzzy matches resolve to
+    # the wrong (smaller / unrelated) company. Surfaced by the live 200-case
+    # regression run — keep these explicit so company names like "Bharat
+    # Petroleum" do not get matched to CHENNPETRO, etc.
+    "BHARAT PETROLEUM": "BPCL",
+    "BHARAT PETROLEUM CORPORATION": "BPCL",
+    "MAHINDRA AND MAHINDRA": "M&M",
+    "MAHINDRA & MAHINDRA": "M&M",
+    "HINDUSTAN LEVER": "HINDUNILVR",
+    "HUL": "HINDUNILVR",
+    "HINDUSTAN UNILEVER": "HINDUNILVR",
+    "STATE BANK OF INDIA": "SBIN",
+    "STATE BANK": "SBIN",
+    "ASIAN PAINTS": "ASIANPAINT",
+    "POWER GRID": "POWERGRID",
+    "POWER GRID CORPORATION": "POWERGRID",
+    "ADANI PORTS": "ADANIPORTS",
+    "ADANI ENTERPRISES": "ADANIENT",
+    "RELIANCE INDUSTRIES": "RELIANCE",
+    "TATA CONSULTANCY": "TCS",
+    "TATA CONSULTANCY SERVICES": "TCS",
+    "TATA INVESTMENT": "TATAINVEST",
+    "TATA INVESTMENT CORPORATION": "TATAINVEST",
+    "BHARAT FORGE": "BHARATFORG",
+    "MARUTI SUZUKI": "MARUTI",
+    "SUN PHARMA": "SUNPHARMA",
+    "DR REDDY": "DRREDDY",
+    "DR REDDYS": "DRREDDY",
+    "LARSEN AND TOUBRO": "LT",
+    "LARSEN & TOUBRO": "LT",
+    "PREMIER ENERGIES": "PREMIERENE",
+    "HINDUSTAN AERONAUTICS": "HAL",
+    "BAJAJ AUTO": "BAJAJ-AUTO",
 }
 
 _SYMBOL_CONTEXT_TOKENS: set[str] = {
@@ -686,9 +720,24 @@ def _resolve_local_symbol(query: str) -> dict:
         return {"symbol": None, "confidence": "none", "query": query}
 
     contains_hits: list[tuple[int, str, str]] = []
+    # Word-boundary tokens of the original query for whole-word containment
+    # checks. Without this, a 3-letter ticker like "GNA" false-positives on
+    # any prose phrase that contains the letters G-N-A in sequence (e.g.
+    # "intraday siGNAls"). We allow the short-key-inside-long-query direction
+    # ONLY when the key matches as a whole token, not as a mid-word fragment.
+    q_word_tokens = {tok for tok in re.split(r"[^A-Z0-9]+", q.upper()) if tok}
     for key_norm, (key, sym) in normalized.items():
-        if q_key in key_norm or key_norm in q_key:
+        if q_key in key_norm:
+            # User typed a prefix/substring of a known company name — safe.
             contains_hits.append((abs(len(key_norm) - len(q_key)), key, sym))
+        elif key_norm in q_key:
+            # Reverse direction: a short canonical key appearing inside a long
+            # query. Only accept if (a) the key is reasonably long, AND
+            # (b) it shows up as a whole token in the original query — not as
+            # a mid-word fragment. Otherwise 3-letter tickers will haunt every
+            # prose phrase they coincidentally appear inside.
+            if len(key_norm) >= 6 or key_norm in q_word_tokens:
+                contains_hits.append((abs(len(key_norm) - len(q_key)), key, sym))
     if contains_hits and not strict_exact_ticker:
         contains_hits.sort(key=lambda x: x[0])
         best = contains_hits[0][2]
@@ -719,6 +768,31 @@ def _resolve_local_symbol(query: str) -> dict:
             and ratio >= 0.90
         ):
             near_hits.append((ratio, key, sym))
+    if strict_exact_ticker:
+        # Allow only very high-confidence one-character ticker corrections for
+        # actual symbols (not company-name aliases). This catches slips like
+        # WAREEENER -> WAAREEENER while preserving unknown-ticker failures such
+        # as NAVABUPA, which could otherwise be incorrectly substituted.
+        typo_hits: list[tuple[float, str, str]] = []
+        for key_norm, (key, sym) in normalized.items():
+            if key_norm != _lookup_key(sym):
+                continue
+            if len(key_norm) < 8 or len(q_key) < 8 or q_key[:2] != key_norm[:2]:
+                continue
+            ratio = SequenceMatcher(None, q_key, key_norm).ratio()
+            if ratio >= 0.94:
+                typo_hits.append((ratio, key, sym))
+        if typo_hits:
+            typo_hits.sort(key=lambda x: x[0], reverse=True)
+            unique = list(dict.fromkeys(hit[2] for hit in typo_hits))
+            if len(unique) == 1:
+                return {
+                    "symbol": unique[0],
+                    "confidence": "near-match",
+                    "query": query,
+                    "matched": typo_hits[0][1],
+                    "candidates": unique,
+                }
     if near_hits:
         near_hits.sort(key=lambda x: x[0], reverse=True)
         best = near_hits[0][2]
@@ -730,6 +804,24 @@ def _resolve_local_symbol(query: str) -> dict:
         }
 
     return {"symbol": None, "confidence": "none", "query": query}
+
+
+def _suggest_local_symbols(query: str, limit: int = 5) -> list[str]:
+    """Return likely local symbol suggestions without canonicalizing the query."""
+    q_key = _lookup_key(query)
+    if not q_key or len(q_key) < 4:
+        return []
+    suggestions: list[tuple[float, str]] = []
+    for key, sym in _all_symbols_map().items():
+        key_norm = _lookup_key(key)
+        sym_norm = _lookup_key(sym)
+        if not key_norm or key_norm != sym_norm:
+            continue
+        ratio = SequenceMatcher(None, q_key, key_norm).ratio()
+        if ratio >= 0.80 or q_key[:4] == key_norm[:4]:
+            suggestions.append((ratio, str(sym).upper()))
+    suggestions.sort(key=lambda item: item[0], reverse=True)
+    return list(dict.fromkeys(sym for _, sym in suggestions[:limit]))
 
 
 def _canonical_symbol(symbol: str) -> str:
@@ -794,6 +886,7 @@ def resolve_symbol(query: str) -> dict:
             "error": f"'{query}' contains search/report context, not a resolvable NSE symbol.",
         }
     exact_ticker_query = bool(re.fullmatch(r"[A-Z0-9&-]{2,12}", query.strip()))
+    suggestions = _suggest_local_symbols(query)
 
     # Fall back to NSE live search API
     try:
@@ -804,6 +897,12 @@ def resolve_symbol(query: str) -> dict:
         payload = r.json()
         results = payload.get("results", []) if isinstance(payload, dict) else []
         if results:
+            search_suggestions = [
+                str(x.get("symbol") or "").strip().upper()
+                for x in results[:5]
+                if isinstance(x, dict) and x.get("symbol")
+            ]
+            suggestions = list(dict.fromkeys([*suggestions, *search_suggestions]))[:5]
             # Prefer exact ticker match when the user passed a ticker-shaped
             # query, otherwise NSE search ranks by relevance and a substring
             # match can land first (e.g. RELIANCE → RELIANCEPOWER).
@@ -851,8 +950,16 @@ def resolve_symbol(query: str) -> dict:
         except Exception:
             pass
 
-    return {"symbol": None, "confidence": "none", "query": query,
-            "error": f"No exact NSE symbol found for '{query}'" if exact_ticker_query else f"No NSE symbol found for '{query}'"}
+    result = {
+        "symbol": None,
+        "confidence": "none",
+        "query": query,
+        "error": f"No exact NSE symbol found for '{query}'" if exact_ticker_query else f"No NSE symbol found for '{query}'",
+    }
+    if suggestions:
+        result["candidates"] = suggestions[:5]
+        result["suggestion"] = suggestions[0]
+    return result
 
 
 _STAGE_SNAPSHOT_COLS = [
@@ -4317,13 +4424,70 @@ def get_live_market_overview() -> dict:
         return {"error": str(e)}
 
 
+def _intraday_market_overview_from_pg(preferred: list[str], live_error: str | None = None) -> dict:
+    """Build a market-overview-shaped payload from the latest stored index tape."""
+    try:
+        import psycopg2
+        from psycopg2.extras import RealDictCursor
+
+        conn = psycopg2.connect("dbname=nse_market user=nse_admin host=/tmp")
+        try:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    """
+                    WITH ranked AS (
+                        SELECT symbol, as_of, captured_at, last_price, change, pct_change,
+                               day_high, day_low,
+                               row_number() OVER (PARTITION BY symbol ORDER BY captured_at DESC) AS rn
+                        FROM   intraday.quote_snapshots
+                        WHERE  symbol = ANY(%s)
+                          AND  last_price IS NOT NULL
+                    )
+                    SELECT symbol, as_of, captured_at, last_price, change, pct_change, day_high, day_low
+                    FROM   ranked
+                    WHERE  rn = 1
+                    """,
+                    (preferred,),
+                )
+                rows = [dict(row) for row in cur.fetchall()]
+        finally:
+            conn.close()
+    except Exception as exc:
+        return {"error": f"PG intraday quote fallback unavailable: {exc}"}
+
+    if not rows:
+        return {"error": "PG intraday quote fallback has no stored index tape"}
+
+    indices = {}
+    latest_captured = None
+    for row in rows:
+        symbol = str(row.get("symbol") or "").upper()
+        indices[symbol] = {
+            "last": float(row["last_price"]) if row.get("last_price") is not None else None,
+            "change": float(row["change"]) if row.get("change") is not None else None,
+            "pct_change": float(row["pct_change"]) if row.get("pct_change") is not None else None,
+            "day_high": float(row["day_high"]) if row.get("day_high") is not None else None,
+            "day_low": float(row["day_low"]) if row.get("day_low") is not None else None,
+        }
+        captured_at = row.get("captured_at")
+        if captured_at and (latest_captured is None or captured_at > latest_captured):
+            latest_captured = captured_at
+
+    return {
+        "indices": indices,
+        "broad_market": {k: v for k, v in indices.items() if k in {"NIFTY 50", "NIFTY NEXT 50"}},
+        "sectoral": {k: v for k, v in indices.items() if k not in {"NIFTY 50", "NIFTY NEXT 50"}},
+        "adv_dec": {},
+        "as_of": str(latest_captured) if latest_captured else datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "source": "PG intraday.quote_snapshots fallback",
+        "degraded": True,
+        "fallback_reason": f"NSE live overview unavailable: {live_error}" if live_error else "NSE live overview unavailable.",
+    }
+
+
 def get_intraday_market_recap(minutes: int = 15) -> dict:
     """Summarize what changed in the broad market over the last N minutes."""
     minutes = max(1, min(int(minutes or 15), 120))
-    overview = get_live_market_overview()
-    if overview.get("error"):
-        return {"error": f"Live market overview unavailable: {overview['error']}", "minutes": minutes}
-
     preferred = [
         "NIFTY 50",
         "NIFTY BANK",
@@ -4331,6 +4495,16 @@ def get_intraday_market_recap(minutes: int = 15) -> dict:
         "NIFTY MIDCAP 50",
         "NIFTY MIDCAP 100",
     ]
+    overview = get_live_market_overview()
+    if overview.get("error"):
+        live_error = str(overview.get("error"))
+        overview = _intraday_market_overview_from_pg(preferred, live_error=live_error)
+        if overview.get("error"):
+            return {
+                "error": f"Live market overview unavailable: {live_error}; {overview['error']}",
+                "minutes": minutes,
+            }
+
     indices = overview.get("indices") or {}
     current_rows: list[dict[str, Any]] = []
     for name in preferred:
@@ -4463,6 +4637,8 @@ def get_intraday_market_recap(minutes: int = 15) -> dict:
         "adv_dec": adv_dec,
         "rows": rows,
         "note": "Interval deltas use the nearest stored intraday.quote_snapshots row at or before the requested lookback.",
+        "degraded": bool(overview.get("degraded")),
+        "fallback_reason": overview.get("fallback_reason"),
     }
 
 
@@ -4588,7 +4764,8 @@ def get_top_gainers_losers(
     """
     try:
         s = _get_live_session()
-        idx_param = index.upper().replace(" ", "%20")
+        from urllib.parse import quote as _urlquote
+        idx_param = _urlquote(index.upper(), safe="")
         r2 = s.get(
             f"https://www.nseindia.com/api/equity-stockIndices?index={idx_param}",
             timeout=10,
@@ -8084,6 +8261,22 @@ TOOL_REGISTRY.update({
             "required": ["symbol"],
         },
     ),
+    "run_visual_scan": (
+        run_visual_scan,
+        (
+            "Generate a grounded swing/EOD visual scan report for one NSE symbol with "
+            "annotated charts, deterministic pattern evidence, MTF alignment, optional "
+            "TradingView corroboration, and a research stance."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string"},
+                "capture_tradingview": {"type": "boolean", "default": True},
+            },
+            "required": ["symbol"],
+        },
+    ),
     "analyze_options_buying": (
         analyze_options_buying,
         (
@@ -8659,12 +8852,13 @@ TOOL_REGISTRY.update({
 def analyze_document(source: str, max_pages: int = 50,
                      vision_fallback: bool = True,
                      vision_threshold: int = 200) -> dict:
-    """Read and extract text from a local file (PDF, DOCX, TXT, CSV) or a web URL.
+    """Read and extract text from a local file (PDF, DOCX, HTML, TXT, CSV) or a web URL.
 
     Detects the source type automatically:
       - URL (http/https) → scrape web page or download PDF
       - .pdf             → extract text with PyMuPDF page by page
       - .docx            → extract text with python-docx paragraph by paragraph
+      - .html / .htm     → strip tags via BeautifulSoup, extract headings + tables
       - .txt / .csv / .md → read as plain text
 
     For PDFs, pages whose text extraction yields < ``vision_threshold`` chars
@@ -8788,6 +8982,67 @@ def analyze_document(source: str, max_pages: int = 50,
         except Exception as e:
             return {"error": f"DOCX read error: {e}", "source": path}
 
+    # ── HTML ──────────────────────────────────────────────────────────────
+    if ext in (".html", ".htm"):
+        try:
+            with open(path, "r", encoding="utf-8", errors="replace") as f:
+                raw = f.read()
+            title = ""
+            sections: list[dict] = []
+            tables_text: list[str] = []
+            try:
+                from bs4 import BeautifulSoup
+                soup = BeautifulSoup(raw, "lxml") if "lxml" in str(BeautifulSoup) else BeautifulSoup(raw, "html.parser")
+                for tag in soup(["script", "style", "noscript"]):
+                    tag.decompose()
+                if soup.title and soup.title.string:
+                    title = soup.title.string.strip()
+                for h in soup.find_all(["h1", "h2", "h3", "h4"]):
+                    htext = h.get_text(" ", strip=True)
+                    if htext:
+                        sections.append({"style": h.name.upper(), "text": htext})
+                for t_idx, table in enumerate(soup.find_all("table")):
+                    rows = []
+                    for tr in table.find_all("tr"):
+                        cells = [c.get_text(" ", strip=True) for c in tr.find_all(["th", "td"])]
+                        if cells:
+                            rows.append(" | ".join(cells))
+                    if rows:
+                        tables_text.append(f"--- Table {t_idx + 1} ---\n" + "\n".join(rows))
+                body_text = soup.get_text("\n", strip=True)
+            except ImportError:
+                import re as _re
+                body_text = _re.sub(r"<script[^>]*>.*?</script>", " ", raw, flags=_re.S | _re.I)
+                body_text = _re.sub(r"<style[^>]*>.*?</style>", " ", body_text, flags=_re.S | _re.I)
+                body_text = _re.sub(r"<[^>]+>", " ", body_text)
+                import html as _html_mod
+                body_text = _html_mod.unescape(_re.sub(r"\s+\n", "\n", body_text)).strip()
+
+            body_text = "\n".join(line for line in (ln.strip() for ln in body_text.splitlines()) if line)
+            max_chars = 200_000
+            truncated = len(body_text) > max_chars
+            if truncated:
+                body_text = body_text[:max_chars]
+            full_parts = []
+            if title:
+                full_parts.append(f"# {title}")
+            full_parts.append(body_text)
+            if tables_text:
+                full_parts.append("\n=== TABLES ===\n" + "\n\n".join(tables_text))
+            full_text = "\n\n".join(full_parts)
+            return {
+                "source": path, "source_type": "html", "file_name": file_name,
+                "file_size_kb": round(file_size / 1024, 1),
+                "title": title,
+                "section_count": len(sections),
+                "table_count": len(tables_text),
+                "truncated": truncated,
+                "text": full_text,
+                "sections": sections[:100],
+            }
+        except Exception as e:
+            return {"error": f"HTML read error: {e}", "source": path}
+
     # ── Plain text (TXT, CSV, MD, etc.) ───────────────────────────────────
     if ext in (".txt", ".csv", ".md", ".log", ".json", ".yaml", ".yml"):
         try:
@@ -8804,18 +9059,19 @@ def analyze_document(source: str, max_pages: int = 50,
         except Exception as e:
             return {"error": f"Read error: {e}", "source": path}
 
-    return {"error": f"Unsupported file type: {ext}. Supported: .pdf, .docx, .txt, .csv, .md",
+    return {"error": f"Unsupported file type: {ext}. Supported: .pdf, .docx, .html, .txt, .csv, .md",
             "source": path}
 
 
 TOOL_REGISTRY.update({
     "analyze_document": (
         analyze_document,
-        ("Read and extract text from a local file (PDF, DOCX, TXT, CSV) or a web URL. "
+        ("Read and extract text from a local file (PDF, DOCX, HTML, TXT, CSV) or a web URL. "
          "Use this for document analysis — annual reports, research papers, filings, "
-         "concall transcripts, presentations. Returns full text content with metadata. "
+         "concall transcripts, presentations, dashboards. Returns full text content with metadata. "
          "For PDFs: page-by-page extraction with automatic vision/OCR fallback "
          "for image-only or scanned pages. For DOCX: paragraphs + tables. "
+         "For HTML: heading sections + tables via BeautifulSoup. "
          "For URLs: smart web scraping or PDF download."),
         {
             "type": "object",
@@ -8842,6 +9098,183 @@ TOOL_REGISTRY.update({
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Multi-timeframe (MTF) analysis tools — PG 2026-05-22
+# Engine lives in terminal/mtf.py. These wrappers shape inputs/outputs for the
+# LLM tool-calling surface and add a multi-symbol scanner that reuses the same
+# scoring as the single-symbol analyzer.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def analyze_mtf(
+    symbol: str,
+    timeframes: list[str] | None = None,
+    days: int = 800,
+) -> dict:
+    """Aligned multi-timeframe analysis for a single symbol.
+
+    Returns the per-timeframe indicator stack (RSI/MACD/EMA20/EMA50/SMA stack)
+    for monthly, weekly, daily, 60m, 15m, a weighted confluence score (0-100),
+    a deterministic BUY/WATCH/AVOID/SELL verdict, and the rationale used.
+
+    Missing timeframes are reported with status="missing" and never inferred.
+    """
+    from terminal.mtf import compute_mtf, DEFAULT_TIMEFRAMES
+
+    sym = _canonical_symbol(symbol)
+    tfs = tuple(timeframes) if timeframes else DEFAULT_TIMEFRAMES
+    try:
+        result = compute_mtf(sym, timeframes=tfs, days=days)
+    except Exception as exc:
+        return {"symbol": sym, "error": f"MTF computation failed: {exc}"}
+    out = result.as_dict()
+    out["data_source"] = "PostgreSQL market.equity_eod (daily resampled) + PG intraday.ohlcv_bars"
+    return out
+
+
+def scan_mtf_aligned(
+    symbols: list[str] | None = None,
+    index: str | None = None,
+    direction: str = "bullish",
+    min_score: int = 70,
+    timeframes: list[str] | None = None,
+    top_n: int = 10,
+) -> dict:
+    """Rank a universe by MTF confluence in a given direction.
+
+    Provide EITHER an explicit ``symbols`` list OR an NSE ``index`` name
+    (e.g. 'NIFTY 50', 'NIFTY 500'). Symbols path is preferred for tight
+    fan-outs (faster, cheaper). Returns ranked top_n symbols whose MTF
+    direction matches and whose confluence_score >= min_score.
+    """
+    from terminal.mtf import compute_mtf, DEFAULT_TIMEFRAMES
+
+    direction = (direction or "bullish").lower()
+    if direction not in {"bullish", "bearish"}:
+        return {"error": "direction must be 'bullish' or 'bearish'"}
+
+    universe: list[str] = []
+    if symbols:
+        universe = [_canonical_symbol(s) for s in symbols if s and s.strip()]
+    elif index:
+        try:
+            s = _get_live_session()
+            idx_param = index.upper().replace(" ", "%20")
+            r = s.get(
+                f"https://www.nseindia.com/api/equity-stockIndices?index={idx_param}",
+                timeout=10,
+            )
+            universe = [
+                x["symbol"]
+                for x in r.json().get("data", [])
+                if x.get("priority") != 1 and x.get("symbol")
+            ]
+        except Exception as exc:
+            return {"error": f"Could not fetch {index} constituents: {exc}"}
+    else:
+        return {"error": "Provide either 'symbols' or 'index'."}
+
+    universe = list(dict.fromkeys(universe))[:200]
+    if not universe:
+        return {"error": "Empty universe after dedup."}
+
+    tfs = tuple(timeframes) if timeframes else DEFAULT_TIMEFRAMES
+
+    ranked: list[dict] = []
+    errors: list[dict] = []
+    for sym in universe:
+        try:
+            res = compute_mtf(sym, timeframes=tfs)
+        except Exception as exc:
+            errors.append({"symbol": sym, "error": str(exc)[:120]})
+            continue
+        if res.direction != direction:
+            continue
+        if res.confluence_score < int(min_score):
+            continue
+        ranked.append(
+            {
+                "symbol": sym,
+                "direction": res.direction,
+                "confluence_score": res.confluence_score,
+                "verdict": res.verdict,
+                "aligned_tfs": res.aligned_tfs,
+                "missing_tfs": res.missing_tfs,
+            }
+        )
+
+    ranked.sort(key=lambda r: (-r["confluence_score"], r["symbol"]))
+    return {
+        "direction": direction,
+        "min_score": int(min_score),
+        "timeframes": list(tfs),
+        "universe_size": len(universe),
+        "matches_total": len(ranked),
+        "top": ranked[: int(top_n)],
+        "errors": errors[:10],
+        "data_source": "PostgreSQL market.equity_eod (daily resampled) + PG intraday.ohlcv_bars",
+    }
+
+
+TOOL_REGISTRY.update({
+    "analyze_mtf": (
+        analyze_mtf,
+        (
+            "Multi-timeframe (MTF) technical analysis for a single NSE stock. "
+            "Computes RSI/MACD/EMA20/EMA50/SMA stack across monthly, weekly, daily, 60m, 15m, "
+            "produces a weighted confluence score (0-100) and a deterministic "
+            "BUY/WATCH/AVOID/SELL verdict with per-timeframe rationale. "
+            "Missing timeframes are reported, never inferred. "
+            "Use for: 'multi timeframe analysis of X', 'MTF view on X', "
+            "'are weekly/daily aligned on X', 'is X a confluent buy'."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string", "description": "NSE ticker"},
+                "timeframes": {
+                    "type": "array",
+                    "items": {"type": "string", "enum": ["monthly", "weekly", "daily", "60m", "15m"]},
+                    "description": "Subset of timeframes to analyse; defaults to all five.",
+                },
+                "days": {
+                    "type": "integer",
+                    "description": "Daily history depth in days (default 800 ≈ 3 years).",
+                    "default": 800,
+                },
+            },
+            "required": ["symbol"],
+        },
+    ),
+    "scan_mtf_aligned": (
+        scan_mtf_aligned,
+        (
+            "Rank an NSE universe by multi-timeframe confluence in a chosen direction. "
+            "Provide EITHER 'symbols' (preferred — explicit list, fast) OR 'index' "
+            "(NSE index name, fetches constituents live). Returns the top_n stocks whose "
+            "MTF direction matches and whose confluence_score >= min_score. "
+            "Use for: 'top picks where weekly+daily agree', "
+            "'recommendation report — bullish across timeframes', 'MTF scan NIFTY 50'."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbols": {"type": "array", "items": {"type": "string"}},
+                "index": {"type": "string", "description": "NSE index name, e.g. 'NIFTY 50'"},
+                "direction": {"type": "string", "enum": ["bullish", "bearish"], "default": "bullish"},
+                "min_score": {"type": "integer", "default": 70},
+                "timeframes": {
+                    "type": "array",
+                    "items": {"type": "string", "enum": ["monthly", "weekly", "daily", "60m", "15m"]},
+                },
+                "top_n": {"type": "integer", "default": 10},
+            },
+            "required": [],
+        },
+    ),
+})
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # /report — First-class report generation (PDF, HTML, Markdown)
 # PG: Enables any LLM output to be written as a formatted report file.
 # ─────────────────────────────────────────────────────────────────────────────
@@ -8859,6 +9292,31 @@ def _generate_report_tool(content: str, report_type: str = "research",
         output_format=output_format,
         filename=filename or None,
     )
+
+
+def run_recommendation_report(
+    symbols: list[str] | None = None,
+    indices: list[str] | None = None,
+    sectors: list[str] | None = None,
+    watchlist: list[str] | None = None,
+    output_format: str = "html",
+    top_n: int = 25,
+    include_portfolio: bool = False,
+    persist: bool = True,
+) -> dict:
+    """Generate a grounded recommendation report scoped by symbols, indices, or sectors."""
+    from terminal.recommendation_report import RecommendationReportOptions, generate_recommendation_report
+
+    opts = RecommendationReportOptions(
+        output_format=output_format,
+        top_n=int(top_n or 25),
+        include_portfolio=bool(include_portfolio),
+        watchlist=[str(symbol).upper().strip() for symbol in (watchlist or []) if str(symbol).strip()],
+        symbols=[str(symbol).upper().strip() for symbol in (symbols or []) if str(symbol).strip()],
+        indices=[str(index).upper().strip() for index in (indices or []) if str(index).strip()],
+        sectors=[str(sector).strip() for sector in (sectors or []) if str(sector).strip()],
+    )
+    return generate_recommendation_report(options=opts, persist=bool(persist))
 
 
 TOOL_REGISTRY.update({
@@ -8935,6 +9393,44 @@ TOOL_REGISTRY.update({
                 "project_root": {"type": "string"},
             },
             "required": ["first_path", "second_path"],
+        },
+    ),
+    "run_recommendation_report": (
+        run_recommendation_report,
+        "Generate a grounded recommendation report scoped by stock symbols, indices, sectors, watchlist, or portfolio.",
+        {
+            "type": "object",
+            "properties": {
+                "symbols": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional NSE stock symbols to include, e.g. ['DIXON', 'DMART'].",
+                },
+                "indices": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional NSE index names to include, e.g. ['NIFTY 50', 'NIFTY BANK'].",
+                },
+                "sectors": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional sector names to include, e.g. ['IT', 'Capital Goods'].",
+                },
+                "watchlist": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional watchlist symbols to add as portfolio/watchlist evidence.",
+                },
+                "output_format": {
+                    "type": "string",
+                    "enum": ["html", "pdf", "md"],
+                    "default": "html",
+                },
+                "top_n": {"type": "integer", "default": 25},
+                "include_portfolio": {"type": "boolean", "default": False},
+                "persist": {"type": "boolean", "default": True},
+            },
+            "required": [],
         },
     ),
     "get_postgres_health": (

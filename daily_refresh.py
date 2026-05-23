@@ -244,6 +244,33 @@ def step_screener_fundamentals_backfill(
     return _run(f"Screener fundamentals backfill ({index})", cmd, dry_run=dry_run)
 
 
+def step_refresh_results_feed(
+    dry_run: bool,
+    days_back: int = 14,
+    limit: int = 200,
+    delay: float = 2.5,
+    skip_fresh_hours: float = 6.0,
+) -> bool:
+    """Refresh structured financials cache for companies that filed results recently.
+
+    Narrow daily counterpart to the weekly fundamentals backfill: only
+    touches symbols listed in the NSE corporates-financial-results feed
+    within the last ``days_back`` days. Polite (delay+jitter) and skips
+    symbols already refreshed within ``skip_fresh_hours``.
+    """
+    _section(f"STEP 7b — Results-Feed Refresh (last {days_back}d)")
+    if not _ensure_postgres_running(dry_run=dry_run):
+        return False
+    cmd = [
+        PYTHON, "-u", "-m", "scripts.refresh_results_feed",
+        "--days-back", str(days_back),
+        "--limit", str(limit),
+        "--delay", str(delay),
+        "--skip-fresh-hours", str(skip_fresh_hours),
+    ]
+    return _run("Results-feed structured refresh", cmd, dry_run=dry_run)
+
+
 def step_comprehensive_r_reports(dry_run: bool) -> bool:
     """Run R-based comprehensive reports: All Indexes + All Sectors HTML.
 
@@ -289,6 +316,8 @@ def main() -> int:
                         help="Force NIFTY 500 fundamentals backfill (otherwise runs only on Sundays)")
     parser.add_argument("--skip-fundamentals", action="store_true",
                         help="Skip fundamentals backfill even on its scheduled day")
+    parser.add_argument("--skip-results-feed", action="store_true",
+                        help="Skip daily results-feed cache refresh")
     parser.add_argument("--fundamentals-index", default="NIFTY 500",
                         help="Index label for fundamentals backfill (default: NIFTY 500)")
     parser.add_argument("--dry-run",         action="store_true",
@@ -358,6 +387,14 @@ def main() -> int:
     if not step_postgres_load(args.dry_run):
         print("  ⚠️  PostgreSQL load failed — screeners not updated")
         failed.append("PostgreSQL screeners")
+
+    # 7a. Daily results-feed refresh — narrow, fast (only companies that
+    #     filed results in the last 14d). Keeps the structured financials
+    #     cache current so /strategy_council reads PG instead of scraping.
+    if not args.skip_results_feed:
+        if not step_refresh_results_feed(args.dry_run):
+            print("  ⚠️  Results-feed refresh had failures — see scores.financials_refresh_log")
+            failed.append("Results-feed refresh")
 
     # 7b. Weekly fundamentals backfill (default: Sundays only, or --fundamentals-backfill)
     run_fundamentals = (

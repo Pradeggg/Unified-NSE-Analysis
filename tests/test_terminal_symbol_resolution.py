@@ -50,6 +50,19 @@ class TerminalSymbolResolutionTests(unittest.TestCase):
         self.assertIsNone(result["symbol"])
         self.assertEqual(result["confidence"], "none")
         self.assertIn("No exact NSE symbol found", result["error"])
+        self.assertEqual(result["suggestion"], "NIVABUPA")
+        self.assertIn("NIVABUPA", result["candidates"])
+
+    def test_resolve_symbol_corrects_high_confidence_one_character_symbol_typo(self):
+        with patch(
+            "terminal.tools._all_symbols_map",
+            return_value={"WAAREEENER": "WAAREEENER", "WAREHOUSE": "WAREHOUSE"},
+        ), patch("terminal.tools._get_live_session") as live_session:
+            result = resolve_symbol("WAREEENER")
+
+        self.assertEqual(result["symbol"], "WAAREEENER")
+        self.assertEqual(result["confidence"], "near-match")
+        live_session.assert_not_called()
 
     def test_resolve_symbol_live_search_requires_exact_match_for_ticker_shape(self):
         search_response = Mock()

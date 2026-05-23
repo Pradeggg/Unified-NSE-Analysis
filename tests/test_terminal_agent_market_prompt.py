@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import patch
 
 from terminal.agent import Agent, SYSTEM_PROMPT, _keyword_intent, _required_tools_for_query, _split_compound_query
+from terminal.situation_assessment import TurnContext
 from terminal.tools import compare_stocks
 from terminal.deliberation import build_hypotheses, build_plan, evaluate_evidence, render_final_answer
 from voice_persona import normalize_spoken_query
@@ -70,6 +71,50 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
 
         self.assertEqual(routed["intent"], "screener")
         self.assertEqual(routed["plan"], [("run_screener_query", {"screen_type": "new_highs"})])
+
+    def test_visual_scan_prompt_routes_to_visual_scan_tool(self):
+        routed = _keyword_intent("Perform a visual scan of DMART", data_mode="historical")
+
+        self.assertEqual(routed["intent"], "visual_scan")
+        self.assertEqual(routed["plan"], [("run_visual_scan", {"symbol": "DMART"})])
+
+    def test_visual_scan_slash_prompt_routes_to_visual_scan_tool(self):
+        routed = _keyword_intent("/visual-scan DMART", data_mode="historical")
+
+        self.assertEqual(routed["intent"], "visual_scan")
+        self.assertEqual(routed["plan"], [("run_visual_scan", {"symbol": "DMART"})])
+
+    def test_visual_scan_of_prompt_routes_to_visual_scan_tool(self):
+        routed = _keyword_intent("visual scan of DMART", data_mode="historical")
+
+        self.assertEqual(routed["intent"], "visual_scan")
+        self.assertEqual(routed["plan"], [("run_visual_scan", {"symbol": "DMART"})])
+
+    def test_visual_scan_answer_renders_report_and_evidence_paths(self):
+        agent = Agent()
+        agent.backend = object()
+        agent.backend_name = "TestBackend"
+
+        with patch("terminal.agent._execute_plan") as execute_plan:
+            execute_plan.return_value = [
+                {
+                    "tool": "run_visual_scan",
+                    "args": {"symbol": "DMART"},
+                    "result": {
+                        "success": True,
+                        "symbol": "DMART",
+                        "summary": "DMART Visual Scan: Watchlist / base building | Score 68.",
+                        "html_path": "/tmp/dmart_visual.html",
+                        "json_path": "/tmp/dmart_visual.json",
+                    },
+                }
+            ]
+            result = agent.query("visual scan of DMART")
+
+        self.assertEqual(result["intent"], "visual_scan")
+        self.assertIn("DMART — Visual Scan", result["answer"])
+        self.assertIn("Report: /tmp/dmart_visual.html", result["answer"])
+        self.assertIn("Evidence: /tmp/dmart_visual.json", result["answer"])
 
     def test_agent_explains_placeholder_symbol_without_missing_evidence_report(self):
         agent = Agent()
@@ -252,8 +297,168 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
         self.assertIn("No.", second["answer"])
         self.assertIn("EOD CSV + DB snapshot", second["answer"])
         self.assertIn("not from the last 30 minutes", second["answer"])
+        self.assertIn("NEXT OPTIONS", second["answer"])
+        self.assertIn("Check last-30-minute intraday movement", second["answer"])
+        self.assertIn("Run 15m intraday setups", second["answer"])
+        self.assertIn("Refresh Stage 2 EOD scan", second["answer"])
         self.assertNotIn("Last 30 Minutes", second["answer"])
         self.assertNotIn("get_intraday_market_recap", str(second["trace"]))
+
+    def test_contextual_stage2_last_30_option_b_runs_intraday_setup_scan(self):
+        agent = Agent()
+        agent.backend = object()
+        agent.backend_name = "TestBackend"
+
+        with patch("terminal.agent._execute_plan") as execute_plan:
+            execute_plan.side_effect = [
+                [
+                    {
+                        "tool": "run_screener_query",
+                        "args": {"screen_type": "stage2"},
+                        "result": {
+                            "screen_type": "stage2",
+                            "count": 2,
+                            "results": [{"symbol": "BLISSGVS"}, {"symbol": "IPCALAB"}],
+                        },
+                    }
+                ],
+                [
+                    {
+                        "tool": "scan_symbols_intraday",
+                        "args": {"symbols": ["BLISSGVS", "IPCALAB"], "interval": "15m"},
+                        "result": {"symbols_scanned": ["BLISSGVS", "IPCALAB"], "top_buy": [], "top_sell": []},
+                    }
+                ],
+            ]
+            agent.query("lets look at the Stage 2 uptrend stocks")
+            agent.query("were these pulled from last 30mins")
+            third = agent.query("B")
+
+        self.assertEqual(third["intent"], "clarification_reply_binding")
+        execute_plan.assert_any_call([
+            ("scan_symbols_intraday", {"symbols": ["BLISSGVS", "IPCALAB"], "interval": "15m"})
+        ])
+
+    def test_next_options_follow_on_matrix_executes_bound_actions(self):
+        cases = [
+            ("stage2", "A", [("scan_symbols_intraday", {"symbols": ["BLISSGVS", "IPCALAB"], "interval": "5m"})]),
+            ("stage2", "B", [("scan_symbols_intraday", {"symbols": ["BLISSGVS", "IPCALAB"], "interval": "15m"})]),
+            ("stage2", "C", [("run_screener_query", {"screen_type": "stage2", "top_n": 10})]),
+            ("stage2", "1", [("scan_symbols_intraday", {"symbols": ["BLISSGVS", "IPCALAB"], "interval": "5m"})]),
+            ("stage2", "2", [("scan_symbols_intraday", {"symbols": ["BLISSGVS", "IPCALAB"], "interval": "15m"})]),
+            ("stage2", "Check last-30-minute intraday movement", [("scan_symbols_intraday", {"symbols": ["BLISSGVS", "IPCALAB"], "interval": "5m"})]),
+            ("report", "A", [("open_report", {"path": "/tmp/SWELECTES_research.html"})]),
+            ("report", "B", [("read_report", {"path": "/tmp/SWELECTES_research.html", "max_chars": 12000}), ("summarize_report", {"path": "/tmp/SWELECTES_research.html"})]),
+            ("report", "C", [("read_report", {"path": "/tmp/SWELECTES_research.html", "max_chars": 12000})]),
+            ("report", "Read report contents", [("read_report", {"path": "/tmp/SWELECTES_research.html", "max_chars": 12000})]),
+        ]
+
+        for setup, reply, expected_plan in cases:
+            agent = Agent()
+            agent.backend = object()
+            agent.backend_name = "TestBackend"
+            if setup == "stage2":
+                first_result = [
+                    {
+                        "tool": "run_screener_query",
+                        "args": {"screen_type": "stage2"},
+                        "result": {
+                            "screen_type": "stage2",
+                            "count": 2,
+                            "results": [{"symbol": "BLISSGVS"}, {"symbol": "IPCALAB"}],
+                        },
+                    }
+                ]
+                second_result = [
+                    {
+                        "tool": expected_plan[0][0],
+                        "args": expected_plan[0][1],
+                        "result": {"ok": True},
+                    }
+                ]
+                with patch("terminal.agent._execute_plan") as execute_plan:
+                    execute_plan.side_effect = [first_result, second_result]
+                    agent.query("lets look at the Stage 2 uptrend stocks")
+                    prompt = agent.query("were these pulled from last 30mins")
+                    result = agent.query(reply)
+            else:
+                agent._last_turn_context = TurnContext(
+                    user_input="/analyze SWELECTES",
+                    intent="entity_topic_command",
+                    mode="research",
+                    tools=["comprehensive_stock_research"],
+                    source_label="EOD CSV + DB snapshot",
+                    result_type="stock_analysis",
+                    result_summary="Report saved for SWELECTES.",
+                    symbols=["SWELECTES"],
+                    result_items=["/tmp/SWELECTES_research.html"],
+                )
+                second_result = [
+                    {
+                        "tool": expected_plan[0][0],
+                        "args": expected_plan[0][1],
+                        "result": {"ok": True, "path": expected_plan[0][1].get("path")},
+                    }
+                ]
+                with patch("terminal.agent._execute_plan") as execute_plan:
+                    prompt = agent.query("the report")
+                    execute_plan.side_effect = [second_result]
+                    result = agent.query(reply)
+
+            self.assertIn("NEXT OPTIONS", prompt["answer"], msg=(setup, reply))
+            self.assertEqual(result["intent"], "clarification_reply_binding", msg=(setup, reply))
+            execute_plan.assert_any_call(expected_plan)
+
+    def test_direct_last_30_market_recap_after_market_overview_bypasses_situation_llm(self):
+        agent = Agent()
+        agent.backend = object()
+        agent.backend_name = "TestBackend"
+
+        with patch("terminal.agent._execute_plan") as execute_plan, patch(
+            "terminal.assessment_llm.llm_assess_followup"
+        ) as llm_assess:
+            execute_plan.side_effect = [
+                [
+                    {
+                        "tool": "get_live_market_overview",
+                        "args": {},
+                        "result": {
+                            "indices": {"NIFTY 50": {"last": 23415.35, "pct_change": -0.96}},
+                            "adv_dec": {"advances": 41, "declines": 460},
+                            "source": "NSE live API",
+                            "as_of": "2026-05-18 14:14:00",
+                        },
+                    },
+                    {"tool": "get_market_breadth", "args": {}, "result": {"advances": 41, "declines": 460, "ad_ratio": 0.09}},
+                ],
+                [
+                    {
+                        "tool": "get_intraday_market_recap",
+                        "args": {"minutes": 30},
+                        "result": {
+                            "minutes": 30,
+                            "as_of": "2026-05-18 14:14:40",
+                            "source": "NSE live API + PG intraday.quote_snapshots",
+                            "index_moves": [
+                                {"symbol": "NIFTY 50", "last": 23415.35, "delta_pct": -0.25, "day_pct": -0.96},
+                            ],
+                            "live_breadth": {"advances": 41, "declines": 460},
+                        },
+                    },
+                    {"tool": "get_market_breadth", "args": {}, "result": {"advances": 41, "declines": 460, "ad_ratio": 0.09}},
+                ],
+            ]
+
+            first = agent.query("market overview")
+            second = agent.query("what happened in the market in the last 30 minutes")
+
+        self.assertEqual(first["intent"], "market_overview")
+        self.assertEqual(second["intent"], "intraday_market_recap")
+        self.assertEqual(execute_plan.call_args_list[-1].args[0][0], ("get_intraday_market_recap", {"minutes": 30}))
+        llm_assess.assert_not_called()
+        self.assertNotIn("SITUATION ASSESSMENT", second["answer"])
+        self.assertNotIn("scan_symbols_intraday", second["answer"])
+        self.assertIn("Last 30 Minutes", second["answer"])
 
     def test_contextual_stage2_scan_these_uses_prior_symbols(self):
         agent = Agent()
@@ -934,6 +1139,95 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
         self.assertIn(("get_fno_overview", {"symbol": "NIFTY", "expiry_index": 0}), routed["plan"])
         self.assertNotIn("explain_intraday_setup", str(routed))
 
+    def test_live_stock_fno_and_5m_intraday_request_routes_to_same_stock_not_nifty(self):
+        routed = _keyword_intent(
+            "live pricies for dixon tech and the analysis of the F&O data and intraday tradesetup in 5 mins",
+            data_mode="intraday",
+        )
+
+        self.assertEqual(routed["intent"], "intraday_setup")
+        self.assertIn(("resolve_symbol", {"query": "DIXON"}), routed["plan"])
+        self.assertIn(("get_nse_intraday_snapshot", {"symbol": "DIXON"}), routed["plan"])
+        self.assertIn(("get_fno_overview", {"symbol": "DIXON", "expiry_index": 0}), routed["plan"])
+        self.assertIn(("explain_intraday_setup", {"symbol": "DIXON", "timeframe": "5m"}), routed["plan"])
+        self.assertIn(("get_intraday_analysis", {"symbol": "DIXON", "interval": "5m"}), routed["plan"])
+        self.assertNotIn(("get_fno_overview", {"symbol": "NIFTY", "expiry_index": 0}), routed["plan"])
+
+    def test_live_stock_fno_intraday_request_preserves_company_names_with_and(self):
+        routed = _keyword_intent(
+            "current price for Mahindra and Mahindra F&O and intraday setup in 15 mins",
+            data_mode="intraday",
+        )
+
+        self.assertEqual(routed["intent"], "intraday_setup")
+        self.assertIn(("resolve_symbol", {"query": "M&M"}), routed["plan"])
+        self.assertIn(("get_fno_overview", {"symbol": "M&M", "expiry_index": 0}), routed["plan"])
+        self.assertIn(("explain_intraday_setup", {"symbol": "M&M", "timeframe": "15m"}), routed["plan"])
+        self.assertNotIn("M&MFIN", str(routed["plan"]))
+
+    def test_live_stock_fno_intraday_answer_renders_both_derivatives_and_setup(self):
+        agent = Agent()
+        agent.backend = object()
+        agent.backend_name = "TestBackend"
+
+        with patch("terminal.agent._execute_plan") as execute_plan:
+            execute_plan.return_value = [
+                {"tool": "resolve_symbol", "args": {"query": "DIXON"}, "result": {"symbol": "DIXON"}},
+                {
+                    "tool": "get_nse_intraday_snapshot",
+                    "args": {"symbol": "DIXON"},
+                    "result": {
+                        "symbol": "DIXON",
+                        "source": "NSE live API",
+                        "as_of": "22-May-2026 09:35:00",
+                        "last_price": 11258,
+                        "pct_change": 1.2,
+                        "day_low": 11100,
+                        "day_high": 11300,
+                    },
+                },
+                {
+                    "tool": "get_fno_overview",
+                    "args": {"symbol": "DIXON", "expiry_index": 0},
+                    "result": {
+                        "symbol": "DIXON",
+                        "pcr": 0.91,
+                        "max_pain": 11200,
+                        "option_chain": {},
+                        "top_oi_strikes": {"calls": [], "puts": []},
+                        "futures": {},
+                        "basis": 22.5,
+                        "cost_of_carry": 8.1,
+                        "recommendation": {"strategy": "defined_risk_spread"},
+                        "source_trail": {"get_options_chain": "ok", "get_futures_analysis": "ok"},
+                    },
+                },
+                {
+                    "tool": "explain_intraday_setup",
+                    "args": {"symbol": "DIXON", "timeframe": "5m"},
+                    "result": {
+                        "symbol": "DIXON",
+                        "timeframe": "5m",
+                        "setup_label": "WATCH",
+                        "score": 55,
+                        "latest_close": 11258,
+                        "latest_timestamp": "2026-05-22 09:35:00",
+                        "indicators": {},
+                        "levels": {},
+                    },
+                },
+            ]
+            result = agent.query(
+                "live pricies for dixon tech and the analysis of the F&O data and intraday tradesetup in 5 mins"
+            )
+
+        self.assertEqual(result["intent"], "intraday_setup")
+        self.assertIn("DIXON — F&O Overview", result["answer"])
+        self.assertIn("▶ INTRADAY SETUP", result["answer"])
+        self.assertIn("Timeframe: 5m", result["answer"])
+        self.assertIn("▶ NSE LIVE SNAPSHOT", result["answer"])
+        self.assertNotIn("NIFTY — F&O Overview", result["answer"])
+
     def test_intraday_nifty_uses_nse_snapshot_before_fallback(self):
         routed = _keyword_intent(
             "Intraday technical analysis of NIFTY50 right now. Use NSE website snapshot first, then yfinance only as fallback, and label stale data.",
@@ -1209,6 +1503,29 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
         self.assertIn(("resolve_symbol", {"query": "TMPV"}), routed["plan"])
         self.assertIn(("search_latest_catalysts", {"symbol": "TMPV"}), routed["plan"])
         self.assertNotIn("explain_intraday_setup", str(routed))
+
+    def test_unresolved_symbol_response_suggests_near_matches(self):
+        agent = Agent()
+        agent.backend = None
+        with patch("terminal.agent._execute_plan") as execute_plan:
+            execute_plan.return_value = [
+                {
+                    "tool": "resolve_symbol",
+                    "args": {"query": "WAREEENER"},
+                    "result": {
+                        "symbol": None,
+                        "confidence": "none",
+                        "query": "WAREEENER",
+                        "error": "No exact NSE symbol found for 'WAREEENER'",
+                        "candidates": ["WAAREEENER"],
+                        "suggestion": "WAAREEENER",
+                    },
+                }
+            ]
+            result = agent.query("WAREEENER technical setup")
+
+        self.assertIn("Did you mean: WAAREEENER", result["answer"])
+        self.assertIn("Suggestions: WAAREEENER", result["answer"])
 
     def test_intraday_symbol_setup_ignores_timeframe_preposition(self):
         routed = _keyword_intent("RELIANCE intraday setup on 15m", data_mode="intraday")

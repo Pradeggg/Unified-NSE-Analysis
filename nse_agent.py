@@ -38,6 +38,7 @@ import subprocess
 import sys
 import threading
 import time
+import webbrowser
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -75,7 +76,35 @@ from colorama import Fore, Style
 
 from rich.console import Console, Group
 from rich.live import Live
-from rich.markdown import Markdown
+from rich.markdown import Markdown as _RichMarkdown
+
+
+class Markdown(_RichMarkdown):
+    """Rich Markdown with file:// links enabled.
+
+    markdown-it-py's default URL validator rejects ``file://`` schemes as an
+    XSS defence, which strips clickability from local-file links Rich would
+    otherwise emit as OSC 8 hyperlinks. In a terminal context that filter is
+    counter-productive, so we override the parser's ``validateLink`` to also
+    accept ``file://``.
+    """
+
+    def __init__(self, *args, **kwargs):  # type: ignore[no-untyped-def]
+        super().__init__(*args, **kwargs)
+        try:
+            from markdown_it import MarkdownIt
+            parser = MarkdownIt().enable("strikethrough").enable("table")
+            _orig_validate = parser.validateLink
+
+            def _validate(url: str) -> bool:
+                if url.lower().startswith("file:"):
+                    return True
+                return _orig_validate(url)
+
+            parser.validateLink = _validate  # type: ignore[method-assign]
+            self.parsed = parser.parse(self.markup)
+        except Exception:
+            pass
 from rich.panel import Panel
 from rich.rule import Rule
 from rich.style import Style as RichStyle
@@ -105,6 +134,11 @@ except ImportError:
     pass
 
 # ── Rich console — force_terminal so ANSI codes always work ──────────────────
+# Rich auto-emits OSC 8 hyperlink escape sequences for Markdown link syntax
+# ([label](url) and <url>) when writing to a terminal. Bare URLs and local
+# file paths are not auto-linked — use `_linkify_markdown()` on text before
+# rendering as Markdown to make them clickable in iTerm2, kitty, WezTerm,
+# VS Code's integrated terminal, and Terminal.app (macOS 15+).
 console = Console(highlight=False, force_terminal=True)
 _renderer_set_console(console)  # share the same console with the renderer module
 
@@ -277,6 +311,27 @@ def _remember_terminal_interaction(
             if re.fullmatch(r"[A-Z0-9&-]{2,12}", s.upper())
         ]
         summary = " ".join((answer or "").split())[:240]
+        # Surface any generated report/dashboard path in the structured
+        # context so situation_assessment._report_path_from_context() can
+        # bind follow-ups like "analyze the report" → the actual file path.
+        report_paths: list[str] = []
+        for pattern in (
+            r"(?m)^Report:\s*(.+?)\s*$",
+            r"(?m)^Dashboard:\s*(.+?)\s*$",
+            r"Report saved \([^)]*\):\s*(.+?)(?:\n|$)",
+        ):
+            for m in re.finditer(pattern, answer or ""):
+                candidate = m.group(1).strip()
+                if candidate and candidate not in report_paths:
+                    report_paths.append(candidate)
+        merged_items: list[str] = []
+        for item in (result_items or list(dict.fromkeys(clean_symbols))[:20]):
+            if item not in merged_items:
+                merged_items.append(item)
+        # Report paths take priority so _report_path_from_context picks
+        # them up before any symbol entries.
+        merged_items = report_paths + [i for i in merged_items if i not in report_paths]
+        tool_args = [{"path": p} for p in report_paths]
         ctx = TurnContext(
             user_input=user_input,
             intent=intent,
@@ -286,9 +341,69 @@ def _remember_terminal_interaction(
             result_type=result_type or intent,
             result_summary=summary,
             symbols=list(dict.fromkeys(clean_symbols))[:10],
-            result_items=result_items or list(dict.fromkeys(clean_symbols))[:20],
+            result_items=merged_items[:20],
+            tool_args=tool_args,
         )
         agent._remember_interaction(user_input, answer, [], turn_context=ctx)
+    except Exception:
+        pass
+
+
+def _remember_ric_sequence_interaction(
+    agent,
+    *,
+    key: str,
+    ric_name: str,
+    symbol: str,
+    desc: str,
+    step_records: list[dict],
+) -> None:
+    """Persist a completed RIC as one consolidated context for follow-ups."""
+    if not step_records:
+        return
+    try:
+        from terminal.situation_assessment import TurnContext
+
+        tools: list[str] = []
+        summary_parts: list[str] = []
+        freshness_bits: list[str] = []
+        for record in step_records:
+            label = str(record.get("label") or "").strip()
+            answer = " ".join(str(record.get("answer") or "").split())
+            if answer:
+                summary_parts.append(f"Step {record.get('index')} {label}: {answer[:260]}")
+            for item in record.get("trace") or []:
+                if not isinstance(item, dict):
+                    continue
+                tool = str(item.get("tool") or item.get("name") or "").strip()
+                if tool and tool not in tools:
+                    tools.append(tool)
+            for pattern in (
+                r"Data Freshness:\s*([^·\n]+)",
+                r"As of:\s*([0-9A-Za-z: -]+)",
+                r"snapshot\s+(\d{4}-\d{2}-\d{2})",
+            ):
+                for match in re.finditer(pattern, answer, flags=re.I):
+                    bit = match.group(1).strip()
+                    if bit and bit not in freshness_bits:
+                        freshness_bits.append(bit)
+
+        clean_name = re.sub(r"\s+", " ", ric_name).strip()
+        symbols = [symbol] if symbol else []
+        summary = f"RIC {clean_name} for {symbol or 'Market'}. " + " ".join(summary_parts)
+        ctx = TurnContext(
+            user_input=f"/ric {key} {symbol}".strip(),
+            intent=f"ric_{key.replace('-', '_')}",
+            mode=_mode,
+            tools=tools,
+            source_label=f"RIC {clean_name}: {desc}",
+            freshness=" / ".join(freshness_bits[:4]) or None,
+            result_type="ric_sequence",
+            result_summary=summary[:1800],
+            symbols=symbols,
+            result_items=symbols,
+        )
+        agent._remember_interaction(ctx.user_input, summary, [], turn_context=ctx)
     except Exception:
         pass
 
@@ -472,6 +587,43 @@ PROMPT_LIBRARY = [
             ("India vs Emerging",    "How is India performing vs other emerging markets (China, Brazil, Korea) this month? Relative outperformance?"),
         ],
     },
+    # ── 11. Email Pipe (PG 2026-05-20) ────────────────────────────────────────
+    # Demonstrates the `<upstream> | /email --to <addr>` chain syntax.
+    # The pipe captures the upstream command's rendered output, writes it to
+    # reports/generated/piped_*.md, and dispatches /email with an LLM-drafted
+    # subject + body via Outlook. Replace the recipient before running.
+    {
+        "cat": "📧 Email Pipe",
+        "key": "email",
+        "color": "blue",
+        "prompts": [
+            ("Mail FII/DII flows",        "Compare today's FII and DII activity in crores. Who is buying, who is selling, and what does the institutional flow tell us? | /email --to pgorai@deloitte.com"),
+            ("Mail insider alerts",       "Show the top 15 insider/promoter alerts today with action, score, and symbol. | /email --to pgorai@deloitte.com"),
+            ("Mail corporate events",     "List the next 20 upcoming corporate events — results, board meetings, ex-dividends. | /email --to pgorai@deloitte.com"),
+            ("Mail sector breadth",       "Show current sector breadth snapshot — advance/decline by sector with leaders and laggards. | /email --to pgorai@deloitte.com"),
+            ("Mail macro proxies",        "Macro proxy signals snapshot — USD/INR, crude, bond yields, gold and what they imply for Nifty. | /email --to pgorai@deloitte.com"),
+            ("Mail seasonal returns",     "Show seasonal monthly returns for Nifty and major sectors over the last 10 years. | /email --to pgorai@deloitte.com"),
+            ("Mail global indices",       "What happened in US, Asian, and European markets overnight? SGX Nifty cues. | /email --to pgorai@deloitte.com"),
+            ("Mail signal log",           "Show the 15 most recent trading signals across the universe with stage, RS, and action. | /email --to pgorai@deloitte.com"),
+            ("Mail voice briefing",       "Read out today's voice briefing script (no audio) with the key market call-outs. | /email --to pgorai@deloitte.com"),
+            ("Mail sector rotation",      "/email sector --to pgorai@deloitte.com"),
+            ("Mail RIC Sherlock DMART",   "/ric sherlock DMART | /email --to pgorai@deloitte.com"),
+            ("Mail Strategy Council",     "Run Strategy Council on RELIANCE and show the consolidated verdict. | /email --to pgorai@deloitte.com"),
+            ("Mail top movers",           "Top 5 gainers and top 5 losers in NIFTY 50 today with % change and signal label. | /email --to pgorai@deloitte.com"),
+            ("Mail Nifty pulse",          "Full live market overview — NIFTY 50, BANK, IT, Pharma, Metal indices with breadth. | /email --to pgorai@deloitte.com"),
+            ("Mail Stage 2 summary",      "/email stage2 --to pgorai@deloitte.com"),
+            ("Mail F&O signals",          "Show the top 12 F&O signals today with PCR, buildup, and direction. | /email --to pgorai@deloitte.com"),
+            ("Mail results feed",         "Companies announcing results in the next 24 hours with event details. | /email --to pgorai@deloitte.com"),
+            ("Mail market dashboard",     "/email dashboard --to pgorai@deloitte.com"),
+            ("Mail data coverage",        "Run /data-coverage and summarize EOD history audit + Postgres row counts. | /email --to pgorai@deloitte.com"),
+            ("Mail morning intel",        "/ric morning-intel | /email --to pgorai@deloitte.com"),
+            ("Mail breadth history",      "Show market breadth history for last 10 sessions — advances, declines, A/D ratio. | /email --to pgorai@deloitte.com"),
+            ("Mail portfolio P&L",        "Show my portfolio P&L snapshot — qty, avg cost, LTP, P&L, return per holding. | /email --to pgorai@deloitte.com"),
+            ("Mail regime detector",      "Run regime detection — trend score, breadth thrust, volatility, sector dispersion. | /email --to pgorai@deloitte.com"),
+            ("Mail pullback picks",       "Show pullback recovery candidates — Stage 2 stocks with recent 5-10% drawdowns. | /email --to pgorai@deloitte.com"),
+            ("Mail Company Xray DMART",   "/ric company-xray DMART | /email --to pgorai@deloitte.com"),
+        ],
+    },
 ]
 
 # flat list for O(1) lookup: prompt_number → (category, title, query)
@@ -523,7 +675,7 @@ def _print_prompts_library(filter_key: str = "") -> None:
     console.print(
         f"[dim]  {total} prompts shown  ·  Type [bold white]p<number>[/bold white] to run  ·  "
         f"/prompts [bold]market|intraday|technical|sector|screener|fundamentals|"
-        f"stock|news|portfolio|global[/bold] to filter[/dim]"
+        f"stock|news|portfolio|global|email[/bold] to filter[/dim]"
     )
     console.print()
 
@@ -547,6 +699,7 @@ _BOX_MID = _BOX_W - 4  # usable interior (after 2-space left + 2-space right mar
 def _separator(title: str = "") -> None:
     """Thin horizontal rule, optional centred title."""
     console.rule(title, style="dim")
+
 
 def _open_report_path(path: str, report_console=None) -> bool:
     """Best-effort viewer launch for generated reports."""
@@ -600,8 +753,6 @@ def _handle_recommendation_report_command(parts: list[str], report_console=None)
     return True
 
 
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Input autocomplete
 # ─────────────────────────────────────────────────────────────────────────────
@@ -621,6 +772,7 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/prompts news",     "News & catalysts prompts"),
     ("/prompts portfolio","Portfolio prompts"),
     ("/prompts global",   "Global & macro prompts"),
+    ("/prompts email",    "Email-pipe prompts — chain any command to /email"),
     ("/ric",              "Show RIC library (8 investigative recipes)"),
     ("/ric sherlock",           "5-step: quote→technicals→fundamentals→news→trade  [SYMBOL]"),
     ("/ric sector-xray",        "4-step: sector breadth→leaders→laggards→entries  [SECTOR]"),
@@ -714,6 +866,8 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/chart NIFTY --html",     "NIFTY interactive HTML chart (opens in browser)"),
     ("/chart NIFTY 1y --html",  "NIFTY 1-year interactive HTML chart"),
     ("/chart BANKNIFTY 6mo --html", "BANKNIFTY 6-month HTML chart"),
+    ("/visual-scan",            "Grounded swing/EOD visual scan report with annotated charts and pattern evidence"),
+    ("/visual-scan DMART",      "Balanced visual scan report: trend, VCP, cup-handle, breakout, volume, MTF"),
     # ── Deep Search commands ────────────────────────────────────────────────
     ("/search",                           "Deep search — 11 parallel verticals (NSE+BSE+web)"),
     ("/search RELIANCE",                  "Full deep search on RELIANCE"),
@@ -766,6 +920,21 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/forensic",                         "D5 Forensic analysis — Beneish M-score, Piotroski F-score, Altman Z'-score"),
     ("/forensic RELIANCE",                "Forensic accounting analysis for RELIANCE"),
     ("/forensic TCS INFY WIPRO",          "Forensic screening across multiple stocks"),
+    # ── Email commands (PG 2026-05-19: first-class /email mailer) ──────────
+    ("/email",                            "Mail an Agent Adda report — LLM-drafted subject + HTML body via Outlook"),
+    ("/email dashboard --to a@x.com",     "Mail newest market dashboard (alias: market | pulse)"),
+    ("/email sector --to a@x.com",        "Mail sector rotation report (default: attachment + exec summary)"),
+    ("/email stage2 --to a@x.com --send", "Send Stage 2 tracker immediately (skip Outlook draft)"),
+    ("/email sector --to \"a@x.com;b@y.com\"",        "Multiple recipients — comma, semicolon or whitespace separated"),
+    ("/email sector --to a@x.com --bcc b@y.com,c@z.com --as body", "Inline LLM-rendered body, no attachment"),
+    ("/email <path> --to a@x.com --dry-run", "Render to logs/ preview without touching Outlook"),
+    ("<cmd> | /email --to a@x.com",       "Pipe ANY upstream command's output as the email body (PG 2026-05-20)"),
+    ("/ric sherlock DMART | /email --to a@x.com --send", "Example: capture RIC output and send immediately"),
+    # ── Screenshot mailer (PG 2026-05-20) ──
+    ("/screenshot --to a@x.com",                "Drag a selection box, then mail PNG with LLM cover note"),
+    ("/screenshot --mode window --to a@x.com",  "Click a window to capture and mail"),
+    ("/screenshot --mode full --to a@x.com --send", "Full screen, send immediately (no draft review)"),
+    ("/screenshot --no-email --out ~/Desktop/shot.png", "Capture only — save to disk, don't email"),
     # ── Latest results feed commands ────────────────────────────────────────
     ("/results-feed",                     "Latest quarterly results filings — default last 2 weeks"),
     ("/results-feed 2",                   "Latest quarterly results filings in last N weeks"),
@@ -807,6 +976,15 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/narrative",                        "P2-4 Portfolio narratives — bull/bear thesis per stock"),
     ("/narrative TCS INFY",               "Investment narratives for specific stocks"),
     ("/concall TCS",                      "D4 Concall NLP — sentiment, themes, risk flags"),
+    # ── Multi-Timeframe (MTF) confluence ───────────────────────────────────
+    ("/mtf",                              "📐 Multi-timeframe confluence — verdict + score across M/W/D/60m/15m"),
+    ("/mtf RELIANCE",                     "MTF panel for a single symbol (M/W/D/60m/15m verdict + score)"),
+    ("/mtf RELIANCE --report",            "MTF panel + write markdown report to reports/mtf/"),
+    ("/mtf scan NIFTY50 bullish",         "Rank NIFTY 50 by bullish MTF confluence (top-10, score ≥ 70)"),
+    ("/mtf scan NIFTY50 bearish",         "Rank NIFTY 50 by bearish MTF confluence"),
+    ("/mtf scan NIFTY500 bullish --min-score 80", "Universe scan with custom min-score"),
+    ("/mtf scan BANKNIFTY bullish",       "MTF scan on Bank Nifty constituents"),
+    ("/mtf RELIANCE | /email --to a@x.com", "Email the rendered MTF panel as HTML"),
     # ── Report generation commands ─────────────────────────────────────────
     ("/report",                           "Generate a formatted report — PDF, HTML, or Markdown"),
     ("/report sector-rotation",           "⚡ Instant sector rotation dashboard from DB (no LLM)"),
@@ -908,6 +1086,7 @@ _CMD_CATEGORIES: dict[str, tuple[str, str]] = {
     "/fno":      ("F&O / Options",       "📊"),
     "/strategy": ("F&O / Options",       "📊"),
     "/chart":    ("Charts",              "📈"),
+    "/visual-scan": ("Charts",           "📈"),
     "/search":   ("Deep Search",         "🌐"),
     "/results":  ("Latest Results",      "🧾"),
     "/results-feed": ("Latest Results",  "🧾"),
@@ -928,6 +1107,8 @@ _CMD_CATEGORIES: dict[str, tuple[str, str]] = {
     "/strategy-council": ("Strategy Council", "🧠"),
     "/data-coverage": ("Data Coverage", "📊"),
     "/forensic": ("Forensic",            "🧪"),
+    "/email":    ("Report Mailer",       "✉️"),
+    "/screenshot": ("Screen Capture Mailer", "📸"),
     "/voice-mode": ("Voice Briefing",    "🎙️"),
     "/events":   ("Events Calendar",     "📅"),
     "/us":       ("Macro & Global",      "🌍"),
@@ -1079,63 +1260,370 @@ _STARTER_PHRASES: list[tuple[str, str]] = [
     ("52 week high",       "Stocks near 52-week highs"),
     ("concall transcript", "Management commentary from screener.in"),
     ("global markets",     "Overnight US/Asian/SGX context"),
+    ("visual scan",        "Grounded EOD chart-pattern scan"),
 ]
 
 
 class _AgentCompleter(Completer):
-    """Three-tier completion:
-      /…       → slash commands
-      p<digit> → prompt library entries
-      word     → starter phrases + known stock symbols
+    """Universal, ranked completer.
+
+    Provides four tiers of completion, each with multi-criteria matching:
+
+      • **Slash command** mode (``/…``) — matches command names and hint text;
+        ranks exact > prefix > word-prefix > substring (command) > substring
+        (hint). After the first space, switches to *argument* completion
+        scoped to the root command (symbols, indices, strategies, etc.).
+
+      • **Prompt-number** mode (``p`` / ``p1`` / ``p23``) — surfaces numbered
+        prompts from the library. Bare ``p`` lists all 60+ prompts.
+
+      • **Prompt-by-keyword** — typing free text searches prompt titles too,
+        offering the ``p<n>`` shortcut so the user can run them by typing
+        the number.
+
+      • **Freeform** mode — matches starter phrases, NSE symbols, and index
+        names; multi-token queries supported (all tokens must hit).
+
+    All tiers cap their output at ``_MAX_RESULTS`` to keep the menu usable.
     """
 
+    _MAX_RESULTS = 30
+
+    # Argument completion sources -------------------------------------------------
+    _ARG_INDICES = [
+        "NIFTY 50", "NIFTY 100", "NIFTY 200", "NIFTY 500",
+        "NIFTY NEXT 50", "NIFTY MIDCAP 50", "NIFTY MIDCAP 100",
+        "NIFTY MIDCAP 150", "NIFTY SMALLCAP 100", "NIFTY SMALLCAP 250",
+        "NIFTY BANK", "NIFTY IT", "NIFTY AUTO", "NIFTY FMCG",
+        "NIFTY PHARMA", "NIFTY METAL", "NIFTY REALTY", "NIFTY ENERGY",
+        "NIFTY FIN SERVICE", "NIFTY INFRA",
+        # Common shorthand aliases (also accepted by handlers)
+        "NIFTY50", "NIFTY500", "BANKNIFTY", "FINNIFTY", "MIDCAP100",
+    ]
+    _ARG_STRATEGIES = [
+        "breakout", "volume_surge", "reversal", "momentum", "supertrend",
+        "vcp", "orb", "gap_go", "vwap", "engulfing", "ema_ribbon",
+        "multi_confirm", "rsi_divergence", "all",
+    ]
+    _ARG_SCAN_TYPES = [
+        "orb", "gap", "macd", "rsi", "bb", "vwap", "vcp", "momentum",
+    ]
+    _ARG_SCREEN_TYPES = [
+        "stage2", "momentum", "highrs", "turnaround", "base", "tight",
+        "dip", "supertrend", "strong", "new",
+    ]
+    _ARG_REPORT_TYPES = ["research", "ric", "sector", "recommendation"]
+    _ARG_REPORT_FORMATS = ["html", "pdf", "md", "markdown"]
+    _ARG_HELP_SECTIONS = [
+        "charts", "screens", "scan", "fno", "search", "forensic",
+        "monitors", "options", "mtf", "report", "youtube",
+    ]
+    _ARG_DIRECTIONS = ["bullish", "bearish"]
+    _ARG_PROMPT_CATS = [
+        "market", "intraday", "technical", "sector", "screener",
+        "fundamentals", "stock", "news", "portfolio", "global", "email",
+    ]
+
+    # /email recognised flags (kept in sync with terminal/email_dispatcher.py)
+    _ARG_EMAIL_FLAGS = [
+        ("--to", "Recipient(s); comma/semicolon-separated"),
+        ("--bcc", "Blind carbon copy"),
+        ("--cc", "Carbon copy"),
+        ("--as", "body | attachment | both"),
+        ("--mode", "body | attachment | both"),
+        ("--body", "Inline body only"),
+        ("--attachment", "Attach the report"),
+        ("--both", "Inline body + attachment"),
+        ("--send", "Send immediately"),
+        ("--draft", "Save as Outlook draft (default)"),
+        ("--dry-run", "Preview without touching Outlook"),
+        ("--note", "Extra context for the LLM"),
+        ("--attach", "Path to an extra attachment"),
+    ]
+    _ARG_EMAIL_TARGETS = [
+        ("sector", "Sector rotation report"),
+        ("stage2", "Stage-2 watchlist"),
+        ("dashboard", "Market dashboard"),
+        ("portfolio", "Portfolio summary"),
+        ("seasonal", "Seasonal returns"),
+        ("us", "US/global readthrough"),
+        ("index", "Index pulse"),
+    ]
+
+    # Map root command → list[(label, hint)] argument candidates ------------------
+    @classmethod
+    def _arg_sources(cls, root: str, head_tokens: list[str] | None = None,
+                      partial: str = "") -> list[tuple[str, str]]:
+        symbols = [(s, "NSE symbol / index") for s in _KNOWN_SYMBOLS]
+        only_stocks = [(s, "NSE symbol") for s in _KNOWN_SYMBOLS if not s.startswith("NIFTY")]
+        indices = [(i, "NSE index") for i in cls._ARG_INDICES]
+        head_tokens = head_tokens or []
+        subtokens_lower = {t.lower() for t in head_tokens[1:]}
+
+        # When the user starts typing a flag ("/<cmd> --…"), surface flags first
+        # for commands that accept them. Keeps the menu predictable.
+        if partial.startswith("-"):
+            if root == "/email":
+                return cls._ARG_EMAIL_FLAGS
+            if root == "/mtf":
+                return [
+                    ("--report", "Write markdown to reports/mtf/"),
+                    ("--min-score", "Minimum confluence score (0-100)"),
+                ]
+            if root == "/screenshot":
+                return [
+                    ("--to", "Recipient(s)"), ("--bcc", "Blind carbon copy"),
+                    ("--mode", "interactive|window|full|delayed"),
+                    ("--send", "Send immediately"),
+                    ("--dry-run", "Preview without sending"),
+                    ("--note", "Extra context"),
+                    ("--out", "Save path"),
+                ]
+            if root == "/report":
+                return [("--format", "html|pdf|md"),
+                        ("--watchlist", "Comma-separated symbols")]
+
+        if root == "/mtf":
+            # /mtf scan <here> → restrict to indices + direction + flags
+            if "scan" in subtokens_lower:
+                return (
+                    indices
+                    + [(d, "MTF direction") for d in cls._ARG_DIRECTIONS]
+                    + [("--min-score", "Minimum confluence score"),
+                       ("--report", "Write markdown to reports/mtf/")]
+                )
+            return (
+                [("scan", "Universe scan across an index")]
+                + symbols
+                + [(d, "MTF direction") for d in cls._ARG_DIRECTIONS]
+                + [("--report", "Write markdown to reports/mtf/")]
+            )
+        if root == "/email":
+            return cls._ARG_EMAIL_TARGETS + cls._ARG_EMAIL_FLAGS
+        if root == "/scan":
+            return indices + [(s, "Strategy filter") for s in cls._ARG_SCAN_TYPES]
+        if root == "/screen":
+            return [(s, "EOD screener") for s in cls._ARG_SCREEN_TYPES]
+        if root in ("/options", "/chain", "/pcr"):
+            return only_stocks + indices
+        if root == "/monitor":
+            return (
+                [("list", "List strategies"), ("status", "Show running monitors"),
+                 ("start", "Start a monitor"), ("stop", "Stop a monitor")]
+                + [(s, "Monitor strategy") for s in cls._ARG_STRATEGIES]
+            )
+        if root == "/report":
+            return (
+                [(t, "Report type") for t in cls._ARG_REPORT_TYPES]
+                + [(f, "Output format") for f in cls._ARG_REPORT_FORMATS]
+                + only_stocks
+            )
+        if root == "/sector":
+            return [(s.replace("NIFTY ", ""), "Sector") for s in cls._ARG_INDICES
+                    if "MIDCAP" not in s and "SMALLCAP" not in s and s != "NIFTY 50"]
+        if root == "/youtube":
+            return [("channels", "List channels"), ("transcribe", "Force transcription")]
+        if root == "/help":
+            return [(s, "Help section") for s in cls._ARG_HELP_SECTIONS]
+        if root == "/prompts":
+            return [(c, "Prompt category") for c in cls._ARG_PROMPT_CATS]
+        if root == "/model":
+            return [
+                ("gpt-4o", "OpenAI gpt-4o"), ("gpt-4o-mini", "OpenAI gpt-4o-mini"),
+                ("ollama", "Ollama default"), ("keyword", "Disable LLM"),
+            ]
+        if root in ("/learn", "/define", "/compare"):
+            return [
+                ("PE ratio", "Price-to-earnings"), ("ROCE", "Return on capital employed"),
+                ("ROE", "Return on equity"), ("EBITDA", "Earnings metric"),
+                ("VWAP", "Volume-weighted avg price"), ("MACD", "Indicator"),
+                ("RSI", "Indicator"), ("Bollinger Bands", "Indicator"),
+                ("supertrend", "Indicator"), ("stage analysis", "Weinstein"),
+            ]
+        # Default: any command taking a symbol
+        return only_stocks
+
+    # Scoring --------------------------------------------------------------------
+    @staticmethod
+    def _score(query: str, text: str) -> int | None:
+        """Lower is better. ``None`` means no match.
+
+        0=exact · 1=prefix · 2=word-prefix · 3=substring · None=miss.
+        """
+        if not query:
+            return 2  # neutral rank when probing for "everything"
+        q = query.lower()
+        t = text.lower()
+        if t == q:
+            return 0
+        if t.startswith(q):
+            return 1
+        if any(w.startswith(q) for w in re.split(r"[\s_\-/.]+", t) if w):
+            return 2
+        if q in t:
+            return 3
+        return None
+
+    @classmethod
+    def _multi_score(cls, query: str, *fields: str) -> int | None:
+        """Best (lowest) score across multiple fields. Supports multi-token
+        queries — all whitespace-separated tokens must match somewhere."""
+        if not query.strip():
+            return 2
+        tokens = [tok for tok in re.split(r"\s+", query.strip()) if tok]
+        best_per_token: list[int] = []
+        for tok in tokens:
+            scores = [s for s in (cls._score(tok, f) for f in fields) if s is not None]
+            if not scores:
+                return None
+            best_per_token.append(min(scores))
+        return max(best_per_token)  # worst-matched token dominates
+
+    # Dispatcher -----------------------------------------------------------------
     def get_completions(self, document, complete_event):
         text = document.text_before_cursor
+        stripped = text.strip()
 
-        # ── Tier 1: slash commands ──────────────────────────────────────
         if text.startswith("/"):
+            yield from self._slash(text)
+            return
+
+        if re.match(r"^p\d{0,3}$", stripped.lower()):
+            yield from self._prompt_number(text, stripped)
+            return
+
+        if len(stripped) >= 2:
+            yield from self._freeform(text, stripped)
+
+    # Tier 1: slash --------------------------------------------------------------
+    def _slash(self, text: str):
+        if " " in text.rstrip():
+            yield from self._slash_args(text)
+            return
+
+        # Strip the leading '/' for matching purposes so that '/breakout' can
+        # hit '/monitor start breakout' and a query like '/screener' surfaces
+        # commands whose hint mentions "screener".
+        bare = text[1:] if text.startswith("/") else text
+
+        ranked: list[tuple[int, int, str, str, str]] = []
+        for cmd, hint in _SLASH_COMMANDS:
+            cmd_score = self._score(bare, cmd[1:]) if bare else 2
+            hint_score = self._score(bare, hint) if hint and bare else None
+            if cmd_score is not None:
+                rank = cmd_score
+            elif hint_score is not None:
+                rank = hint_score + 4   # hint matches always rank below cmd matches
+            else:
+                continue
+            ranked.append((rank, len(cmd), cmd, hint, cmd))
+
+        ranked.sort(key=lambda r: (r[0], r[1], r[2].lower()))
+
+        # Tier-4 fallback: Levenshtein/ratio-based typo correction. Only kicks in
+        # when nothing matched at all, so it never crowds out real prefix hits.
+        if not ranked and bare:
+            import difflib
+            # Build a deduped set of root commands (drop args/aliases like
+            # "/screen stage2", keep "/screen") so typo correction matches
+            # the bare command, not a multi-word alias variant.
+            root_to_entry: dict[str, tuple[str, str]] = {}
             for cmd, hint in _SLASH_COMMANDS:
-                if cmd.lower().startswith(text.lower()):
-                    yield Completion(
-                        cmd[len(text):],
-                        start_position=0,
-                        display=cmd,
-                        display_meta=hint,
-                    )
-            return
+                root = cmd.split()[0]
+                root_to_entry.setdefault(root, (root, hint))
+            roots_bare = [r[1:] for r in root_to_entry]
+            for guess in difflib.get_close_matches(bare.lower(), roots_bare, n=5, cutoff=0.6):
+                cmd, hint = root_to_entry[f"/{guess}"]
+                ranked.append((10, len(cmd), cmd, f"did you mean? — {hint}", cmd))
 
-        # ── Tier 2: p<n> prompt library shortcuts ───────────────────────
-        if re.match(r"^p\d{0,3}$", text.lower()):
-            prefix_n = text[1:] if len(text) > 1 else ""
-            for n, (cat, title, _query) in _PROMPT_INDEX.items():
-                if str(n).startswith(prefix_n):
-                    yield Completion(
-                        f"p{n}"[len(text):],
-                        start_position=0,
-                        display=f"p{n}  {title}",
-                        display_meta=cat,
-                    )
-            return
+        for _, _, cmd, hint, _ in ranked[: self._MAX_RESULTS]:
+            yield Completion(
+                cmd,
+                start_position=-len(text),
+                display=cmd,
+                display_meta=hint,
+            )
 
-        # ── Tier 3: starter phrases + known symbols ──────────────────────
-        word = text.lower().strip()
-        if len(word) >= 2:
-            for phrase, hint in _STARTER_PHRASES:
-                if phrase.lower().startswith(word):
-                    yield Completion(
-                        phrase[len(text.strip()):],
-                        start_position=0,
-                        display=phrase,
-                        display_meta=hint,
-                    )
-            for sym in _KNOWN_SYMBOLS:
-                if sym.lower().startswith(word):
-                    yield Completion(
-                        sym[len(text.strip()):],
-                        start_position=0,
-                        display=sym,
-                        display_meta="NSE symbol / index",
-                    )
+    def _slash_args(self, text: str):
+        head, _, partial = text.rpartition(" ")
+        head_tokens = head.split()
+        root = head_tokens[0].lower() if head_tokens else ""
+        sources = self._arg_sources(root, head_tokens=head_tokens, partial=partial)
+        if not sources:
+            return
+        ranked: list[tuple[int, int, str, str]] = []
+        for label, hint in sources:
+            score = self._multi_score(partial, label, hint)
+            if score is None:
+                continue
+            ranked.append((score, len(label), label, hint))
+        ranked.sort(key=lambda r: (r[0], r[1], r[2].lower()))
+        for _, _, label, hint in ranked[: self._MAX_RESULTS]:
+            yield Completion(
+                label,
+                start_position=-len(partial),
+                display=label,
+                display_meta=hint,
+            )
+
+    # Tier 2: p<n> --------------------------------------------------------------
+    def _prompt_number(self, text: str, stripped: str):
+        prefix_n = stripped[1:] if len(stripped) > 1 else ""
+        for n, (cat, title, _q) in _PROMPT_INDEX.items():
+            if not prefix_n or str(n).startswith(prefix_n):
+                yield Completion(
+                    f"p{n}"[len(text):],
+                    start_position=0,
+                    display=f"p{n}  {title}",
+                    display_meta=cat,
+                )
+
+    # Tier 3: freeform ---------------------------------------------------------
+    def _freeform(self, text: str, query: str):
+        # Phrase matches
+        ranked_phrases: list[tuple[int, int, str, str]] = []
+        for phrase, hint in _STARTER_PHRASES:
+            score = self._multi_score(query, phrase, hint)
+            if score is not None:
+                ranked_phrases.append((score, len(phrase), phrase, hint))
+        ranked_phrases.sort(key=lambda r: (r[0], r[1], r[2].lower()))
+        for _, _, phrase, hint in ranked_phrases[: self._MAX_RESULTS // 2]:
+            yield Completion(
+                phrase,
+                start_position=-len(text),
+                display=phrase,
+                display_meta=hint,
+            )
+
+        # Symbol matches
+        ranked_syms: list[tuple[int, int, str]] = []
+        for sym in _KNOWN_SYMBOLS:
+            score = self._score(query, sym)
+            if score is not None:
+                ranked_syms.append((score, len(sym), sym))
+        ranked_syms.sort(key=lambda r: (r[0], r[1]))
+        for _, _, sym in ranked_syms[: self._MAX_RESULTS // 2]:
+            yield Completion(
+                sym,
+                start_position=-len(text),
+                display=sym,
+                display_meta="NSE symbol / index",
+            )
+
+        # Prompt-library title matches → suggest as p<n>
+        ranked_prompts: list[tuple[int, int, int, str, str]] = []
+        for n, (cat, title, _q) in _PROMPT_INDEX.items():
+            score = self._multi_score(query, title, cat)
+            if score is not None:
+                ranked_prompts.append((score, len(title), n, title, cat))
+        ranked_prompts.sort(key=lambda r: (r[0], r[1]))
+        for _, _, n, title, cat in ranked_prompts[: 10]:
+            yield Completion(
+                f"p{n}",
+                start_position=-len(text),
+                display=f"p{n}  {title}",
+                display_meta=f"prompt · {cat}",
+            )
 
 
 # prompt_toolkit style for the completion menu
@@ -1421,6 +1909,79 @@ def _parse_multi_analyze_symbols(arg: str) -> list[str]:
     return list(dict.fromkeys(symbols))
 
 
+_ANALYZE_PATH_SYMBOL_STOPWORDS = frozenset(
+    {
+        "DOC",
+        "DOCS",
+        "DOCUMENT",
+        "REPORT",
+        "RESEARCH",
+        "STRATEGY",
+        "COUNCIL",
+        "DASHBOARD",
+        "NSE",
+        "BSE",
+        "EQUITY",
+        "FINAL",
+        "ANALYSIS",
+        "DAILY",
+        "WEEKLY",
+        "QUARTERLY",
+        "ANNUAL",
+        "LATEST",
+        "OUTPUT",
+        "ARCHIVE",
+        "FILE",
+        "FILING",
+        "INDEX",
+        "MARKET",
+        "PROFILE",
+        "RAW",
+        "PARSED",
+        "DATA",
+        "EXAMPLE",
+        "TEST",
+    }
+)
+
+
+def _infer_symbol_from_analyze_arg(arg: str) -> str:
+    """Best-effort heuristic to pull a stock symbol out of an /analyze input.
+
+    Handles patterns like:
+      * ``reports/strategy_council/strategy_council_GESHIP_*.md`` → ``GESHIP``
+      * ``GESHIP_research_20260518.html`` → ``GESHIP``
+      * ``data/filings/RELIANCE/LATEST/raw/file.pdf`` → ``RELIANCE``
+
+    Returns the canonical upper-cased token, or ``""`` when nothing
+    plausible is found. The token is only an HINT — the LLM must still
+    call ``resolve_symbol`` to validate.
+    """
+    if not arg:
+        return ""
+    tail = arg.split("?")[0].split("#")[0]
+    base = Path(tail).name or tail
+    candidates: list[str] = []
+    for token in re.split(r"[^A-Za-z0-9&-]+", base):
+        if not token:
+            continue
+        upper = token.upper()
+        if not re.fullmatch(r"[A-Z][A-Z0-9&-]{2,14}", upper):
+            continue
+        if upper in _ANALYZE_PATH_SYMBOL_STOPWORDS:
+            continue
+        if upper.lower() in {"html", "pdf", "md", "docx", "xlsx", "csv", "txt"}:
+            continue
+        candidates.append(upper)
+    if not candidates:
+        # Fall back to scanning the full path for /filings/<SYMBOL>/ segments.
+        match = re.search(r"/filings/([A-Z][A-Z0-9&-]{2,14})/", arg)
+        if match:
+            return match.group(1)
+        return ""
+    return candidates[0]
+
+
 def _run_ric(agent, key: str, arg: str, show_trace: bool, output_format: str = "") -> None:
     """Execute a named RIC step by step, each result feeding context.
 
@@ -1448,8 +2009,23 @@ def _run_ric(agent, key: str, arg: str, show_trace: bool, output_format: str = "
         return
 
     symbol  = arg.strip().upper() if arg else ""
+    if ric.get("arg") == "symbol" and symbol:
+        try:
+            from terminal.tools import resolve_symbol
+
+            resolved = resolve_symbol(symbol)
+            canonical = str(resolved.get("symbol") or "").strip().upper()
+            if canonical and canonical != symbol:
+                console.print(
+                    f"[dim]  ↺  Resolved {symbol} → {canonical} "
+                    f"({resolved.get('confidence', 'resolved')})[/dim]"
+                )
+                symbol = canonical
+        except Exception:
+            pass
     n_steps = len(ric["steps"])
     collected_parts: list[str] = []  # accumulate step answers for report export
+    step_records: list[dict] = []    # consolidated memory for contextual follow-ups
 
     console.print()
     console.rule(
@@ -1480,6 +2056,12 @@ def _run_ric(agent, key: str, arg: str, show_trace: bool, output_format: str = "
             # Collect clean answer for report
             answer, _ = _parse_followups(result.get("answer", ""))
             collected_parts.append(f"## Step {i}: {label}\n\n{answer}")
+            step_records.append({
+                "index": i,
+                "label": label,
+                "answer": answer,
+                "trace": result.get("trace") or [],
+            })
         except Exception as e:
             console.print(f"[red]  ✗  Step {i} failed: {e}[/red]")
             console.print()
@@ -1490,6 +2072,15 @@ def _run_ric(agent, key: str, arg: str, show_trace: bool, output_format: str = "
         style="yellow",
     )
     console.print()
+
+    _remember_ric_sequence_interaction(
+        agent,
+        key=key,
+        ric_name=ric["name"],
+        symbol=symbol,
+        desc=ric["desc"],
+        step_records=step_records,
+    )
 
     # Auto-export report if format was requested
     if output_format and collected_parts:
@@ -1774,23 +2365,28 @@ def _fetch_market_dashboard_snapshot(focus: str = "", llm_backend=None) -> dict:
     from terminal.tools import call_tool
 
     plan = [
-        ("get_live_market_overview", {}),
-        ("get_intraday_market_recap", {"minutes": 15}),
-        ("get_market_breadth", {}),
-        ("get_top_gainers_losers", {"index": "NIFTY 500", "top_n": 8, "direction": "both"}),
-        ("get_fii_dii_activity", {}),
-        ("get_global_market_assessment", {}),
-        ("search_latest_catalysts", {"symbol": "NIFTY India market today"}),
-        ("get_options_chain", {"symbol": "NIFTY", "expiry_index": 0}),
-        ("get_futures_analysis", {"symbol": "NIFTY"}),
-        ("run_screener_query", {"screen_type": "high_rs", "top_n": 5}),
+        ("get_live_market_overview", {}, "get_live_market_overview"),
+        ("get_intraday_market_recap", {"minutes": 15}, "get_intraday_market_recap"),
+        ("get_market_breadth", {}, "get_market_breadth"),
+        ("get_top_gainers_losers", {"index": "NIFTY 500", "top_n": 8, "direction": "both"}, "get_top_gainers_losers"),
+        ("get_fii_dii_activity", {}, "get_fii_dii_activity"),
+        ("get_global_market_assessment", {}, "get_global_market_assessment"),
+        ("search_latest_catalysts", {"symbol": "NIFTY India market today"}, "search_latest_catalysts"),
+        ("get_options_chain", {"symbol": "NIFTY", "expiry_index": 0}, "get_options_chain"),
+        ("get_futures_analysis", {"symbol": "NIFTY"}, "get_futures_analysis"),
+        ("get_options_chain", {"symbol": "BANKNIFTY", "expiry_index": 0}, "get_options_chain_BANKNIFTY"),
+        ("get_futures_analysis", {"symbol": "BANKNIFTY"}, "get_futures_analysis_BANKNIFTY"),
+        ("run_screener_query", {"screen_type": "high_rs", "top_n": 5}, "run_screener_query"),
+        ("run_intraday_screener", {"screen_type": "vcp", "timeframe": "15m", "top_n": 5}, "run_intraday_screener_vcp"),
+        ("run_intraday_screener", {"screen_type": "supertrend", "timeframe": "15m", "top_n": 5}, "run_intraday_screener_supertrend"),
+        ("run_intraday_screener", {"screen_type": "vwap_reclaim", "timeframe": "15m", "top_n": 5}, "run_intraday_screener_vwap"),
     ]
     out: dict[str, dict] = {"focus": focus, "fetched_at": datetime.now(_IST).strftime("%Y-%m-%d %H:%M:%S")}
-    for name, args in plan:
+    for name, args, key in plan:
         try:
-            out[name] = call_tool(name, args)
+            out[key] = call_tool(name, args)
         except Exception as exc:
-            out[name] = {"error": str(exc)}
+            out[key] = {"error": str(exc)}
     if llm_backend is not None:
         narrative = _generate_dashboard_llm_narrative(out, llm_backend)
         if narrative:
@@ -1954,6 +2550,217 @@ def _dashboard_intraday_line(snapshot: dict) -> str:
     return "intraday recap pending; watching live tape, breadth, sector heat, and mover confirmation"
 
 
+def _dashboard_reactions(snapshot: dict) -> list[dict]:
+    live = snapshot.get("get_live_market_overview") or {}
+    indices = live.get("indices") or {}
+    adv_dec = live.get("adv_dec") or {}
+    movers = snapshot.get("get_top_gainers_losers") or {}
+    reactions: list[dict] = []
+
+    n50_pct = (indices.get("NIFTY 50") or {}).get("pct_change", (indices.get("NIFTY 50") or {}).get("chg_pct"))
+    vix_pct = (indices.get("INDIA VIX") or {}).get("pct_change", (indices.get("INDIA VIX") or {}).get("chg_pct"))
+    adv, dec = adv_dec.get("advances"), adv_dec.get("declines")
+    breadth_positive = isinstance(adv, (int, float)) and isinstance(dec, (int, float)) and adv > dec
+    breadth_negative = isinstance(adv, (int, float)) and isinstance(dec, (int, float)) and dec > adv
+
+    if isinstance(n50_pct, (int, float)) and n50_pct > 0 and breadth_positive and (not isinstance(vix_pct, (int, float)) or vix_pct <= 0):
+        reactions.append({
+            "label": "Risk-on confirmation",
+            "severity": "positive",
+            "confidence": "high",
+            "evidence": f"NIFTY {_dashboard_fmt_pct(n50_pct)}, breadth {adv}A/{dec}D, VIX {_dashboard_fmt_pct(vix_pct)}",
+            "command": "/scan momentum",
+        })
+    elif isinstance(n50_pct, (int, float)) and n50_pct < 0 and breadth_negative:
+        reactions.append({
+            "label": "Risk-off pressure",
+            "severity": "negative",
+            "confidence": "high",
+            "evidence": f"NIFTY {_dashboard_fmt_pct(n50_pct)} with breadth {adv}A/{dec}D",
+            "command": "/scan levels",
+        })
+
+    if isinstance(n50_pct, (int, float)) and n50_pct > 0 and breadth_negative:
+        reactions.append({
+            "label": "Breadth divergence",
+            "severity": "warning",
+            "confidence": "medium",
+            "evidence": f"NIFTY {_dashboard_fmt_pct(n50_pct)} while declines exceed advances {adv}A/{dec}D",
+            "command": "/screen highrs",
+        })
+
+    sector_rows = []
+    for name in _DASHBOARD_SECTOR_NAMES:
+        pct = (indices.get(name) or {}).get("pct_change", (indices.get(name) or {}).get("chg_pct"))
+        if isinstance(pct, (int, float)):
+            sector_rows.append((name, float(pct)))
+    if sector_rows:
+        leader, leader_pct = max(sector_rows, key=lambda item: item[1])
+        reactions.append({
+            "label": "Sector rotation active",
+            "severity": "positive" if leader_pct > 0 else "neutral",
+            "confidence": "medium",
+            "evidence": f"{leader} leads at {_dashboard_fmt_pct(leader_pct)}",
+            "command": f"/scan {leader.replace('NIFTY ', '')}",
+        })
+
+    for row in (movers.get("gainers") or [])[:1]:
+        pct = row.get("pct_change")
+        if isinstance(pct, (int, float)) and abs(pct) >= 5:
+            reactions.append({
+                "label": "Mover anomaly",
+                "severity": "warning",
+                "confidence": "medium",
+                "evidence": f"{row.get('symbol', 'symbol')} moved {_dashboard_fmt_pct(pct)}",
+                "command": f"/analyze {row.get('symbol', '')}".strip(),
+            })
+
+    if not reactions:
+        reactions.append({
+            "label": "Mixed tape",
+            "severity": "neutral",
+            "confidence": "low",
+            "evidence": "Major tape, breadth, and sector inputs are mixed or unavailable",
+            "command": "/screen highrs",
+        })
+    return reactions[:6]
+
+
+def _dashboard_action_cards(snapshot: dict, reactions: list[dict] | None = None) -> list[dict]:
+    reactions = reactions if reactions is not None else _dashboard_reactions(snapshot)
+    actions: list[dict] = []
+
+    def add(title: str, command: str, why: str, risk: str) -> None:
+        if not any(row["command"] == command for row in actions):
+            actions.append({"title": title, "command": command, "why": why, "risk": risk})
+
+    for reaction in reactions:
+        label = reaction.get("label")
+        if label == "Risk-on confirmation":
+            add("Confirm momentum", "/scan momentum", reaction.get("evidence", ""), "Wait for intraday invalidation levels before acting.")
+            add("Find relative strength", "/screen highrs", "Breadth and headline tape are aligned.", "Avoid extended names without pullback or base.")
+        elif label == "Risk-off pressure":
+            add("Inspect downside leaders", "/scan levels", reaction.get("evidence", ""), "Research only; avoid chase after large gaps.")
+        elif label == "Breadth divergence":
+            add("Check leadership quality", "/screen highrs", reaction.get("evidence", ""), "Prefer clean relative strength over index-only moves.")
+        elif label == "Sector rotation active":
+            add("Inspect sector pocket", str(reaction.get("command") or "/scan momentum"), reaction.get("evidence", ""), "Confirm stock-level liquidity and setup.")
+        elif label == "Mover anomaly":
+            add("Inspect mover", str(reaction.get("command") or "/scan momentum"), reaction.get("evidence", ""), "High velocity moves can reverse quickly.")
+
+    add("Check F&O map", "/fno NIFTY", "Validate support, resistance, PCR, and futures basis.", "Options data can shift fast near expiry.")
+    add("Inspect VCP pocket", "/scan vcp", "Find volatility contraction candidates for research.", "A scan result is not a breakout confirmation.")
+    add("Check Supertrend alignment", "/scan supertrend", "Compare trend-following candidates with tape direction.", "Whipsaws are common in range-bound tape.")
+    add("Watch VWAP reclaim", "/scan vwap", "Look for intraday reclaim/loss setups.", "Use only as confirmation evidence.")
+    return actions[:6]
+
+
+def _dashboard_opportunity_radar(snapshot: dict, limit: int = 6) -> list[dict]:
+    live = snapshot.get("get_live_market_overview") or {}
+    indices = live.get("indices") or {}
+    movers = snapshot.get("get_top_gainers_losers") or {}
+    screen = snapshot.get("run_screener_query") or {}
+    opportunities: list[dict] = []
+
+    def add(label: str, symbol: str, side: str, confidence: str, evidence: str, tags: list[str], command: str, risk: str) -> None:
+        opportunities.append({
+            "label": label,
+            "symbol": symbol,
+            "side": side,
+            "confidence": confidence,
+            "evidence": evidence,
+            "setup_tags": tags,
+            "command": command,
+            "risk": risk,
+        })
+
+    sector_rows = []
+    for name in _DASHBOARD_SECTOR_NAMES:
+        pct = (indices.get(name) or {}).get("pct_change", (indices.get(name) or {}).get("chg_pct"))
+        if isinstance(pct, (int, float)):
+            sector_rows.append((name, float(pct)))
+    if sector_rows:
+        leader, pct = max(sector_rows, key=lambda item: item[1])
+        add(
+            "Pocket of Strength",
+            leader,
+            "long-watch" if pct > 0 else "neutral",
+            "medium",
+            f"{leader} is the strongest visible sector at {_dashboard_fmt_pct(pct)}",
+            ["Relative Strength", "MTF Watch"],
+            f"/scan {leader.replace('NIFTY ', '')}",
+            "Confirm constituents, breadth, and intraday levels before considering risk.",
+        )
+
+    for row in (screen.get("results") or [])[:2]:
+        sym = str(row.get("symbol") or "").upper()
+        if sym:
+            rs = row.get("rs_pct", row.get("relative_strength"))
+            add(
+                "Relative Strength Candidate",
+                sym,
+                "long-watch",
+                "medium",
+                f"{sym} appears in high-RS screener" + (f" with RS {rs:.0f}" if isinstance(rs, (int, float)) else ""),
+                ["Relative Strength", "MTF Watch"],
+                f"/strategy-council {sym}",
+                "Require price setup and invalidation; RS alone is not an entry.",
+            )
+
+    setup_sources = [
+        ("run_intraday_screener_vcp", "VCP Candidate", "VCP", "/scan vcp"),
+        ("run_intraday_screener_supertrend", "Supertrend Confirmation", "Supertrend", "/scan supertrend"),
+        ("run_intraday_screener_vwap", "VWAP Reclaim Watch", "VWAP", "/scan vwap"),
+    ]
+    for key, label, tag, fallback_command in setup_sources:
+        result = snapshot.get(key) or {}
+        rows = result.get("results") or result.get("top_buy") or result.get("buy_signals") or []
+        if rows:
+            row = rows[0]
+            sym = str(row.get("symbol") or row.get("ticker") or "").upper()
+            score = row.get("score")
+            setup_label = row.get("setup_label") or row.get("signal") or "watch"
+            confidence = "high" if isinstance(score, (int, float)) and score >= 70 else "medium"
+            add(
+                label,
+                sym or tag,
+                "long-watch" if str(row.get("setup_side", "long")).lower() != "short" else "short-watch",
+                confidence,
+                f"{tag} scan returned {sym or 'candidate'} on {row.get('timeframe', result.get('timeframe', '15m'))}; setup {setup_label}",
+                [tag, "Intraday", "MTF Watch"],
+                f"/intraday {sym}" if sym else fallback_command,
+                "Confirm higher timeframe trend, liquidity, and invalidation before acting.",
+            )
+        else:
+            add(
+                f"{tag} Scan Needed",
+                tag,
+                "neutral",
+                "low",
+                f"No confirmed {tag} evidence in this snapshot; run the scan for current candidates.",
+                [tag],
+                fallback_command,
+                "Do not assume formation without scan evidence.",
+            )
+
+    for row in (movers.get("gainers") or [])[:1]:
+        sym = str(row.get("symbol") or "").upper()
+        pct = row.get("pct_change")
+        if sym:
+            add(
+                "ORB Follow-through Watch",
+                sym,
+                "long-watch",
+                "low",
+                f"{sym} is a top mover at {_dashboard_fmt_pct(pct)}; inspect ORB/VWAP follow-through.",
+                ["ORB", "VWAP", "Momentum"],
+                f"/intraday {sym}",
+                "Large intraday movers can be late; require fresh trigger and invalidation.",
+            )
+
+    return opportunities[:limit]
+
+
 def _dashboard_fno_bias(options: dict, futures: dict) -> str:
     pcr = options.get("pcr")
     try:
@@ -2013,6 +2820,110 @@ def _dashboard_fno_line(snapshot: dict) -> str:
     return " || ".join(parts) or "F&O data pending"
 
 
+def _dashboard_fno_details(snapshot: dict) -> dict[str, dict]:
+    def build(symbol: str, options_key: str, futures_key: str) -> dict:
+        options = snapshot.get(options_key) or {}
+        futures = snapshot.get(futures_key) or {}
+        if options.get("error") and futures.get("error"):
+            return {"symbol": symbol, "status": "unavailable", "source": f"{options.get('error')}; {futures.get('error')}"}
+        calls = sorted(options.get("calls") or [], key=lambda row: row.get("oi") or 0, reverse=True)
+        puts = sorted(options.get("puts") or [], key=lambda row: row.get("oi") or 0, reverse=True)
+        fut = (futures.get("futures") or [{}])[0] if isinstance(futures.get("futures"), list) else {}
+        status = "available" if (options and not options.get("error")) or (futures and not futures.get("error")) else "unavailable"
+        return {
+            "symbol": symbol,
+            "status": status,
+            "expiry": options.get("expiry") or options.get("expiry_date") or "n/a",
+            "spot": options.get("underlying") or futures.get("spot") or futures.get("underlying") or "n/a",
+            "pcr": options.get("pcr", "n/a"),
+            "max_pain": _dashboard_fmt_num(options.get("max_pain"), 0),
+            "resistance": _dashboard_fmt_num(calls[0].get("strike"), 0) if calls else "n/a",
+            "support": _dashboard_fmt_num(puts[0].get("strike"), 0) if puts else "n/a",
+            "basis": _dashboard_fmt_num(fut.get("basis"), 0) if fut else "n/a",
+            "basis_pct": _dashboard_fmt_num(fut.get("basis_pct"), 2) if fut else "n/a",
+            "cost_of_carry": _dashboard_fmt_num(fut.get("cost_of_carry_annualised_pct"), 1) if fut else "n/a",
+            "rollover": (futures.get("rollover") or {}).get("rollover_pct", "n/a"),
+            "source": options.get("source") or futures.get("source") or "dashboard snapshot",
+        }
+
+    return {
+        "NIFTY": build("NIFTY", "get_options_chain", "get_futures_analysis"),
+        "BANKNIFTY": build("BANKNIFTY", "get_options_chain_BANKNIFTY", "get_futures_analysis_BANKNIFTY"),
+    }
+
+
+def _dashboard_top_index_drilldown(snapshot: dict, limit: int = 3, stocks_per_index: int = 5) -> list[dict]:
+    """Return per-index top-gainer drill-down rows.
+
+    For each of the top ``limit`` indices (by intraday % change), fetch the
+    *index's own* top gainers via the NSE ``equity-stockIndices`` API. Results
+    are cached back into the snapshot under
+    ``get_top_gainers_losers_<INDEX_SLUG>`` so repeated panel renders within the
+    same dashboard tick don't refetch.
+
+    **Important**: We deliberately do NOT fall back to the market-wide
+    ``get_top_gainers_losers`` payload here. That fallback used to make every
+    index row show identical non-constituent stocks (e.g. JSWCEMENT/HONASA
+    appearing under NIFTY PRIVATE BANK). If the per-index fetch fails we
+    surface "constituent gainers unavailable" instead of misleading data.
+    """
+    from terminal.tools import call_tool
+
+    live = snapshot.get("get_live_market_overview") or {}
+    indices = live.get("indices") or {}
+    rows = []
+    for name, row in indices.items():
+        if name.upper() == "INDIA VIX":
+            continue
+        pct = row.get("pct_change", row.get("chg_pct"))
+        if isinstance(pct, (int, float)):
+            rows.append((name, float(pct), row))
+    rows = sorted(rows, key=lambda item: item[1], reverse=True)[:limit]
+
+    out = []
+    for name, pct, row in rows:
+        key = "get_top_gainers_losers_" + re.sub(r"[^A-Z0-9]+", "_", name.upper()).strip("_")
+        data = snapshot.get(key)
+        if not data:
+            try:
+                data = call_tool(
+                    "get_top_gainers_losers",
+                    {"index": name, "top_n": stocks_per_index, "direction": "gainers"},
+                )
+            except Exception as exc:
+                data = {"error": str(exc)[:120]}
+            snapshot[key] = data  # cache for the rest of this tick
+
+        if data.get("error"):
+            stocks = []
+            source = f"constituent fetch failed: {data.get('error')}"
+        else:
+            source = data.get("source") or "NSE equity-stockIndices"
+            stocks = []
+            for stock in (data.get("gainers") or [])[:stocks_per_index]:
+                sym = str(stock.get("symbol") or "").upper()
+                if not sym:
+                    continue
+                stocks.append({
+                    "symbol": sym,
+                    "price": stock.get("last_price", stock.get("price", stock.get("last"))),
+                    "pct_change": stock.get("pct_change"),
+                    "volume": stock.get("volume"),
+                    "source": source,
+                    "actions": [f"/analyze {sym}", f"/intraday {sym}", f"/strategy-council {sym}"],
+                })
+
+        out.append({
+            "index": name,
+            "pct_change": pct,
+            "last": row.get("last", row.get("close")),
+            "source": source,
+            "stocks": stocks,
+            "missing": not bool(stocks),
+        })
+    return out
+
+
 def _dashboard_recommendations_line(snapshot: dict) -> str:
     live = snapshot.get("get_live_market_overview") or {}
     glob = snapshot.get("get_global_market_assessment") or {}
@@ -2055,6 +2966,74 @@ def _dashboard_recommendations_table(snapshot: dict):
     rec.add_row("Derivatives", _dashboard_fno_line(snapshot))
     rec.add_row("Next checks", "Confirm sector leadership, VWAP/ORB follow-through, and invalidation before acting.")
     return rec
+
+
+def _dashboard_reactions_table(snapshot: dict, limit: int = 4) -> Table:
+    table = Table(box=box.SIMPLE, expand=True, padding=(0, 1), show_header=False)
+    table.add_column("Reaction", style="bold cyan", no_wrap=True, width=24)
+    table.add_column("Evidence", overflow="fold")
+    for row in _dashboard_reactions(snapshot)[:limit]:
+        label = row.get("label", "Reaction")
+        confidence = row.get("confidence", "low")
+        table.add_row(f"{label} [{confidence}]", f"{row.get('evidence', '')} -> {row.get('command', '')}")
+    return table
+
+
+def _dashboard_action_board_table(snapshot: dict, limit: int = 5) -> Table:
+    table = Table(box=box.SIMPLE, expand=True, padding=(0, 1), show_header=False)
+    table.add_column("Action", style="bold green", no_wrap=True, width=24)
+    table.add_column("Why / Risk", overflow="fold")
+    for row in _dashboard_action_cards(snapshot)[:limit]:
+        table.add_row(f"{row.get('title')} {row.get('command')}", f"{row.get('why')} Risk: {row.get('risk')}")
+    return table
+
+
+def _dashboard_opportunity_table(snapshot: dict, limit: int = 5) -> Table:
+    table = Table(box=box.SIMPLE, expand=True, padding=(0, 1), show_header=False)
+    table.add_column("Opportunity", style="bold magenta", no_wrap=True, width=26)
+    table.add_column("Evidence / Action", overflow="fold")
+    for row in _dashboard_opportunity_radar(snapshot, limit=limit):
+        tags = ", ".join(row.get("setup_tags") or [])
+        title = f"{row.get('label')} {row.get('symbol')}".strip()
+        table.add_row(title, f"{tags} | {row.get('evidence')} | {row.get('command')}")
+    return table
+
+
+def _dashboard_fno_details_table(snapshot: dict) -> Table:
+    table = Table(box=box.SIMPLE_HEAD, expand=True, padding=(0, 1))
+    table.add_column("Symbol", style="bold cyan", no_wrap=True)
+    table.add_column("PCR", justify="right")
+    table.add_column("Support", justify="right")
+    table.add_column("Resistance", justify="right")
+    table.add_column("Futures", overflow="fold")
+    for symbol, row in _dashboard_fno_details(snapshot).items():
+        if row.get("status") != "available":
+            table.add_row(symbol, "n/a", "n/a", "n/a", f"unavailable: {row.get('source', '')}")
+            continue
+        table.add_row(
+            symbol,
+            str(row.get("pcr", "n/a")),
+            str(row.get("support", "n/a")),
+            str(row.get("resistance", "n/a")),
+            f"Basis {row.get('basis')} ({row.get('basis_pct')}%) | CoC {row.get('cost_of_carry')}% | Rollover {row.get('rollover')}%",
+        )
+    return table
+
+
+def _dashboard_drilldown_table(snapshot: dict, limit: int = 3) -> Table:
+    table = Table(box=box.SIMPLE_HEAD, expand=True, padding=(0, 1))
+    table.add_column("Index", style="bold cyan", no_wrap=True)
+    table.add_column("Move", justify="right", no_wrap=True)
+    table.add_column("Top Stocks / Actions", overflow="fold")
+    for row in _dashboard_top_index_drilldown(snapshot, limit=limit):
+        stocks = []
+        for stock in row.get("stocks") or []:
+            stocks.append(
+                f"{stock.get('symbol')} {_dashboard_fmt_pct(stock.get('pct_change'))} "
+                f"({_dashboard_fmt_num(stock.get('price'), 2)}) -> {', '.join(stock.get('actions') or [])}"
+            )
+        table.add_row(row.get("index", "n/a"), _dashboard_fmt_pct(row.get("pct_change")), " | ".join(stocks) or "top stocks unavailable")
+    return table
 
 
 def _dashboard_rs_screener_line(snapshot: dict, limit: int = 5) -> str:
@@ -2285,7 +3264,7 @@ def _dashboard_visual_summary(snapshot: dict) -> Table:
     return table
 
 
-def _market_dashboard_renderable(snapshot: dict, *, width: int | None = None, height: int | None = None):
+def _market_dashboard_renderable(snapshot: dict, *, width: int | None = None, height: int | None = None, drilldown: bool = False):
     """Return a screen-fitting Rich renderable for the live market dashboard."""
     size = shutil.get_terminal_size((120, 34))
     width = width or size.columns
@@ -2463,11 +3442,15 @@ def _market_dashboard_renderable(snapshot: dict, *, width: int | None = None, he
                 ticker_panel,
                 cockpit,
                 middle,
+                Panel(_dashboard_reactions_table(snapshot), title="Reaction Engine", border_style="bright_yellow"),
+                Panel(_dashboard_action_board_table(snapshot), title="Action Board", border_style="bright_green"),
+                Panel(_dashboard_opportunity_table(snapshot), title="Opportunity Radar", border_style="bright_magenta"),
+                Panel(_dashboard_fno_details_table(snapshot), title="F&O Control", border_style="blue"),
+                Panel(_dashboard_drilldown_table(snapshot), title="Top Stocks in Top Indices", border_style="cyan") if drilldown else Panel("Press Enter to expand top stocks in top indices. Use --drilldown for non-interactive runs.", title="Top Stocks in Top Indices", border_style="dim"),
                 Panel(_dashboard_recommendations_table(snapshot), title="Recommendations", border_style="bright_green"),
-                fno_rs_news_panel,
             ),
             title=f"📺 Stock Market TV / Market Dashboard · {fetched_at} · focus: {focus} · refresh: 60s · Ctrl+C to exit"[: max(40, width - 4)],
-            subtitle="LIVE Ticker • Tape Bias • Breadth Gauge • Index Momentum • Sector Strength • F&O • Ctrl+C to exit",
+            subtitle="LIVE Ticker • Reactions • Actions • Opportunities • F&O • Enter drilldown • Ctrl+C to exit",
             border_style="bold white",
             expand=True,
         )
@@ -2505,8 +3488,19 @@ def _market_dashboard_renderable(snapshot: dict, *, width: int | None = None, he
         ] if part
     ) or "movers unavailable")
     tv.add_row("Recommendations", _dashboard_recommendations_line(snapshot))
+    tv.add_row("Reaction Engine", " | ".join(f"{r.get('label')} -> {r.get('command')}" for r in _dashboard_reactions(snapshot)[:3]))
+    tv.add_row("Action Board", " | ".join(f"{a.get('title')} {a.get('command')}" for a in _dashboard_action_cards(snapshot)[:3]))
+    tv.add_row("Opportunity Radar", " | ".join(f"{o.get('label')} {o.get('symbol')} {o.get('command')}" for o in _dashboard_opportunity_radar(snapshot, limit=3)))
     tv.add_row("Sharp Moves", f"Sharp Moves | {_dashboard_sharp_moves(snapshot, limit=3)}")
-    tv.add_row("F&O", f"F&O | {_dashboard_fno_line(snapshot)}")
+    tv.add_row("F&O Control", f"F&O | {_dashboard_fno_line(snapshot)}")
+    if drilldown:
+        drill_bits = []
+        for row in _dashboard_top_index_drilldown(snapshot, limit=2):
+            stocks = ", ".join(str(s.get("symbol")) for s in (row.get("stocks") or [])[:3]) or "stocks n/a"
+            drill_bits.append(f"{row.get('index')} {_dashboard_fmt_pct(row.get('pct_change'))}: {stocks}")
+        tv.add_row("Top Stocks in Top Indices", " | ".join(drill_bits) or "drilldown unavailable")
+    else:
+        tv.add_row("Top Stocks in Top Indices", "Press Enter to expand or run /dashboard --drilldown")
     tv.add_row("RS Screener", f"RS Screener | {_dashboard_rs_screener_line(snapshot, limit=3)}")
     tv.add_row("Intraday View", f"Intraday View | {_dashboard_intraday_line(snapshot)}")
     tv.add_row("Preset Alerts / Screens", f"Preset Alerts | {_dashboard_alert_presets(snapshot)}")
@@ -2654,16 +3648,272 @@ def _market_dashboard_renderable(snapshot: dict, *, width: int | None = None, he
     )
 
 
-def _run_market_dashboard_live(focus: str = "", *, refresh_secs: int = 60, max_cycles: int | None = None, llm_backend=None) -> None:
+def _render_market_dashboard_html(snapshot: dict, *, drilldown: bool = False) -> str:
+    live = snapshot.get("get_live_market_overview") or {}
+    indices = live.get("indices") or {}
+    focus = html.escape(str(snapshot.get("focus") or "whole market"))
+    fetched_at = html.escape(str(snapshot.get("fetched_at") or datetime.now(_IST).strftime("%Y-%m-%d %H:%M:%S")))
+
+    def esc(value) -> str:
+        return html.escape(str(value if value is not None else ""))
+
+    def card(title: str, body: str, cls: str = "") -> str:
+        return f'<section class="panel {cls}"><h2>{esc(title)}</h2>{body}</section>'
+
+    pulse_rows = []
+    for name, row in indices.items():
+        if name.upper() in {"NIFTY 50", "NIFTY BANK", "INDIA VIX"} or name in _DASHBOARD_SECTOR_NAMES:
+            pct = row.get("pct_change", row.get("chg_pct"))
+            pulse_rows.append(
+                f'<div class="metric"><span>{esc(name)}</span><b>{esc(_dashboard_fmt_num(row.get("last", row.get("close")), 0))}</b><em>{esc(_dashboard_fmt_pct(pct))}</em></div>'
+            )
+    pulse = card("Market Pulse", "".join(pulse_rows[:12]) or "<p>Market pulse unavailable.</p>")
+
+    reactions = "".join(
+        f'<li class="{esc(r.get("severity"))}"><b>{esc(r.get("label"))}</b><span>{esc(r.get("evidence"))}</span><code>{esc(r.get("command"))}</code></li>'
+        for r in _dashboard_reactions(snapshot)
+    )
+    reaction_panel = card("Reaction Engine", f"<ul>{reactions}</ul>")
+
+    actions = "".join(
+        f'<li><b>{esc(a.get("title"))}</b><code>{esc(a.get("command"))}</code><span>{esc(a.get("why"))}</span><small>{esc(a.get("risk"))}</small></li>'
+        for a in _dashboard_action_cards(snapshot)
+    )
+    action_panel = card("Action Board", f"<ul>{actions}</ul>")
+
+    opportunities = "".join(
+        f'<li><b>{esc(o.get("label"))} · {esc(o.get("symbol"))}</b><span>{esc(", ".join(o.get("setup_tags") or []))}</span><p>{esc(o.get("evidence"))}</p><code>{esc(o.get("command"))}</code><small>{esc(o.get("risk"))}</small></li>'
+        for o in _dashboard_opportunity_radar(snapshot)
+    )
+    opportunity_panel = card("Opportunity Radar", f"<ul>{opportunities}</ul>", "wide")
+
+    fno_rows = "".join(
+        f'<tr><td>{esc(symbol)}</td><td>{esc(row.get("pcr"))}</td><td>{esc(row.get("support"))}</td><td>{esc(row.get("resistance"))}</td><td>{esc(row.get("basis"))} / {esc(row.get("basis_pct"))}%</td><td>{esc(row.get("status"))}</td></tr>'
+        for symbol, row in _dashboard_fno_details(snapshot).items()
+    )
+    fno_panel = card("F&O Control", f"<table><thead><tr><th>Symbol</th><th>PCR</th><th>Support</th><th>Resistance</th><th>Basis</th><th>Status</th></tr></thead><tbody>{fno_rows}</tbody></table>", "wide")
+
+    drill = []
+    for row in _dashboard_top_index_drilldown(snapshot):
+        stocks = "".join(
+            f'<li><b>{esc(stock.get("symbol"))}</b><span>{esc(_dashboard_fmt_pct(stock.get("pct_change")))}</span><code>{esc(" · ".join(stock.get("actions") or []))}</code></li>'
+            for stock in row.get("stocks") or []
+        )
+        open_attr = " open" if drilldown else ""
+        drill.append(
+            f'<details data-index-card{open_attr}><summary>{esc(row.get("index"))} {esc(_dashboard_fmt_pct(row.get("pct_change")))}</summary><ul>{stocks or "<li>Top stocks unavailable</li>"}</ul></details>'
+        )
+    drill_panel = card("Top Stocks in Top Indices", "".join(drill) or "<p>Drilldown unavailable.</p>", "wide")
+
+    movers = snapshot.get("get_top_gainers_losers") or {}
+    mover_rows = "".join(
+        f'<div class="metric"><span>{esc(row.get("symbol"))}</span><b>{esc(_dashboard_fmt_pct(row.get("pct_change")))}</b><em>{esc(row.get("last_price", ""))}</em></div>'
+        for row in ((movers.get("gainers") or [])[:4] + (movers.get("losers") or [])[:4])
+    )
+    movers_panel = card("Movers", mover_rows or "<p>Movers unavailable.</p>")
+    news_panel = card("Catalyst Tape", f"<p>{esc(_dashboard_news_tape(snapshot, limit=4))}</p>")
+    rs_panel = card("RS Leaders", f"<p>{esc(_dashboard_rs_screener_line(snapshot, limit=6))}</p>")
+    source_panel = card("Source/Freshness Audit", f"<p>Fetched {fetched_at}. Missing data is labeled unavailable. Research only, not investment advice.</p>", "wide")
+
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Market Dashboard · {focus}</title>
+<style>
+:root {{ color-scheme: dark; --bg:#081018; --panel:#101a24; --line:#263746; --text:#e7eef5; --muted:#91a4b7; --green:#38d188; --red:#ff5f6d; --yellow:#f7c948; --cyan:#51d6ff; --mag:#d97bff; }}
+body {{ margin:0; background:var(--bg); color:var(--text); font:14px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }}
+header {{ padding:20px 24px 12px; border-bottom:1px solid var(--line); background:#0b141d; position:sticky; top:0; z-index:2; }}
+h1 {{ margin:0; font-size:22px; letter-spacing:0; }}
+.sub {{ color:var(--muted); margin-top:4px; }}
+.grid {{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; padding:16px; }}
+.panel {{ background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:14px; min-width:0; }}
+.wide {{ grid-column:span 3; }}
+h2 {{ margin:0 0 10px; font-size:15px; color:#d8f3ff; }}
+ul {{ list-style:none; padding:0; margin:0; display:grid; gap:8px; }}
+li {{ border-top:1px solid rgba(255,255,255,.07); padding-top:8px; }}
+code {{ display:inline-block; color:var(--cyan); background:#07131d; border:1px solid #1f4255; border-radius:5px; padding:2px 6px; margin:2px 6px 2px 0; }}
+small,.metric em,.metric span,p,li span {{ color:var(--muted); }}
+.metric {{ display:grid; grid-template-columns:1fr auto auto; gap:10px; align-items:center; border-top:1px solid rgba(255,255,255,.07); padding:7px 0; }}
+table {{ width:100%; border-collapse:collapse; }}
+th,td {{ text-align:left; border-top:1px solid rgba(255,255,255,.08); padding:8px; }}
+details {{ border:1px solid var(--line); border-radius:8px; padding:10px; margin:8px 0; background:#0b1520; }}
+summary {{ cursor:pointer; color:var(--cyan); font-weight:700; }}
+.positive {{ color:var(--green); }} .negative {{ color:var(--red); }} .warning {{ color:var(--yellow); }} .neutral {{ color:var(--muted); }}
+@media (max-width: 900px) {{ .grid {{ grid-template-columns:1fr; }} .wide {{ grid-column:span 1; }} }}
+</style>
+</head>
+<body>
+<header><h1>Market Dashboard Command Center</h1><div class="sub">focus: {focus} · fetched: {fetched_at} · research-only opportunity radar</div></header>
+<main class="grid">
+{pulse}
+{reaction_panel}
+{action_panel}
+{opportunity_panel}
+{fno_panel}
+{drill_panel}
+{movers_panel}
+{news_panel}
+{rs_panel}
+{source_panel}
+</main>
+<script>
+document.querySelectorAll('[data-index-card]').forEach(function(card) {{
+  card.addEventListener('toggle', function() {{ card.classList.toggle('active', card.open); }});
+}});
+</script>
+</body>
+</html>
+"""
+
+
+def _write_market_dashboard_html(snapshot: dict, *, drilldown: bool = False, open_browser: bool = False) -> Path:
+    out_dir = Path("reports") / "dashboards"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now(_IST).strftime("%Y%m%d_%H%M%S")
+    path = out_dir / f"market_dashboard_{stamp}.html"
+    path.write_text(_render_market_dashboard_html(snapshot, drilldown=drilldown), encoding="utf-8")
+    if open_browser:
+        webbrowser.open(path.resolve().as_uri())
+    return path
+
+
+def _parse_dashboard_command(text: str) -> dict:
+    parts = text.split()
+    args = parts[1:] if parts else []
+    flags = {"html": False, "open": False, "once": False, "drilldown": False}
+    focus_parts = []
+    for arg in args:
+        low = arg.lower()
+        if low == "--html":
+            flags["html"] = True
+        elif low == "--open":
+            flags["open"] = True
+            flags["html"] = True
+        elif low == "--once":
+            flags["once"] = True
+        elif low == "--drilldown":
+            flags["drilldown"] = True
+        else:
+            focus_parts.append(arg)
+    return {"focus": " ".join(focus_parts).strip(), **flags}
+
+
+def _dashboard_enter_pressed() -> bool:
+    try:
+        if not sys.stdin or not sys.stdin.isatty():
+            return False
+        import select
+        import termios
+        import tty
+
+        fd = sys.stdin.fileno()
+        old = termios.tcgetattr(fd)
+        try:
+            tty.setcbreak(fd)
+            readable, _, _ = select.select([sys.stdin], [], [], 0)
+            if readable:
+                return sys.stdin.read(1) in ("\n", "\r")
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old)
+    except Exception:
+        return False
+    return False
+
+
+class _DashboardKeyReader:
+    """Scoped nonblocking Enter reader for the Rich live dashboard."""
+
+    def __init__(self) -> None:
+        self._stream = None
+        self._fd: int | None = None
+        self._old_termios = None
+
+    def __enter__(self):
+        try:
+            import termios
+            import tty
+
+            if sys.stdin and sys.stdin.isatty():
+                self._fd = sys.stdin.fileno()
+            else:
+                self._stream = open("/dev/tty", "rb", buffering=0)
+                self._fd = self._stream.fileno()
+            self._old_termios = termios.tcgetattr(self._fd)
+            tty.setcbreak(self._fd)
+        except Exception:
+            self._close_stream()
+            self._fd = None
+            self._old_termios = None
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        if self._fd is not None and self._old_termios is not None:
+            try:
+                import termios
+
+                termios.tcsetattr(self._fd, termios.TCSADRAIN, self._old_termios)
+            except Exception:
+                pass
+        self._close_stream()
+        self._fd = None
+        self._old_termios = None
+        return False
+
+    def _close_stream(self) -> None:
+        if self._stream is not None:
+            try:
+                self._stream.close()
+            except Exception:
+                pass
+            self._stream = None
+
+    def pressed_enter(self) -> bool:
+        if self._fd is None:
+            return False
+        try:
+            import select
+
+            readable, _, _ = select.select([self._fd], [], [], 0)
+            if not readable:
+                return False
+            data = os.read(self._fd, 1)
+            return data in (b"\n", b"\r")
+        except KeyboardInterrupt:
+            raise
+        except Exception:
+            return False
+
+
+def _run_market_dashboard_live(
+    focus: str = "",
+    *,
+    refresh_secs: int = 60,
+    max_cycles: int | None = None,
+    llm_backend=None,
+    once: bool = False,
+    html_output: bool = False,
+    open_browser: bool = False,
+    drilldown: bool = False,
+) -> None:
     """Run the auto-refreshing compact dashboard until Ctrl+C."""
     con = _mcon()
     if llm_backend is None:
         snapshot = _fetch_market_dashboard_snapshot(focus)
     else:
         snapshot = _fetch_market_dashboard_snapshot(focus, llm_backend=llm_backend)
+    if html_output or open_browser:
+        path = _write_market_dashboard_html(snapshot, drilldown=drilldown, open_browser=open_browser)
+        con.print(f"[green]  HTML dashboard written:[/green] {path.resolve()}")
+        if once:
+            return
+    if once:
+        con.print(_market_dashboard_renderable(snapshot, drilldown=drilldown))
+        return
     cycles = 0
-    with Live(
-        _market_dashboard_renderable(snapshot),
+    with _DashboardKeyReader() as key_reader, Live(
+        _market_dashboard_renderable(snapshot, drilldown=drilldown),
         console=con,
         screen=True,
         auto_refresh=False,
@@ -2671,12 +3921,19 @@ def _run_market_dashboard_live(focus: str = "", *, refresh_secs: int = 60, max_c
     ) as live:
         next_fetch = time.time() + refresh_secs
         while True:
-            live.update(_market_dashboard_renderable(snapshot), refresh=True)
+            if key_reader.pressed_enter():
+                drilldown = not drilldown
+            live.update(_market_dashboard_renderable(snapshot, drilldown=drilldown), refresh=True)
             cycles += 1
             if max_cycles is not None and cycles >= max_cycles:
                 return
             try:
-                time.sleep(1)
+                wait_until = min(next_fetch, time.time() + 1)
+                while time.time() < wait_until:
+                    time.sleep(min(0.1, max(0, wait_until - time.time())))
+                    if key_reader.pressed_enter():
+                        drilldown = not drilldown
+                        live.update(_market_dashboard_renderable(snapshot, drilldown=drilldown), refresh=True)
                 if time.time() >= next_fetch:
                     if llm_backend is None:
                         snapshot = _fetch_market_dashboard_snapshot(focus)
@@ -2893,7 +4150,10 @@ _HTML_LINK_RE = re.compile(
     r'<a\s+[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)</a>',
     re.IGNORECASE | re.DOTALL,
 )
-_MD_LINK_RE = re.compile(r'\[([^\]]+)\]\((https?://[^\s\)]+)\)')
+_MD_LINK_RE = re.compile(r'\[([^\]]+)\]\(((?:https?|file)://[^\s\)]+)\)')
+# Used by _text_with_links: HTTP only (the local-paths-as-file-links pathway
+# would produce noisy "[label](file://...)" labels in plain-text views).
+_MD_HTTP_LINK_RE = re.compile(r'\[([^\]]+)\]\((https?://[^\s\)]+)\)')
 
 
 def _strip_html_tags(text: str) -> str:
@@ -2901,37 +4161,206 @@ def _strip_html_tags(text: str) -> str:
 
 
 def _html_links_to_visible_urls(text: str) -> str:
-    """Convert HTML anchors <a href="url">label</a> → visible 'label (url)'.
+    """Convert HTML anchors <a href="url">label</a> → Markdown link syntax.
 
-    Plain visible URLs are required for macOS Terminal.app Cmd+click detection.
+    Rich's Markdown renderer emits OSC 8 hyperlink escape sequences for
+    `[label](url)`, so the rendered terminal text is clickable in iTerm2,
+    kitty, WezTerm, VS Code, and macOS Terminal.app (Sequoia+).
     """
     def _replace(match: re.Match) -> str:
         url   = html.unescape(match.group(1).strip())
         label = html.unescape(_strip_html_tags(match.group(2))).strip() or url
         if label == url:
-            return url
-        return f"{label} ({url})"
+            return f"<{url}>"
+        return f"[{label}]({url})"
 
     return _HTML_LINK_RE.sub(_replace, text)
 
 
-def _markdown_links_to_visible_urls(text: str) -> str:
-    """Convert Markdown links [label](url) → visible 'label (url)'."""
-    def _replace(match: re.Match) -> str:
-        label = match.group(1).strip()
-        url = match.group(2).strip()
-        if label == url:
-            return url
-        return f"{label} ({url})"
+_BARE_URL_LINKIFY_RE = re.compile(
+    # Match http(s) URL with balanced parens allowed in the path/query.
+    # Path/query token: any non-whitespace/non-delimiter char, plus balanced
+    # parenthetical groups (single level — covers Wikipedia-style links like
+    # `Python_(programming_language)`).
+    r"""(?<![\(<\[\"'`/=])
+        (https?://
+            (?:
+                [^\s<>\)\]\"'`(]+    # bulk of URL: no whitespace/closers/openers
+                |   \([^\s<>\)\]\"'`]*\)   # balanced (...) group inside path
+            )+
+        )
+        (?<![,.;:!?])                # don't keep trailing punctuation
+    """,
+    flags=re.IGNORECASE | re.VERBOSE,
+)
 
-    return _MD_LINK_RE.sub(_replace, text)
+
+def _wrap_bare_urls(segment: str) -> str:
+    """Wrap bare http(s) URLs in <...> so Rich's Markdown emits OSC 8 hyperlinks."""
+    def _replace(match: re.Match) -> str:
+        url = match.group(1)
+        # Strip trailing punctuation that's almost never part of a URL.
+        while url and url[-1] in ".,;:!?":
+            url = url[:-1]
+        if not url:
+            return match.group(0)
+        return f"<{url}>" + match.group(0)[match.end(1) - match.start():]
+    # Use simpler post-processing approach for trailing punctuation.
+    return _BARE_URL_LINKIFY_RE.sub(lambda m: f"<{m.group(1)}>", segment)
+
+
+_BACKTICK_PATH_RE = re.compile(
+    r"`(/[^`\n]+|[A-Za-z]:\\[^`\n]+|~[^`\n]*|\./[^`\n]+|\.\./[^`\n]+|[A-Za-z0-9_.\-]+/[^`\n]+)`"
+)
+_BARE_LOCAL_PATH_RE = re.compile(
+    r"(?<![\w/.])(/[A-Za-z0-9_.\-][A-Za-z0-9_./\-]*\.(?:md|html|htm|pdf|json|csv|txt|log|yaml|yml|toml|ini|sh|py))(?![\w/])"
+)
+
+
+def _path_to_file_uri(path: str) -> str:
+    """Build a file:// URI from a possibly-relative path. Best-effort: returns
+    the original path unchanged if it can't be safely resolved."""
+    try:
+        import os
+        from urllib.parse import quote
+        raw = path
+        if raw.startswith("~"):
+            raw = os.path.expanduser(raw)
+        if not os.path.isabs(raw):
+            raw = os.path.abspath(raw)
+        # Quote everything except '/'; leading '/' is preserved.
+        return "file://" + quote(raw, safe="/")
+    except Exception:
+        return path
+
+
+def _wrap_backticked_paths_outside_code(text: str) -> str:
+    """Wrap `inline-code` local paths in Markdown links, but only outside
+    fenced code blocks and existing Markdown links (avoids double-wrap)."""
+    fence_re = re.compile(r"```.*?```", flags=re.DOTALL)
+
+    def _wrap_in_segment(seg: str) -> str:
+        # Skip inside existing [label](url) links.
+        out: list[str] = []
+        last = 0
+        for lm in _MD_LINK_RE.finditer(seg):
+            out.append(_BACKTICK_PATH_RE.sub(_backtick_path_wrap, seg[last:lm.start()]))
+            out.append(lm.group(0))
+            last = lm.end()
+        out.append(_BACKTICK_PATH_RE.sub(_backtick_path_wrap, seg[last:]))
+        return "".join(out)
+
+    out: list[str] = []
+    cursor = 0
+    for m in fence_re.finditer(text):
+        out.append(_wrap_in_segment(text[cursor:m.start()]))
+        out.append(m.group(0))
+        cursor = m.end()
+    out.append(_wrap_in_segment(text[cursor:]))
+    return "".join(out)
+
+
+def _backtick_path_wrap(m: re.Match) -> str:
+    path = m.group(1)
+    uri = _path_to_file_uri(path)
+    if uri == path:
+        return m.group(0)
+    return f"[`{path}`]({uri})"
+
+
+def _wrap_local_paths(segment: str) -> str:
+    """Wrap inline-code paths and bare local file paths in Markdown links
+    pointing to ``file://`` URIs so Rich emits OSC 8 hyperlinks.
+
+    Our local ``Markdown`` subclass overrides markdown-it's URL validator to
+    permit ``file:`` schemes; without that this wrapping would render as
+    literal text.
+    """
+    def _wrap_tick(m: re.Match) -> str:
+        return _backtick_path_wrap(m)
+
+    def _wrap_bare(m: re.Match) -> str:
+        path = m.group(1)
+        uri = _path_to_file_uri(path)
+        if uri == path:
+            return m.group(0)
+        return f"[{path}]({uri})"
+
+    segment = _BACKTICK_PATH_RE.sub(_wrap_tick, segment)
+    segment = _BARE_LOCAL_PATH_RE.sub(_wrap_bare, segment)
+    return segment
 
 
 def _linkify_markdown(text: str) -> str:
-    """Normalize links so markdown output always contains visible raw URLs."""
+    """Make every URL clickable when the text is rendered as Markdown.
+
+    Strategy:
+      1. Convert HTML anchors (<a href=...>label</a>) → Markdown link syntax.
+      2. Keep existing [label](url) Markdown links untouched (Rich emits OSC 8).
+      3. Wrap bare http(s) URLs in <...> so Rich autolinks them.
+      4. Preserve inline code spans, fenced code blocks, and 4-space-indented
+         code blocks verbatim.
+
+    Rich's Markdown renderer only emits OSC 8 hyperlinks for http(s) schemes,
+    so local file paths are left as plain text — modern terminals (iTerm2,
+    Terminal.app, kitty, WezTerm) detect them for Cmd+click without escape
+    sequences.
+    """
+    if not text:
+        return text
     text = _html_links_to_visible_urls(text)
-    text = _markdown_links_to_visible_urls(text)
-    return text
+    # Wrap backticked local paths BEFORE inline-code extraction so they don't
+    # get hidden inside the "skip inline code" branch. The output still
+    # contains the backticks (now inside a [`path`](file://...) label), so
+    # Rich's Markdown still applies inline-code styling on render.
+    text = _wrap_backticked_paths_outside_code(text)
+    # First, slice out fenced code blocks and inline code spans (never touch).
+    code_re = re.compile(r"```.*?```|`[^`\n]+`", flags=re.DOTALL)
+    parts: list[str] = []
+    cursor = 0
+    for m in code_re.finditer(text):
+        parts.append(_linkify_non_code_segment(text[cursor:m.start()]))
+        parts.append(m.group(0))
+        cursor = m.end()
+    parts.append(_linkify_non_code_segment(text[cursor:]))
+    return "".join(parts)
+
+
+def _linkify_non_code_segment(segment: str) -> str:
+    """Linkify a segment that contains no inline/fenced code.
+
+    Still skips 4-space (or tab) indented code blocks, which Markdown renders
+    as code without explicit fences.
+    """
+    if not segment:
+        return segment
+    out_lines: list[str] = []
+    for line in segment.splitlines(keepends=True):
+        stripped = line.lstrip("\n\r")
+        leading = line[: len(line) - len(stripped)]
+        body = stripped
+        # Markdown indented code block: 4+ leading spaces or a tab.
+        if re.match(r"(?: {4,}|\t)", body):
+            out_lines.append(line)
+            continue
+        out_lines.append(leading + _protect_existing_md_links(body))
+    return "".join(out_lines)
+
+
+def _protect_existing_md_links(segment: str) -> str:
+    """Wrap bare URLs / local paths in a segment, leaving existing markdown links intact."""
+    # Split on existing [label](url) so we only linkify in between.
+    out: list[str] = []
+    last = 0
+    for m in _MD_LINK_RE.finditer(segment):
+        between = segment[last:m.start()]
+        between = _wrap_local_paths(_wrap_bare_urls(between))
+        out.append(between)
+        out.append(m.group(0))
+        last = m.end()
+    tail = _wrap_local_paths(_wrap_bare_urls(segment[last:]))
+    out.append(tail)
+    return "".join(out)
 
 
 def _append_bare_url_links(target: Text, text: str) -> None:
@@ -2956,7 +4385,7 @@ def _text_with_links(text: str) -> Text:
     """Create Rich Text; HTML/Markdown links → visible label + raw URL; bare URLs → cyan."""
     # Pre-process: convert markdown [label](url) → HTML anchors so the
     # single HTML-anchor loop handles both formats uniformly.
-    text = _MD_LINK_RE.sub(r'<a href="\2">\1</a>', text)
+    text = _MD_HTTP_LINK_RE.sub(r'<a href="\2">\1</a>', text)
 
     out = Text()
     pos = 0
@@ -3012,6 +4441,342 @@ def _print_user(query: str) -> None:
     console.print()
     console.rule(f"[bold cyan]❯[/bold cyan]  [bold]{query}[/bold]  [dim]{_ts()}[/dim]",
                  style="dim cyan", align="left")
+
+
+_MTF_FREEFORM_RE = re.compile(
+    r"\b(?:mtf|multi[\s\-]?time[\s\-]?frame|multi[\s\-]?timeframe|"
+    r"multi[\s\-]?tf|muti[\s\-]?time[\s\-]?frame|muti[\s\-]?timeframe|"
+    r"across\s+(?:all\s+)?time[\s\-]?frames?|"
+    r"aligned\s+across|timeframe\s+(?:alignment|confluence)|"
+    r"tf\s+confluence|"
+    r"higher\s+time[\s\-]?frame)\b",
+    re.IGNORECASE,
+)
+
+_MTF_STOPWORDS = {
+    "MTF", "RUN", "ANALYSE", "ANALYZE", "SHOW", "GIVE", "GET", "ON", "FOR",
+    "WITH", "ACROSS", "MULTI", "TIME", "FRAME", "TIMEFRAME", "TIMEFRAMES",
+    "DAILY", "WEEKLY", "MONTHLY", "INTRADAY", "TODAY", "NOW",
+    "AND", "THE", "OF", "A", "AN", "IS", "ARE", "BE", "TO", "MY",
+    "BUY", "SELL", "BEARISH", "BULLISH", "ALIGNED", "ALIGNMENT", "CONFLUENCE",
+    "STOCK", "STOCKS", "SETUP", "SETUPS", "ACROSS",
+}
+
+
+def _detect_mtf_intent_scored(text: str):
+    """Confidence-aware variant of :func:`_detect_mtf_intent`.
+
+    Returns ``(rewrite, score)`` where ``rewrite`` is the proposed
+    ``/mtf …`` slash command (or ``None``) and ``score`` is a
+    :class:`terminal.confidence.ConfidenceScore` instance (or ``None``
+    when no MTF intent was detected).
+    """
+    from terminal.confidence import score_intent  # local to avoid import cycles
+
+    if not text or text.lstrip().startswith("/"):
+        return None, None
+    if not _MTF_FREEFORM_RE.search(text):
+        return None, None
+
+    upper = text.upper()
+    # 1) Did the user name a NIFTY-style index? If yes → scan.
+    index_match = re.search(r"\bNIFTY\s*(?:50|100|200|500|MIDCAP|NEXT\s*50|BANK|IT)?\b", upper)
+    # Direction detection with conflict-awareness. Distinguish explicit
+    # direction adjectives (bullish/bearish) from intent verbs (short/sell/
+    # long/buy). When both bullish and bearish hints appear, prefer the
+    # adjective (the user's most direct signal) and warn — covers prompts
+    # like "find bullish MTF aligned stocks for short in NIFTY500" which
+    # used to silently flip to bearish because SHORT matched first.
+    has_adj_bull = bool(re.search(r"\b(?:BULLISH|UPTREND)\b", upper))
+    has_adj_bear = bool(re.search(r"\b(?:BEARISH|DOWNTREND)\b", upper))
+    has_verb_bear = bool(re.search(r"\b(?:SHORT|SELL|DOWN)\b", upper))
+    has_verb_bull = bool(re.search(r"\b(?:LONG|BUY|UP)\b", upper))
+    any_bull = has_adj_bull or has_verb_bull
+    any_bear = has_adj_bear or has_verb_bear
+    conflict = any_bull and any_bear
+
+    if conflict:
+        # Explicit adjective wins over verb. If both adjectives are present
+        # (rare), fall back to whichever appeared first in the text.
+        if has_adj_bull and not has_adj_bear:
+            direction = "bullish"
+        elif has_adj_bear and not has_adj_bull:
+            direction = "bearish"
+        elif has_adj_bull and has_adj_bear:
+            direction = "bullish" if upper.find("BULLISH") < upper.find("BEARISH") else "bearish"
+        else:
+            direction = "bearish" if has_verb_bear else "bullish"
+        # No inline warning here — the caller renders a richer
+        # ConfidenceScore clarification panel which already explains
+        # the conflict in context.
+    elif any_bear:
+        direction = "bearish"
+    else:
+        direction = "bullish"
+
+    # 2) Try to extract a single uppercase ticker-like token (3-12 chars, all caps in original text).
+    # Look at the ORIGINAL text (not uppercased) so we don't false-match natural-language words.
+    symbol_candidates = re.findall(r"\b[A-Z][A-Z0-9&\-]{2,11}\b", text)
+    symbol_candidates = [s for s in symbol_candidates if s not in _MTF_STOPWORDS and not s.startswith("NIFTY")]
+
+    direction_explicit = has_adj_bull or has_adj_bear
+
+    def _score(decision: str, *, has_target: bool, multi_sym: bool = False, alts=None):
+        return score_intent(
+            decision=decision,
+            has_direction_conflict=conflict,
+            direction_explicit=direction_explicit,
+            has_index_or_symbol=has_target,
+            multiple_symbol_candidates=multi_sym,
+            extra_signals={
+                "has_adj_bull": has_adj_bull, "has_adj_bear": has_adj_bear,
+                "has_verb_bull": has_verb_bull, "has_verb_bear": has_verb_bear,
+                "index_match": index_match.group(0).strip() if index_match else None,
+                "symbol_candidates": list(symbol_candidates),
+            },
+            alternatives=list(alts or []),
+        )
+
+    if symbol_candidates and not index_match:
+        # Prefer the longest candidate (less likely to be an accidental acronym).
+        sym = max(symbol_candidates, key=len)
+        rewrite = f"/mtf {sym}"
+        # Surface other candidates as alternatives if the user had multiple.
+        other = sorted({s for s in symbol_candidates if s != sym})[:3]
+        alts = [f"/mtf {s}" for s in other]
+        return rewrite, _score(rewrite, has_target=True, multi_sym=len(other) > 0, alts=alts)
+
+    if index_match:
+        idx = index_match.group(0).strip().upper()
+        idx = re.sub(r"NIFTY\s*", "NIFTY ", idx).strip()
+        rewrite = f"/mtf scan {idx} {direction} --min-score 70"
+        alts = []
+        if conflict:
+            other = "bearish" if direction == "bullish" else "bullish"
+            alts.append(f"/mtf scan {idx} {other} --min-score 70")
+        return rewrite, _score(rewrite, has_target=True, alts=alts)
+
+    # Generic MTF request without explicit symbol or index → NIFTY 50 scan.
+    rewrite = f"/mtf scan NIFTY 50 {direction} --min-score 70"
+    alts = ["/mtf scan NIFTY 500 " + direction + " --min-score 70"]
+    if conflict:
+        other = "bearish" if direction == "bullish" else "bullish"
+        alts.append(f"/mtf scan NIFTY 50 {other} --min-score 70")
+    return rewrite, _score(rewrite, has_target=False, alts=alts)
+
+
+def _detect_mtf_intent(text: str) -> str | None:
+    """Backward-compatible wrapper around :func:`_detect_mtf_intent_scored`.
+
+    Returns just the rewrite string (or ``None``). Callers that want the
+    confidence score should use :func:`_detect_mtf_intent_scored`
+    directly.
+    """
+    rewrite, _ = _detect_mtf_intent_scored(text)
+    return rewrite
+
+
+def _normalize_mtf_index(idx: str) -> str:
+    """Normalize user-typed index aliases to NSE API form.
+
+    Accepts ``NIFTY50``, ``NIFTY 50``, ``nifty50``, ``BANKNIFTY``, ``NIFTYNEXT50``,
+    ``MIDCAP100``, etc. and returns the canonical form expected by the NSE
+    ``equity-stockIndices`` API (e.g. ``NIFTY 50``, ``NIFTY BANK``).
+    """
+    if not idx:
+        return "NIFTY 50"
+    raw = idx.upper().strip()
+    compact = raw.replace(" ", "").replace("-", "")
+    aliases = {
+        "NIFTY50": "NIFTY 50",
+        "NIFTY100": "NIFTY 100",
+        "NIFTY200": "NIFTY 200",
+        "NIFTY500": "NIFTY 500",
+        "NIFTYNEXT50": "NIFTY NEXT 50",
+        "NEXT50": "NIFTY NEXT 50",
+        "NIFTYMIDCAP50": "NIFTY MIDCAP 50",
+        "NIFTYMIDCAP100": "NIFTY MIDCAP 100",
+        "NIFTYMIDCAP150": "NIFTY MIDCAP 150",
+        "MIDCAP50": "NIFTY MIDCAP 50",
+        "MIDCAP100": "NIFTY MIDCAP 100",
+        "MIDCAP150": "NIFTY MIDCAP 150",
+        "NIFTYSMALLCAP100": "NIFTY SMALLCAP 100",
+        "NIFTYSMALLCAP250": "NIFTY SMALLCAP 250",
+        "SMALLCAP100": "NIFTY SMALLCAP 100",
+        "SMALLCAP250": "NIFTY SMALLCAP 250",
+        "BANKNIFTY": "NIFTY BANK",
+        "NIFTYBANK": "NIFTY BANK",
+        "NIFTYIT": "NIFTY IT",
+        "NIFTYAUTO": "NIFTY AUTO",
+        "NIFTYFMCG": "NIFTY FMCG",
+        "NIFTYPHARMA": "NIFTY PHARMA",
+        "NIFTYMETAL": "NIFTY METAL",
+        "NIFTYREALTY": "NIFTY REALTY",
+        "NIFTYENERGY": "NIFTY ENERGY",
+        "NIFTYFINSERVICE": "NIFTY FIN SERVICE",
+        "NIFTYFINSERVICES": "NIFTY FIN SERVICE",
+        "FINNIFTY": "NIFTY FIN SERVICE",
+    }
+    if compact in aliases:
+        return aliases[compact]
+    return raw
+
+
+def _handle_mtf_command(raw_command: str) -> None:
+    """Shared handler for ``/mtf`` invoked from both the chat loop and --query mode.
+
+    Supports:
+      • ``/mtf SYMBOL [--report]``                           single-symbol panel
+      • ``/mtf scan [INDEX] [bullish|bearish] [--min-score N] [--report]``
+
+    Renders rich tables via :mod:`terminal.renderer`. When ``--report`` is
+    supplied, also writes the result to ``reports/mtf/*.md`` and prints the
+    path. The console output is always recorded so ``| /email`` captures
+    the full styled table automatically.
+    """
+    from terminal.tools import analyze_mtf as _analyze_mtf_tool, scan_mtf_aligned as _scan_mtf_tool
+    from terminal.renderer import render_mtf_panel, render_mtf_scan, write_mtf_report
+
+    raw_args = raw_command.strip()
+    if raw_args.lower().startswith("/mtf"):
+        raw_args = raw_args[len("/mtf"):].strip()
+    tokens = raw_args.split()
+
+    want_report = False
+    if "--report" in tokens:
+        want_report = True
+        tokens = [t for t in tokens if t != "--report"]
+
+    try:
+        if tokens and tokens[0].lower() == "scan":
+            scan_args = tokens[1:]
+            index = "NIFTY 50"
+            direction = "bullish"
+            min_score = 70
+            passthrough: list[str] = []
+            i = 0
+            while i < len(scan_args):
+                t = scan_args[i]
+                tl = t.lower()
+                # Tolerant direction matching: catches "bull", "bullish",
+                # "bullishh" (typo), "bear", "bearish", "short", "long".
+                if tl.startswith("bull") or tl in ("long", "up", "buy"):
+                    direction = "bullish"
+                elif tl.startswith("bear") or tl in ("short", "down", "sell"):
+                    direction = "bearish"
+                elif tl in ("--min-score", "--min_score"):
+                    if i + 1 < len(scan_args):
+                        try:
+                            min_score = int(scan_args[i + 1])
+                        except ValueError:
+                            pass
+                        i += 1
+                else:
+                    passthrough.append(t)
+                i += 1
+            if passthrough:
+                # Try normalising each token individually first — handles
+                # cases where a junk token follows a valid alias, e.g.
+                # ``NIFTY500 garbage``. Prefer the first token that maps
+                # cleanly. Falls back to joined+normalize for multi-word
+                # indices like ``NIFTY FIN SERVICE``.
+                resolved = None
+                for tok in passthrough:
+                    norm = _normalize_mtf_index(tok)
+                    if norm != tok.upper().strip():
+                        resolved = norm
+                        break
+                index = resolved or _normalize_mtf_index(" ".join(passthrough).upper())
+            else:
+                index = _normalize_mtf_index(index)
+
+            result = _scan_mtf_tool(
+                index=index, direction=direction, min_score=min_score, top_n=10,
+            )
+            # Surface a clearer error when the universe resolves to nothing.
+            # ``scan_mtf_aligned`` reports "Empty universe after dedup." which
+            # hides the underlying cause (typically an unknown index alias).
+            if (
+                isinstance(result, dict)
+                and "empty universe" in str(result.get("error", "")).lower()
+            ):
+                _valid = (
+                    "NIFTY 50, NIFTY 100, NIFTY 200, NIFTY 500, NIFTY NEXT 50, "
+                    "NIFTY BANK, NIFTY IT, NIFTY AUTO, NIFTY FMCG, NIFTY PHARMA, "
+                    "NIFTY METAL, NIFTY REALTY, NIFTY ENERGY, NIFTY FIN SERVICE, "
+                    "NIFTY MIDCAP 50/100/150, NIFTY SMALLCAP 100/250"
+                )
+                console.print(
+                    f"[red]  ✗ /mtf scan failed:[/red] index "
+                    f"'[yellow]{index}[/yellow]' returned no symbols.\n"
+                    f"[dim]  Known indices:[/dim] {_valid}"
+                )
+                return
+            render_mtf_scan(result)
+            if want_report and not result.get("error"):
+                path = write_mtf_report(result)
+                console.print(f"[dim]  ✓ Report written:[/dim] {path}")
+
+        elif tokens:
+            symbol = tokens[0].upper()
+            result = _analyze_mtf_tool(symbol)
+            render_mtf_panel(result)
+            if want_report and not result.get("error"):
+                path = write_mtf_report(result)
+                console.print(f"[dim]  ✓ Report written:[/dim] {path}")
+
+        else:
+            console.print(
+                "[dim]  Usage:[/dim]\n"
+                "  /mtf SYMBOL [--report]                                   — single-symbol MTF panel\n"
+                "  /mtf scan [INDEX] [bullish|bearish] [--min-score N] [--report]\n"
+                "  /mtf SYMBOL | /email --to a@x.com                         — email rendered table"
+            )
+    except Exception as exc:
+        console.print(f"[red]  ✗ /mtf crashed:[/red] {exc}")
+
+
+def _handle_visual_scan_command(raw_command: str, agent=None) -> None:
+    """Run ``/visual-scan SYMBOL`` directly without LLM planning."""
+    parts = raw_command.strip().split()
+    symbol = ""
+    capture_tradingview = True
+    for part in parts[1:]:
+        if part.lower() in {"--no-tv", "--no-tradingview"}:
+            capture_tradingview = False
+            continue
+        if not symbol:
+            symbol = re.sub(r"[^A-Za-z0-9&-]", "", part).upper()
+
+    if not symbol:
+        console.print("[dim]  Usage: /visual-scan DMART [--no-tv][/dim]")
+        return
+
+    from terminal.visual_scan.command import run_visual_scan
+
+    console.print(f"[dim]  → Visual scan: {symbol}[/dim]")
+    result = run_visual_scan(symbol, capture_tradingview=capture_tradingview)
+    lines = [
+        f"━━━ {result.get('symbol', symbol)} — Visual Scan ━━━",
+        result.get("summary", "Visual scan completed."),
+    ]
+    if result.get("html_path"):
+        lines.append(f"Report: {result['html_path']}")
+    if result.get("json_path"):
+        lines.append(f"Evidence: {result['json_path']}")
+    output = "\n".join(lines)
+    _remember_generated_report(output)
+    if agent is not None:
+        _remember_terminal_interaction(
+            agent,
+            raw_command,
+            output,
+            intent="visual_scan",
+            source_label="Visual Scan report",
+            result_type="report",
+            result_items=[str(result.get("html_path", "")), str(result.get("json_path", ""))],
+        )
+    console.print(Markdown(_linkify_markdown(output)))
 
 
 # ── Markdown table interceptor ────────────────────────────────────────────────
@@ -3234,6 +4999,21 @@ def _print_response(result: dict) -> None:
         for i, q in enumerate(_followups, 1):
             _print_followup_line(i, q)
         console.print("[dim]  Reply 1 · 2 · 3 or type the command directly[/dim]")
+
+    # ── Synthesis-stage confidence check (PG 2026-05-22) ──────────────────
+    # Run a small heuristic on the final answer text. If hedge density or
+    # stale-data markers dominate, surface a non-blocking clarification
+    # panel so the user knows the result may need a follow-up.
+    try:
+        from terminal.confidence import score_synthesis, render_clarification
+
+        _synth_conf = score_synthesis(clean, decision="final-answer")
+        # Suppress the panel for short/trivial answers where the heuristic
+        # is unreliable (e.g. a one-line table summary).
+        if _synth_conf.needs_clarification and len(clean or "") > 200:
+            render_clarification(_synth_conf, console)
+    except Exception:
+        pass
 
     console.print()
     _separator()
@@ -3752,7 +5532,7 @@ def _handle_us_global_command(text: str) -> bool:
                 if full_prices is not None and not getattr(full_prices, "empty", False):
                     report_bundle = build_us_market_bundle(full_prices, warnings=full_result.get("warnings", []))
         report_result = render_us_market_report(report_bundle)
-        console.print(Markdown(_format_us_global_terminal_summary(request, bundle, report_result)))
+        console.print(Markdown(_linkify_markdown(_format_us_global_terminal_summary(request, bundle, report_result))))
     except Exception as exc:
         console.print(f"[bold red]  ❌  US/global command failed: {exc}[/bold red]")
     return True
@@ -4270,6 +6050,13 @@ def _print_help() -> None:
             "  [cyan]/screen supertrend[/cyan]        — Supertrend BUY state\n"
             "  [cyan]/screen strong[/cyan]            — STRONG_BUY signals\n"
             "  [cyan]/screen new[/cyan]               — New Stage 2 entrants (14d)\n\n"
+            "[bold cyan]MULTI-TIMEFRAME (MTF) 📐[/bold cyan]\n"
+            "  [cyan]/mtf RELIANCE[/cyan]             — MTF panel: verdict + score across M/W/D/60m/15m\n"
+            "  [cyan]/mtf RELIANCE --report[/cyan]    — Also write markdown to reports/mtf/\n"
+            "  [cyan]/mtf scan NIFTY50 bullish[/cyan] — Rank Nifty 50 by bullish confluence (top 10)\n"
+            "  [cyan]/mtf scan NIFTY500 bearish --min-score 80[/cyan] — Custom universe + threshold\n"
+            "  [cyan]/mtf scan BANKNIFTY bullish[/cyan] — Sector/index scan (BANKNIFTY, FINNIFTY, MIDCAP100…)\n"
+            "  [cyan]/mtf RELIANCE | /email --to a@x.com[/cyan] — Email the rendered panel\n\n"
             "[bold magenta]BACKGROUND MONITORS 🔔[/bold magenta]\n"
             "  [magenta]/monitor list[/magenta]          — Show available strategies\n"
             "  [magenta]/monitor status[/magenta]        — Show active monitors\n"
@@ -4663,24 +6450,29 @@ def _single_query(agent, query: str, show_trace: bool) -> None:
         _print_user(query)
         output = handle_strategy_council_command(query, data_mode=_mode)
         _remember_generated_report(output)
-        console.print(Markdown(output))
+        console.print(Markdown(_linkify_markdown(output)))
         return
 
     if query.strip().lower().startswith(("/backtest", "/strategy-lab")):
         from terminal.backtest import handle_backtest_command
         _print_user(query)
-        console.print(Markdown(handle_backtest_command(query)))
+        console.print(Markdown(_linkify_markdown(handle_backtest_command(query))))
         return
 
     if query.strip().lower().startswith("/data-coverage"):
         from terminal.data_coverage import handle_data_coverage_command
         _print_user(query)
-        console.print(Markdown(handle_data_coverage_command(query)))
+        console.print(Markdown(_linkify_markdown(handle_data_coverage_command(query))))
         return
 
     if _is_open_last_report_request(query):
         _print_user(query)
-        console.print(Markdown(_open_last_generated_report()))
+        console.print(Markdown(_linkify_markdown(_open_last_generated_report())))
+        return
+
+    if query.strip().lower().startswith(("/visual-scan", "/visual_scan")):
+        _print_user(query)
+        _handle_visual_scan_command(query, agent)
         return
 
     if query.strip().lower().startswith("/doctor"):
@@ -4695,6 +6487,19 @@ def _single_query(agent, query: str, show_trace: bool) -> None:
             console.print(f"[bold red]  ❌ PostgreSQL doctor failed: {exc}[/bold red]")
         return
 
+    _mtf_rewrite, _mtf_conf = _detect_mtf_intent_scored(query)
+    if _mtf_rewrite is not None:
+        console.print(f"[dim]  ⤳ Routing freeform MTF prompt → [bold]{_mtf_rewrite}[/bold][/dim]")
+        if _mtf_conf is not None:
+            from terminal.confidence import render_clarification as _render_clarif
+            _render_clarif(_mtf_conf, console)
+        query = _mtf_rewrite
+
+    if query.strip().lower().startswith("/mtf"):
+        _print_user(query)
+        _handle_mtf_command(query)
+        return
+
     if query.strip().lower().startswith("/strength"):
         parts = query.strip().split()[1:]
         symbols = [re.sub(r"[^A-Za-z0-9&-]", "", p).upper() for p in parts]
@@ -4705,6 +6510,44 @@ def _single_query(agent, query: str, show_trace: bool) -> None:
             return
         from terminal.tools import validate_strength_watchlist
         _print_strength_validation(validate_strength_watchlist(symbols))
+        return
+
+    # ── /email — first-class report mailer (PG 2026-05-19) ───────────────
+    # Mirrors the handler in _chat_loop. Without this branch, --query "/email …"
+    # falls through to the LLM path which mis-classifies report aliases/notes
+    # as stock symbols and fails symbol validation.
+    if query.strip().lower().startswith("/email"):
+        _print_user(query)
+        try:
+            from terminal.email_dispatcher import (
+                run_email_command,
+                email_command_usage,
+            )
+            arg_part = query.strip()[len("/email"):].strip()
+            if not arg_part or arg_part.lower() in {"help", "-h", "--help"}:
+                console.print(f"[cyan]  /email usage:[/cyan]\n{email_command_usage()}")
+                return
+            console.print("[dim]  → Composing email via LLM…[/dim]")
+            result = run_email_command(query, agent)
+            if not result.get("ok"):
+                console.print(f"[red]  ✗ /email failed:[/red] {result.get('message', 'unknown error')}")
+                console.print(f"[dim]  Usage:[/dim]\n{email_command_usage()}")
+                return
+            subj  = result.get("subject", "")
+            recip = result.get("recipients", {})
+            to_str  = ", ".join(recip.get("to", []))
+            bcc_str = ", ".join(recip.get("bcc", []))
+            console.print(f"[green]  ✓ /email {result.get('message', '')}[/green]")
+            console.print(f"[dim]    subject: [bold]{subj}[/bold][/dim]")
+            console.print(f"[dim]    to:  {to_str}[/dim]")
+            if bcc_str:
+                console.print(f"[dim]    bcc: {bcc_str}[/dim]")
+            if result.get("dry_run"):
+                console.print(f"[dim]    preview: {result.get('body_path', '')}[/dim]")
+            else:
+                console.print(f"[dim]    mode: {result.get('mode', '')}  ·  report: {result.get('report', '')}[/dim]")
+        except Exception as exc:
+            console.print(f"[red]  ✗ /email crashed:[/red] {exc}")
         return
 
     _print_user(query)
@@ -4791,14 +6634,125 @@ def _chat_loop(agent, show_trace: bool) -> None:
     )
 
     console.print(f"[bold green]  ✓ Agent Adda ready[/bold green] [dim]{_session_clock_label()}[/dim] — type your question and press Enter")
-    console.print("[dim]  Tip: /live  /eod  /auto  │  /model  │  /prompts  │  /youtube  │  /ric  │  1·2·3 = follow-ups  │  /new  │  /help  │  exit[/dim]")
+    console.print("[dim]  Tip: /live  /eod  /auto  │  /model  │  /mtf  │  /prompts  │  /youtube  │  /ric  │  1·2·3 = follow-ups  │  /new  │  /help  │  exit[/dim]")
     console.print()
 
     # Start background alert auto-display thread.
     # Uses patch_stdout so alerts print above the active input line automatically.
     _start_alert_autodisplay()
 
+    # ── /email pipe state (PG 2026-05-20): chain "<cmd> | /email --to …") ─
+    # When a pipe is detected we enable rich Console recording, run the upstream
+    # turn normally, then on the *next* iteration top we drain the captured text
+    # and dispatch /email against a generated markdown file under reports/generated/.
+    _pending_email_pipe: dict | None = None
+    # PG 2026-05-20: keep recording always-on so /screenshot (and similar) can
+    # attach the prior turn's terminal output. Between turns we snapshot the
+    # buffer into the renderer cache and clear it to bound memory.
+    console.record = True
+    from terminal.renderer import set_last_turn_capture as _set_last_turn_capture
+
     while True:
+        # ── Finalize any pending /email pipe from the previous iteration ─
+        if _pending_email_pipe is not None:
+            # PG 2026-05-20: capture rich console output as HTML (with inline
+            # styles preserving colors/formatting) so the attachment is a
+            # faithful rendering of what the user saw, not stripped plaintext.
+            _captured_html = ""
+            _captured_text = ""
+            try:
+                _captured_html = console.export_html(
+                    clear=False, inline_styles=True, code_format=None
+                )
+            except Exception as _exc:
+                _captured_html = ""
+                _captured_text = f"[error exporting captured HTML: {_exc}]"
+            try:
+                _captured_text = console.export_text(clear=True) or _captured_text
+            except Exception as _exc:
+                if not _captured_text:
+                    _captured_text = f"[error exporting captured text: {_exc}]"
+            # PG 2026-05-20: keep record-mode on for downstream /screenshot etc.
+            _pending = _pending_email_pipe
+            _pending_email_pipe = None
+            try:
+                _gen_dir = Path(__file__).resolve().parent / "reports" / "generated"
+                _gen_dir.mkdir(parents=True, exist_ok=True)
+                _slug = re.sub(r"[^a-zA-Z0-9]+", "_", _pending["upstream"]).strip("_")[:60] or "pipe"
+                _ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+                _captured_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                _header_html = (
+                    "<div style=\"font-family:Arial,Helvetica,sans-serif;"
+                    "padding:12px 16px;background:#1a365d;color:#fff;"
+                    "border-radius:6px;margin:0 0 14px 0;\">"
+                    "<div style=\"font-size:16px;font-weight:bold;\">"
+                    "Agent Adda · captured terminal output</div>"
+                    f"<div style=\"font-size:12px;color:#cbd5e0;margin-top:4px;\">"
+                    f"<b>Source command:</b> <code style=\"color:#fff;\">"
+                    f"{_pending['upstream'].replace('<','&lt;').replace('>','&gt;')}</code>"
+                    f"</div>"
+                    f"<div style=\"font-size:12px;color:#cbd5e0;\">"
+                    f"<b>Captured at:</b> {_captured_at}</div>"
+                    "</div>"
+                )
+                if _captured_html:
+                    # Rich's export_html returns a full <html><body>…</body></html>
+                    # document. Inject our header just inside <body> so the
+                    # attachment opens as a styled standalone page.
+                    if "<body" in _captured_html:
+                        _captured_html = re.sub(
+                            r"(<body[^>]*>)",
+                            r"\1\n" + _header_html,
+                            _captured_html,
+                            count=1,
+                        )
+                    else:
+                        _captured_html = _header_html + _captured_html
+                    _outfile = _gen_dir / f"piped_{_slug}_{_ts}.html"
+                    _outfile.write_text(_captured_html, encoding="utf-8")
+                else:
+                    # Plaintext fallback if HTML export was unavailable.
+                    _outfile = _gen_dir / f"piped_{_slug}_{_ts}.md"
+                    _outfile.write_text(
+                        "# Captured output\n\n"
+                        f"**Source command:** `{_pending['upstream']}`\n\n"
+                        f"**Captured at:** {_captured_at}\n\n"
+                        f"---\n\n```\n{(_captured_text or '').strip()}\n```\n",
+                        encoding="utf-8",
+                    )
+                from terminal.email_dispatcher import run_email_command as _run_email_pipe
+                _email_cmd = f"/email {_outfile} {_pending['tail']}".strip()
+                console.print(f"[dim]  ⤳ /email pipe → composing email from captured output…[/dim]")
+                _email_result = _run_email_pipe(_email_cmd, agent)
+                if _email_result.get("ok"):
+                    console.print(f"[green]  ✓ /email {_email_result.get('message','')}[/green]")
+                    console.print(f"[dim]    subject: [bold]{_email_result.get('subject','')}[/bold][/dim]")
+                    _rec = _email_result.get("recipients", {})
+                    console.print(f"[dim]    to: {', '.join(_rec.get('to', []))}[/dim]")
+                    if _rec.get("bcc"):
+                        console.print(f"[dim]    bcc: {', '.join(_rec.get('bcc', []))}[/dim]")
+                    console.print(f"[dim]    captured: {_outfile}[/dim]")
+                else:
+                    console.print(f"[red]  ✗ /email pipe failed:[/red] {_email_result.get('message','unknown error')}")
+            except Exception as _exc:
+                console.print(f"[red]  ✗ /email pipe crashed:[/red] {_exc}")
+        else:
+            # PG 2026-05-20: snapshot the just-completed turn's console output
+            # into the renderer cache so /screenshot (next turn) can attach it
+            # as terminal context. Clears the buffer to bound memory.
+            try:
+                _turn_html = console.export_html(
+                    clear=False, inline_styles=True, code_format=None
+                )
+            except Exception:
+                _turn_html = ""
+            try:
+                _turn_text = console.export_text(clear=True)
+            except Exception:
+                _turn_text = ""
+            if (_turn_text or "").strip():
+                _set_last_turn_capture(_turn_html, _turn_text)
+
         # ── Restart auto-display + drain any queued alerts before prompt ─
         _start_alert_autodisplay()
         _check_monitor_alerts()
@@ -4835,6 +6789,27 @@ def _chat_loop(agent, show_trace: bool) -> None:
         text, _normalise_note = _normalise_interactive_input(text, _followups)
         if _normalise_note:
             console.print(f"[dim]  → {_normalise_note}[/dim]")
+
+        # ── Detect "<upstream> | /email …" chain syntax (PG 2026-05-20) ──
+        # Strips the trailing "| /email …" off `text`, captures upstream output
+        # via rich Console recording, and dispatches /email on the next loop top.
+        _pipe_match = re.search(r"\s\|\s*/email\b(.*)$", text, flags=re.IGNORECASE)
+        if _pipe_match:
+            _email_tail = _pipe_match.group(1).strip()
+            _upstream_text = text[:_pipe_match.start()].strip()
+            if not _upstream_text:
+                console.print("[red]  ✗ /email pipe: upstream command is empty[/red]")
+                continue
+            if not _email_tail:
+                console.print("[red]  ✗ /email pipe: missing /email args (e.g. --to a@x.com)[/red]")
+                continue
+            _pending_email_pipe = {"upstream": _upstream_text, "tail": _email_tail}
+            try:
+                console.export_text(clear=True)
+            except Exception:
+                pass
+            console.print(f"[dim]  ⤳ piping output to /email after upstream completes…[/dim]")
+            text = _upstream_text
         try:
             from terminal.situation_assessment import assess_entity_topic_request as _assess_entity_topic_request
             _entity_assessment = _assess_entity_topic_request(text)
@@ -4890,6 +6865,20 @@ def _chat_loop(agent, show_trace: bool) -> None:
             print_banner()
             continue
 
+        _mtf_rewrite, _mtf_conf = _detect_mtf_intent_scored(text)
+        if _mtf_rewrite is not None:
+            console.print(f"[dim]  ⤳ Routing freeform MTF prompt → [bold]{_mtf_rewrite}[/bold][/dim]")
+            if _mtf_conf is not None:
+                from terminal.confidence import render_clarification as _render_clarif
+                _render_clarif(_mtf_conf, console)
+            text = _mtf_rewrite
+
+        if text.lower().startswith("/mtf"):
+            _print_user(text)
+            _handle_mtf_command(text)
+            _separator()
+            continue
+
         if text.lower().startswith("/strength"):
             parts = text.split()[1:]
             symbols = [re.sub(r"[^A-Za-z0-9&-]", "", p).upper() for p in parts]
@@ -4917,21 +6906,21 @@ def _chat_loop(agent, show_trace: bool) -> None:
                 source_label="Strategy Council report",
                 result_type="report",
             )
-            console.print(Markdown(output))
+            console.print(Markdown(_linkify_markdown(output)))
             _separator()
             continue
 
         if text.lower().startswith(("/backtest", "/strategy-lab")):
             from terminal.backtest import handle_backtest_command
             _print_user(text)
-            console.print(Markdown(handle_backtest_command(text)))
+            console.print(Markdown(_linkify_markdown(handle_backtest_command(text))))
             _separator()
             continue
 
         if text.lower().startswith("/data-coverage"):
             from terminal.data_coverage import handle_data_coverage_command
             _print_user(text)
-            console.print(Markdown(handle_data_coverage_command(text)))
+            console.print(Markdown(_linkify_markdown(handle_data_coverage_command(text))))
             _separator()
             continue
 
@@ -4953,9 +6942,16 @@ def _chat_loop(agent, show_trace: bool) -> None:
 
         # ── /dashboard: comprehensive current-market dashboard + narrative ─
         if text.lower() in ("/dashboard", "/dash") or text.lower().startswith(("/dashboard ", "/dash ")):
-            topic = text.split(maxsplit=1)[1].strip() if len(text.split(maxsplit=1)) > 1 else ""
+            parsed_dashboard = _parse_dashboard_command(text)
             try:
-                _run_market_dashboard_live(topic, llm_backend=getattr(agent, "backend", None))
+                _run_market_dashboard_live(
+                    parsed_dashboard["focus"],
+                    llm_backend=getattr(agent, "backend", None),
+                    once=parsed_dashboard["once"],
+                    html_output=parsed_dashboard["html"],
+                    open_browser=parsed_dashboard["open"],
+                    drilldown=parsed_dashboard["drilldown"],
+                )
             finally:
                 console.print("[dim]  Dashboard closed.[/dim]")
             continue
@@ -5700,6 +7696,23 @@ def _chat_loop(agent, show_trace: bool) -> None:
                 _doc_export_note = f" → saving {_analyze_fmt.upper()} report" if _analyze_fmt else " → saving MD report"
                 console.print(f"[dim]  → Document Analysis (POT + TOT, 2-step): [bold]{source_label}[/bold]{_doc_export_note}[/dim]")
                 _analyze_sym = Path(arg).stem.split(".")[0][:20] if not _is_url else "document"
+                _doc_symbol_hint = _infer_symbol_from_analyze_arg(arg)
+                _symbol_supplement = (
+                    (
+                        f"\n\nSYMBOL CONTEXT — the input path suggests this document is about "
+                        f"the NSE-listed stock `{_doc_symbol_hint}`. If — AND ONLY IF — the "
+                        f"document itself does not disclose Revenue / EBITDA / PAT / EPS / Net "
+                        f"Debt (e.g. it is a strategy council report, a dashboard, a press "
+                        f"release, or a non-financial filing), supplement the Headline Numbers "
+                        f"Strip and Tables A–D using `get_symbol_snapshot('{_doc_symbol_hint}')` "
+                        f"and `get_latest_results('{_doc_symbol_hint}')`. Cite the tool name in "
+                        f"the cell (e.g. `Revenue ₹4,713 Cr (get_latest_results)`) instead of "
+                        f"leaving rows as `n/d`. Do NOT call these tools when the document "
+                        f"itself already contains the numbers — quote the page in that case."
+                    )
+                    if _doc_symbol_hint
+                    else ""
+                )
                 text = (
                     f"You are a senior buy-side analyst. Use the analyze_document tool with "
                     f"source='{arg}', max_pages=60, vision_fallback=true to read the FULL "
@@ -5870,6 +7883,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
                     f"• Do not skip Step 0, Step 1, Step 1.5 or Step 2 — all four must be "
                     f"  visible. The Executive Summary (Step 0) MUST be the first section "
                     f"  of the rendered report."
+                    + _symbol_supplement
                 )
                 # Always export to Markdown unless the user specified a different format.
                 _doc_export_fmt = _analyze_fmt or "md"
@@ -6010,6 +8024,83 @@ def _chat_loop(agent, show_trace: bool) -> None:
                     f"Piotroski F-score (financial health), Altman Z'-score (distress risk). "
                     f"Highlight any stocks with high risk and explain the specific flags."
                 )
+
+        # ── /email — first-class report mailer (LLM subject + body) ───────
+        # PG 2026-05-19: /email <report> --to ... [--bcc ...] [--as body|attachment|both] [--send]
+        # Composes an executive-grade email via the agent's LLM and sends/draft
+        # through Microsoft Outlook (macOS AppleScript). Friendly aliases:
+        # sector, stage2, index, portfolio, seasonal, us — or a direct path.
+        elif text.lower().startswith("/email"):
+            try:
+                from terminal.email_dispatcher import (
+                    run_email_command,
+                    email_command_usage,
+                )
+                arg_part = text[len("/email"):].strip()
+                if not arg_part or arg_part.lower() in {"help", "-h", "--help"}:
+                    console.print(f"[cyan]  /email usage:[/cyan]\n{email_command_usage()}")
+                    continue
+                console.print(f"[dim]  → Composing email via LLM…[/dim]")
+                result = run_email_command(text, agent)
+                if not result.get("ok"):
+                    console.print(f"[red]  ✗ /email failed:[/red] {result.get('message', 'unknown error')}")
+                    console.print(f"[dim]  Usage:[/dim]\n{email_command_usage()}")
+                    continue
+                subj = result.get("subject", "")
+                recip = result.get("recipients", {})
+                to_str  = ", ".join(recip.get("to", []))
+                bcc_str = ", ".join(recip.get("bcc", []))
+                console.print(
+                    f"[green]  ✓ /email {result.get('message', '')}[/green]"
+                )
+                console.print(f"[dim]    subject: [bold]{subj}[/bold][/dim]")
+                console.print(f"[dim]    to:  {to_str}[/dim]")
+                if bcc_str:
+                    console.print(f"[dim]    bcc: {bcc_str}[/dim]")
+                if result.get("dry_run"):
+                    console.print(f"[dim]    preview: {result.get('body_path', '')}[/dim]")
+                else:
+                    console.print(f"[dim]    mode: {result.get('mode', '')}  ·  report: {result.get('report', '')}[/dim]")
+                continue
+            except Exception as exc:
+                console.print(f"[red]  ✗ /email crashed:[/red] {exc}")
+                continue
+
+        # ── /screenshot — macOS screencapture + LLM-drafted /email (PG 2026-05-20) ─
+        # /screenshot --to a@x.com [--bcc b@y.com] [--mode interactive|window|full|delayed]
+        #             [--send] [--note "..."] [--dry-run] [--no-email] [--out path]
+        elif text.lower().startswith("/screenshot"):
+            try:
+                from terminal.screenshot import (
+                    run_screenshot_command,
+                    screenshot_command_usage,
+                )
+                arg_part = text[len("/screenshot"):].strip()
+                if arg_part.lower() in {"help", "-h", "--help"}:
+                    console.print(f"[cyan]  /screenshot usage:[/cyan]\n{screenshot_command_usage()}")
+                    continue
+                console.print("[dim]  → Capturing screenshot via macOS screencapture…[/dim]")
+                result = run_screenshot_command(text, agent)
+                shot = result.get("screenshot", "")
+                if not result.get("ok"):
+                    console.print(f"[red]  ✗ /screenshot failed:[/red] {result.get('message','unknown error')}")
+                    if shot:
+                        console.print(f"[dim]    file: {shot}[/dim]")
+                    console.print(f"[dim]  Usage:[/dim]\n{screenshot_command_usage()}")
+                    continue
+                console.print(f"[green]  ✓ /screenshot {result.get('message','')}[/green]")
+                console.print(f"[dim]    file: {shot}  ·  mode: {result.get('mode','')}  ·  {result.get('size_kb','?')} KB[/dim]")
+                email = result.get("email") or {}
+                if email:
+                    rec = email.get("recipients", {})
+                    console.print(f"[dim]    subject: [bold]{email.get('subject','')}[/bold][/dim]")
+                    console.print(f"[dim]    to:  {', '.join(rec.get('to', []))}[/dim]")
+                    if rec.get("bcc"):
+                        console.print(f"[dim]    bcc: {', '.join(rec.get('bcc', []))}[/dim]")
+                continue
+            except Exception as exc:
+                console.print(f"[red]  ✗ /screenshot crashed:[/red] {exc}")
+                continue
 
         # ── /voice-mode — persistent spoken responses for normal answers ──
         elif text.lower().startswith("/voice-mode"):
@@ -6767,6 +8858,13 @@ def _chat_loop(agent, show_trace: bool) -> None:
             )
             console.print(f"[dim]  → Strategy: {strat} on {sym}[/dim]")
 
+        # ── /visual-scan <symbol> — grounded EOD chart-pattern report ───
+        elif text.lower().startswith(("/visual-scan", "/visual_scan")):
+            _print_user(text)
+            _handle_visual_scan_command(text, agent)
+            _separator()
+            continue
+
         # ── /recap — intraday market recap (PG intraday.quote_snapshots) ─
         # PG-recap-slash: rewrite `/recap [minutes]` into a phrase that the
         # planner's `intraday_market_recap` keyword rule accepts. Without this
@@ -6875,7 +8973,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
                 source_label="local generated report",
                 result_type="report",
             )
-            console.print(Markdown(output))
+            console.print(Markdown(_linkify_markdown(output)))
             _separator()
             continue
 

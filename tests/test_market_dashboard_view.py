@@ -27,8 +27,15 @@ def _dashboard_snapshot():
             "stage_distribution": {"STAGE_1": 100, "STAGE_2": 420, "STAGE_3": 200, "STAGE_4": 280},
         },
         "get_top_gainers_losers": {
-            "gainers": [{"symbol": "AAA", "pct_change": 6.1}],
-            "losers": [{"symbol": "ZZZ", "pct_change": -5.4}],
+            "gainers": [{"symbol": "AAA", "last_price": 120.0, "pct_change": 6.1, "volume": 1500000}],
+            "losers": [{"symbol": "ZZZ", "last_price": 88.0, "pct_change": -5.4, "volume": 900000}],
+            "source": "NSE live API",
+        },
+        "get_top_gainers_losers_NIFTY_METAL": {
+            "index": "NIFTY METAL",
+            "gainers": [{"symbol": "TATASTEEL", "last_price": 172.5, "pct_change": 3.2, "volume": 2100000}],
+            "losers": [{"symbol": "HINDZINC", "last_price": 410.0, "pct_change": -0.8, "volume": 500000}],
+            "source": "NSE live API",
         },
         "get_fii_dii_activity": {"data": [{"category": "FII", "net_crore": 850.0}]},
         "get_global_market_assessment": {"risk_regime": "risk-on"},
@@ -49,7 +56,29 @@ def _dashboard_snapshot():
             ],
             "rollover": {"rollover_pct": 62.0},
         },
-        "run_screener_query": {"results": [{"symbol": "AAA", "rs_pct": 88.0}]},
+        "get_options_chain_BANKNIFTY": {
+            "symbol": "BANKNIFTY",
+            "pcr": 1.05,
+            "max_pain": 54000,
+            "calls": [{"strike": 54500, "oi": 500000}],
+            "puts": [{"strike": 53500, "oi": 650000}],
+        },
+        "get_futures_analysis_BANKNIFTY": {
+            "symbol": "BANKNIFTY",
+            "futures": [{"basis": 85.0, "basis_pct": 0.16, "cost_of_carry_annualised_pct": 7.5}],
+            "rollover": {"rollover_pct": 58.0},
+        },
+        "run_screener_query": {"results": [{"symbol": "AAA", "rs_pct": 88.0, "change": 2.5}]},
+        "run_intraday_screener_vcp": {
+            "screen_type": "vcp",
+            "results": [{"symbol": "AAA", "score": 72, "setup_label": "WATCH", "setup_side": "long", "timeframe": "15m"}],
+            "source": "PostgreSQL intraday.ohlcv_bars",
+        },
+        "run_intraday_screener_supertrend": {
+            "screen_type": "supertrend",
+            "results": [{"symbol": "BBB", "score": 68, "setup_label": "LONG_SETUP", "setup_side": "long", "supertrend_dir": 1, "timeframe": "15m"}],
+            "source": "PostgreSQL intraday.ohlcv_bars",
+        },
     }
 
 
@@ -103,6 +132,65 @@ class MarketDashboardViewTests(unittest.TestCase):
         self.assertIn("Recommendations", text)
         self.assertIn("Options unavailable", text)
         self.assertIn("Futures unavailable", text)
+
+    def test_dashboard_reactions_actions_and_opportunity_radar_are_source_backed(self):
+        snapshot = _dashboard_snapshot()
+
+        reactions = nse_agent._dashboard_reactions(snapshot)
+        actions = nse_agent._dashboard_action_cards(snapshot, reactions)
+        opportunities = nse_agent._dashboard_opportunity_radar(snapshot)
+
+        self.assertTrue(any(row["label"] == "Risk-on confirmation" for row in reactions))
+        self.assertTrue(any(row["command"] == "/scan momentum" for row in actions))
+        self.assertTrue(any(row["label"] == "Pocket of Strength" for row in opportunities))
+        self.assertTrue(any("VCP" in row["setup_tags"] for row in opportunities))
+        self.assertTrue(any("Supertrend" in row["setup_tags"] for row in opportunities))
+        self.assertFalse(
+            any(
+                "confirmed" in row["evidence"].lower() and "VCP" in row["setup_tags"]
+                for row in opportunities
+                if row.get("confidence") != "high"
+            )
+        )
+
+    def test_dashboard_fno_details_include_nifty_banknifty_and_status(self):
+        fno = nse_agent._dashboard_fno_details(_dashboard_snapshot())
+
+        self.assertIn("NIFTY", fno)
+        self.assertIn("BANKNIFTY", fno)
+        self.assertEqual(fno["NIFTY"]["status"], "available")
+        self.assertEqual(fno["BANKNIFTY"]["status"], "available")
+        self.assertEqual(fno["NIFTY"]["support"], "23,500")
+        self.assertEqual(fno["BANKNIFTY"]["resistance"], "54,500")
+
+    def test_dashboard_top_index_drilldown_uses_top_indices_and_stock_actions(self):
+        rows = nse_agent._dashboard_top_index_drilldown(_dashboard_snapshot())
+
+        self.assertEqual(rows[0]["index"], "NIFTY METAL")
+        self.assertTrue(rows[0]["stocks"])
+        self.assertEqual(rows[0]["stocks"][0]["symbol"], "TATASTEEL")
+        self.assertIn("/analyze TATASTEEL", rows[0]["stocks"][0]["actions"])
+
+    def test_dashboard_renderable_includes_action_sections_and_drilldown(self):
+        text = _render_text(nse_agent._market_dashboard_renderable(_dashboard_snapshot(), width=160, height=44, drilldown=True))
+
+        self.assertIn("Reaction Engine", text)
+        self.assertIn("Action Board", text)
+        self.assertIn("Opportunity Radar", text)
+        self.assertIn("Top Stocks in Top Indices", text)
+        self.assertIn("VCP", text)
+        self.assertIn("Supertrend", text)
+
+    def test_dashboard_html_contains_command_center_sections_and_clickable_drilldown(self):
+        html = nse_agent._render_market_dashboard_html(_dashboard_snapshot(), drilldown=True)
+
+        self.assertIn("Reaction Engine", html)
+        self.assertIn("Action Board", html)
+        self.assertIn("Opportunity Radar", html)
+        self.assertIn("F&amp;O Control", html)
+        self.assertIn("Top Stocks in Top Indices", html)
+        self.assertIn("data-index-card", html)
+        self.assertIn("/scan vcp", html)
 
 
 if __name__ == "__main__":

@@ -27,6 +27,55 @@ from backtesting.strategy_council.types import (
 )
 
 
+DEFAULT_BENCHMARK_INDEX = "Nifty 50"
+
+
+def _load_default_benchmark_closes(eod_data: pd.DataFrame) -> pd.Series | None:
+    """Best-effort load of Nifty 50 closes aligned to the symbol's date range.
+
+    Returns ``None`` if Postgres or the benchmark series is unavailable so the
+    enrichment step degrades gracefully.
+    """
+    import os
+
+    try:
+        import psycopg2  # type: ignore
+    except Exception:
+        return None
+
+    try:
+        date_col = "date" if "date" in eod_data.columns else None
+        start = eod_data[date_col].min() if date_col else None
+        end = eod_data[date_col].max() if date_col else None
+        dsn = os.environ.get("AGENT_ADDA_PG_DSN") or "dbname=nse_market user=nse_admin host=/tmp"
+        with psycopg2.connect(dsn) as conn, conn.cursor() as cur:
+            if start is not None and end is not None:
+                cur.execute(
+                    """
+                    SELECT trade_date, close FROM market.index_eod
+                    WHERE index_symbol = %s AND trade_date BETWEEN %s AND %s
+                    ORDER BY trade_date
+                    """,
+                    (DEFAULT_BENCHMARK_INDEX, start, end),
+                )
+            else:
+                cur.execute(
+                    """
+                    SELECT trade_date, close FROM market.index_eod
+                    WHERE index_symbol = %s ORDER BY trade_date
+                    """,
+                    (DEFAULT_BENCHMARK_INDEX,),
+                )
+            rows = cur.fetchall()
+        if not rows:
+            return None
+        df = pd.DataFrame(rows, columns=["date", "close"])
+        df["close"] = pd.to_numeric(df["close"], errors="coerce")
+        return df["close"].dropna().reset_index(drop=True)
+    except Exception:
+        return None
+
+
 def _score_result(result) -> float:
     ret = result.metrics.get("total_return_pct")
     trades = result.trade_count
@@ -49,16 +98,44 @@ def _select_best(
     return candidates[0]
 
 
-def _recommend(test_results: tuple) -> Recommendation:
+def _matching_validation_result(locked: StrategySpec | None, validation_results: tuple):
+    if locked is None:
+        return None
+    for result in validation_results:
+        if result.strategy_id == locked.strategy_id and result.horizon_days == locked.horizon_days:
+            return result
+    return None
+
+
+def _recommend(
+    *,
+    locked: StrategySpec | None,
+    validation_results: tuple,
+    test_results: tuple,
+    critiques: tuple[Critique, ...],
+) -> tuple[Recommendation, str]:
+    validation = _matching_validation_result(locked, validation_results)
+    if validation is None:
+        return "NO_TRADE", "No matching validation result for the locked strategy."
+    validation_ret = validation.metrics.get("total_return_pct")
+    if not isinstance(validation_ret, (int, float)):
+        return "WAIT", "Locked strategy has no numeric validation return."
+    if validation.trade_count == 0:
+        return "WAIT", "Locked strategy had zero validation trades; positive one-shot test is not enough."
+    if validation_ret <= 0:
+        return "WAIT", "Locked strategy validation return was not positive; positive one-shot test is not enough."
+    rejected = [critique.critic for critique in critiques if str(critique.verdict).lower() == "reject"]
+    if rejected:
+        return "WAIT", f"Blocking critic verdicts remain: {', '.join(rejected)}."
     if not test_results:
-        return "NO_TRADE"
+        return "NO_TRADE", "No final one-shot test result was produced."
     best = max(test_results, key=_score_result)
     ret = best.metrics.get("total_return_pct")
     if not isinstance(ret, (int, float)) or best.trade_count == 0:
-        return "NO_TRADE"
+        return "NO_TRADE", "Final one-shot test had no numeric return or no trades."
     if ret > 2:
-        return "TRADE_RESEARCH"
-    return "WAIT"
+        return "TRADE_RESEARCH", "Validation was positive and final one-shot test cleared the research threshold."
+    return "WAIT", "Validation was positive, but final one-shot test did not clear the research threshold."
 
 
 def run_strategy_council(
@@ -81,7 +158,8 @@ def run_strategy_council(
             strategist = base
     if config.include_enrichment:
         try:
-            enrich_with_market_signals(evidence, eod_data)
+            benchmark = _load_default_benchmark_closes(eod_data)
+            enrich_with_market_signals(evidence, eod_data, benchmark=benchmark)
         except Exception:
             pass
     if critics is None:
@@ -176,8 +254,15 @@ def run_strategy_council(
             ),
         )
 
-    recommendation = _recommend(test_results)
+    final_critiques = iterations[-1].critiques if iterations else ()
+    recommendation, gate_reason = _recommend(
+        locked=locked,
+        validation_results=last_validation_results,
+        test_results=test_results,
+        critiques=final_critiques,
+    )
     rationale = (
+        f"Recommendation gate: {gate_reason} "
         "Final recommendation is based on validation-selected strategy and one-shot test results. "
         "This is research-only output, not investment advice."
     )

@@ -507,6 +507,62 @@ class MarketDashboardLiveTests(unittest.TestCase):
 
         fetch.assert_called_once_with("banks")
 
+    def test_live_dashboard_enter_key_toggles_top_index_drilldown(self):
+        class FakeLive:
+            instances = []
+
+            def __init__(self, renderable, **kwargs):
+                self.renderables = [renderable]
+                FakeLive.instances.append(self)
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+            def update(self, renderable, refresh=False):
+                self.renderables.append(renderable)
+
+        class FakeKeyReader:
+            def __init__(self):
+                self.calls = 0
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+            def pressed_enter(self):
+                self.calls += 1
+                return self.calls == 2
+
+        with patch.object(nse_agent, "_fetch_market_dashboard_snapshot", return_value=self._sample_snapshot()), patch.object(
+            nse_agent, "Live", FakeLive
+        ), patch.object(nse_agent, "_DashboardKeyReader", FakeKeyReader):
+            nse_agent._run_market_dashboard_live("banks", refresh_secs=0, max_cycles=2)
+
+        from rich.console import Console as RichConsole
+
+        first = io.StringIO()
+        last = io.StringIO()
+        RichConsole(file=first, force_terminal=False, width=160, height=44).print(FakeLive.instances[0].renderables[1])
+        RichConsole(file=last, force_terminal=False, width=160, height=44).print(FakeLive.instances[0].renderables[-1])
+
+        self.assertIn("Press Enter to expand", first.getvalue())
+        self.assertIn("AAA", last.getvalue())
+        self.assertNotIn("Press Enter to expand", last.getvalue())
+
+    def test_parse_dashboard_command_extracts_flags_and_focus(self):
+        parsed = nse_agent._parse_dashboard_command("/dashboard banks --once --html --drilldown")
+
+        self.assertEqual(parsed["focus"], "banks")
+        self.assertTrue(parsed["once"])
+        self.assertTrue(parsed["html"])
+        self.assertFalse(parsed["open"])
+        self.assertTrue(parsed["drilldown"])
+
     def test_live_dashboard_refreshes_snapshot_after_interval(self):
         class FakeLive:
             instances = []
@@ -568,9 +624,21 @@ class MarketDashboardLiveTests(unittest.TestCase):
                 "search_latest_catalysts",
                 "get_options_chain",
                 "get_futures_analysis",
+                "get_options_chain",
+                "get_futures_analysis",
                 "run_screener_query",
+                "run_intraday_screener",
+                "run_intraday_screener",
+                "run_intraday_screener",
             ],
         )
+        self.assertIn(("get_options_chain", {"symbol": "BANKNIFTY", "expiry_index": 0}), calls)
+        self.assertIn(("get_futures_analysis", {"symbol": "BANKNIFTY"}), calls)
+        self.assertIn(("run_intraday_screener", {"screen_type": "vcp", "timeframe": "15m", "top_n": 5}), calls)
+        self.assertIn(("run_intraday_screener", {"screen_type": "supertrend", "timeframe": "15m", "top_n": 5}), calls)
+        self.assertIn(("run_intraday_screener", {"screen_type": "vwap_reclaim", "timeframe": "15m", "top_n": 5}), calls)
+        self.assertIn("get_options_chain_BANKNIFTY", snapshot)
+        self.assertIn("run_intraday_screener_vcp", snapshot)
 
     def test_fetch_market_dashboard_snapshot_can_add_llm_narrative(self):
         class FakeBackend:

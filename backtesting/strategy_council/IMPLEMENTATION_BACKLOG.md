@@ -1,7 +1,7 @@
 # Strategy Council Implementation Backlog
 
-**Purpose:** Actionable backlog of Strategy Council enhancements that are **not yet fully implemented**.  
-**Source:** `ENHANCEMENT_ROADMAP.md`, reconciled against the current tree.  
+**Purpose:** Canonical actionable backlog of Strategy Council enhancements that are **not yet fully implemented**.
+**Source:** `ENHANCEMENT_ROADMAP.md`, reconciled against the current tree on 2026-05-19.
 **Guardrail:** All items remain research-only and must preserve point-in-time evidence, source trails, and missing-evidence disclosure.
 
 ---
@@ -22,41 +22,59 @@ These items should not be duplicated:
 | Basic HTML dashboard | Implemented, expandable | `dashboard_generator.py` |
 | PostgreSQL persistence | Implemented | `postgres_storage.py` |
 | Latest-results feed and forthcoming-results feed | Implemented in Agent tooling, not fully consumed by Council evidence | `terminal/tools.py`, `terminal/agent.py` |
+| Latest-results / filing tool foundations | Partially implemented, not fully consumed by Council evidence | `terminal/results_tools.py`, `backtesting/strategy_council/evidence_filings.py`, `tool_router.py` |
+| Company evidence and F&O composite tool foundations | Partially implemented, not fully consumed by Council evidence | `terminal/company_evidence_tools.py`, `terminal/fno_composite.py` |
 
 ---
 
-## P0 — Evidence Completeness and Safety
+## P0 — Evidence Completeness, Safety, and Recommendation Gating
 
-### SC-E1 Multi-Timeframe Evidence Pack
+### SC-GATE1 Validation-Based Recommendation Gate
 
 - **Status:** Ready
 - **Priority:** P0
+- **Files:** `backtesting/strategy_council/council.py`, `backtesting/strategy_council/llm.py`, `backtesting/strategy_council/report.py`, tests
+- **Build:** Add a hard policy over validation returns, validation trade count, blocking critic verdicts, and one-shot test results. A positive one-shot test must not override negative/empty validation by itself.
+- **Acceptance:** Recent report patterns such as negative validation with positive test are labeled `WAIT` or `RESEARCH_ANOMALY`; `TRADE_RESEARCH` requires positive validation, enough validation trades, and no blocking critic verdicts.
+
+### SC-GATE2 Source-Backed Strategy Claim Gate
+
+- **Status:** Ready
+- **Priority:** P0
+- **Files:** `backtesting/strategy_council/council.py`, `report.py`, `dashboard_generator.py`, tests
+- **Build:** Require every recommendation rationale clause to map to evidence fields or critic/test outputs. Unsupported mentions of fundamentals, sentiment, F&O, filings, catalysts, or intraday context are omitted or labeled unavailable.
+- **Acceptance:** Reports cannot mention sentiment, filing facts, F&O, event risk, or intraday alignment unless those evidence sections are present with source trails.
+
+### SC-E1 Multi-Timeframe Evidence Pack
+
+- **Status:** Partially implemented
+- **Priority:** P0
 - **Files:** `backtesting/strategy_council/evidence_enrichment.py`, `terminal/intraday_storage.py`, tests
-- **Build:** Add daily, weekly, and intraday evidence fields: trend alignment, timeframe conflict, latest intraday direction, and freshness.
+- **Build:** Add daily, weekly, and intraday evidence fields: trend alignment, timeframe conflict, latest intraday direction, and freshness. Report rendering has an intraday evidence section; remaining work is to populate it consistently from the evidence pack and enforce freshness/missing-data policy.
 - **Acceptance:** A Strategy Council report can state whether daily/weekly/intraday evidence agrees, conflicts, or is unavailable. Missing intraday data is labeled, not inferred.
 
 ### SC-E2 Latest Results and Event Evidence
 
-- **Status:** Ready
+- **Status:** Partially implemented
 - **Priority:** P0
-- **Files:** `backtesting/strategy_council/evidence.py`, `terminal/results_tools.py`, `terminal/tools.py`, tests
-- **Build:** Add latest-results pack, forthcoming-results date, corporate action window, and event-risk flag into `EvidencePack`.
+- **Files:** `backtesting/strategy_council/evidence.py`, `backtesting/strategy_council/evidence_filings.py`, `backtesting/strategy_council/tool_router.py`, `terminal/results_tools.py`, `terminal/tools.py`, tests
+- **Build:** Add latest-results pack, forthcoming-results date, corporate action window, filing summary, and event-risk flag into `EvidencePack`. Foundations exist in terminal/results and filing summary helpers; remaining work is first-class Council integration and missing-data reconciliation.
 - **Acceptance:** For symbols with recent/forthcoming results, reports include the filing/event source trail. Missing results no longer appear as missing when the tool has evidence.
 
 ### SC-E3 Source-Gated News Sentiment
 
-- **Status:** Ready
+- **Status:** Partially implemented
 - **Priority:** P0
 - **Files:** `backtesting/strategy_council/evidence_enrichment.py`, `terminal/company_evidence_tools.py`, tests
-- **Build:** Extract company/news sentiment as `sentiment_score`, `impact_score`, `source_count`, `top_events`, and `freshness`.
+- **Build:** Extract company/news sentiment as `sentiment_score`, `impact_score`, `source_count`, `top_events`, and `freshness`. Company evidence tool foundations exist; remaining work is Council-specific source gating and report/dashboard rendering.
 - **Acceptance:** Council output may mention sentiment only when source-backed sentiment evidence is present.
 
 ### SC-E4 F&O Evidence Contract
 
-- **Status:** Ready
+- **Status:** Partially implemented
 - **Priority:** P0
 - **Files:** `backtesting/strategy_council/evidence_enrichment.py`, `terminal/fno_composite.py`, tests
-- **Build:** Add option-chain summary, PCR, max pain, top OI strikes, futures basis, and cost of carry when symbol/index supports F&O.
+- **Build:** Add option-chain summary, PCR, max pain, top OI strikes, futures basis, and cost of carry when symbol/index supports F&O. Composite F&O tooling exists; remaining work is Council integration and recommendation gating.
 - **Acceptance:** F&O-derived strategy comments are blocked unless F&O evidence was fetched and included.
 
 ### SC-E5 Liquidity and Tradability Evidence
@@ -307,11 +325,10 @@ These items should not be duplicated:
 
 ## Recommended Next Sprint
 
-1. **SC-E2 Latest Results and Event Evidence**
-2. **SC-C1 Liquidity Critic**
-3. **SC-C2 Execution Cost Critic**
-4. **SC-D1 Performance Attribution Dashboard**
+1. **SC-GATE1 Validation-Based Recommendation Gate**
+2. **SC-GATE2 Source-Backed Strategy Claim Gate**
+3. **SC-E2 Latest Results and Event Evidence**
+4. **SC-C2 Execution Cost Critic**
 5. **SC-D3 Walk-Forward Visualization**
 
-These have the best ratio of usefulness to implementation risk and fit the existing architecture.
-
+These address the highest current risk: reports can show negative/empty validation but positive one-shot tests, and evidence foundations can exist without being consistently consumed by Council recommendations.

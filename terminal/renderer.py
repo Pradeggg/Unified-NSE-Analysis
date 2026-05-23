@@ -38,10 +38,30 @@ from rich.text import Text
 # Shared console — caller may override via set_console()
 _console: Console = Console(highlight=False, force_terminal=True)
 
+# PG 2026-05-20: cache of the most recently completed REPL turn's rich console
+# output, so capabilities like /screenshot can attach the terminal context that
+# preceded their invocation. Populated by nse_agent's REPL loop between turns.
+_last_turn_html: str = ""
+_last_turn_text: str = ""
+
 
 def set_console(con: Console) -> None:
     global _console
     _console = con
+
+
+def get_console() -> Console:
+    return _console
+
+
+def get_last_turn_capture() -> tuple[str, str]:
+    """Return (html, text) snapshot of the prior REPL turn's console output."""
+    return _last_turn_html, _last_turn_text
+
+
+def set_last_turn_capture(html: str, text: str) -> None:
+    global _last_turn_html, _last_turn_text
+    _last_turn_html, _last_turn_text = html or "", text or ""
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -699,6 +719,8 @@ _TOOL_RENDERERS: dict[str, Any] = {
     "get_bulk_block_deals":      render_bulk_deals,
     "run_screener_query":        lambda d: render_screener_results(d, "Screener Results"),
     "get_sector_context":        render_sector_context,
+    "analyze_mtf":               lambda d: render_mtf_panel(d),
+    "scan_mtf_aligned":          lambda d: render_mtf_scan(d),
 }
 
 # Tool names that we want to render as structured tables
@@ -1061,3 +1083,247 @@ def apply_render_plan(plan: dict) -> str:
 def get_bold_symbols(plan: dict) -> list[str]:
     """Return the list of symbols the plan wants emphasised."""
     return plan.get("bold_symbols") or []
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Multi-Timeframe (MTF) confluence
+# ─────────────────────────────────────────────────────────────────────────────
+
+_MTF_VERDICT_STYLE = {
+    "BUY":   "bold green",
+    "WATCH": "bold yellow",
+    "AVOID": "bold magenta",
+    "SELL":  "bold red",
+}
+
+_MTF_DIR_STYLE = {
+    "bullish": "green",
+    "bearish": "red",
+    "neutral": "yellow",
+}
+
+
+def _mtf_dir_glyph(direction: str | None) -> Text:
+    if direction == "bullish":
+        return Text("▲ bullish", style="green")
+    if direction == "bearish":
+        return Text("▼ bearish", style="red")
+    if direction == "neutral":
+        return Text("• neutral", style="yellow")
+    return Text("? n/a", style="dim")
+
+
+def render_mtf_panel(data: dict) -> None:
+    """Render a single-symbol /mtf analyze_mtf result as a rich panel."""
+    if not data or data.get("error"):
+        if data and data.get("error"):
+            _console.print(f"[red]  ✗ /mtf failed:[/red] {data['error']}")
+        return
+
+    symbol  = data.get("symbol", "—")
+    direction = data.get("direction", "—")
+    score   = data.get("confluence_score", 0)
+    verdict = data.get("verdict", "—")
+    aligned = data.get("aligned_tfs") or []
+    dissonant = data.get("dissonant_tfs") or []
+    missing = data.get("missing_tfs") or []
+
+    summary = Table(box=box.SIMPLE, expand=True, padding=(0, 1), show_header=False)
+    summary.add_column("Field", style="bold cyan", no_wrap=True, width=14)
+    summary.add_column("Value", overflow="fold")
+    summary.add_row("Symbol", Text(symbol, style="bold white"))
+    summary.add_row("Direction", _mtf_dir_glyph(direction))
+    summary.add_row("Confluence", Text(f"{int(score)} / 100", style=_score_style(score)))
+    summary.add_row("Verdict", Text(verdict, style=_MTF_VERDICT_STYLE.get(verdict, "bold")))
+    if aligned:
+        summary.add_row("Aligned TFs", Text(", ".join(aligned), style="green"))
+    if dissonant:
+        summary.add_row("Dissonant TFs", Text(", ".join(dissonant), style="yellow"))
+    if missing:
+        summary.add_row("Missing TFs", Text(", ".join(missing), style="dim"))
+
+    detail = Table(box=box.SIMPLE_HEAD, header_style="bold dim", expand=True, padding=(0, 1))
+    detail.add_column("TF", style="bold white", no_wrap=True, width=8)
+    detail.add_column("Dir", no_wrap=True, width=10)
+    detail.add_column("Close", justify="right")
+    detail.add_column("RSI(14)", justify="right")
+    detail.add_column("MACD", no_wrap=True, width=8)
+    detail.add_column("EMA20", justify="right")
+    detail.add_column("EMA50", justify="right")
+    detail.add_column("SMA stack", no_wrap=True, width=12)
+
+    for tf in data.get("timeframes") or []:
+        reading = (data.get("readings") or {}).get(tf, {}) or {}
+        if reading.get("status") != "ok":
+            detail.add_row(tf, Text(reading.get("status", "?"), style="dim"), "—", "—", "—", "—", "—", "—")
+            continue
+        rsi = reading.get("rsi")
+        rsi_style = "green" if (rsi or 0) > 55 else "red" if (rsi or 0) < 45 else "yellow"
+        macd = reading.get("macd", "—")
+        macd_style = _MTF_DIR_STYLE.get(macd, "white")
+        if reading.get("sma_stack_bullish"):
+            stack, stack_style = "bullish", "green"
+        elif reading.get("sma_stack_bearish"):
+            stack, stack_style = "bearish", "red"
+        else:
+            stack, stack_style = "mixed", "yellow"
+        detail.add_row(
+            tf,
+            _mtf_dir_glyph(reading.get("direction")),
+            f"{reading.get('close', 0):.2f}" if reading.get("close") is not None else "—",
+            Text(f"{rsi:.1f}" if isinstance(rsi, (int, float)) else "—", style=rsi_style),
+            Text(str(macd), style=macd_style),
+            f"{reading.get('ema20', 0):.2f}" if reading.get("ema20") is not None else "—",
+            f"{reading.get('ema50', 0):.2f}" if reading.get("ema50") is not None else "—",
+            Text(stack, style=stack_style),
+        )
+
+    rationale = data.get("rationale") or ""
+    if isinstance(rationale, list):
+        rationale = "  ·  ".join(str(r) for r in rationale)
+    body_renderables: list[Any] = [summary, detail]
+    if rationale:
+        body_renderables.append(Text(str(rationale), style="dim italic"))
+
+    _console.print()
+    _console.print(Panel(
+        Columns(body_renderables, expand=True, equal=False) if False else _stack(body_renderables),
+        title=f"[bold cyan]🧭  Multi-Timeframe Confluence — {symbol}[/bold cyan]",
+        border_style=_MTF_VERDICT_STYLE.get(verdict, "dim cyan"),
+        padding=(0, 1),
+    ))
+
+
+def _stack(items: list[Any]):
+    """Vertically stack rich renderables inside a single Panel."""
+    from rich.console import Group
+    return Group(*items)
+
+
+def render_mtf_scan(data: dict) -> None:
+    """Render the universe scan_mtf_aligned result as a ranked panel."""
+    if not data or data.get("error"):
+        if data and data.get("error"):
+            _console.print(f"[red]  ✗ /mtf scan failed:[/red] {data['error']}")
+        return
+
+    direction = data.get("direction", "—")
+    min_score = data.get("min_score", "—")
+    timeframes = data.get("timeframes") or []
+    universe_size = data.get("universe_size", 0)
+    matches_total = data.get("matches_total", 0)
+    top = data.get("top") or []
+
+    header = Table(box=box.SIMPLE, expand=True, padding=(0, 1), show_header=False)
+    header.add_column("Field", style="bold cyan", no_wrap=True, width=14)
+    header.add_column("Value", overflow="fold")
+    header.add_row("Direction", _mtf_dir_glyph(direction))
+    header.add_row("Min score", Text(str(min_score), style="bold white"))
+    header.add_row("Timeframes", Text(", ".join(timeframes), style="white"))
+    header.add_row("Universe", Text(f"{universe_size} symbols", style="white"))
+    header.add_row("Matches", Text(f"{matches_total} ≥ {min_score}", style="bold yellow"))
+
+    tbl = Table(box=box.SIMPLE_HEAD, header_style="bold dim", expand=True, padding=(0, 1))
+    tbl.add_column("#", width=3, style="dim", justify="right")
+    tbl.add_column("Symbol", style="bold white", no_wrap=True, min_width=12)
+    tbl.add_column("Score", justify="right", width=7)
+    tbl.add_column("Verdict", no_wrap=True, width=8)
+    tbl.add_column("Aligned TFs", overflow="fold")
+    tbl.add_column("Dissonant", overflow="fold")
+    tbl.add_column("Missing", overflow="fold")
+
+    if not top:
+        tbl.add_row("—", Text("(no symbols met threshold)", style="dim"), "—", "—", "—", "—", "—")
+    for i, row in enumerate(top, start=1):
+        verdict = row.get("verdict", "—")
+        score = row.get("confluence_score", 0)
+        aligned_tfs = row.get("aligned_tfs") or []
+        dissonant_tfs = row.get("dissonant_tfs") or []
+        missing_tfs = row.get("missing_tfs") or []
+        tbl.add_row(
+            str(i),
+            row.get("symbol", "—"),
+            Text(str(int(score)), style=_score_style(score)),
+            Text(verdict, style=_MTF_VERDICT_STYLE.get(verdict, "white")),
+            Text(", ".join(aligned_tfs), style="green") if aligned_tfs else Text("—", style="dim"),
+            Text(", ".join(dissonant_tfs), style="yellow") if dissonant_tfs else Text("—", style="dim"),
+            Text(", ".join(missing_tfs), style="dim") if missing_tfs else Text("—", style="dim"),
+        )
+
+    _console.print()
+    _console.print(Panel(
+        _stack([header, tbl]),
+        title=f"[bold cyan]🧭  MTF Scan — {direction.upper()} confluence[/bold cyan]",
+        border_style="dim cyan",
+        padding=(0, 1),
+    ))
+
+
+def write_mtf_report(data: dict, out_dir: str = "reports/mtf") -> str:
+    """Persist an MTF result as a markdown report and return the absolute path.
+
+    Accepts either a single-symbol analyze_mtf result or a scan_mtf_aligned result.
+    """
+    import os
+    from datetime import datetime as _dt
+    os.makedirs(out_dir, exist_ok=True)
+    ts = _dt.now().strftime("%Y%m%d_%H%M%S")
+
+    lines: list[str] = []
+    if "top" in data and "direction" in data and "universe_size" in data:
+        slug = f"mtf_scan_{data.get('direction','x')}_{ts}"
+        lines.append(f"# MTF Scan — {data.get('direction','—').upper()} confluence")
+        lines.append("")
+        lines.append(f"- Generated: {_dt.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        lines.append(f"- Direction: **{data.get('direction','—')}**  ·  Min score: **{data.get('min_score','—')}**")
+        lines.append(f"- Timeframes: `{', '.join(data.get('timeframes') or [])}`")
+        lines.append(f"- Universe: {data.get('universe_size',0)} symbols  ·  Matches ≥ threshold: {data.get('matches_total',0)}")
+        lines.append("")
+        lines.append("| # | Symbol | Score | Verdict | Aligned TFs | Dissonant | Missing |")
+        lines.append("|---|--------|------:|---------|-------------|-----------|---------|")
+        for i, row in enumerate(data.get("top") or [], start=1):
+            lines.append(
+                f"| {i} | **{row.get('symbol','—')}** | {int(row.get('confluence_score',0))} | "
+                f"{row.get('verdict','—')} | {', '.join(row.get('aligned_tfs') or []) or '—'} | "
+                f"{', '.join(row.get('dissonant_tfs') or []) or '—'} | "
+                f"{', '.join(row.get('missing_tfs') or []) or '—'} |"
+            )
+    else:
+        symbol = data.get("symbol", "SYMBOL")
+        slug = f"mtf_{symbol}_{ts}"
+        lines.append(f"# Multi-Timeframe Confluence — {symbol}")
+        lines.append("")
+        lines.append(f"- Generated: {_dt.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        lines.append(f"- Direction: **{data.get('direction','—')}**")
+        lines.append(f"- Confluence score: **{int(data.get('confluence_score',0))} / 100**")
+        lines.append(f"- Verdict: **{data.get('verdict','—')}**")
+        if data.get("aligned_tfs"):
+            lines.append(f"- Aligned timeframes: {', '.join(data['aligned_tfs'])}")
+        if data.get("dissonant_tfs"):
+            lines.append(f"- Dissonant timeframes: {', '.join(data['dissonant_tfs'])}")
+        if data.get("missing_tfs"):
+            lines.append(f"- Missing timeframes: {', '.join(data['missing_tfs'])}")
+        lines.append("")
+        lines.append("| TF | Direction | Close | RSI(14) | MACD | EMA20 | EMA50 | SMA stack |")
+        lines.append("|----|-----------|------:|--------:|------|------:|------:|-----------|")
+        for tf in data.get("timeframes") or []:
+            r = (data.get("readings") or {}).get(tf, {}) or {}
+            if r.get("status") != "ok":
+                lines.append(f"| {tf} | _{r.get('status','?')}_ | — | — | — | — | — | — |")
+                continue
+            lines.append(
+                f"| {tf} | {r.get('direction','—')} | "
+                f"{r.get('close','—')} | {r.get('rsi','—')} | {r.get('macd','—')} | "
+                f"{r.get('ema20','—')} | {r.get('ema50','—')} | {r.get('sma_stack','—')} |"
+            )
+        if data.get("rationale"):
+            lines.append("")
+            _rat = data["rationale"]
+            if isinstance(_rat, list):
+                _rat = "  ·  ".join(str(r) for r in _rat)
+            lines.append(f"> {_rat}")
+
+    out_path = os.path.abspath(os.path.join(out_dir, f"{slug}.md"))
+    with open(out_path, "w", encoding="utf-8") as fh:
+        fh.write("\n".join(lines) + "\n")
+    return out_path

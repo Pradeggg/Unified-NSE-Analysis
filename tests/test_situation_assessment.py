@@ -16,6 +16,7 @@ from terminal.situation_assessment import (
     render_assessment_block,
     render_context_answer,
 )
+import nse_agent
 
 
 def test_turn_context_defaults_are_compact():
@@ -60,12 +61,54 @@ def test_contextual_source_questions_trigger_assessment():
     assert needs_situation_assessment("/report technical United Spirits pdf")
     assert needs_situation_assessment("/results United Spirits latest quarter")
     assert needs_situation_assessment("what would be your recommendation based on the above financial analysis")
+    assert needs_situation_assessment("based on the PCBL analysis what should be our approach")
     assert needs_situation_assessment("yes please")
+
+
+def test_ric_contextual_recommendation_uses_consolidated_evidence_and_followups():
+    ctx = TurnContext(
+        user_input="/ric sherlock MANINDS",
+        intent="ric_sherlock",
+        mode="auto",
+        tools=[
+            "explain_intraday_setup",
+            "get_nse_intraday_snapshot",
+            "get_symbol_snapshot",
+            "get_technical_setup",
+            "scrape_screener_in",
+            "search_latest_catalysts",
+            "get_intraday_levels",
+        ],
+        source_label="RIC Stock Sherlock: intraday + EOD + fundamentals + catalysts",
+        freshness="21-May-2026 16:00:00 / EOD 2026-05-20",
+        result_type="ric_sequence",
+        result_summary=(
+            "RIC Stock Sherlock for MANINDS. Step 1 Live Quote: intraday SHORT_SETUP at 564.05, "
+            "bearish below 569.71. Step 2 Technical Setup: EOD STAGE_2 BUY, RSI snapshot 78, "
+            "technical RSI 73, supertrend SELL. Step 3 Fundamentals: PE 22.5, ROCE 16, debtor days increased. "
+            "Step 4 Catalysts: acquisition and board meeting. Step 5 Trade Setup: support 561.35, resistance 569.71."
+        ),
+        symbols=["MANINDS"],
+    )
+    assessment = assess_followup("Based on the above what would be your recommendation", ctx)
+
+    answer = render_context_answer("Based on the above what would be your recommendation", assessment, ctx)
+    _clean, followups = nse_agent._parse_followups(answer)
+
+    assert "EOD picture is constructive" in answer
+    assert "intraday setup is bearish" in answer
+    assert "Do not chase" in answer
+    assert "## 💬 What to explore next" in answer
+    assert len(followups) == 3
+    assert "/chart MANINDS 3mo" in followups[0]
+    assert nse_agent._normalise_interactive_input("1", followups)[0] == "/chart MANINDS 3mo"
 
 
 def test_direct_queries_do_not_trigger_assessment():
     assert not needs_situation_assessment("show Stage 2 stocks")
     assert not needs_situation_assessment("RELIANCE technical setup")
+    assert not needs_situation_assessment("what happened in the market in the last 30 minutes")
+    assert not needs_situation_assessment("what changed in NIFTY over the last 15 minutes")
     assert not needs_situation_assessment(
         """
         You are starting a new trading session.
@@ -216,10 +259,21 @@ def test_stage2_last_30_minutes_question_answers_from_context():
 
     assert assessment.applies
     assert assessment.confidence == "high"
-    assert assessment.decision == "answer_from_context"
+    assert assessment.decision == "ask_clarification"
     assert assessment.tool_plan == []
     assert "Stage 2" in assessment.user_is_asking
     assert "not generated from last-30-minute" in assessment.source_assessment
+    assert len(assessment.clarification_questions) == 1
+    options = assessment.clarification_questions[0].options
+    assert options[0].bound_action["tool_plan"] == [
+        ("scan_symbols_intraday", {"symbols": ["BLISSGVS", "IPCALAB"], "interval": "5m"})
+    ]
+    assert options[1].bound_action["tool_plan"] == [
+        ("scan_symbols_intraday", {"symbols": ["BLISSGVS", "IPCALAB"], "interval": "15m"})
+    ]
+    assert options[2].bound_action["tool_plan"] == [
+        ("run_screener_query", {"screen_type": "stage2", "top_n": 10})
+    ]
 
 
 def test_postgres_or_fallback_question_answers_from_intraday_context():
@@ -330,13 +384,28 @@ def test_render_context_answer_for_stage2_last_30_question():
         result_type="stage2_screener",
         result_summary="stage2 screener returned 10 results.",
     )
-    assessment = assess_followup("were these pulled from last 30mins", ctx)
+    assessment = SituationAssessment(
+        applies=True,
+        decision="answer_from_context",
+        confidence="high",
+        user_is_asking="Whether the prior Stage 2 list came from last-30-minute data.",
+        context_found="Previous result was Stage 2 screener.",
+        source_assessment="It came from EOD CSV + DB snapshot.",
+    )
 
     answer = render_context_answer("were these pulled from last 30mins", assessment, ctx)
 
     assert "No." in answer
     assert "2026-05-14" in answer
     assert "not from the last 30 minutes" in answer
+    assert "NEXT OPTIONS" in answer
+    assert "[A]" in answer
+    assert "Check last-30-minute intraday movement" in answer
+    assert "[B]" in answer
+    assert "Run 15m intraday setups" in answer
+    assert "[C]" in answer
+    assert "Refresh Stage 2 EOD scan" in answer
+    assert "Reply with A, B, or C" in answer
     assert "Not investment advice" in answer
 
 
@@ -361,6 +430,51 @@ def test_recommendation_based_on_above_analysis_answers_from_context():
     assert "CONTEXTUAL RECOMMENDATION" in answer
     assert "cautious / avoid fresh entry" in answer
     assert "Do not resolve words" in assessment.plan[1]
+
+
+def test_approach_based_on_named_prior_analysis_answers_from_context_with_pot_tot():
+    ctx = TurnContext(
+        user_input="PCBL analysis",
+        intent="stock_brief",
+        mode="historical",
+        tools=["resolve_symbol", "get_symbol_snapshot", "get_technical_setup", "scrape_screener_in"],
+        source_label="EOD CSV + DB snapshot + screener.in",
+        freshness="2026-05-19",
+        result_type="stock_brief",
+        result_summary=(
+            "stock brief for PCBL; price 273.55; signal SELL; stage STAGE_4; "
+            "RS -3; MACD bearish; supertrend SELL; risk: low interest coverage."
+        ),
+        symbols=["PCBL"],
+    )
+
+    assessment = assess_followup("based on the PCBL analysis what should be our approach", ctx)
+    answer = render_context_answer("based on the PCBL analysis what should be our approach", assessment, ctx)
+
+    assert assessment.decision == "answer_from_context"
+    assert assessment.resolved_entities == ["PCBL"]
+    assert "recommended approach" in assessment.user_is_asking
+    assert "PLAN OF THOUGHT (POT)" in answer
+    assert "TREE OF THOUGHT (TOT)" in answer
+    assert "cautious / avoid fresh entry" in answer
+
+
+def test_named_analysis_followup_does_not_bind_to_wrong_prior_symbol():
+    ctx = TurnContext(
+        user_input="HDBFS analysis",
+        intent="stock_brief",
+        mode="historical",
+        tools=["resolve_symbol", "get_symbol_snapshot"],
+        source_label="EOD CSV + DB snapshot",
+        result_type="stock_brief",
+        result_summary="stock brief for HDBFS; signal SELL.",
+        symbols=["HDBFS"],
+    )
+
+    assessment = assess_followup("based on the PCBL analysis what should be our approach", ctx)
+
+    assert assessment.applies is False
+    assert assessment.decision == "fallback_to_router"
 
 
 def test_stock_context_summary_preserves_decision_signals():
@@ -651,8 +765,16 @@ def test_structured_clarification_renders_numbered_questions_with_options():
             ClarificationQuestion(
                 prompt="What would you like me to do?",
                 options=(
-                    ClarificationOption(label="A", text="Open the report"),
-                    ClarificationOption(label="B", text="Summarize its recommendation"),
+                    ClarificationOption(
+                        label="A",
+                        text="Open the report",
+                        bound_action={"decision": "run_tool_plan", "tool_plan": [("open_report", {"path": "/tmp/report.html"})]},
+                    ),
+                    ClarificationOption(
+                        label="B",
+                        text="Summarize its recommendation",
+                        bound_action={"decision": "run_tool_plan", "tool_plan": [("summarize_report", {"path": "/tmp/report.html"})]},
+                    ),
                 ),
                 default_label="B",
             ),
@@ -662,7 +784,56 @@ def test_structured_clarification_renders_numbered_questions_with_options():
     assert "Q1. What would you like me to do?" in rendered
     assert "[A]  Open the report" in rendered
     assert "[B]* Summarize its recommendation" in rendered
-    assert "Reply with the option letter" in rendered
+    assert "Use: `A`" in rendered
+    assert "Use: `B`" in rendered
+    assert "Reply with A, B, or C" in rendered
+
+
+def test_next_options_validator_rejects_unbound_or_unknown_tool_options():
+    from terminal.situation_assessment import (
+        ClarificationOption,
+        ClarificationQuestion,
+        validate_next_options,
+    )
+
+    good = SituationAssessment(
+        applies=True,
+        decision="ask_clarification",
+        clarification_questions=(
+            ClarificationQuestion(
+                prompt="?",
+                options=(
+                    ClarificationOption(
+                        label="A",
+                        text="Open",
+                        bound_action={"decision": "run_tool_plan", "tool_plan": [("open_report", {"path": "/tmp/a.html"})]},
+                    ),
+                ),
+            ),
+        ),
+    )
+    assert validate_next_options(good) == []
+
+    bad = SituationAssessment(
+        applies=True,
+        decision="ask_clarification",
+        clarification_questions=(
+            ClarificationQuestion(
+                prompt="?",
+                options=(
+                    ClarificationOption(label="A", text="No binding"),
+                    ClarificationOption(
+                        label="B",
+                        text="Bad tool",
+                        bound_action={"decision": "run_tool_plan", "tool_plan": [("missing_tool", {})]},
+                    ),
+                ),
+            ),
+        ),
+    )
+    errors = validate_next_options(bad)
+    assert any("A" in error and "bound_action" in error for error in errors)
+    assert any("B" in error and "missing_tool" in error for error in errors)
 
 
 def test_match_clarification_reply_accepts_letter_text_and_numeric():
@@ -816,3 +987,72 @@ def test_review_setups_without_prior_scan_does_not_bind():
     # in tests). Decision must NOT be a confident run_tool_plan with a
     # fabricated symbol list.
     assert not (asm.decision == "run_tool_plan" and asm.applies)
+
+
+def test_assessment_llm_rejects_scan_symbols_without_symbols():
+    from terminal.assessment_llm import _parse_response
+
+    ctx = TurnContext(
+        user_input="market overview",
+        intent="market_overview",
+        mode="intraday",
+        tools=["get_live_market_overview", "get_market_breadth"],
+        source_label="NSE live API + DB breadth",
+        result_summary="market overview",
+    )
+    raw = """
+    {
+      "decision": "run_tool_plan",
+      "confidence": "high",
+      "user_is_asking": "what happened in the market in the last 30 minutes",
+      "carry_symbols": [],
+      "tool_plan": [{"tool": "scan_symbols_intraday", "args": {}}],
+      "clarification_questions": []
+    }
+    """
+
+    assert _parse_response(raw, ctx) is None
+
+
+def test_assessment_llm_defaults_to_gpt55_high_reasoning():
+    from terminal import assessment_llm
+
+    assert assessment_llm.DEFAULT_ASSESSMENT_MODEL == "gpt-5.5"
+    assert assessment_llm.DEFAULT_ASSESSMENT_REASONING_EFFORT == "high"
+
+
+def test_assessment_llm_system_prompt_reflects_context_and_conflicts():
+    from terminal.assessment_llm import _SYSTEM_PROMPT
+
+    assert "first read the previous turn context" in _SYSTEM_PROMPT
+    assert "what the user is really asking" in _SYSTEM_PROMPT
+    assert "RSI values differ" in _SYSTEM_PROMPT
+    assert "POT" in _SYSTEM_PROMPT
+    assert "TOT" in _SYSTEM_PROMPT
+
+
+def test_assessment_llm_uses_responses_reasoning_for_gpt5_class_models():
+    from terminal.assessment_llm import _call_llm
+
+    class FakeResponse:
+        output_text = '{"decision":"fallback_to_router"}'
+
+    class FakeResponses:
+        def __init__(self):
+            self.kwargs = None
+
+        def create(self, **kwargs):
+            self.kwargs = kwargs
+            return FakeResponse()
+
+    class FakeClient:
+        def __init__(self):
+            self.responses = FakeResponses()
+
+    client = FakeClient()
+    raw = _call_llm(client, "gpt-5.5", {"user_input": "x"})
+
+    assert raw == '{"decision":"fallback_to_router"}'
+    assert client.responses.kwargs["model"] == "gpt-5.5"
+    assert client.responses.kwargs["reasoning"] == {"effort": "high"}
+    assert client.responses.kwargs["text"]["format"]["type"] == "json_object"

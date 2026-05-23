@@ -84,6 +84,24 @@ def test_parse_recommendation_report_args_supports_format_watchlist_and_top():
     assert opts.top_n == 12
 
 
+def test_parse_recommendation_report_args_supports_symbol_index_and_sector_filters():
+    opts = parse_recommendation_report_args(
+        [
+            "recommendation",
+            "--symbols",
+            "AAA,BBB",
+            "--index",
+            "NIFTY BANK",
+            "--sectors",
+            "Capital Goods,Chemicals",
+        ]
+    )
+
+    assert opts.symbols == ["AAA", "BBB"]
+    assert opts.indices == ["NIFTY BANK"]
+    assert opts.sectors == ["Capital Goods", "Chemicals"]
+
+
 def _history(symbol: str, start: float = 100.0, rows: int = 240) -> pd.DataFrame:
     return pd.DataFrame(
         [
@@ -354,6 +372,44 @@ def test_sector_rollup_uses_full_universe_even_when_stock_recommendations_are_li
     assert "Capital Goods" in pack.sectors
     assert "Chemicals" in pack.sectors
     assert pack.sectors["Chemicals"]["rotation_label"] == "laggard"
+
+
+def test_evidence_pack_filters_recommendations_by_symbols_indices_and_sectors():
+    data = RecommendationInputData(
+        index_history=pd.concat([_history("NIFTY 50"), _history("NIFTY BANK", 120.0)]),
+        equity_history=pd.concat([_history("AAA"), _history("BBB", 80.0), _history("CCC", 60.0)]),
+        snapshots=pd.DataFrame(
+            [
+                {"symbol": "AAA", "sector": "Capital Goods", "technical_score": 90, "investment_score": 80},
+                {"symbol": "BBB", "sector": "Chemicals", "technical_score": 85, "investment_score": 75},
+                {"symbol": "CCC", "sector": "IT", "technical_score": 70, "investment_score": 65},
+            ]
+        ),
+        fundamentals=pd.DataFrame(
+            [
+                {"symbol": "AAA", "roe": 18, "roce": 24, "interest_coverage": 8},
+                {"symbol": "BBB", "roe": 16, "roce": 20, "interest_coverage": 7},
+                {"symbol": "CCC", "roe": 15, "roce": 19, "interest_coverage": 6},
+            ]
+        ),
+    )
+
+    pack = build_recommendation_evidence_pack(
+        data,
+        top_n=10,
+        symbols=["AAA", "CCC"],
+        indices=["NIFTY BANK"],
+        sectors=["Capital Goods"],
+    )
+
+    assert list(pack.indices) == ["NIFTY BANK"]
+    assert list(pack.stocks) == ["AAA"]
+    assert list(pack.sectors) == ["Capital Goods"]
+    assert pack.filters == {
+        "symbols": ["AAA", "CCC"],
+        "indices": ["NIFTY BANK"],
+        "sectors": ["Capital Goods"],
+    }
 
 
 def test_portfolio_recommendation_is_retained_when_symbol_also_has_stock_recommendation():

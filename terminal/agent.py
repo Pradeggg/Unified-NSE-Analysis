@@ -40,6 +40,11 @@ from .situation_assessment import (
     render_assessment_block,
     render_context_answer,
 )
+from .conversation_memory import (
+    ConversationMemory,
+    DEFAULT_SESSION_ID as MEMORY_DEFAULT_SESSION_ID,
+    load_memory_fail_open,
+)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Constants
@@ -105,6 +110,20 @@ You have access to these data tools (call them as needed):
 • compare_stocks(symbols, aspects)    → Side-by-side comparison of multiple stocks on BOTH
                                         technical (stage, RSI, RS, scores, signals) AND
                                         fundamental (P/E, P/B, ROE, ROCE, div yield) metrics
+
+[Multi-timeframe (MTF) confluence tools — deterministic alignment engine, no LLM in the loop]
+• analyze_mtf(symbol, timeframes?)    → Aligned RSI/MACD/EMA20/EMA50/SMA-stack readings across
+                                        monthly, weekly, daily, 60m, 15m. Returns weighted
+                                        confluence score (0-100) and BUY/WATCH/AVOID/SELL verdict
+                                        with per-timeframe rationale. Missing timeframes are
+                                        reported, never inferred. Use this whenever the user asks
+                                        for "multi timeframe", "MTF", "weekly + daily agreement",
+                                        or "is X a confluent buy".
+• scan_mtf_aligned(symbols?, index?,  → Rank a universe by MTF confluence in a chosen direction.
+    direction, min_score, top_n)        Use for "top stocks where weekly + daily agree",
+                                        "recommendation report — confluent bullish setups",
+                                        "MTF scan NIFTY 50". Pass an explicit symbols list when
+                                        possible (faster); index path fans out to constituents.
 
 [Intraday screener tools — live quote/index tape lives in PostgreSQL intraday.quote_snapshots; candle history lives in PostgreSQL intraday.ohlcv_bars and may be seeded from yfinance when PG has no bars]
 • get_intraday_source_health()        → PostgreSQL intraday table health and freshness
@@ -277,6 +296,22 @@ You have access to these data tools (call them as needed):
   stock tool call. This prevents alias mistakes such as "DATAPATTERNS" vs
   NSE symbol "DATAPATTNS". If a downstream stock tool still returns no data,
   mention the resolved symbol and source trail before explaining the gap.
+  ⚠️ HARD RULE — When the user mentions a MULTI-WORD company name, ALWAYS
+  pass the COMPLETE phrase to resolve_symbol(query=...), NEVER just the first
+  word. Examples:
+    "Premier Energies"            → resolve_symbol(query="Premier Energies")  ✓ → PREMIERENE
+    "Premier"                     → resolve_symbol(query="Premier")           ✗ → PREMEXPLN (wrong company!)
+    "Hindustan Unilever"          → resolve_symbol(query="Hindustan Unilever") ✓ → HINDUNILVR
+    "Bharat Petroleum"            → resolve_symbol(query="Bharat Petroleum")  ✓ → BPCL
+    "Tata Consultancy Services"   → resolve_symbol(query="Tata Consultancy Services") ✓ → TCS
+    "HDFC Bank"                   → resolve_symbol(query="HDFC Bank")          ✓ → HDFCBANK
+    "HDFC"                        → resolve_symbol(query="HDFC")               ✗ → HDFCGOLD (ETF!)
+    "Mahindra and Mahindra"       → resolve_symbol(query="Mahindra and Mahindra") ✓ → M&M
+    "Adani Ports"                 → resolve_symbol(query="Adani Ports")        ✓ → ADANIPORTS
+  Strip only filler ("can you analyze ___", "tell me about ___", "what about ___");
+  keep ALL of the company-name words. Single-word prefixes like "Premier" / "HDFC" /
+  "Bharat" / "Tata" / "Adani" / "Mahindra" / "Bajaj" / "State" resolve to the
+  WRONG company because they are prefixes shared by many tickers.
 • "option chain / options data / OI for NIFTY/BANKNIFTY/<stock> / option chain analysis" → call get_option_chain(symbol)
 • "options chain" / "OI" / "PCR" / "max pain" / "option chain" → get_options_chain (rich side-by-side viewer)
 • "PCR / put call ratio / put-call ratio" → call get_fno_analytics(symbol) first, then get_oi_analysis(symbol) if strike detail is needed
@@ -695,7 +730,7 @@ def _extract_intraday_timeframe(q: str) -> str:
     m = re.search(r"\b(5m|15m|30m|1h)\b", q)
     if m:
         return m.group(1)
-    m = re.search(r"\b(5|15|30)\s*(?:min|minute|minutes)\b", q)
+    m = re.search(r"\b(5|15|30)\s*(?:mins?|minutes?)\b", q)
     if m:
         return f"{m.group(1)}m"
     return "15m"
@@ -811,6 +846,19 @@ def _primary_symbol_query(candidates: list[str], symbol_candidates: list[str], r
     first word ("TATA" → fuzzy-matched to TATATECH).
     """
     if raw_query:
+        # Prefer the leading multi-word company phrase ("State Bank of India",
+        # "Bharat Petroleum") BEFORE the preposition extractor, otherwise
+        # "of India" matches first and the resolver returns INDIA. The leading-
+        # phrase helper already strips prose filler ("can you analyze ___").
+        phrase = _leading_company_phrase(raw_query)
+        if phrase:
+            try:
+                resolved = resolve_symbol(phrase)
+                canonical = resolved.get("symbol") if isinstance(resolved, dict) else None
+                if canonical and (resolved or {}).get("confidence") in {"exact", "near-match"}:
+                    return canonical
+            except Exception:
+                pass
         phrase = _symbol_phrase_after_preposition(raw_query)
         if phrase:
             try:
@@ -820,7 +868,11 @@ def _primary_symbol_query(candidates: list[str], symbol_candidates: list[str], r
                     return canonical
             except Exception:
                 pass
-            return phrase
+            # Only fall back to the raw phrase when the caller has no better
+            # explicit candidate. Otherwise we end up shipping prose like
+            # "intraday signals" downstream as if it were a ticker.
+            if not symbol_candidates:
+                return phrase
         phrase = _leading_company_phrase(raw_query)
         if phrase:
             try:
@@ -861,10 +913,26 @@ def _primary_symbol_query(candidates: list[str], symbol_candidates: list[str], r
 def _leading_company_phrase(raw_query: str) -> str:
     """Extract a leading multi-word company phrase before task words."""
     stop_words = {
+        # Prose filler — must be stripped so the 4-word window doesn't fill
+        # with "can you analyze ..." before the real company name. Without
+        # these, "can you analyze Premier Energies" yielded "can you analyze
+        # Premier" and resolved to PREMEXPLN instead of PREMIERENE.
+        "can", "could", "would", "should", "shall", "may", "might",
+        "you", "u", "we", "i", "me", "us", "they",
+        "please", "kindly", "tell", "show", "give", "explain", "describe",
+        "analyze", "analyse", "analysis",
+        "let", "lets", "let's", "want", "wanna", "wish",
+        "about", "around", "regarding", "concerning",
+        "how", "what", "where", "when", "why",
+        "do", "does", "doing", "done",
+        "is", "are", "was", "were", "be", "been", "being",
+        "a", "an", "the", "this", "that", "these", "those",
+        "to", "into", "onto", "upon",
+        # Existing task words
         "intraday", "setup", "technical", "technicals", "fundamental", "fundamentals",
         "analysis", "deep", "dive", "research", "forensic", "risk", "levels",
         "support", "resistance", "target", "targets", "today", "now", "live",
-        "scan", "show", "tell", "give", "what", "is", "the", "of", "for",
+        "scan",
         "superperformance", "minervini", "sepa", "vcp", "canslim",
     }
     words: list[str] = []
@@ -874,7 +942,7 @@ def _leading_company_phrase(raw_query: str) -> str:
                 break
             continue
         words.append(token)
-        if len(words) >= 4:
+        if len(words) >= 6:
             break
     return " ".join(words).strip() if len(words) >= 2 else ""
 
@@ -897,6 +965,13 @@ def _symbol_phrase_after_preposition(raw_query: str) -> str:
         subject = re.split(r"\s+[—–-]\s+|[,;:?]", match.group(1), maxsplit=1)[0]
         if re.match(r"\s*\d+\s*(?:m|min|mins?|minutes?|h|hour|hours?)\b", subject, flags=re.IGNORECASE):
             continue
+        connective_company = re.match(
+            r"\s*(Mahindra\s+(?:and|&)\s+Mahindra)\b",
+            subject,
+            flags=re.IGNORECASE,
+        )
+        if connective_company:
+            return connective_company.group(1).strip()
         words: list[str] = []
         for token in re.findall(r"[A-Za-z][A-Za-z0-9&.-]*", subject):
             if token.lower() in stop_words:
@@ -951,9 +1026,11 @@ _REQUIRED_TOOLS_BY_INTENT: dict[str, tuple[str, ...]] = {
     "screener": ("run_screener_query",),
     "intraday_screener": ("run_intraday_screener",),
     "intraday_index_scan": ("scan_intraday_market",),
+    "intraday_symbol_scan": ("scan_symbols_intraday",),
     "intraday_setup": ("explain_intraday_setup", "get_nse_intraday_snapshot"),
     "intraday_levels": ("get_intraday_levels", "get_nse_intraday_snapshot"),
     "fno_overview": ("get_fno_overview",),
+    "visual_scan": ("run_visual_scan",),
     "stock_comparison": ("compare_stocks",),
     "strength_validation": ("validate_strength_watchlist",),
     "stock_brief": ("resolve_symbol", "get_symbol_snapshot"),
@@ -983,6 +1060,32 @@ _DYNAMIC_EVIDENCE_REQUIRED_INTENTS: frozenset[str] = frozenset(
 def _explicit_requested_symbols(query: str) -> list[str]:
     """Return explicit ticker-looking symbols from user text without fuzzy substitution."""
     requested = validate_requested_symbols(query or "").get("requested_symbols", [])
+    # Multi-word company-phrase guard (priority path): when the user typed a
+    # phrase like "HDFC Bank" / "Sun Pharma", the upstream validator picks the
+    # first ticker-shaped token ("HDFC" → an ETF; "SUN" → a defunct ticker)
+    # which then trips the validation gate against evidence using the real
+    # company symbol (HDFCBANK / SUNPHARMA). If the leading-company-phrase
+    # helper resolves the full phrase exactly via the alias/universe map, that
+    # canonical symbol wins over any single-token extraction.
+    try:
+        # Strip known index phrases (NIFTY MIDCAP 100, NIFTY BANK, NIFTY
+        # FINANCIAL SERVICES, ...) before attempting company-phrase resolution.
+        # Otherwise "NIFTY MIDCAP" resolves to the MIDCPNIFTY derivative and
+        # mis-fires the validation gate against breadth/scan tools that use
+        # the actual index name.
+        from .entity_resolution import _strip_index_phrases as _strip_idx_phr
+        scrubbed_for_phrase = _strip_idx_phr(query or "")
+        phrase = _leading_company_phrase(scrubbed_for_phrase)
+        if phrase and " " in phrase.strip():
+            phrase_resolution = resolve_symbol(phrase)
+            if (
+                isinstance(phrase_resolution, dict)
+                and phrase_resolution.get("symbol")
+                and phrase_resolution.get("confidence") in {"exact", "near-match"}
+            ):
+                return [str(phrase_resolution["symbol"]).upper()]
+    except Exception:
+        pass
     # The universe-backed validator deliberately filters non-listed tokens to
     # avoid instruction words becoming symbols in generated prompts. For final
     # evidence validation, retain explicit all-caps user tokens in stock-shaped
@@ -992,12 +1095,37 @@ def _explicit_requested_symbols(query: str) -> list[str]:
         query or "",
         re.I,
     ):
+        # Strip well-known multi-word NSE index names ("NIFTY SMALLCAP 100",
+        # "NIFTY FINANCIAL SERVICES", ...) before re-extracting candidate
+        # tokens. Without this, "lets analyze NIFTY SMALLCAP 100" trips the
+        # symbol-validation gate on SMALLCAP/MIDCAP/PRIVATE/etc. even though
+        # the upstream universe-backed validator correctly stripped them.
+        from .entity_resolution import _strip_index_phrases as _strip_idx
+        scrubbed = _strip_idx(query or "")
         requested = [
             token
-            for token in re.findall(r"\b[A-Z][A-Z0-9&-]{1,12}\b", query or "")
+            for token in re.findall(r"\b[A-Z][A-Z0-9&-]{1,12}\b", scrubbed)
             if token.upper() not in _SYMBOL_VALIDATION_SKIP
             and token.upper() not in TECHNICAL_NON_SYMBOL_TERMS
         ]
+        # Multi-word company-phrase guard: when the user typed a phrase like
+        # "HDFC Bank" / "Premier Energies", the single-token extractor only
+        # picks up the first all-caps run ("HDFC") which resolves to HDFCGOLD
+        # (an ETF). If the leading-phrase helper resolves the whole company
+        # name exactly via _COMMON_STOCK_ALIASES, prefer that canonical symbol
+        # so the validation gate matches the actual evidence (HDFCBANK).
+        try:
+            phrase = _leading_company_phrase(query or "")
+            if phrase:
+                phrase_resolution = resolve_symbol(phrase)
+                if (
+                    isinstance(phrase_resolution, dict)
+                    and phrase_resolution.get("symbol")
+                    and phrase_resolution.get("confidence") in {"exact", "near-match"}
+                ):
+                    requested = [str(phrase_resolution["symbol"]).upper()]
+        except Exception:
+            pass
     symbols: list[str] = []
     for token in requested:
         clean = token.strip().upper()
@@ -1042,6 +1170,10 @@ def _source_trail_lines(tool_results: list[dict]) -> list[str]:
         err = result.get("error")
         status = f"ERROR: {err}" if err else "ok"
         lines.append(f"  {tr.get('tool')}: {status}")
+        if err and tr.get("tool") == "resolve_symbol":
+            candidates = result.get("candidates") or []
+            if candidates:
+                lines.append(f"    Suggestions: {', '.join(str(c) for c in candidates[:5])}")
     return lines
 
 
@@ -1098,10 +1230,19 @@ def _validate_required_tools(query: str, intent: str, tool_results: list[dict]) 
     missing = validation.get("missing_tools") or [tool for tool in required if tool not in executed]
     if not missing:
         return None
+    suggestions: list[str] = []
+    for tr in tool_results or []:
+        if tr.get("tool") != "resolve_symbol" or not isinstance(tr.get("result"), dict):
+            continue
+        candidates = tr["result"].get("candidates") or []
+        if candidates:
+            bad_query = tr["result"].get("query") or tr.get("args", {}).get("query") or "requested symbol"
+            suggestions.append(f"  Symbol not found: {bad_query}. Did you mean: {', '.join(str(c) for c in candidates[:5])}?")
     lines = [
         "▶ REQUIRED TOOL VALIDATION FAILED",
         f"  Intent: {intent}",
         f"  Missing required tool(s): {', '.join(missing)}",
+        *suggestions,
         "  No market conclusion was rendered because the mandatory evidence plan did not run.",
         "",
         "▶ SOURCE TRAIL",
@@ -1305,6 +1446,16 @@ def _entity_topic_execution_plan(assessment) -> list[tuple[str, dict]]:
             ("run_forensic_analysis", {"symbol": symbol}),
         ]
     if command in {"/analyze", "/canslim", "/concall", "/chart", "/company-xray", "/company-index", "/strategy-council"}:
+        # ── Fix 2026-05-19: /analyze SYMBOL used to return only a thin 4-tool
+        # plan (resolve/snapshot/technical/sector), producing a 2-line summary
+        # with no fundamentals, no news/catalysts, no forensic, no concall, no
+        # deep-search (shareholding/insider/analyst). The full 360° plan was
+        # only firing for the agent-generated "comprehensive 360° analysis of
+        # X" phrasing, not for user-typed /analyze. Route /analyze to the rich
+        # plan; keep the other slash commands on their existing thin plan to
+        # avoid behavioural drift in unrelated features.
+        if command == "/analyze":
+            return _stock_360_prompt_plan(symbol, topic or "")
         return [
             ("resolve_symbol", {"query": symbol}),
             ("get_symbol_snapshot", {"symbol": symbol}),
@@ -1321,6 +1472,39 @@ def _entity_topic_execution_plan(assessment) -> list[tuple[str, dict]]:
 
 def _build_market_situation_assessment_plan(query: str, data_mode: str = "historical") -> dict | None:
     q = _routing_query_text(query).lower()
+
+    # ── Fix 2026-05-19: bail out for sector-specific deep dives. Previously
+    # prompts like "Analyse the IT sector — breadth, ..." matched on "breadth"
+    # + "nifty" and short-circuited the sector router. Defer to the keyword
+    # planner's SECTOR_INDEX_MAP route which yields the proper plan.
+    #
+    # 2026-05-22: Skip the bailout when the user explicitly asks for MTF /
+    # confluence / recommendation. Those intents need the universe scan
+    # (mtf-universe-scan) regardless of which sector words appear.
+    _mtf_intent_hint = (
+        "mtf" in q
+        or "multi" in q
+        or "muti" in q  # tolerate the common 'multi' typo
+        or "confluence" in q
+        or "timeframe" in q
+        or "time frame" in q
+        or "recommendation" in q
+        or "recommendataion" in q  # tolerate
+    )
+    if "sector" in q and not _mtf_intent_hint:
+        _sector_tokens = (
+            "it sector", "sector it", "banking sector", "bank sector",
+            "pharma sector", "auto sector", "fmcg sector", "metal sector",
+            "metals sector", "realty sector", "real estate sector",
+            "energy sector", "oil & gas sector", "oil and gas sector",
+            "media sector", "consumer durables sector", "infrastructure sector",
+            "defence sector", "defense sector", "chemicals sector",
+            "financial services sector", "capital markets sector",
+            "healthcare sector", "psu bank sector", "private bank sector",
+        )
+        if any(tok in q for tok in _sector_tokens):
+            return None
+
     market_terms = ("market", "nifty", "indices", "index", "breadth", "advance", "decline")
     status_terms = ("current", "status", "today", "now", "live", "how is")
     mover_terms = ("top gainer", "top gainers", "gainers", "losers", "movers", "top stocks", "top indices")
@@ -1333,6 +1517,34 @@ def _build_market_situation_assessment_plan(query: str, data_mode: str = "histor
     wants_breadth = "breadth" in q or "advance" in q or "decline" in q
     wants_flows = any(term in q for term in flow_terms)
     wants_news = any(term in q for term in news_terms)
+    # MTF + recommendation intent (PG 2026-05-22): trigger when the user asks
+    # for multi-timeframe analysis or a "recommendation report" style ask.
+    # These imply a fan-out across a universe + per-symbol confluence scoring
+    # that the LLM rarely orchestrates unaided.
+    mtf_terms = (
+        "multi time frame", "multi-time-frame", "multi timeframe",
+        "multi-timeframe", "multitimeframe", " mtf ", "mtf:",
+        "mtf scan", "mtf alignment", "mtf confluence",
+        "muti time frame", "muti-time", "muti timeframe", "muti-timeframe",
+        "multi tf", "multi-tf",
+        "across timeframes", "across time frames",
+        "weekly and daily", "monthly weekly daily", "weekly + daily",
+        "higher timeframe", "higher time frame", "timeframe alignment",
+        "timeframe confluence", "tf confluence",
+    )
+    rec_terms = (
+        "recommendation report", "recommendation list", "buy list",
+        "top picks", "top buys", "what to buy", "best stocks to buy",
+        "confluent setups", "confluence",
+    )
+    wants_mtf = any(term in q for term in mtf_terms) or (
+        f" {q} ".find(" mtf ") != -1
+    )
+    # Tolerant match: catches typo variants like "recommendataion report".
+    wants_recommendation = (
+        any(term in q for term in rec_terms)
+        or bool(re.search(r"recommend\w*\s+(report|list|view|note)", q))
+    )
     wants_plan = any(
         term in q
         for term in (
@@ -1342,8 +1554,18 @@ def _build_market_situation_assessment_plan(query: str, data_mode: str = "histor
         )
     )
 
-    if not wants_market or not (wants_status or wants_breadth or wants_movers or wants_flows):
-        return None
+    # MTF / recommendation prompts qualify as market-situation requests even
+    # without an explicit status word — the user clearly wants market-wide
+    # decomposition. Treat the recommendation/MTF flags as primary triggers
+    # alongside the original (status|breadth|movers|flows) set. They also
+    # bypass the wants_market gate when present, since "find bearish MTF
+    # aligned stocks" or "pharma sector MTF confluence" clearly implies a
+    # market-wide fan-out even without an explicit market/nifty/index word.
+    if not (wants_mtf or wants_recommendation):
+        if not wants_market or not (
+            wants_status or wants_breadth or wants_movers or wants_flows
+        ):
+            return None
 
     tasks = [
         _planner_task(
@@ -1406,17 +1628,98 @@ def _build_market_situation_assessment_plan(query: str, data_mode: str = "histor
             )
         )
 
+    if wants_mtf or wants_recommendation:
+        # Universe-wide MTF confluence scan. NIFTY 50 keeps the fan-out
+        # bounded (~50 symbols * 5 timeframes); callers can override.
+        mtf_direction = "bearish" if any(t in q for t in ("short", "sell", "bearish")) else "bullish"
+        tasks.append(
+            _planner_task(
+                "mtf-universe-scan",
+                "Rank an NSE universe by multi-timeframe confluence in the requested direction.",
+                tool="scan_mtf_aligned",
+                args={
+                    "index": "NIFTY 50",
+                    "direction": mtf_direction,
+                    "min_score": 60,
+                    "top_n": 10,
+                },
+                fallback="If live NSE constituents fetch fails, derive a 50-symbol universe from PostgreSQL scores.mv_latest_daily top-RS rows and pass via 'symbols'.",
+                recovery_plan="If scan_mtf_aligned is missing, fall back to calling analyze_mtf per stock from a 20-symbol candidate list derived from run_screener_query('high_rs').",
+            )
+        )
+        tasks.append(
+            _planner_task(
+                "mtf-top-symbols",
+                "For the top scan matches, surface the full per-timeframe MTF stack (direction, score, aligned/dissonant TFs) so the report cites every aligned/dissonant timeframe.",
+                derived_from="mtf-universe-scan",
+                fallback="Iterate symbols from mtf-universe-scan.top and call analyze_mtf(symbol) for each (cap to 5 to keep runtime bounded).",
+                recovery_plan="If analyze_mtf is missing, build the per-stock MTF stack inline using terminal.mtf.compute_mtf.",
+            )
+        )
+        if wants_recommendation:
+            tasks.append(
+                _planner_task(
+                    "recommendation-fundamentals",
+                    "Augment the top MTF-aligned symbols with fundamental context (P/E, ROCE, growth) so the recommendation is grounded on both technical and fundamental data.",
+                    derived_from="mtf-universe-scan",
+                    fallback="If screener.in is unreachable, use compare_stocks(symbols, aspects=['fundamentals']) which reads PG fundamentals.",
+                    recovery_plan="If both fail, mark fundamentals as missing in the report rather than inferring.",
+                )
+            )
+
+    # Attach a confidence score to the plan so downstream renderers can
+    # surface a clarification panel for low-confidence routes.
+    try:
+        from terminal.confidence import score_plan as _score_plan
+
+        triggers = [
+            ("status", wants_status),
+            ("breadth", wants_breadth),
+            ("movers", wants_movers),
+            ("flows", wants_flows),
+            ("news", wants_news),
+            ("mtf", wants_mtf),
+            ("recommendation", wants_recommendation),
+        ]
+        trigger_count = sum(1 for _, present in triggers if present)
+        # Detect typo-tolerant route: any of the fuzzy-only mtf aliases.
+        typo_route = any(
+            term in q for term in ("muti-time", "muti timeframe", "muti-timeframe", "muti time frame")
+        ) or bool(re.search(r"recommend\w*\s+(report|list|view|note)", q) and "recommendation" not in q)
+        plan_conf = _score_plan(
+            decision="situation_assessment_plan",
+            trigger_count=trigger_count,
+            has_mtf_or_recommendation=bool(wants_mtf or wants_recommendation),
+            has_market_word=bool(wants_market),
+            typo_route=typo_route,
+            extra_signals={
+                "triggers": {name: present for name, present in triggers},
+                "wants_market": wants_market,
+                "wants_plan": wants_plan,
+            },
+        )
+    except Exception:
+        plan_conf = None
+
     return {
         "kind": "market_situation_assessment",
         "tasks": tasks,
         "execution_order": [task["id"] for task in tasks],
         "mode": data_mode,
         "show_plan": wants_plan,
+        "confidence": plan_conf.to_dict() if plan_conf is not None else None,
     }
 
 
 def _extract_fno_symbol(query: str) -> str:
-    """Extract an index/stock symbol for F&O tools without treating F&O terms as symbols."""
+    """Extract an index/stock symbol for F&O tools without treating F&O terms as symbols.
+
+    Resolution order:
+      1. Known multi-word index aliases (banknifty / finnifty / etc).
+      2. The first token that is present in the NSE symbol universe.
+      3. The first token not in the F&O-jargon skip list (back-compat fallback).
+      4. Default to NIFTY.
+    """
     text = query or ""
     q = text.lower()
     if "banknifty" in q or "bank nifty" in q or "nifty bank" in q:
@@ -1428,16 +1731,40 @@ def _extract_fno_symbol(query: str) -> str:
     if "nifty" in q:
         return "NIFTY"
 
+    for phrase in (_symbol_phrase_after_preposition(text), _leading_company_phrase(text)):
+        if not phrase:
+            continue
+        try:
+            resolved = resolve_symbol(phrase)
+            symbol = str(resolved.get("symbol") or "").strip().upper() if isinstance(resolved, dict) else ""
+        except Exception:
+            symbol = ""
+        if symbol:
+            return symbol
+
     skip = {
-        "F", "O", "FO", "FNO", "AND", "FOR", "THE", "WITH", "GIVE", "COMPREHENSIVE",
+        "F", "O", "FO", "FNO", "F&O",
+        "AND", "FOR", "THE", "WITH", "GIVE", "COMPREHENSIVE",
         "OVERVIEW", "OPTION", "OPTIONS", "CHAIN", "PCR", "MAX", "PAIN", "TOP", "OI",
         "STRIKES", "FUTURES", "BASIS", "COST", "CARRY", "ROLL", "ROLLOVER", "RECOMMEND",
         "BEST", "STRATEGY", "CURRENT", "DATA", "OPEN", "INTEREST",
     }
-    for token in re.findall(r"\b[A-Z][A-Z0-9&-]{1,12}\b", text):
-        clean = token.upper()
-        if clean not in skip:
-            return clean
+    tokens = [t.upper() for t in re.findall(r"\b[A-Z][A-Z0-9&-]{1,12}\b", text)]
+    candidates = [t for t in tokens if t not in skip]
+
+    # Prefer tokens that exist in the NSE symbol universe — this stops jargon
+    # like "F&O" being treated as a ticker when a real symbol (HINDUNILVR,
+    # RELIANCE, etc.) appears later in the prompt.
+    try:
+        from terminal.entity_resolution import _load_symbol_universe
+        universe = _load_symbol_universe()
+    except Exception:
+        universe = frozenset()
+    for token in candidates:
+        if universe and token in universe:
+            return token
+    for token in candidates:
+        return token
     return "NIFTY"
 
 
@@ -1775,6 +2102,17 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
             ("get_latest_results_feed", {"days_back": results_feed_slash_days, "limit": 50}),
         ]}
 
+    visual_scan_match = re.search(
+        r"^(?:/visual-scan|/visual_scan|visual scan(?:\s+of)?|perform a visual scan of|deep visual qa of)\s+(.+)$",
+        routing_text.strip(),
+        flags=re.IGNORECASE,
+    )
+    if visual_scan_match:
+        raw_symbol = visual_scan_match.group(1).strip(" .,:;")
+        raw_symbol = re.sub(r"\bchart\b", "", raw_symbol, flags=re.IGNORECASE).strip()
+        sym_q = _primary_symbol_query([raw_symbol], [], raw_symbol)
+        return {"intent": "visual_scan", "plan": [("run_visual_scan", {"symbol": sym_q.upper()})]}
+
     analyze_symbols = _analyze_command_symbols(routing_text)
     if len(analyze_symbols) >= 2:
         return {
@@ -1834,8 +2172,9 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
             ("get_intraday_analysis", {"symbol": symbol}),
         ]}
 
-    if "sector" in q and re.search(r"\bit\b|information technology", q):
-        return {"intent": "sector_scan", "plan": [("get_sector_context", {"sector_or_symbol": "IT"})]}
+    # Removed 2026-05-19: legacy thin IT-only route returned just
+    # get_sector_context, causing prompt p21 to skip index snapshot + breadth.
+    # Generic SECTOR_INDEX_MAP route below now handles IT with full plan.
 
     if "dashboard" in q and any(term in q for term in ("market", "nifty", "india", "current", "narrative")):
         return {
@@ -1859,8 +2198,43 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
     )
     if any(term in f" {q} " for term in fno_terms):
         symbol = _extract_fno_symbol(routing_text)
+        if data_mode == "intraday" and any(
+            term in q
+            for term in (
+                "intraday", "trade setup", "tradesetup", "trading setup",
+                "live price", "live prices", "live pricies", "price", "prices", "pricies",
+            )
+        ) and symbol not in {"NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"}:
+            timeframe = _extract_intraday_timeframe(q)
+            plan = [
+                ("resolve_symbol", {"query": symbol}),
+                ("get_nse_intraday_snapshot", {"symbol": symbol}),
+                ("get_fno_overview", {"symbol": symbol, "expiry_index": 0}),
+                ("explain_intraday_setup", {"symbol": symbol, "timeframe": timeframe}),
+                ("get_intraday_analysis", {"symbol": symbol, "interval": timeframe}),
+            ]
+            return {"intent": "intraday_setup", "plan": plan}
         plan = [("get_fno_overview", {"symbol": symbol, "expiry_index": 0})]
         return {"intent": "fno_overview", "plan": plan}
+
+    sector_analysis_match = re.search(r"\bsector\s+analysis\s+for\s+([a-z][a-z\s&-]{1,40})(?:[:?.]|$)", q)
+    if sector_analysis_match:
+        sector_name = sector_analysis_match.group(1).strip()
+        sector_aliases = {
+            "it": "IT",
+            "information technology": "IT",
+            "bank": "Bank",
+            "banking": "Bank",
+            "pharma": "Pharma",
+            "auto": "Auto",
+            "metal": "Metals",
+            "metals": "Metals",
+            "fmcg": "FMCG",
+            "real estate": "Real Estate",
+            "realty": "Real Estate",
+            "energy": "Energy",
+        }
+        return {"intent": "sector_scan", "plan": [("get_sector_context", {"sector_or_symbol": sector_aliases.get(sector_name, sector_name.upper())})]}
 
     stock_360_symbol = _stock_360_prompt_symbol(routing_text)
     if stock_360_symbol:
@@ -1901,6 +2275,62 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
         "top gainer", "top gainers", "gainers", "losers", "movers",
         "top stocks", "top indices", "indices", "index movers",
     ]
+
+    # ── Fix 2026-05-19: route sector-deep-dive prompts BEFORE breadth check ──
+    # Bug: prompts like "Analyse the IT sector — breadth, stage distribution, RS
+    # vs Nifty, leaders and laggards, and key themes" (prompt-library p21)
+    # used to hit `breadth_words` first and return the generic market overview,
+    # never invoking get_sector_context. We pre-route any query that names a
+    # specific sector (token "<sector> sector" or "sector ... <name>") to
+    # get_sector_context + get_index_snapshot for that sector's NIFTY index.
+    SECTOR_INDEX_MAP = {
+        "it":          ("IT",          "NIFTY IT"),
+        "banking":     ("Banking",     "NIFTY BANK"),
+        "bank":        ("Banking",     "NIFTY BANK"),
+        "psu bank":    ("PSU Banking", "NIFTY PSU BANK"),
+        "private bank":("Private Banking", "NIFTY PRIVATE BANK"),
+        "pharma":      ("Pharma",      "NIFTY PHARMA"),
+        "healthcare":  ("Healthcare",  "NIFTY HEALTHCARE INDEX"),
+        "auto":        ("Auto",        "NIFTY AUTO"),
+        "fmcg":        ("FMCG",        "NIFTY FMCG"),
+        "metal":       ("Metals",      "NIFTY METAL"),
+        "metals":      ("Metals",      "NIFTY METAL"),
+        "realty":      ("Realty",      "NIFTY REALTY"),
+        "real estate": ("Realty",      "NIFTY REALTY"),
+        "energy":      ("Energy",      "NIFTY ENERGY"),
+        "oil & gas":   ("Oil & Gas",   "NIFTY OIL & GAS"),
+        "oil and gas": ("Oil & Gas",   "NIFTY OIL & GAS"),
+        "media":       ("Media",       "NIFTY MEDIA"),
+        "consumer durables": ("Consumer Durables", "NIFTY CONSUMER DURABLES"),
+        "infrastructure":    ("Infrastructure",    "NIFTY INFRASTRUCTURE"),
+        "defence":     ("Defence",     "NIFTY INDIA DEFENCE"),
+        "defense":     ("Defence",     "NIFTY INDIA DEFENCE"),
+        "chemicals":   ("Chemicals",   "NIFTY CHEMICALS"),
+        "financial services": ("Financial Services", "NIFTY FINANCIAL SERVICES"),
+        "capital markets":    ("Capital Markets",    "NIFTY CAPITAL MARKETS"),
+    }
+    if "sector" in q:
+        # Match "<name> sector" or "sector ... <name>" (longest names first so
+        # "real estate" beats "estate" and "private bank" beats "bank").
+        sector_hit = None
+        for name in sorted(SECTOR_INDEX_MAP.keys(), key=len, reverse=True):
+            if f"{name} sector" in q or f"sector {name}" in q or (
+                "sector" in q and re.search(rf"\b{re.escape(name)}\b", q)
+            ):
+                sector_hit = name
+                break
+        if sector_hit:
+            canonical, idx_name = SECTOR_INDEX_MAP[sector_hit]
+            return {
+                "intent": "sector_deep_dive",
+                "plan": [
+                    ("get_sector_context",   {"sector_or_symbol": canonical}),
+                    ("get_index_snapshot",   {"index_name": idx_name}),
+                    ("get_top_gainers_losers", {"index": idx_name, "top_n": 5, "direction": "both"}),
+                    ("get_market_breadth",   {}),
+                ],
+            }
+
     recent_market_words = [
         "what happened", "what changed", "last 15", "last 30", "last 5",
         "last few minutes", "last minutes", "recent move", "just now",
@@ -2268,6 +2698,36 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
                 ("get_nse_intraday_snapshot", {"symbol": sym_q}),
                 ("get_intraday_analysis", {"symbol": sym_q}),
             ]}
+        # PG 2026-05-22: "intraday scan for TRENT" / "scan SBIN intraday" — when
+        # the user pairs the word "scan" with an explicit single-symbol subject
+        # (no index keyword), route to scan_symbols_intraday so we actually
+        # analyze that stock instead of falling through to the generic momentum
+        # screener.
+        if (
+            candidates
+            and explicit_stock_subject
+            and ("scan" in q or "screener" in q)
+            and not any(
+                kw in q
+                for kw in ("nifty", "bank nifty", "banknifty", "midcap", "smallcap",
+                            "sensex", "finnifty", "index", "universe")
+            )
+        ):
+            sym_q = _primary_symbol_query(candidates, symbol_candidates, routing_text)
+            sym_upper = sym_q.upper()
+            return {"intent": "intraday_symbol_scan", "plan": [
+                ("resolve_symbol", {"query": sym_q}),
+                ("scan_symbols_intraday", {
+                    "symbols": [sym_upper],
+                    "interval": _extract_intraday_timeframe(q),
+                    "strategies": _extract_intraday_scan_strategies(q),
+                    "direction_filter": _intraday_scan_direction(q),
+                    "min_rr": 1.3,
+                    "top_n": 10,
+                }),
+                ("explain_intraday_setup", {"symbol": sym_q}),
+                ("get_nse_intraday_snapshot", {"symbol": sym_q}),
+            ]}
         if "scan" in q and (
             "nifty" in q
             or "bank nifty" in q
@@ -2575,6 +3035,7 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
     fno_futures = _get("get_futures_analysis")
     fno_strategy = _get("get_strategy_recommendations")
     fno_overview = _get("get_fno_overview")
+    visual_scan = _get("run_visual_scan")
     forensic = _get("run_forensic_analysis")
     deep = _get("deep_search")
     intra_setup = _get("explain_intraday_setup")
@@ -2611,6 +3072,18 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
     if not sym and forensic:
         sym = forensic.get("symbol") or ""
     cname = (snap or {}).get("company_name") or sym
+
+    if intent == "visual_scan" and visual_scan:
+        lines.append(f"━━━ {visual_scan.get('symbol', '—')} — Visual Scan ━━━")
+        lines.append(visual_scan.get("summary", "Visual scan completed."))
+        if visual_scan.get("html_path"):
+            lines.append(f"Report: {visual_scan.get('html_path')}")
+        if visual_scan.get("json_path"):
+            lines.append(f"Evidence: {visual_scan.get('json_path')}")
+        lines.append("\n▶ SOURCE TRAIL")
+        lines.extend(_source_trail_lines(tool_results))
+        lines.append("\n━━━ Not investment advice. For research and learning only. ━━━")
+        return "\n".join(line for line in lines if str(line).strip())
 
     def _render_assessment_plan(plan: dict | None) -> None:
         if not plan:
@@ -3665,6 +4138,25 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
     if intent == "market_situation_assessment":
         if (assessment_plan or {}).get("show_plan"):
             _render_assessment_plan(assessment_plan)
+        # Surface plan-stage clarification when the planner's confidence
+        # is low. Non-blocking — we still proceed with the best guess.
+        _plan_conf_dict = (assessment_plan or {}).get("confidence")
+        if isinstance(_plan_conf_dict, dict) and _plan_conf_dict.get("score", 1.0) < 0.65:
+            try:
+                from terminal.confidence import ConfidenceScore, render_clarification
+                from rich.console import Console as _RConsole
+
+                _restored = ConfidenceScore(
+                    score=float(_plan_conf_dict.get("score", 0.0)),
+                    stage=str(_plan_conf_dict.get("stage", "plan")),
+                    decision=str(_plan_conf_dict.get("decision", "")),
+                    reasons=list(_plan_conf_dict.get("reasons") or []),
+                    signals=dict(_plan_conf_dict.get("signals") or {}),
+                    alternatives=list(_plan_conf_dict.get("alternatives") or []),
+                )
+                render_clarification(_restored, _RConsole())
+            except Exception:
+                pass
 
     if intent == "startup_morning_briefing":
         def _fmt_pct(value) -> str:
@@ -3791,10 +4283,7 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
         lines.append("3. `/scan NIFTY 50 vwap` — find intraday research setups with clear invalidation.")
 
         lines.append("\n▶ SOURCE TRAIL")
-        for tr in tool_results:
-            err = tr["result"].get("error", "") if isinstance(tr.get("result"), dict) else ""
-            status = f"ERROR: {err}" if err else "ok"
-            lines.append(f"  {tr['tool']}: {status}")
+        lines.extend(_source_trail_lines(tool_results))
         lines.append("\n━━━ Not investment advice. For research and learning only. ━━━")
         return "\n".join(l for l in lines if str(l).strip() != "")
 
@@ -3879,6 +4368,30 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
                 parts.append(f"{strike}: OI {oi}{chg_txt}")
             return " | ".join(parts)
 
+    if fno_overview and intent != "fno_overview":
+        symbol = fno_overview.get("symbol") or "—"
+        lines.append(f"\n━━━ {symbol} — F&O Overview ━━━")
+        lines.append("▶ OPTION CHAIN")
+        chain = fno_overview.get("option_chain") or {}
+        if chain.get("status") == "missing" or chain.get("error"):
+            lines.append(f"  ERROR: {chain.get('error') or 'option-chain evidence missing'}")
+        else:
+            lines.append(f"  PCR: {fno_overview.get('pcr', '—')} | Max pain: {fno_overview.get('max_pain', '—')}")
+        lines.append("▶ FUTURES BASIS & CARRY")
+        futures = fno_overview.get("futures") or {}
+        if futures.get("status") == "missing" or futures.get("error"):
+            lines.append(f"  ERROR: {futures.get('error') or 'futures evidence missing'}")
+        else:
+            lines.append(f"  Basis: {fno_overview.get('basis', '—')} | Cost of carry: {fno_overview.get('cost_of_carry', '—')}")
+        rec = fno_overview.get("recommendation") or {}
+        if rec:
+            lines.append("▶ STRATEGY CONTEXT")
+            if rec.get("status") == "blocked":
+                lines.append(f"  Blocked: {rec.get('reason')}")
+            else:
+                lines.append(f"  Strategy: {rec.get('strategy', '—')}")
+
+    if fno_chain or fno_futures or fno_strategy:
         symbol = (
             (fno_chain or {}).get("symbol")
             or (fno_futures or {}).get("symbol")
@@ -4650,6 +5163,30 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
                 for row in losers[:5]
             ))
 
+    mtf_scan = _get("scan_mtf_aligned")
+    if mtf_scan and not mtf_scan.get("error"):
+        lines.append("\n▶ MULTI-TIMEFRAME CONFLUENCE")
+        lines.append(
+            f"  Direction: {mtf_scan.get('direction','—')}  ·  "
+            f"min_score: {mtf_scan.get('min_score','—')}  ·  "
+            f"timeframes: {','.join(mtf_scan.get('timeframes') or [])}  ·  "
+            f"universe: {mtf_scan.get('universe_size', 0)}  ·  "
+            f"matches: {mtf_scan.get('matches_total', 0)}"
+        )
+        top = mtf_scan.get("top") or []
+        if top:
+            lines.append("  Top aligned (score · verdict · aligned TFs):")
+            for row in top[:10]:
+                aligned = ",".join(row.get("aligned_tfs", []) or [])
+                lines.append(
+                    f"    {row.get('symbol','—'):<14} "
+                    f"{int(row.get('confluence_score', 0)):>3}  "
+                    f"{row.get('verdict','—'):<6}  "
+                    f"[{aligned}]"
+                )
+        else:
+            lines.append("  No symbols met the confluence threshold; consider lowering min_score or widening universe.")
+
     # 4b. Global market assessment
     if glob and not glob.get("error"):
         lines.append("\n▶ GLOBAL MARKET ASSESSMENT")
@@ -5121,6 +5658,13 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
     if missing_tools:
         lines.append("\n▶ MISSING EVIDENCE")
         lines.append("  Missing evidence: " + ", ".join(dict.fromkeys(missing_tools)))
+        for tr in tool_results:
+            if tr.get("tool") != "resolve_symbol" or not isinstance(tr.get("result"), dict):
+                continue
+            candidates = tr["result"].get("candidates") or []
+            if candidates:
+                bad_query = tr["result"].get("query") or tr.get("args", {}).get("query") or "requested symbol"
+                lines.append(f"  Symbol not found: {bad_query}. Did you mean: {', '.join(str(c) for c in candidates[:5])}?")
         lines.append("  No unsupported technical, fundamental, catalyst, or sector conclusion was inferred from missing data.")
 
     # Intraday / data health
@@ -5149,10 +5693,7 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
 
     # Source trail
     lines.append("\n▶ SOURCE TRAIL")
-    for tr in tool_results:
-        err = tr["result"].get("error", "")
-        status = f"ERROR: {err}" if err else "ok"
-        lines.append(f"  {tr['tool']}: {status}")
+    lines.extend(_source_trail_lines(tool_results))
 
     lines.append("\n━━━ Not investment advice. For research and learning only. ━━━")
     return "\n".join(l for l in lines if l.strip() != "")
@@ -5266,6 +5807,13 @@ class Agent:
         self._history: list[dict] = []
         self._last_symbols: list[str] = []
         self._last_turn_context: TurnContext | None = None
+        self._memory_session_id = os.environ.get("AGENT_ADDA_MEMORY_SESSION_ID", MEMORY_DEFAULT_SESSION_ID)
+        self._memory_pg_enabled = os.environ.get("AGENT_ADDA_MEMORY_PG", "1").lower() not in {"0", "false", "no"}
+        self._memory = (
+            load_memory_fail_open(self._memory_session_id)
+            if self._memory_pg_enabled
+            else ConversationMemory(session_id=self._memory_session_id)
+        )
         # Most recent assistant clarification (set when we render an
         # ask_clarification turn). The next user input is matched against
         # its options; the bound_action is executed verbatim without
@@ -5323,6 +5871,8 @@ class Agent:
                 " ".join(str(symbol) for symbol in (context.symbols or [])),
                 " ".join(str(tool) for tool in (context.tools or [])),
             ])
+        if getattr(self, "_memory", None) is not None:
+            parts.append(self._memory.compressed_summary())
         return "\n".join(part for part in parts if part)
 
     def _tool_schemas_for_query(self, user_input: str) -> list[dict]:
@@ -5444,6 +5994,7 @@ class Agent:
         self._history = []
         self._last_symbols = []
         self._last_turn_context = None
+        self._memory = ConversationMemory(session_id=self._memory_session_id)
 
     def _contextualize_pronouns(self, user_input: str) -> str:
         """Replace stock pronouns with the last resolved symbol for routing."""
@@ -5486,9 +6037,26 @@ class Agent:
 
         self._history.append({"role": "user", "content": user_input})
         self._history.append({"role": "assistant", "content": answer})
+        memory_context = turn_context or self._last_turn_context
+        if getattr(self, "_memory", None) is not None:
+            try:
+                self._memory.record_turn(user_input, answer, tool_results, memory_context)
+                if self._memory_pg_enabled:
+                    self._memory.save_to_postgres()
+            except Exception:
+                # Memory persistence must never break the research answer path.
+                pass
 
     def _conversation_fallback_context(self, *, mode: str, source_label: str) -> TurnContext | None:
         """Build minimal context from rolling history when structured context is absent."""
+        if getattr(self, "_memory", None) is not None:
+            memory_context = self._memory.context_for_query(
+                "previous analysis",
+                mode=mode,
+                source_label=source_label,
+            )
+            if memory_context is not None:
+                return memory_context
         if not self._history:
             return None
         recent = "\n".join(str(m.get("content") or "") for m in self._history[-6:])
@@ -6027,6 +6595,7 @@ class Agent:
             "stock_comparison", "portfolio_review",
             "event_calendar",
             "fno_overview", "market_dashboard", "screener",
+            "visual_scan",
             "long_term_growth_research",
             "market_overview", "intraday_index_scan", "intraday_screener",
             "intraday_market_recap", "intraday_setup", "intraday_levels",
@@ -6076,6 +6645,57 @@ class Agent:
 
         # ── LLM path ──────────────────────────────────────────────────────────
         if self.backend is not None:
+            # PG-HALL-GUARD: Final hallucination gate before the free-text
+            # LLM router. If the user asked for a data-grounded scan
+            # (RS / screener / gainers / intraday scan), no deterministic
+            # handler claimed it (intent_plan.intent is the fallback/general
+            # chat), AND no situation-assessment tool_plan was produced,
+            # then prose is not an acceptable output. Refuse cleanly.
+            try:
+                from .situation_assessment import classify_grounded_intent as _cgi
+                _grounded_tag = _cgi(clean_input)
+            except Exception:
+                _grounded_tag = ""
+            _deterministic_intents = {
+                "market_overview",
+                "market_situation_assessment",
+                "market_dashboard",
+                "screener_run",
+                "stage2_screener",
+                "intraday_scan",
+                "intraday_symbol_scan",
+                "gainers_losers",
+                "top_movers",
+                "high_rs",
+                "breakout_scan",
+                "entity_topic_command",
+                "report_lookup",
+                "contextual_tool_plan",
+            }
+            _claimed = (intent_plan.get("intent") or "") in _deterministic_intents
+            if _grounded_tag and not _claimed:
+                trace.append({
+                    "step": "hallucination_guard_pre_llm",
+                    "reason": "grounded ask with no deterministic handler",
+                    "grounded_intent": _grounded_tag,
+                    "intent_plan": intent_plan.get("intent"),
+                })
+                answer = (
+                    f"_No grounded results available for `{_grounded_tag}` request._\n\n"
+                    "This needs a real scan against live/DB data — I won't "
+                    "fabricate a list. Please specify the universe "
+                    "(e.g. `NIFTY 50`, `NIFTY 500`, `F&O`) or run a deterministic "
+                    "command like `/screen highrs` or `/scan NIFTY 500`.\n\n"
+                    "━━━ Not investment advice. For research and learning only. ━━━"
+                ) + mode_suffix
+                self._remember_interaction(clean_input, answer, [])
+                return {
+                    "answer": answer,
+                    "trace": trace,
+                    "backend": self.backend_name,
+                    "intent": "hallucination_guard",
+                }
+
             result = self._llm_query(clean_input, show_trace, mode_context)
             # Only append mode suffix if the LLM didn't include a Source Trail
             if "Mode:" not in result.get("answer", "")[-600:]:

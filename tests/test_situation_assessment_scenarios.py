@@ -279,10 +279,16 @@ _SOURCE_CASES = [
 def test_bucket_e_source_followups_answer_from_context(user_input):
     ctx = _stage2_context(["TCS", "INFY", "WIPRO"])
     asm = assess_followup(user_input, ctx)
-    # Either source-question or last-window branch — both must use context.
-    assert asm.decision == "answer_from_context", (
-        f"input={user_input!r} → {asm.decision}"
-    )
+    if "last 30" in user_input or "last-30" in user_input or "last thirty" in user_input:
+        assert asm.decision == "ask_clarification", (
+            f"input={user_input!r} → {asm.decision}"
+        )
+        assert asm.clarification_questions
+        assert all(opt.bound_action for opt in asm.clarification_questions[0].options)
+    else:
+        assert asm.decision == "answer_from_context", (
+            f"input={user_input!r} → {asm.decision}"
+        )
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -1,10 +1,11 @@
 import unittest
+from unittest.mock import patch
 
 import pandas as pd
 
 from backtesting.strategy_council.council import run_strategy_council
 from backtesting.strategy_council.llm import JSONLLMCritic, JSONLLMStrategist, RuleBasedRiskCritic, RuleBasedStrategist
-from backtesting.strategy_council.types import BacktestSliceResult, CouncilConfig, EvidencePack
+from backtesting.strategy_council.types import BacktestSliceResult, CouncilConfig, EvidencePack, StrategySpec
 
 
 class StrategyCouncilLoopTests(unittest.TestCase):
@@ -69,6 +70,79 @@ class StrategyCouncilLoopTests(unittest.TestCase):
 
 
 class StrategyCouncilOrchestrationTests(unittest.TestCase):
+    def _flat_eod(self):
+        return pd.DataFrame(
+            {
+                "date": pd.date_range("2024-01-01", periods=520, freq="D"),
+                "symbol": ["DMART"] * 520,
+                "open": [100.0] * 520,
+                "high": [101.0] * 520,
+                "low": [99.0] * 520,
+                "close": [100.0] * 520,
+                "volume": [1000] * 520,
+            }
+        )
+
+    def _single_stage2_strategist(self):
+        class StaticStrategist:
+            def propose(self, *, evidence, config, prior_feedback):
+                return (
+                    StrategySpec(
+                        "stage2",
+                        5,
+                        ("entry",),
+                        ("exit",),
+                        ("risk",),
+                        "static test strategy",
+                    ),
+                )
+
+        return StaticStrategist()
+
+    def test_positive_test_does_not_override_negative_validation(self):
+        def fake_run(_df, spec, *, split_name, initial_capital):
+            if split_name == "validation":
+                return BacktestSliceResult("validation", spec.strategy_id, spec.horizon_days, {"total_return_pct": -7.0}, 5)
+            if split_name == "test":
+                return BacktestSliceResult("test", spec.strategy_id, spec.horizon_days, {"total_return_pct": 8.0}, 1)
+            return BacktestSliceResult("train", spec.strategy_id, spec.horizon_days, {"total_return_pct": 12.0}, 5)
+
+        config = CouncilConfig(symbol="DMART", iterations=1, max_candidates=1)
+        evidence = EvidencePack(symbol="DMART", as_of="2026-05-14", technical={"close": 100, "bars": 520})
+
+        with patch("backtesting.strategy_council.council.run_strategy_spec_on_split", side_effect=fake_run):
+            result = run_strategy_council(
+                self._flat_eod(),
+                evidence=evidence,
+                config=config,
+                strategist=self._single_stage2_strategist(),
+            )
+
+        self.assertEqual(result.recommendation, "WAIT")
+        self.assertIn("validation", result.rationale.lower())
+
+    def test_positive_test_does_not_override_zero_trade_validation(self):
+        def fake_run(_df, spec, *, split_name, initial_capital):
+            if split_name == "validation":
+                return BacktestSliceResult("validation", spec.strategy_id, spec.horizon_days, {"total_return_pct": 0.0}, 0)
+            if split_name == "test":
+                return BacktestSliceResult("test", spec.strategy_id, spec.horizon_days, {"total_return_pct": 8.0}, 1)
+            return BacktestSliceResult("train", spec.strategy_id, spec.horizon_days, {"total_return_pct": 12.0}, 5)
+
+        config = CouncilConfig(symbol="DMART", iterations=1, max_candidates=1)
+        evidence = EvidencePack(symbol="DMART", as_of="2026-05-14", technical={"close": 100, "bars": 520})
+
+        with patch("backtesting.strategy_council.council.run_strategy_spec_on_split", side_effect=fake_run):
+            result = run_strategy_council(
+                self._flat_eod(),
+                evidence=evidence,
+                config=config,
+                strategist=self._single_stage2_strategist(),
+            )
+
+        self.assertEqual(result.recommendation, "WAIT")
+        self.assertIn("validation", result.rationale.lower())
+
     def test_council_runs_iterations_then_only_runs_test_after_lock(self):
         df = pd.DataFrame(
             {

@@ -75,3 +75,11 @@ def test_call_tool_preserves_known_kwargs():
     assert isinstance(result, dict)
     err = result.get("error", "")
     assert "unexpected keyword argument" not in err
+
+
+def test_recommendation_report_tool_is_registered():
+    assert "run_recommendation_report" in TOOL_REGISTRY
+    schema = TOOL_REGISTRY["run_recommendation_report"][2]
+    assert "symbols" in schema["properties"]
+    assert "indices" in schema["properties"]
+    assert "sectors" in schema["properties"]

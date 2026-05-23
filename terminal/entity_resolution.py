@@ -50,6 +50,7 @@ TECHNICAL_NON_SYMBOL_TERMS: frozenset[str] = frozenset(
         "FII",
         "DII",
         "FNO",
+        "F&O",
         "FY",
         "QOQ",
         "YOY",
@@ -321,10 +322,14 @@ _INDEX_COMPONENT_WORDS = (
     "AUTOMOTIVE", "TRANSPORTATION", "LOGISTICS", "TELECOM",
     "DIVIDEND", "OPPORTUNITIES", "GROWTH", "SECTORS",
     "HIGH", "LOW", "BETA", "ALPHA", "QUALITY", "VALUE", "VOLATILITY",
-    "FINANCIAL", "INDIA", "NEW",
+    "FINANCIAL", "INDIA", "NEW", "PRIVATE", "INDEX",
 )
 
 
+# Sort component words by descending length so longer alternations (FINANCIAL,
+# HEALTHCARE) match before their shorter prefixes (FIN, HEALTH) in Python's
+# left-to-right alternation. Without this, "NIFTY FINANCIAL SERVICES" would
+# match "NIFTY FIN" + leave "ANCIAL SERVICES" behind.
 _INDEX_PHRASE_RE = re.compile(
     # Uppercase NSE index prefix + optional component words from a closed
     # vocabulary + optional numeric tier. Closed-vocab matching protects
@@ -332,7 +337,9 @@ _INDEX_PHRASE_RE = re.compile(
     # RELIANCE; "NIFTY OIL & GAS" is consumed entirely). Case-sensitive
     # uppercase only — aligned with the upstream tokenizer.
     r"\b(?:BANK\s+NIFTY|BANKNIFTY|FINNIFTY|MIDCPNIFTY|SENSEX|NIFTY)"
-    r"(?:\s+(?:" + "|".join(_INDEX_COMPONENT_WORDS) + r"|&))*"
+    r"(?:\s+(?:"
+    + "|".join(sorted(_INDEX_COMPONENT_WORDS, key=len, reverse=True))
+    + r"|&))*"
     r"(?:\s+\d{1,4})?"
 )
 

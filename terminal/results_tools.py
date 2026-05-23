@@ -15,6 +15,18 @@ from typing import Any
 from financial_filing_agent import ingest_filing_url, parse_pdf_filing as _parse_pdf_filing, parse_registered_filing
 from terminal.search_engine import search_bse_filings, search_nse_announcements
 from terminal.web_research import scrape_screener_in
+from terminal.financials_cache import (
+    screener_payload_from_cache,
+    upsert_screener_payload,
+)
+
+
+def _financials_cache_ttl_hours() -> float:
+    import os
+    try:
+        return float(os.environ.get("AGENT_ADDA_FINANCIALS_CACHE_TTL_H", "24"))
+    except (TypeError, ValueError):
+        return 24.0
 
 
 def _status_from(result: Any) -> str:
@@ -83,6 +95,58 @@ def _rows_to_candidates(rows: Any, source: str) -> list[dict]:
     return candidates
 
 
+def _resolve_screener_data(sym: str) -> tuple[dict, str]:
+    """PG-first → live screener scrape → cache fallback.
+
+    Order:
+      1. If fresh structured rows exist in PG (within
+         ``AGENT_ADDA_FINANCIALS_CACHE_TTL_H`` hours, default 24), return a
+         reconstructed payload and skip the live scrape.
+      2. Otherwise call ``scrape_screener_in``; on success, write the
+         structured rows back to PG.
+      3. If the live scrape errors out or returns empty, fall back to any
+         cached rows regardless of age (stale > nothing).
+
+    Returns ``(screener_data, status_string)``. ``status_string`` is what
+    gets recorded into ``source_trail`` and looks like:
+      ``pg_cache_hit:<age>h``, ``ok+writeback``, ``ok (writeback_err)``,
+      ``pg_cache_fallback:<age>h``, or ``ERROR: ...``.
+    """
+    ttl = _financials_cache_ttl_hours()
+    if ttl > 0:
+        cached = screener_payload_from_cache(sym, max_age_hours=ttl)
+        if cached is not None:
+            age = cached.get("_cache_age_hours")
+            return cached, f"pg_cache_hit:{age}h"
+
+    try:
+        live = scrape_screener_in(sym)
+    except Exception as exc:
+        stale = screener_payload_from_cache(sym, max_age_hours=None)
+        if stale is not None:
+            age = stale.get("_cache_age_hours")
+            return stale, f"pg_cache_fallback:{age}h (scrape ERROR: {exc})"
+        raise
+
+    if not live or live.get("error") or not any(
+        isinstance(live.get(k), dict) and live.get(k)
+        for k in ("quarterly", "annual_pl", "balance_sheet", "cash_flow")
+    ):
+        stale = screener_payload_from_cache(sym, max_age_hours=None)
+        if stale is not None:
+            age = stale.get("_cache_age_hours")
+            err = (live or {}).get("error") or "empty payload"
+            return stale, f"pg_cache_fallback:{age}h (scrape {err})"
+        return live or {}, _status_from(live)
+
+    writeback_status = "writeback"
+    try:
+        upsert_screener_payload(sym, live)
+    except Exception as exc:
+        writeback_status = f"writeback_err:{exc}"
+    return live, f"{_status_from(live)} ({writeback_status})"
+
+
 def discover_financial_filings(symbol: str, max_results: int = 10) -> dict:
     """Discover likely financial-result filings from NSE, BSE, and Screener."""
     sym = str(symbol or "").strip().upper()
@@ -107,8 +171,8 @@ def discover_financial_filings(symbol: str, max_results: int = 10) -> dict:
         source_trail["search_bse_filings"] = f"ERROR: {exc}"
 
     try:
-        screener_data = scrape_screener_in(sym)
-        source_trail["scrape_screener_in"] = _status_from(screener_data)
+        screener_data, screener_status = _resolve_screener_data(sym)
+        source_trail["scrape_screener_in"] = screener_status
         candidates.extend(_rows_to_candidates(screener_data.get("announcements") or [], "screener_in"))
     except Exception as exc:
         source_trail["scrape_screener_in"] = f"ERROR: {exc}"
@@ -278,18 +342,33 @@ def get_latest_results(symbol: str, period: str = "latest", ingest: bool = True)
     source_trail["discover_financial_filings"] = _status_from(discovery)
     source_trail.update(discovery.get("source_trail") or {})
 
-    candidate = (discovery.get("candidates") or [None])[0]
+    candidates = discovery.get("candidates") or []
+    candidate: dict[str, Any] | None = candidates[0] if candidates else None
     ingestion: dict[str, Any] = {}
     parsed: dict[str, Any] = {}
-    if ingest and candidate and candidate.get("url"):
-        ingestion = ingest_financial_filing(candidate["url"], symbol=sym, period=period)
+    if ingest and candidates:
+        # Walk the discovery candidates and stop at the first one that yields a
+        # successfully-parsed PDF (annual report / quarterly results PDF). The
+        # top-ranked candidate is often a BSE quote/board-meetings HTML page
+        # which the parser cannot consume; falling back to the next PDF
+        # candidate is what an analyst would do manually.
+        attempted = 0
+        for cand in candidates:
+            url = (cand or {}).get("url")
+            if not url:
+                continue
+            attempted += 1
+            ingestion = ingest_financial_filing(url, symbol=sym, period=period)
+            manifest_path = ingestion.get("manifest_path")
+            if ingestion.get("status") == "ok" and manifest_path:
+                parsed = parse_financial_filing(str(manifest_path))
+                if parsed.get("status") == "ok":
+                    candidate = cand
+                    break
+            if attempted >= 5:
+                break
         source_trail["ingest_financial_filing"] = _status_from(ingestion)
-        manifest_path = ingestion.get("manifest_path")
-        if ingestion.get("status") == "ok" and manifest_path:
-            parsed = parse_financial_filing(str(manifest_path))
-            source_trail["parse_financial_filing"] = _status_from(parsed)
-        else:
-            source_trail["parse_financial_filing"] = "skipped"
+        source_trail["parse_financial_filing"] = _status_from(parsed) if parsed else "skipped"
     else:
         source_trail["ingest_financial_filing"] = "skipped"
         source_trail["parse_financial_filing"] = "skipped"

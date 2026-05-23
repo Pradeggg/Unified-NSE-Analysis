@@ -38,6 +38,18 @@ The Strategy Council currently has these foundations:
 
 This roadmap focuses on what should come next.
 
+## Current Near-Term Priority — 2026-05-19
+
+Recent generated reports show the most important product risk: a strategy can have negative or empty validation results while the final one-shot test is positive. Until that is gated, additional dashboard polish can make weak research look stronger than it is.
+
+Near-term implementation order:
+
+1. Validation-based recommendation gate.
+2. Source-backed strategy claim gate.
+3. Latest results, filings, events, and sentiment evidence completion.
+4. Execution-cost and liquidity critics.
+5. Walk-forward visualization and dashboard attribution.
+
 ---
 
 ## 1. Evidence Enhancements
@@ -340,4 +352,3 @@ These should follow once historical council runs are persisted and enough observ
 3. Genetic optimizer
 4. LLM evidence-gated narratives
 5. Transfer learning / RL research
-

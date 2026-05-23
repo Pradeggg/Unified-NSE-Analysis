@@ -379,6 +379,9 @@ class RecommendationReportOptions:
     top_n: int = 25
     include_portfolio: bool = False
     watchlist: list[str] = field(default_factory=list)
+    symbols: list[str] = field(default_factory=list)
+    indices: list[str] = field(default_factory=list)
+    sectors: list[str] = field(default_factory=list)
     output_dir: Path | None = None
 
 
@@ -397,6 +400,15 @@ def parse_recommendation_report_args(args: list[str]) -> RecommendationReportOpt
         tokens = tokens[1:]
 
     options = RecommendationReportOptions()
+    def split_csv(value: Any, *, upper: bool = False) -> list[str]:
+        out: list[str] = []
+        for item in str(value or "").split(","):
+            text = item.strip()
+            if not text:
+                continue
+            out.append(text.upper() if upper else text)
+        return out
+
     idx = 0
     while idx < len(tokens):
         token = str(tokens[idx]).strip()
@@ -424,17 +436,24 @@ def parse_recommendation_report_args(args: list[str]) -> RecommendationReportOpt
                 pass
         elif lower == "--watchlist" and idx + 1 < len(tokens):
             idx += 1
-            options.watchlist = [
-                symbol.upper().strip()
-                for symbol in str(tokens[idx]).split(",")
-                if symbol.strip()
-            ]
+            options.watchlist = split_csv(tokens[idx], upper=True)
         elif lower.startswith("--watchlist="):
-            options.watchlist = [
-                symbol.upper().strip()
-                for symbol in token.split("=", 1)[1].split(",")
-                if symbol.strip()
-            ]
+            options.watchlist = split_csv(token.split("=", 1)[1], upper=True)
+        elif lower in {"--symbol", "--symbols"} and idx + 1 < len(tokens):
+            idx += 1
+            options.symbols = split_csv(tokens[idx], upper=True)
+        elif lower.startswith("--symbol=") or lower.startswith("--symbols="):
+            options.symbols = split_csv(token.split("=", 1)[1], upper=True)
+        elif lower in {"--index", "--indices"} and idx + 1 < len(tokens):
+            idx += 1
+            options.indices = split_csv(tokens[idx], upper=True)
+        elif lower.startswith("--index=") or lower.startswith("--indices="):
+            options.indices = split_csv(token.split("=", 1)[1], upper=True)
+        elif lower in {"--sector", "--sectors"} and idx + 1 < len(tokens):
+            idx += 1
+            options.sectors = split_csv(tokens[idx])
+        elif lower.startswith("--sector=") or lower.startswith("--sectors="):
+            options.sectors = split_csv(token.split("=", 1)[1])
         idx += 1
 
     options.output_format = _normalize_report_format(options.output_format)
@@ -453,6 +472,7 @@ class RecommendationEvidencePack:
     market_regime: dict[str, Any] = field(default_factory=dict)
     source_trail: dict[str, dict[str, Any]] = field(default_factory=dict)
     missing_evidence: dict[str, list[str]] = field(default_factory=dict)
+    filters: dict[str, list[str]] = field(default_factory=dict)
 
 
 def _normalize_columns(frame: pd.DataFrame) -> pd.DataFrame:
@@ -512,6 +532,37 @@ def _history_groups(frame: pd.DataFrame, symbol_col: str = "symbol") -> dict[str
         if normalized_symbol:
             groups[normalized_symbol] = group.copy().reset_index(drop=True)
     return groups
+
+
+def _norm_filter_key(value: Any) -> str:
+    return re.sub(r"[^0-9A-Z]+", "", str(value or "").upper())
+
+
+def _normalize_filter_values(values: list[str] | tuple[str, ...] | None, *, upper: bool = False) -> list[str]:
+    out: list[str] = []
+    for value in values or []:
+        text = str(value or "").strip()
+        if not text:
+            continue
+        text = text.upper() if upper else text
+        if text not in out:
+            out.append(text)
+    return out
+
+
+def _matches_filter(value: Any, filters: list[str], *, partial: bool = False) -> bool:
+    if not filters:
+        return True
+    value_key = _norm_filter_key(value)
+    for filter_value in filters:
+        filter_key = _norm_filter_key(filter_value)
+        if not filter_key:
+            continue
+        if value_key == filter_key:
+            return True
+        if partial and filter_key in value_key:
+            return True
+    return False
 
 
 def _source_entry(
@@ -681,8 +732,20 @@ def build_recommendation_evidence_pack(
     data: RecommendationInputData,
     *,
     top_n: int = 25,
+    symbols: list[str] | None = None,
+    indices: list[str] | None = None,
+    sectors: list[str] | None = None,
 ) -> RecommendationEvidencePack:
+    symbol_filters = _normalize_filter_values(symbols, upper=True)
+    index_filters = _normalize_filter_values(indices, upper=True)
+    sector_filters = _normalize_filter_values(sectors)
     index_groups = _history_groups(data.index_history)
+    if index_filters:
+        index_groups = {
+            symbol: frame
+            for symbol, frame in index_groups.items()
+            if _matches_filter(symbol, index_filters, partial=False)
+        }
     equity_groups = _history_groups(data.equity_history)
     snapshots = _records_by_symbol(data.snapshots)
     fundamentals = _records_by_symbol(data.fundamentals)
@@ -711,6 +774,15 @@ def build_recommendation_evidence_pack(
     universe_stocks: dict[str, SubjectEvidence] = {}
     for symbol in ordered_symbols:
         universe_stocks[symbol] = _build_stock_evidence(symbol, equity_groups, snapshots, fundamentals, benchmark)
+
+    if symbol_filters:
+        ordered_symbols = [symbol for symbol in symbol_filters if symbol in universe_stocks]
+    if sector_filters:
+        ordered_symbols = [
+            symbol
+            for symbol in ordered_symbols
+            if _matches_filter(universe_stocks[symbol].sector or "Unknown", sector_filters, partial=True)
+        ]
 
     display_symbols = ordered_symbols[:top_n] if top_n > 0 else ordered_symbols
 
@@ -788,12 +860,17 @@ def build_recommendation_evidence_pack(
         as_of=as_of,
         generated_at=datetime.now().isoformat(timespec="seconds"),
         indices=indices,
-        sectors=_sector_rollup(universe_stocks),
+        sectors=_sector_rollup({symbol: universe_stocks[symbol] for symbol in ordered_symbols}),
         stocks=stocks,
         portfolio=portfolio,
         market_regime=_market_regime(indices),
         source_trail=source_trail,
         missing_evidence=missing_evidence,
+        filters={
+            "symbols": symbol_filters,
+            "indices": index_filters,
+            "sectors": sector_filters,
+        },
     )
 
 
@@ -1128,8 +1205,15 @@ def _jsonable(value: Any) -> Any:
     return value
 
 
-def build_recommendations(pack: RecommendationEvidencePack) -> list[GroundedRecommendation]:
+def build_recommendations(
+    pack: RecommendationEvidencePack,
+    *,
+    include_indices: bool = False,
+) -> list[GroundedRecommendation]:
     recommendations: list[GroundedRecommendation] = []
+    if include_indices:
+        for _symbol, evidence in pack.indices.items():
+            recommendations.append(make_recommendation(evidence, market_regime=pack.market_regime, sector={}))
     for _symbol, evidence in pack.stocks.items():
         sector = pack.sectors.get(evidence.sector or "Unknown", {})
         recommendations.append(make_recommendation(evidence, market_regime=pack.market_regime, sector=sector))
@@ -1327,6 +1411,12 @@ def render_recommendation_markdown(
     lines.append("## Executive Summary")
     lines.append("")
     lines.append(f"- Market backdrop: **{_human_trend(pack.market_regime.get('label', 'unknown'))}**.")
+    active_filters = [
+        f"{name}: {', '.join(values)}"
+        for name, values in sorted(pack.filters.items())
+        if values
+    ]
+    lines.append(f"- Scope filters: {('; '.join(active_filters) if active_filters else 'none')}.")
     lines.append(f"- Recommendations generated: {len(recommendations)}.")
     lines.append(f"- Recommendation labels: {label_summary}.")
     lines.append(
@@ -1792,8 +1882,14 @@ def generate_recommendation_report(
     opts = options or RecommendationReportOptions()
     opts.output_format = _normalize_report_format(opts.output_format)
     data = input_data or load_recommendation_input_data(opts)
-    pack = build_recommendation_evidence_pack(data, top_n=opts.top_n)
-    recommendations = build_recommendations(pack)
+    pack = build_recommendation_evidence_pack(
+        data,
+        top_n=opts.top_n,
+        symbols=opts.symbols,
+        indices=opts.indices,
+        sectors=opts.sectors,
+    )
+    recommendations = build_recommendations(pack, include_indices=bool(opts.indices))
     markdown = render_recommendation_markdown(pack, recommendations)
     title = "Grounded EOD Recommendation Report"
     warnings = _recommendation_report_warnings(pack, recommendations)
@@ -1825,6 +1921,7 @@ def generate_recommendation_report(
         "evidence_path": str(evidence_path),
         "recommendation_count": len(recommendations),
         "run_id": pack.run_id,
+        "filters": dict(pack.filters),
         "persistence": persistence,
         "warnings": warnings,
         "markdown": markdown,
