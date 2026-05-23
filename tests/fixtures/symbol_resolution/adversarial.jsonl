@@ -1,0 +1,50 @@
+{"query":"intraday signals","expected_symbol":null,"kind":"prose"}
+{"query":"market action","expected_symbol":null,"kind":"prose"}
+{"query":"buy candidates","expected_symbol":null,"kind":"prose"}
+{"query":"sell candidates","expected_symbol":null,"kind":"prose"}
+{"query":"last 30 mins","expected_symbol":null,"kind":"prose"}
+{"query":"technical setup","expected_symbol":null,"kind":"prose"}
+{"query":"recommendation report","expected_symbol":null,"kind":"prose"}
+{"query":"based on above","expected_symbol":null,"kind":"prose"}
+{"query":"what happened","expected_symbol":null,"kind":"prose"}
+{"query":"today market","expected_symbol":null,"kind":"prose"}
+{"query":"of India","expected_symbol":null,"kind":"preposition"}
+{"query":"for intraday","expected_symbol":null,"kind":"preposition"}
+{"query":"in pharma","expected_symbol":null,"kind":"preposition"}
+{"query":"with technicals","expected_symbol":null,"kind":"preposition"}
+{"query":"on market","expected_symbol":null,"kind":"preposition"}
+{"query":"from report","expected_symbol":null,"kind":"preposition"}
+{"query":"for results","expected_symbol":null,"kind":"preposition"}
+{"query":"of bank","expected_symbol":null,"kind":"preposition"}
+{"query":"in energy","expected_symbol":null,"kind":"preposition"}
+{"query":"with setup","expected_symbol":null,"kind":"preposition"}
+{"query":"Premier","expected_symbol":null,"kind":"prefix_trap"}
+{"query":"HDFC","expected_symbol":null,"kind":"prefix_trap"}
+{"query":"Bharat","expected_symbol":null,"kind":"prefix_trap"}
+{"query":"State","expected_symbol":null,"kind":"prefix_trap"}
+{"query":"Tata","expected_symbol":null,"kind":"prefix_trap"}
+{"query":"Bajaj","expected_symbol":null,"kind":"prefix_trap"}
+{"query":"Adani","expected_symbol":null,"kind":"prefix_trap"}
+{"query":"Mahindra","expected_symbol":null,"kind":"prefix_trap"}
+{"query":"Dixon","expected_symbol":"DIXON","kind":"positive_ticker"}
+{"query":"Power","expected_symbol":null,"kind":"generic"}
+{"query":"invest","expected_symbol":null,"kind":"generic"}
+{"query":"energy","expected_symbol":null,"kind":"generic"}
+{"query":"bank","expected_symbol":null,"kind":"generic"}
+{"query":"finance","expected_symbol":null,"kind":"generic"}
+{"query":"technologies","expected_symbol":null,"kind":"generic"}
+{"query":"industries","expected_symbol":null,"kind":"generic"}
+{"query":"limited","expected_symbol":null,"kind":"generic"}
+{"query":"global","expected_symbol":null,"kind":"generic"}
+{"query":"growth","expected_symbol":null,"kind":"generic"}
+{"query":"pharma","expected_symbol":null,"kind":"generic"}
+{"query":"intraday siGNAls","expected_symbol":null,"kind":"mid_word"}
+{"query":"market actION","expected_symbol":null,"kind":"mid_word"}
+{"query":"for intrADAY","expected_symbol":null,"kind":"mid_word"}
+{"query":"search HDFC Bank","expected_symbol":null,"kind":"context_phrase"}
+{"query":"analysis Tata Steel","expected_symbol":null,"kind":"context_phrase"}
+{"query":"NIFTY 50","expected_symbol":"NIFTY","kind":"positive_index"}
+{"query":"BANK NIFTY","expected_symbol":"BANKNIFTY","kind":"positive_index"}
+{"query":"DATAPATTERNS","expected_symbol":"DATAPATTNS","kind":"positive_contraction","alias_map":{"DATAPATTNS":"DATAPATTNS"}}
+{"query":"WAREEENER","expected_symbol":"WAAREEENER","kind":"positive_typo","alias_map":{"WAAREEENER":"WAAREEENER"}}
+{"query":"DIXON TECH","expected_symbol":"DIXON","kind":"positive_alias"}

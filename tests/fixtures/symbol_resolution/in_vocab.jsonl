@@ -1,0 +1,200 @@
+{"query":"RELIANCE","expected_symbol":"RELIANCE"}
+{"query":"reliance","expected_symbol":"RELIANCE"}
+{"query":"RELIANCE.","expected_symbol":"RELIANCE"}
+{"query":"RELIANCE/","expected_symbol":"RELIANCE"}
+{"query":"Reliance Industries","expected_symbol":"RELIANCE"}
+{"query":"reliance industries","expected_symbol":"RELIANCE"}
+{"query":"RELIANCE-INDUSTRIES","expected_symbol":"RELIANCE"}
+{"query":"RELIANCE/INDUSTRIES","expected_symbol":"RELIANCE"}
+{"query":"TCS","expected_symbol":"TCS"}
+{"query":"tcs","expected_symbol":"TCS"}
+{"query":"TCS.","expected_symbol":"TCS"}
+{"query":"TCS/","expected_symbol":"TCS"}
+{"query":"Tata Consultancy Services","expected_symbol":"TCS"}
+{"query":"tata consultancy services","expected_symbol":"TCS"}
+{"query":"TATA-CONSULTANCY-SERVICES","expected_symbol":"TCS"}
+{"query":"TATA/CONSULTANCY/SERVICES","expected_symbol":"TCS"}
+{"query":"HDFC Bank","expected_symbol":"HDFCBANK"}
+{"query":"hdfc bank","expected_symbol":"HDFCBANK"}
+{"query":"HDFC-BANK","expected_symbol":"HDFCBANK"}
+{"query":"HDFC/BANK","expected_symbol":"HDFCBANK"}
+{"query":"ICICI Bank","expected_symbol":"ICICIBANK"}
+{"query":"icici bank","expected_symbol":"ICICIBANK"}
+{"query":"ICICI-BANK","expected_symbol":"ICICIBANK"}
+{"query":"ICICI/BANK","expected_symbol":"ICICIBANK"}
+{"query":"Kotak Bank","expected_symbol":"KOTAKBANK"}
+{"query":"kotak bank","expected_symbol":"KOTAKBANK"}
+{"query":"KOTAK-BANK","expected_symbol":"KOTAKBANK"}
+{"query":"KOTAK/BANK","expected_symbol":"KOTAKBANK"}
+{"query":"Tata Steel","expected_symbol":"TATASTEEL"}
+{"query":"tata steel","expected_symbol":"TATASTEEL"}
+{"query":"TATA-STEEL","expected_symbol":"TATASTEEL"}
+{"query":"TATA/STEEL","expected_symbol":"TATASTEEL"}
+{"query":"Tata Motors","expected_symbol":"TATAMOTORS"}
+{"query":"tata motors","expected_symbol":"TATAMOTORS"}
+{"query":"TATA-MOTORS","expected_symbol":"TATAMOTORS"}
+{"query":"TATA/MOTORS","expected_symbol":"TATAMOTORS"}
+{"query":"USL","expected_symbol":"UNITDSPR"}
+{"query":"usl","expected_symbol":"UNITDSPR"}
+{"query":"USL.","expected_symbol":"UNITDSPR"}
+{"query":"USL/","expected_symbol":"UNITDSPR"}
+{"query":"United Spirits","expected_symbol":"UNITDSPR"}
+{"query":"united spirits","expected_symbol":"UNITDSPR"}
+{"query":"UNITED-SPIRITS","expected_symbol":"UNITDSPR"}
+{"query":"UNITED/SPIRITS","expected_symbol":"UNITDSPR"}
+{"query":"Diageo India","expected_symbol":"UNITDSPR"}
+{"query":"diageo india","expected_symbol":"UNITDSPR"}
+{"query":"DIAGEO-INDIA","expected_symbol":"UNITDSPR"}
+{"query":"DIAGEO/INDIA","expected_symbol":"UNITDSPR"}
+{"query":"Bharat Petroleum","expected_symbol":"BPCL"}
+{"query":"bharat petroleum","expected_symbol":"BPCL"}
+{"query":"BHARAT-PETROLEUM","expected_symbol":"BPCL"}
+{"query":"BHARAT/PETROLEUM","expected_symbol":"BPCL"}
+{"query":"Mahindra and Mahindra","expected_symbol":"M&M"}
+{"query":"mahindra and mahindra","expected_symbol":"M&M"}
+{"query":"MAHINDRA-AND-MAHINDRA","expected_symbol":"M&M"}
+{"query":"MAHINDRA/AND/MAHINDRA","expected_symbol":"M&M"}
+{"query":"Mahindra & Mahindra","expected_symbol":"M&M"}
+{"query":"mahindra & mahindra","expected_symbol":"M&M"}
+{"query":"MAHINDRA-&-MAHINDRA","expected_symbol":"M&M"}
+{"query":"MAHINDRA/&/MAHINDRA","expected_symbol":"M&M"}
+{"query":"Hindustan Unilever","expected_symbol":"HINDUNILVR"}
+{"query":"hindustan unilever","expected_symbol":"HINDUNILVR"}
+{"query":"HINDUSTAN-UNILEVER","expected_symbol":"HINDUNILVR"}
+{"query":"HINDUSTAN/UNILEVER","expected_symbol":"HINDUNILVR"}
+{"query":"HUL","expected_symbol":"HINDUNILVR"}
+{"query":"hul","expected_symbol":"HINDUNILVR"}
+{"query":"HUL.","expected_symbol":"HINDUNILVR"}
+{"query":"HUL/","expected_symbol":"HINDUNILVR"}
+{"query":"State Bank of India","expected_symbol":"SBIN"}
+{"query":"state bank of india","expected_symbol":"SBIN"}
+{"query":"STATE-BANK-OF-INDIA","expected_symbol":"SBIN"}
+{"query":"STATE/BANK/OF/INDIA","expected_symbol":"SBIN"}
+{"query":"State Bank","expected_symbol":"SBIN"}
+{"query":"state bank","expected_symbol":"SBIN"}
+{"query":"STATE-BANK","expected_symbol":"SBIN"}
+{"query":"STATE/BANK","expected_symbol":"SBIN"}
+{"query":"Asian Paints","expected_symbol":"ASIANPAINT"}
+{"query":"asian paints","expected_symbol":"ASIANPAINT"}
+{"query":"ASIAN-PAINTS","expected_symbol":"ASIANPAINT"}
+{"query":"ASIAN/PAINTS","expected_symbol":"ASIANPAINT"}
+{"query":"Power Grid","expected_symbol":"POWERGRID"}
+{"query":"power grid","expected_symbol":"POWERGRID"}
+{"query":"POWER-GRID","expected_symbol":"POWERGRID"}
+{"query":"POWER/GRID","expected_symbol":"POWERGRID"}
+{"query":"Adani Ports","expected_symbol":"ADANIPORTS"}
+{"query":"adani ports","expected_symbol":"ADANIPORTS"}
+{"query":"ADANI-PORTS","expected_symbol":"ADANIPORTS"}
+{"query":"ADANI/PORTS","expected_symbol":"ADANIPORTS"}
+{"query":"Adani Enterprises","expected_symbol":"ADANIENT"}
+{"query":"adani enterprises","expected_symbol":"ADANIENT"}
+{"query":"ADANI-ENTERPRISES","expected_symbol":"ADANIENT"}
+{"query":"ADANI/ENTERPRISES","expected_symbol":"ADANIENT"}
+{"query":"Tata Investment","expected_symbol":"TATAINVEST"}
+{"query":"tata investment","expected_symbol":"TATAINVEST"}
+{"query":"TATA-INVESTMENT","expected_symbol":"TATAINVEST"}
+{"query":"TATA/INVESTMENT","expected_symbol":"TATAINVEST"}
+{"query":"Bharat Forge","expected_symbol":"BHARATFORG"}
+{"query":"bharat forge","expected_symbol":"BHARATFORG"}
+{"query":"BHARAT-FORGE","expected_symbol":"BHARATFORG"}
+{"query":"BHARAT/FORGE","expected_symbol":"BHARATFORG"}
+{"query":"Maruti Suzuki","expected_symbol":"MARUTI"}
+{"query":"maruti suzuki","expected_symbol":"MARUTI"}
+{"query":"MARUTI-SUZUKI","expected_symbol":"MARUTI"}
+{"query":"MARUTI/SUZUKI","expected_symbol":"MARUTI"}
+{"query":"Sun Pharma","expected_symbol":"SUNPHARMA"}
+{"query":"sun pharma","expected_symbol":"SUNPHARMA"}
+{"query":"SUN-PHARMA","expected_symbol":"SUNPHARMA"}
+{"query":"SUN/PHARMA","expected_symbol":"SUNPHARMA"}
+{"query":"Dr Reddy","expected_symbol":"DRREDDY"}
+{"query":"dr reddy","expected_symbol":"DRREDDY"}
+{"query":"DR-REDDY","expected_symbol":"DRREDDY"}
+{"query":"DR/REDDY","expected_symbol":"DRREDDY"}
+{"query":"Larsen and Toubro","expected_symbol":"LT"}
+{"query":"larsen and toubro","expected_symbol":"LT"}
+{"query":"LARSEN-AND-TOUBRO","expected_symbol":"LT"}
+{"query":"LARSEN/AND/TOUBRO","expected_symbol":"LT"}
+{"query":"Premier Energies","expected_symbol":"PREMIERENE"}
+{"query":"premier energies","expected_symbol":"PREMIERENE"}
+{"query":"PREMIER-ENERGIES","expected_symbol":"PREMIERENE"}
+{"query":"PREMIER/ENERGIES","expected_symbol":"PREMIERENE"}
+{"query":"Hindustan Aeronautics","expected_symbol":"HAL"}
+{"query":"hindustan aeronautics","expected_symbol":"HAL"}
+{"query":"HINDUSTAN-AERONAUTICS","expected_symbol":"HAL"}
+{"query":"HINDUSTAN/AERONAUTICS","expected_symbol":"HAL"}
+{"query":"Bajaj Auto","expected_symbol":"BAJAJ-AUTO"}
+{"query":"bajaj auto","expected_symbol":"BAJAJ-AUTO"}
+{"query":"BAJAJ-AUTO","expected_symbol":"BAJAJ-AUTO"}
+{"query":"BAJAJ/AUTO","expected_symbol":"BAJAJ-AUTO"}
+{"query":"Dixon Tech","expected_symbol":"DIXON"}
+{"query":"dixon tech","expected_symbol":"DIXON"}
+{"query":"DIXON-TECH","expected_symbol":"DIXON"}
+{"query":"DIXON/TECH","expected_symbol":"DIXON"}
+{"query":"Dixon Technologies","expected_symbol":"DIXON"}
+{"query":"dixon technologies","expected_symbol":"DIXON"}
+{"query":"DIXON-TECHNOLOGIES","expected_symbol":"DIXON"}
+{"query":"DIXON/TECHNOLOGIES","expected_symbol":"DIXON"}
+{"query":"NIFTY","expected_symbol":"NIFTY"}
+{"query":"nifty","expected_symbol":"NIFTY"}
+{"query":"NIFTY.","expected_symbol":"NIFTY"}
+{"query":"NIFTY/","expected_symbol":"NIFTY"}
+{"query":"NIFTY 50","expected_symbol":"NIFTY"}
+{"query":"nifty 50","expected_symbol":"NIFTY"}
+{"query":"NIFTY-50","expected_symbol":"NIFTY"}
+{"query":"NIFTY/50","expected_symbol":"NIFTY"}
+{"query":"Bank Nifty","expected_symbol":"BANKNIFTY"}
+{"query":"bank nifty","expected_symbol":"BANKNIFTY"}
+{"query":"BANK-NIFTY","expected_symbol":"BANKNIFTY"}
+{"query":"BANK/NIFTY","expected_symbol":"BANKNIFTY"}
+{"query":"Nifty Bank","expected_symbol":"BANKNIFTY"}
+{"query":"nifty bank","expected_symbol":"BANKNIFTY"}
+{"query":"NIFTY-BANK","expected_symbol":"BANKNIFTY"}
+{"query":"NIFTY/BANK","expected_symbol":"BANKNIFTY"}
+{"query":"Finnifty","expected_symbol":"FINNIFTY"}
+{"query":"finnifty","expected_symbol":"FINNIFTY"}
+{"query":"FINNIFTY.","expected_symbol":"FINNIFTY"}
+{"query":"FINNIFTY/","expected_symbol":"FINNIFTY"}
+{"query":"Nifty Financial Services","expected_symbol":"FINNIFTY"}
+{"query":"nifty financial services","expected_symbol":"FINNIFTY"}
+{"query":"NIFTY-FINANCIAL-SERVICES","expected_symbol":"FINNIFTY"}
+{"query":"NIFTY/FINANCIAL/SERVICES","expected_symbol":"FINNIFTY"}
+{"query":"Midcap Nifty","expected_symbol":"MIDCPNIFTY"}
+{"query":"midcap nifty","expected_symbol":"MIDCPNIFTY"}
+{"query":"MIDCAP-NIFTY","expected_symbol":"MIDCPNIFTY"}
+{"query":"MIDCAP/NIFTY","expected_symbol":"MIDCPNIFTY"}
+{"query":"Nifty Midcap Select","expected_symbol":"MIDCPNIFTY"}
+{"query":"nifty midcap select","expected_symbol":"MIDCPNIFTY"}
+{"query":"NIFTY-MIDCAP-SELECT","expected_symbol":"MIDCPNIFTY"}
+{"query":"NIFTY/MIDCAP/SELECT","expected_symbol":"MIDCPNIFTY"}
+{"query":"Nifty Next 50","expected_symbol":"NIFTYNXT50"}
+{"query":"nifty next 50","expected_symbol":"NIFTYNXT50"}
+{"query":"NIFTY-NEXT-50","expected_symbol":"NIFTYNXT50"}
+{"query":"NIFTY/NEXT/50","expected_symbol":"NIFTYNXT50"}
+{"query":"BAJFINANCE","expected_symbol":"BAJFINANCE"}
+{"query":"bajfinance","expected_symbol":"BAJFINANCE"}
+{"query":"BAJFINANCE.","expected_symbol":"BAJFINANCE"}
+{"query":"BAJFINANCE/","expected_symbol":"BAJFINANCE"}
+{"query":"Bajaj Finance","expected_symbol":"BAJFINANCE"}
+{"query":"bajaj finance","expected_symbol":"BAJFINANCE"}
+{"query":"BAJAJ-FINANCE","expected_symbol":"BAJFINANCE"}
+{"query":"BAJAJ/FINANCE","expected_symbol":"BAJFINANCE"}
+{"query":"Bajaj Finserv","expected_symbol":"BAJAJFINSV"}
+{"query":"bajaj finserv","expected_symbol":"BAJAJFINSV"}
+{"query":"BAJAJ-FINSERV","expected_symbol":"BAJAJFINSV"}
+{"query":"BAJAJ/FINSERV","expected_symbol":"BAJAJFINSV"}
+{"query":"Power Grid Corporation","expected_symbol":"POWERGRID"}
+{"query":"power grid corporation","expected_symbol":"POWERGRID"}
+{"query":"POWER-GRID-CORPORATION","expected_symbol":"POWERGRID"}
+{"query":"POWER/GRID/CORPORATION","expected_symbol":"POWERGRID"}
+{"query":"BANKNIFTY","expected_symbol":"BANKNIFTY"}
+{"query":"banknifty","expected_symbol":"BANKNIFTY"}
+{"query":"BANKNIFTY.","expected_symbol":"BANKNIFTY"}
+{"query":"BANKNIFTY/","expected_symbol":"BANKNIFTY"}
+{"query":"FINNIFTY","expected_symbol":"FINNIFTY"}
+{"query":"finnifty","expected_symbol":"FINNIFTY"}
+{"query":"FINNIFTY.","expected_symbol":"FINNIFTY"}
+{"query":"FINNIFTY/","expected_symbol":"FINNIFTY"}
+{"query":"MIDCPNIFTY","expected_symbol":"MIDCPNIFTY"}
+{"query":"midcpnifty","expected_symbol":"MIDCPNIFTY"}
+{"query":"MIDCPNIFTY.","expected_symbol":"MIDCPNIFTY"}
+{"query":"MIDCPNIFTY/","expected_symbol":"MIDCPNIFTY"}

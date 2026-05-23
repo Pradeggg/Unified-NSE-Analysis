@@ -738,6 +738,11 @@ def resolve_symbol(query: str) -> dict:
     dict + isolated-typo + trigram tiers; we keep the NSE live-search and
     NSE quote-equity fallbacks here so they remain unit-testable and
     network-isolated.
+
+    AA-HSR-5: structured telemetry is emitted inside the hybrid resolver
+    itself (see :mod:`terminal.symbol_search.telemetry`), gated by the
+    ``NSE_SYMBOL_RESOLUTION_TELEMETRY`` env var so tests never pollute
+    ``logs/symbol_resolution.jsonl``.
     """
     import requests as _req
     q = query.strip().upper()
