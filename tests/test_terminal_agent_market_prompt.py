@@ -9,6 +9,27 @@ from voice_persona import normalize_spoken_query
 
 
 class TerminalAgentMarketPromptTests(unittest.TestCase):
+    def test_primary_symbol_query_trusts_high_band_hybrid_resolution(self):
+        from terminal.agent import _primary_symbol_query
+
+        with patch("terminal.agent._leading_company_phrase", return_value="Dixon Technologies"), patch(
+            "terminal.agent.resolve_symbol",
+            return_value={
+                "symbol": "DIXON",
+                "confidence": "fuzzy",
+                "confidence_band": "high",
+                "score": 0.91,
+                "query": "Dixon Technologies",
+            },
+        ):
+            selected = _primary_symbol_query(
+                ["Dixon Technologies"],
+                [],
+                "live prices for Dixon Technologies and 5 min setup",
+            )
+
+        self.assertEqual(selected, "DIXON")
+
     def test_system_prompt_enforces_market_clock_and_fallback_labels(self):
         self.assertIn("MARKET CLOCK + DATA FRESHNESS RULES", SYSTEM_PROMPT)
         self.assertIn("Do not describe fallback/EOD data as \"current intraday\"", SYSTEM_PROMPT)

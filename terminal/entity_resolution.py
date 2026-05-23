@@ -278,7 +278,7 @@ def resolve_stock_entity(query: str) -> dict:
         "canonical_symbol": str(symbol).upper() if symbol else None,
         "confidence": resolved.get("confidence") or "none",
     }
-    for key in ("matched", "name", "candidates", "error"):
+    for key in ("matched", "name", "candidates", "confidence_band", "score", "method", "error"):
         if key in resolved:
             out[key] = resolved[key]
     if not symbol and "error" not in out:

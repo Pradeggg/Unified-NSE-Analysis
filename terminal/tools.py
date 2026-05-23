@@ -84,6 +84,8 @@ from terminal.report_context import (
     read_report,
     summarize_report,
 )
+from terminal.symbol_search import project_legacy_result
+from terminal.symbol_search import resolve as _hybrid_resolve_symbol
 from terminal.entity_resolution import (
     detect_non_symbol_terms,
     resolve_company_alias,
@@ -571,6 +573,8 @@ _COMMON_STOCK_ALIASES: dict[str, str] = {
     "SUN PHARMA": "SUNPHARMA",
     "DR REDDY": "DRREDDY",
     "DR REDDYS": "DRREDDY",
+    "DIXON TECH": "DIXON",
+    "DIXON TECHNOLOGIES": "DIXON",
     "LARSEN AND TOUBRO": "LT",
     "LARSEN & TOUBRO": "LT",
     "PREMIER ENERGIES": "PREMIERENE",
@@ -688,122 +692,12 @@ def _lookup_key(value: str) -> str:
 
 def _resolve_local_symbol(query: str) -> dict:
     """Resolve a symbol/name from local DB aliases without network access."""
-    q = str(query or "").strip().upper()
-    strict_exact_ticker = bool(re.fullmatch(r"[A-Z0-9&-]{2,12}", str(query or "").strip()))
-    q_key = _lookup_key(q)
-    if not q_key:
-        return {"symbol": None, "confidence": "none", "query": query}
-
-    mapping = _all_symbols_map()
-    if q in mapping:
-        return {"symbol": mapping[q], "confidence": "exact", "query": query}
-
-    normalized: dict[str, tuple[str, str]] = {}
-    for key, sym in mapping.items():
-        key_norm = _lookup_key(key)
-        if key_norm:
-            normalized.setdefault(key_norm, (key, sym))
-
-    if q_key in normalized:
-        key, sym = normalized[q_key]
-        return {"symbol": sym, "confidence": "exact", "query": query, "matched": key}
-
-    q_tokens = re.sub(r"[^A-Z0-9 ]", " ", q).split()
-    if len(q_tokens) > 1 and any(tok in _SYMBOL_CONTEXT_TOKENS for tok in q_tokens):
-        return {"symbol": None, "confidence": "none", "query": query}
-
-    # Refuse fuzzy substring resolution for generic English/business words
-    # that would otherwise contains-match arbitrary company names (e.g.
-    # "invest" → TATAINVEST, "energy" → GKENERGY). Such words are never a
-    # ticker on their own — the caller must qualify with more context.
-    if len(q_tokens) == 1 and q_tokens[0] in _GENERIC_NAME_TOKENS:
-        return {"symbol": None, "confidence": "none", "query": query}
-
-    contains_hits: list[tuple[int, str, str]] = []
-    # Word-boundary tokens of the original query for whole-word containment
-    # checks. Without this, a 3-letter ticker like "GNA" false-positives on
-    # any prose phrase that contains the letters G-N-A in sequence (e.g.
-    # "intraday siGNAls"). We allow the short-key-inside-long-query direction
-    # ONLY when the key matches as a whole token, not as a mid-word fragment.
-    q_word_tokens = {tok for tok in re.split(r"[^A-Z0-9]+", q.upper()) if tok}
-    for key_norm, (key, sym) in normalized.items():
-        if q_key in key_norm:
-            # User typed a prefix/substring of a known company name — safe.
-            contains_hits.append((abs(len(key_norm) - len(q_key)), key, sym))
-        elif key_norm in q_key:
-            # Reverse direction: a short canonical key appearing inside a long
-            # query. Only accept if (a) the key is reasonably long, AND
-            # (b) it shows up as a whole token in the original query — not as
-            # a mid-word fragment. Otherwise 3-letter tickers will haunt every
-            # prose phrase they coincidentally appear inside.
-            if len(key_norm) >= 6 or key_norm in q_word_tokens:
-                contains_hits.append((abs(len(key_norm) - len(q_key)), key, sym))
-    if contains_hits and not strict_exact_ticker:
-        contains_hits.sort(key=lambda x: x[0])
-        best = contains_hits[0][2]
-        return {
-            "symbol": best,
-            "confidence": "fuzzy",
-            "query": query,
-            "candidates": list(dict.fromkeys(hit[2] for hit in contains_hits[:5])),
-        }
-
-    near_hits: list[tuple[float, str, str]] = []
-    for key_norm, (key, sym) in normalized.items():
-        if len(key_norm) < 4 or q_key[:4] != key_norm[:4]:
-            continue
-        ratio = SequenceMatcher(None, q_key, key_norm).ratio()
-        if not strict_exact_ticker and ratio >= 0.84:
-            near_hits.append((ratio, key, sym))
-            continue
-        # NSE occasionally truncates long official symbols (e.g.
-        # DATAPATTERNS -> DATAPATTNS). Allow only high-confidence prefix
-        # contractions for exact-looking inputs; do not fuzzy-substitute
-        # arbitrary ticker typos.
-        if (
-            strict_exact_ticker
-            and len(q_key) > len(key_norm)
-            and len(key_norm) >= 8
-            and q_key[:8] == key_norm[:8]
-            and ratio >= 0.90
-        ):
-            near_hits.append((ratio, key, sym))
-    if strict_exact_ticker:
-        # Allow only very high-confidence one-character ticker corrections for
-        # actual symbols (not company-name aliases). This catches slips like
-        # WAREEENER -> WAAREEENER while preserving unknown-ticker failures such
-        # as NAVABUPA, which could otherwise be incorrectly substituted.
-        typo_hits: list[tuple[float, str, str]] = []
-        for key_norm, (key, sym) in normalized.items():
-            if key_norm != _lookup_key(sym):
-                continue
-            if len(key_norm) < 8 or len(q_key) < 8 or q_key[:2] != key_norm[:2]:
-                continue
-            ratio = SequenceMatcher(None, q_key, key_norm).ratio()
-            if ratio >= 0.94:
-                typo_hits.append((ratio, key, sym))
-        if typo_hits:
-            typo_hits.sort(key=lambda x: x[0], reverse=True)
-            unique = list(dict.fromkeys(hit[2] for hit in typo_hits))
-            if len(unique) == 1:
-                return {
-                    "symbol": unique[0],
-                    "confidence": "near-match",
-                    "query": query,
-                    "matched": typo_hits[0][1],
-                    "candidates": unique,
-                }
-    if near_hits:
-        near_hits.sort(key=lambda x: x[0], reverse=True)
-        best = near_hits[0][2]
-        return {
-            "symbol": best,
-            "confidence": "near-match",
-            "query": query,
-            "candidates": list(dict.fromkeys(hit[2] for hit in near_hits[:5])),
-        }
-
-    return {"symbol": None, "confidence": "none", "query": query}
+    result = _hybrid_resolve_symbol(
+        query,
+        alias_map=_all_symbols_map(),
+        use_trigram=True,
+    )
+    return project_legacy_result(result)
 
 
 def _suggest_local_symbols(query: str, limit: int = 5) -> list[str]:
@@ -836,7 +730,14 @@ def _canonical_symbol(symbol: str) -> str:
 def resolve_symbol(query: str) -> dict:
     """Resolve a company name / partial name / alias to its NSE symbol.
 
-    Tries local DB first, then falls back to NSE live search API.
+    AA-HSR-4: this is now a **thin wrapper** over
+    :func:`terminal.symbol_search.resolve`. The wrapper preserves the
+    legacy return-dict shape so existing callers and tests are unchanged,
+    while augmenting the payload with the new ``score`` and
+    ``confidence_band`` fields. The orchestrator is responsible for the
+    dict + isolated-typo + trigram tiers; we keep the NSE live-search and
+    NSE quote-equity fallbacks here so they remain unit-testable and
+    network-isolated.
     """
     import requests as _req
     q = query.strip().upper()
@@ -867,6 +768,9 @@ def resolve_symbol(query: str) -> dict:
         return {
             "symbol": None,
             "confidence": "none",
+            "confidence_band": "none",
+            "score": 0.0,
+            "method": "none",
             "query": query,
             "error": (
                 f"'{query}' is a market concept / screener keyword, not an NSE ticker. "
@@ -874,14 +778,43 @@ def resolve_symbol(query: str) -> dict:
                 "'stage2', 'turnaround') or search_market_knowledge instead."
             ),
         }
-    local = _resolve_local_symbol(q)
-    if local.get("symbol"):
-        return local
+
+    # NEW PRIMARY PATH: hybrid resolver (dict + isolated typo + trigram).
+    try:
+        rich = _hybrid_resolve_symbol(
+            query,
+            alias_map=_all_symbols_map(),
+            use_trigram=True,
+        )
+    except Exception:
+        rich = None
+
+    if rich is not None and rich.symbol:
+        payload: dict = {
+            "symbol":           rich.symbol,
+            "confidence":       rich.legacy_confidence,
+            "confidence_band":  rich.confidence_band,
+            "score":            float(rich.score),
+            "method":           rich.method,
+            "query":            query,
+        }
+        if rich.matched:
+            payload["matched"] = rich.matched
+        if rich.candidates:
+            payload["candidates"] = list(dict.fromkeys(c.symbol for c in rich.candidates))[:5]
+        return payload
+
+    # Search-context guard: prose like "growth strategy outlook for Reliance"
+    # should not be resolved as a ticker if the leading token is a context
+    # word and the rest didn't parse to a known company.
     q_tokens = re.sub(r"[^A-Z0-9 ]", " ", q).split()
     if len(q_tokens) > 1 and any(tok in _SYMBOL_CONTEXT_TOKENS for tok in q_tokens):
         return {
             "symbol": None,
             "confidence": "none",
+            "confidence_band": "none",
+            "score": 0.0,
+            "method": "none",
             "query": query,
             "error": f"'{query}' contains search/report context, not a resolvable NSE symbol.",
         }
@@ -894,8 +827,8 @@ def resolve_symbol(query: str) -> dict:
         url = f"https://www.nseindia.com/api/search?q={_req.utils.quote(query)}&type=equity"
         r   = s.get(url, timeout=10)
         r.raise_for_status()
-        payload = r.json()
-        results = payload.get("results", []) if isinstance(payload, dict) else []
+        payload_search = r.json()
+        results = payload_search.get("results", []) if isinstance(payload_search, dict) else []
         if results:
             search_suggestions = [
                 str(x.get("symbol") or "").strip().upper()
@@ -917,10 +850,13 @@ def resolve_symbol(query: str) -> dict:
             if top is None:
                 raise ValueError("No exact NSE search result for ticker-shaped query")
             return {
-                "symbol":     top.get("symbol"),
-                "name":       top.get("symbol_info"),
-                "confidence": "nse-search",
-                "query":      query,
+                "symbol":           top.get("symbol"),
+                "name":             top.get("symbol_info"),
+                "confidence":       "nse-search",
+                "confidence_band":  "medium",
+                "score":            0.70,
+                "method":           "live_api",
+                "query":            query,
                 "candidates": [x.get("symbol") for x in results[:5] if isinstance(x, dict)],
             }
     except Exception:
@@ -936,16 +872,19 @@ def resolve_symbol(query: str) -> dict:
             url = f"https://www.nseindia.com/api/quote-equity?symbol={_req.utils.quote(q_clean)}"
             r = s.get(url, timeout=10)
             if r.ok is True:
-                payload = r.json()
-                info = (payload.get("info") or {}) if isinstance(payload, dict) else {}
+                payload_quote = r.json()
+                info = (payload_quote.get("info") or {}) if isinstance(payload_quote, dict) else {}
                 resolved = (info.get("symbol") or "").strip().upper()
                 if resolved == q_clean:
                     return {
-                        "symbol":     resolved,
-                        "name":       info.get("companyName") or info.get("symbol_info"),
-                        "confidence": "nse-quote",
-                        "query":      query,
-                        "candidates": [resolved],
+                        "symbol":           resolved,
+                        "name":             info.get("companyName") or info.get("symbol_info"),
+                        "confidence":       "nse-quote",
+                        "confidence_band":  "high",
+                        "score":            0.90,
+                        "method":           "live_api",
+                        "query":            query,
+                        "candidates":       [resolved],
                     }
         except Exception:
             pass
@@ -953,6 +892,9 @@ def resolve_symbol(query: str) -> dict:
     result = {
         "symbol": None,
         "confidence": "none",
+        "confidence_band": "none",
+        "score": 0.0,
+        "method": "none",
         "query": query,
         "error": f"No exact NSE symbol found for '{query}'" if exact_ticker_query else f"No NSE symbol found for '{query}'",
     }

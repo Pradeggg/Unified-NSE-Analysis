@@ -111,6 +111,20 @@ class TerminalSymbolResolutionTests(unittest.TestCase):
         self.assertEqual(united_spirits["symbol"], "UNITDSPR")
         live_session.assert_not_called()
 
+    def test_resolve_symbol_projects_hybrid_confidence_fields(self):
+        with patch(
+            "terminal.tools._all_symbols_map",
+            return_value={"TRENT": "TRENT", "TRENT LIMITED": "TRENT"},
+        ), patch("terminal.tools._get_live_session") as live_session:
+            result = resolve_symbol("TRENT")
+
+        self.assertEqual(result["symbol"], "TRENT")
+        self.assertEqual(result["confidence"], "exact")
+        self.assertEqual(result["confidence_band"], "exact")
+        self.assertEqual(result["score"], 1.0)
+        self.assertEqual(result["method"], "dict")
+        live_session.assert_not_called()
+
     def test_resolve_symbol_does_not_resolve_search_context_as_stock(self):
         with patch(
             "terminal.tools._all_symbols_map",
