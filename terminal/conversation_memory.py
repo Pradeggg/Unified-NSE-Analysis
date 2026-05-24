@@ -16,6 +16,14 @@ from typing import Any
 
 from psycopg2.extras import Json
 
+from .router.context import (
+    ActiveReport,
+    ActiveWorkflow,
+    ContextPack,
+    PendingOption,
+    RecentTurn,
+    WorkflowStep,
+)
 from .situation_assessment import TurnContext
 
 
@@ -141,6 +149,14 @@ class ConversationMemory:
     report_paths: list[str] = field(default_factory=list)
     last_focus_symbols: list[str] = field(default_factory=list)
     last_focus_summary: str = ""
+    # AA-UR-2: lossless structured context for the unified router.
+    active_indices: list[str] = field(default_factory=list)
+    active_sectors: list[str] = field(default_factory=list)
+    active_reports: list[ActiveReport] = field(default_factory=list)
+    active_workflows: dict[str, ActiveWorkflow] = field(default_factory=dict)
+    pending_options: list[PendingOption] = field(default_factory=list)
+    source_trails: list[dict[str, Any]] = field(default_factory=list)
+    current_workflow_id: str = ""
 
     def record_turn(
         self,
@@ -248,6 +264,172 @@ class ConversationMemory:
             result_items=_dedupe(result_items),
         )
 
+    # ------------------------------------------------------------------
+    # AA-UR-2 — Structured context (workflows / reports / pending options)
+    # ------------------------------------------------------------------
+    def register_active_indices(self, indices: list[str]) -> None:
+        for idx in indices:
+            value = str(idx).upper().strip()
+            if value and value not in self.active_indices:
+                self.active_indices.append(value)
+
+    def register_active_sectors(self, sectors: list[str]) -> None:
+        for sec in sectors:
+            value = str(sec).upper().strip()
+            if value and value not in self.active_sectors:
+                self.active_sectors.append(value)
+
+    def register_report(
+        self,
+        path: str,
+        *,
+        report_type: str = "",
+        symbol: str = "",
+    ) -> ActiveReport:
+        """Register a generated report addressable by (path, type, symbol)."""
+        if not path:
+            raise ValueError("register_report requires a non-empty path")
+        sym = (symbol or "").upper().strip()
+        # Idempotent on path: replace prior row for the same path.
+        self.active_reports = [r for r in self.active_reports if r.path != path]
+        report = ActiveReport(path=path, report_type=report_type, symbol=sym)
+        self.active_reports.append(report)
+        if path not in self.report_paths:
+            self.report_paths.append(path)
+        return report
+
+    def start_workflow(self, workflow_id: str, kind: str) -> ActiveWorkflow:
+        if workflow_id in self.active_workflows:
+            return self.active_workflows[workflow_id]
+        wf = ActiveWorkflow(workflow_id=workflow_id, kind=kind)
+        self.active_workflows[workflow_id] = wf
+        self.current_workflow_id = workflow_id
+        return wf
+
+    def append_workflow_step(
+        self,
+        workflow_id: str,
+        step: WorkflowStep,
+    ) -> ActiveWorkflow:
+        wf = self.active_workflows.get(workflow_id)
+        if wf is None:
+            raise KeyError(f"workflow {workflow_id!r} is not active")
+        updated = wf.append_step(step)
+        self.active_workflows[workflow_id] = updated
+        return updated
+
+    def close_workflow(self, workflow_id: str) -> ActiveWorkflow:
+        wf = self.active_workflows.get(workflow_id)
+        if wf is None:
+            raise KeyError(f"workflow {workflow_id!r} is not active")
+        closed = wf.close()
+        self.active_workflows[workflow_id] = closed
+        if self.current_workflow_id == workflow_id:
+            self.current_workflow_id = ""
+        return closed
+
+    def register_pending_options(self, options: list[PendingOption]) -> None:
+        """Replace the pending NEXT OPTIONS for this session."""
+        seen: set[str] = set()
+        deduped: list[PendingOption] = []
+        for opt in options:
+            key = opt.label.strip().lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            deduped.append(opt)
+        self.pending_options = deduped
+
+    def consume_pending_option(self, label: str) -> PendingOption | None:
+        target = (label or "").strip().lower()
+        if not target:
+            return None
+        for idx, opt in enumerate(self.pending_options):
+            if opt.label.strip().lower() == target:
+                self.pending_options.pop(idx)
+                return opt
+        return None
+
+    def record_source_trail(
+        self,
+        source_label: str,
+        freshness: str = "",
+        *,
+        meta: dict[str, Any] | None = None,
+    ) -> None:
+        if not source_label:
+            return
+        entry: dict[str, Any] = {
+            "source_label": source_label,
+            "freshness": freshness,
+        }
+        if meta:
+            entry["meta"] = dict(meta)
+        self.source_trails.append(entry)
+        if len(self.source_trails) > 200:
+            self.source_trails = self.source_trails[-200:]
+
+    def build_context_pack(self, *, depth: int = 5) -> ContextPack:
+        """Project the current memory state into a router-friendly ContextPack."""
+        if depth < 0:
+            depth = 0
+        recent_events = self.raw_events[-depth:] if depth else []
+        recent_turns = tuple(
+            RecentTurn(
+                turn_index=event.turn_index,
+                user_input=event.user_input,
+                intent=event.intent,
+                symbols=tuple(str(s).upper() for s in event.symbols),
+                tools=tuple(event.tool_names),
+                result_type=event.result_type,
+                source_label=event.source_label,
+                freshness=event.freshness,
+                report_paths=tuple(_report_paths(event.result_items)),
+            )
+            for event in recent_events
+        )
+
+        active_symbols: list[str] = []
+        for sym in self.last_focus_symbols:
+            value = str(sym).upper().strip()
+            if value and value not in active_symbols:
+                active_symbols.append(value)
+        for entity_sym in self.entities.keys():
+            if entity_sym not in active_symbols:
+                active_symbols.append(entity_sym)
+
+        workflow_id = self.current_workflow_id
+        active_workflow: ActiveWorkflow | None = None
+        if workflow_id and workflow_id in self.active_workflows:
+            active_workflow = self.active_workflows[workflow_id]
+        elif self.active_workflows:
+            # Fall back to the most recently updated OPEN workflow.
+            open_workflows = [
+                wf for wf in self.active_workflows.values() if wf.status == "open"
+            ]
+            if open_workflows:
+                active_workflow = max(open_workflows, key=lambda wf: wf.updated_at)
+
+        latest_freshness = ""
+        if recent_events:
+            for event in reversed(recent_events):
+                if event.freshness:
+                    latest_freshness = event.freshness
+                    break
+
+        return ContextPack(
+            session_id=self.session_id,
+            recent_turns=recent_turns,
+            active_symbols=tuple(active_symbols),
+            active_indices=tuple(self.active_indices),
+            active_sectors=tuple(self.active_sectors),
+            active_reports=tuple(self.active_reports),
+            active_workflow=active_workflow,
+            pending_options=tuple(self.pending_options),
+            source_trails=tuple(dict(item) for item in self.source_trails[-50:]),
+            freshness=latest_freshness,
+        )
+
     def to_snapshot(self) -> dict[str, Any]:
         return {
             "session_id": self.session_id,
@@ -257,6 +439,13 @@ class ConversationMemory:
             "report_paths": list(self.report_paths),
             "last_focus_symbols": list(self.last_focus_symbols),
             "last_focus_summary": self.last_focus_summary,
+            "active_indices": list(self.active_indices),
+            "active_sectors": list(self.active_sectors),
+            "active_reports": [r.to_dict() for r in self.active_reports],
+            "active_workflows": {wid: wf.to_dict() for wid, wf in self.active_workflows.items()},
+            "pending_options": [opt.to_dict() for opt in self.pending_options],
+            "source_trails": [dict(item) for item in self.source_trails],
+            "current_workflow_id": self.current_workflow_id,
         }
 
     @classmethod
@@ -277,6 +466,27 @@ class ConversationMemory:
         memory.report_paths = [str(v) for v in data.get("report_paths") or []]
         memory.last_focus_symbols = [str(v).upper() for v in data.get("last_focus_symbols") or []]
         memory.last_focus_summary = str(data.get("last_focus_summary") or "")
+        memory.active_indices = [str(v).upper() for v in data.get("active_indices") or []]
+        memory.active_sectors = [str(v).upper() for v in data.get("active_sectors") or []]
+        memory.active_reports = [
+            ActiveReport.from_dict(item)
+            for item in data.get("active_reports") or []
+            if isinstance(item, dict)
+        ]
+        memory.active_workflows = {
+            str(wid): ActiveWorkflow.from_dict(payload)
+            for wid, payload in (data.get("active_workflows") or {}).items()
+            if isinstance(payload, dict)
+        }
+        memory.pending_options = [
+            PendingOption.from_dict(item)
+            for item in data.get("pending_options") or []
+            if isinstance(item, dict)
+        ]
+        memory.source_trails = [
+            dict(item) for item in data.get("source_trails") or [] if isinstance(item, dict)
+        ]
+        memory.current_workflow_id = str(data.get("current_workflow_id") or "")
         return memory
 
     def save_to_postgres(self, dsn: str | None = None) -> dict[str, Any]:

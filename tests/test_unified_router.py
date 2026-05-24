@@ -144,3 +144,87 @@ def test_blocked_route_is_not_executable_and_validation_errors_are_serialized():
         "errors": ["Missing symbol universe.", "No grounded tool plan."],
         "checked_tools": [],
     }
+
+
+# ---------------------------------------------------------------------------
+# AA-UR-2 — ContextPack contract tests
+# ---------------------------------------------------------------------------
+
+from terminal.router import (
+    ActiveReport,
+    ActiveWorkflow,
+    ContextPack,
+    PendingOption,
+    RecentTurn,
+    WorkflowStep,
+)
+
+
+def test_context_pack_to_dict_roundtrips():
+    pack = ContextPack(
+        session_id="s1",
+        recent_turns=(
+            RecentTurn(
+                turn_index=1,
+                user_input="analyse DIXON",
+                intent="analysis",
+                symbols=("DIXON",),
+                tools=("mtf",),
+                result_type="mtf_summary",
+                source_label="PG",
+                freshness="EOD",
+                report_paths=("reports/DIXON.md",),
+            ),
+        ),
+        active_symbols=("DIXON",),
+        active_indices=("NIFTY50",),
+        active_sectors=("IT",),
+        active_reports=(
+            ActiveReport(path="reports/DIXON.md", report_type="mtf", symbol="DIXON"),
+        ),
+        active_workflow=ActiveWorkflow(
+            workflow_id="wf-1",
+            kind="sherlock",
+            steps=(
+                WorkflowStep(
+                    step_id="s1",
+                    kind="setup",
+                    evidence=({"symbol": "DIXON", "fact": "x", "value": "1"},),
+                ),
+            ),
+        ),
+        pending_options=(PendingOption(label="A", text="run scan", bound_action={"cmd": "/scan"}),),
+        source_trails=({"source_label": "PG", "freshness": "EOD"},),
+        freshness="EOD",
+    )
+    restored = ContextPack.from_dict(pack.to_dict())
+    assert restored.session_id == "s1"
+    assert restored.active_symbols == ("DIXON",)
+    assert restored.active_workflow.steps[0].evidence[0]["fact"] == "x"
+    assert restored.find_pending_option("a").bound_action == {"cmd": "/scan"}
+    assert restored.report_for(symbol="DIXON").path == "reports/DIXON.md"
+
+
+def test_active_workflow_append_step_is_immutable_and_returns_new_instance():
+    wf = ActiveWorkflow(workflow_id="wf-1", kind="sherlock")
+    step = WorkflowStep(step_id="s1", kind="setup")
+    updated = wf.append_step(step)
+    assert wf.steps == ()  # original untouched
+    assert len(updated.steps) == 1
+    assert updated.workflow_id == wf.workflow_id
+
+
+def test_active_report_requires_non_empty_path():
+    import pytest
+
+    with pytest.raises(ValueError):
+        ActiveReport(path="")
+
+
+def test_pending_option_requires_label_and_text():
+    import pytest
+
+    with pytest.raises(ValueError):
+        PendingOption(label="", text="x")
+    with pytest.raises(ValueError):
+        PendingOption(label="A", text="")
