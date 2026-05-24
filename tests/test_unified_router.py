@@ -228,3 +228,301 @@ def test_pending_option_requires_label_and_text():
         PendingOption(label="", text="x")
     with pytest.raises(ValueError):
         PendingOption(label="A", text="")
+
+
+# ---------------------------------------------------------------------------
+# AA-UR-3 — UnifiedRouter wrapper + provider chain
+# ---------------------------------------------------------------------------
+
+import pytest
+
+from terminal.router import (
+    ContextPack,
+    DirectIntentProvider,
+    EntityTopicProvider,
+    PendingOption,
+    PendingOptionProvider,
+    RecentTurn,
+    RouteCandidate,
+    UnifiedRouter,
+)
+from terminal.router.providers import (
+    ContextualFollowupProvider,
+    MarketSituationProvider,
+    ReportProvider,
+    VisualScanProvider,
+)
+
+
+def _empty_pack(**overrides) -> ContextPack:
+    base = {"session_id": "s-route"}
+    base.update(overrides)
+    return ContextPack(**base)
+
+
+def test_unified_router_default_provider_chain_order():
+    router = UnifiedRouter()
+    assert router.provider_names == [
+        "PendingOptionProvider",
+        "ContextualFollowupProvider",
+        "EntityTopicProvider",
+        "ReportProvider",
+        "VisualScanProvider",
+        "MarketSituationProvider",
+        "DirectIntentProvider",
+    ]
+
+
+def test_pending_option_provider_short_circuits_without_symbol_resolution():
+    """AA-UR-3 acceptance: pending option replies execute bound actions
+    without symbol re-resolution.
+    """
+    pack = _empty_pack(
+        pending_options=(
+            PendingOption(
+                label="A",
+                text="run intraday scan for DIXON",
+                bound_action={
+                    "intent": "intraday_scan",
+                    "tool_plan": [
+                        {"tool": "run_intraday_screener", "args": {"symbol": "DIXON"}},
+                    ],
+                },
+            ),
+        ),
+        active_symbols=("DIXON",),
+    )
+    decision = UnifiedRouter().route("A", pack)
+    assert decision.route_type == "direct_tool_plan"
+    assert decision.intent == "intraday_scan"
+    assert decision.confidence == "high"
+    assert decision.reasoning_summary.selected_branch == "PendingOptionProvider"
+    assert decision.context_binding.binding_type == "pending_option"
+    # The tool args came straight from the bound action — no resolver call.
+    tools = decision.tool_plan_tuples()
+    assert tools == [("run_intraday_screener", {"symbol": "DIXON"})]
+    assert decision.validation.ok is True
+
+
+def test_pending_option_provider_ignores_unknown_label():
+    pack = _empty_pack(
+        pending_options=(
+            PendingOption(label="A", text="run scan", bound_action={"intent": "x"}),
+        ),
+    )
+    decision = UnifiedRouter().route("Z", pack)
+    assert decision.reasoning_summary.selected_branch != "PendingOptionProvider"
+
+
+def test_pending_option_outranks_market_situation_for_label_reply():
+    pack = _empty_pack(
+        pending_options=(
+            PendingOption(
+                label="1",
+                text="show top gainers",
+                bound_action={
+                    "intent": "top_gainers",
+                    "tool_plan": [{"tool": "top_gainers", "args": {}}],
+                },
+            ),
+        ),
+    )
+    decision = UnifiedRouter().route("1", pack)
+    assert decision.reasoning_summary.selected_branch == "PendingOptionProvider"
+    # MarketSituationProvider would NOT match "1" on its own, but the test
+    # asserts the label resolves before any other provider can fire.
+
+
+def test_contextual_followup_provider_fires_on_above_phrase_with_symbol_context():
+    pack = _empty_pack(active_symbols=("DIXON",), freshness="EOD 2026-05-22")
+    decision = UnifiedRouter().route(
+        "Based on the above what would be your recommendation?", pack
+    )
+    assert decision.reasoning_summary.selected_branch == "ContextualFollowupProvider"
+    assert decision.route_type == "contextual_answer"
+    assert decision.context_binding.symbols == ("DIXON",)
+    assert decision.context_binding.freshness == "EOD 2026-05-22"
+    assert decision.source_policy.allow_stale is False
+
+
+def test_contextual_followup_requires_some_context():
+    """No symbols, no workflow, no recent turns → followup provider doesn't fire."""
+    pack = _empty_pack()
+    decision = UnifiedRouter().route("based on the above what do you think", pack)
+    assert decision.reasoning_summary.selected_branch != "ContextualFollowupProvider"
+
+
+def test_entity_topic_provider_binds_symbol_and_topic():
+    pack = _empty_pack()
+    decision = UnifiedRouter().route("DIXON fundamentals please", pack)
+    assert decision.reasoning_summary.selected_branch == "EntityTopicProvider"
+    assert decision.intent == "entity_topic_fundamentals"
+    tools = decision.tool_plan_tuples()
+    assert tools == [("fundamentals_for_symbol", {"symbol": "DIXON"})]
+    assert decision.validation.ok is True
+
+
+def test_report_provider_binds_to_active_report():
+    from terminal.router import ActiveReport
+
+    pack = _empty_pack(
+        active_reports=(
+            ActiveReport(path="reports/DIXON_mtf.md", report_type="mtf", symbol="DIXON"),
+        ),
+        active_symbols=("DIXON",),
+    )
+    decision = UnifiedRouter().route("Tell me what the report says about it", pack)
+    assert decision.reasoning_summary.selected_branch == "ReportProvider"
+    assert decision.route_type == "contextual_answer"
+    assert "reports/DIXON_mtf.md" in decision.context_binding.report_paths
+
+
+def test_visual_scan_provider_fires_on_chart_phrase():
+    pack = _empty_pack(active_symbols=("RELIANCE",))
+    decision = UnifiedRouter().route("Show me the candlestick chart for it", pack)
+    assert decision.reasoning_summary.selected_branch == "VisualScanProvider"
+    assert decision.tool_plan_tuples()[0][0] == "render_visual_scan"
+
+
+def test_market_situation_provider_handles_market_wide_ask():
+    pack = _empty_pack()
+    decision = UnifiedRouter().route("Run an intraday scan across NIFTY", pack)
+    assert decision.reasoning_summary.selected_branch == "MarketSituationProvider"
+    assert decision.intent == "market_situation"
+
+
+def test_direct_intent_provider_is_last_resort_fallback():
+    pack = _empty_pack()
+    decision = UnifiedRouter().route("show me the RSI", pack)
+    # EntityTopic doesn't fire (no symbol token), Market doesn't fire,
+    # so DirectIntent picks up "rsi" → technicals.
+    assert decision.reasoning_summary.selected_branch == "DirectIntentProvider"
+    assert decision.intent == "direct_technicals"
+
+
+def test_router_emits_fallback_llm_when_no_provider_proposes():
+    pack = _empty_pack()
+    decision = UnifiedRouter().route("hello there friend", pack)
+    assert decision.route_type == "fallback_llm"
+    assert decision.confidence == "low"
+    assert decision.reasoning_summary.selected_branch == "<none>"
+    # All providers should appear as rejected branches.
+    assert "PendingOptionProvider" in decision.reasoning_summary.rejected_branches
+
+
+def test_route_decision_trace_contains_provider_score_binding_and_reasons():
+    """AA-UR-3 acceptance: route trace shows candidate provider, score,
+    context binding, and winning reason.
+    """
+    pack = _empty_pack(active_symbols=("DIXON",))
+    decision = UnifiedRouter().route("DIXON technicals", pack)
+    trace = decision.to_debug_trace()
+    assert trace["selected_branch"] == "EntityTopicProvider"
+    assert trace["context"]["symbols"] == ["DIXON"]
+    assert trace["route_type"] == "direct_tool_plan"
+    assert trace["tools"] == ["technicals_for_symbol"]
+    assert decision.reasoning_summary.pot, "winning reason must be recorded"
+
+
+def test_router_isolates_provider_exceptions():
+    class BoomProvider:
+        name = "BoomProvider"
+
+        def propose(self, user_input, context_pack):
+            raise RuntimeError("boom")
+
+    router = UnifiedRouter(providers=[BoomProvider(), DirectIntentProvider()])
+    decision = router.route("fundamentals", _empty_pack())
+    # The healthy provider still wins.
+    assert decision.reasoning_summary.selected_branch == "DirectIntentProvider"
+    # The boom reason appears as a rejected branch.
+    rejected = " ".join(decision.reasoning_summary.rejected_branches)
+    assert "BoomProvider" in rejected
+
+
+def test_higher_score_wins_over_registration_order():
+    class LowScore:
+        name = "LowScore"
+
+        def propose(self, user_input, context_pack):
+            return [
+                RouteCandidate(
+                    provider=self.name,
+                    intent="low",
+                    route_type="contextual_answer",
+                    confidence="low",
+                    score=0.2,
+                    reasons=("low scorer",),
+                )
+            ]
+
+    class HighScore:
+        name = "HighScore"
+
+        def propose(self, user_input, context_pack):
+            return [
+                RouteCandidate(
+                    provider=self.name,
+                    intent="high",
+                    route_type="contextual_answer",
+                    confidence="high",
+                    score=0.9,
+                    reasons=("high scorer",),
+                )
+            ]
+
+    router = UnifiedRouter(providers=[LowScore(), HighScore()])
+    decision = router.route("anything", _empty_pack())
+    assert decision.reasoning_summary.selected_branch == "HighScore"
+    assert decision.intent == "high"
+
+
+def test_registration_order_breaks_score_ties():
+    class A:
+        name = "AlphaProvider"
+
+        def propose(self, user_input, context_pack):
+            return [
+                RouteCandidate(
+                    provider=self.name, intent="a",
+                    route_type="contextual_answer", confidence="medium",
+                    score=0.5, reasons=("a",),
+                )
+            ]
+
+    class B:
+        name = "BetaProvider"
+
+        def propose(self, user_input, context_pack):
+            return [
+                RouteCandidate(
+                    provider=self.name, intent="b",
+                    route_type="contextual_answer", confidence="medium",
+                    score=0.5, reasons=("b",),
+                )
+            ]
+
+    decision = UnifiedRouter(providers=[A(), B()]).route("x", _empty_pack())
+    assert decision.reasoning_summary.selected_branch == "AlphaProvider"
+
+
+def test_decision_validation_flags_missing_tool_plan_for_direct_routes():
+    class BadProvider:
+        name = "BadProvider"
+
+        def propose(self, user_input, context_pack):
+            return [
+                RouteCandidate(
+                    provider=self.name,
+                    intent="oops",
+                    route_type="direct_tool_plan",
+                    confidence="high",
+                    score=0.9,
+                    reasons=("missing tools",),
+                    tool_plan=(),
+                )
+            ]
+
+    decision = UnifiedRouter(providers=[BadProvider()]).route("x", _empty_pack())
+    assert decision.validation.ok is False
+    assert any("tool_plan" in err for err in decision.validation.errors)
