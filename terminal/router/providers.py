@@ -211,7 +211,14 @@ class PendingOptionProvider:
 
 
 class ContextualFollowupProvider:
-    """Routes "based on the above" / recommendation-on-context asks."""
+    """Routes "based on the above" / recommendation-on-context asks.
+
+    When an :class:`ActiveWorkflow` is present in the context pack, the
+    follow-up is bound to the **full** workflow (every step's evidence),
+    not just the most recent turn — per AA-UR-7 acceptance. The route
+    surfaces the workflow span, freshness divergence across steps, and
+    any conflicting stances so synthesis can audit provenance.
+    """
 
     name = "ContextualFollowupProvider"
 
@@ -220,22 +227,81 @@ class ContextualFollowupProvider:
         if not text:
             return []
         symbols = _pack_symbols(context_pack)
-        if not (symbols or context_pack.active_workflow or context_pack.recent_turns):
+        workflow = context_pack.active_workflow
+        if not (symbols or workflow or context_pack.recent_turns):
             return []
         matched_phrase = next((p for p in _FOLLOWUP_PHRASES if p in text), None)
         if not matched_phrase:
             return []
+
+        reasons: list[str] = [f"Follow-up phrase detected: '{matched_phrase}'"]
+        evidence_reqs: list[EvidenceRequirement] = []
+        intent = "contextual_followup"
+
+        if workflow is not None and workflow.steps:
+            intent = "contextual_followup_workflow"
+            step_kinds = [step.kind for step in workflow.steps if step.kind]
+            wf_symbols = list(workflow.symbols)
+            reasons.append(
+                f"Active workflow '{workflow.workflow_id}' ({workflow.kind}) covers "
+                f"{len(workflow.steps)} step(s): {', '.join(step_kinds) or 'unlabeled'}"
+            )
+            if wf_symbols:
+                reasons.append(
+                    f"Workflow symbols: {', '.join(wf_symbols)}"
+                )
+            # Build one evidence requirement per step kind so validation /
+            # synthesis can audit per-facet coverage of the full workflow.
+            seen_kinds: set[str] = set()
+            for kind in step_kinds:
+                lowered = kind.lower()
+                if lowered in seen_kinds:
+                    continue
+                seen_kinds.add(lowered)
+                evidence_reqs.append(
+                    EvidenceRequirement(
+                        name=lowered.replace(" ", "_"),
+                        optional=True,
+                    )
+                )
+            # Surface freshness divergence across steps so downstream can
+            # warn the user.
+            freshness_values = [
+                step.freshness.strip() for step in workflow.steps if step.freshness.strip()
+            ]
+            unique_freshness = list(dict.fromkeys(freshness_values))
+            if len(unique_freshness) > 1:
+                reasons.append(
+                    "Freshness divergence across workflow steps: "
+                    + " | ".join(unique_freshness)
+                )
+            # Surface conflicting stances if structured evidence carries them.
+            stances: list[str] = []
+            for step in workflow.steps:
+                for fact in step.evidence:
+                    if not isinstance(fact, dict):
+                        continue
+                    stance = str(fact.get("stance") or "").strip().lower()
+                    if stance and stance not in stances:
+                        stances.append(stance)
+            if len(stances) > 1:
+                reasons.append(
+                    "Conflicting stances in workflow evidence: " + ", ".join(stances)
+                )
+        else:
+            reasons.append(
+                f"Context bound to {len(symbols)} symbol(s); recent turns={len(context_pack.recent_turns)}"
+            )
+
         return [
             RouteCandidate(
                 provider=self.name,
-                intent="contextual_followup",
+                intent=intent,
                 route_type="contextual_answer",
-                confidence="high" if symbols else "medium",
-                score=0.9,
-                reasons=(
-                    f"Follow-up phrase detected: '{matched_phrase}'",
-                    f"Context bound to {len(symbols)} symbol(s); recent turns={len(context_pack.recent_turns)}",
-                ),
+                confidence="high" if symbols or workflow else "medium",
+                score=0.92 if workflow else 0.9,
+                reasons=tuple(reasons),
+                evidence_requirements=tuple(evidence_reqs),
                 source_policy=SourcePolicy(
                     required_freshness=context_pack.freshness or "",
                     allow_stale=False,
