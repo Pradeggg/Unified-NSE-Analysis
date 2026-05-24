@@ -23,8 +23,12 @@ def test_agent_api_routes_search_command_through_entity_topic_assessment():
     execute_plan.assert_called_once_with([
         ("deep_search", {"symbol": "UNITDSPR", "context": "growth strategy"})
     ])
-    assert result["trace"][0]["step"] == "entity_topic_assessment"
-    assert result["trace"][0]["result"]["canonical_symbol"] == "UNITDSPR"
+    entity_step = next(
+        (s for s in result["trace"] if isinstance(s, dict) and s.get("step") == "entity_topic_assessment"),
+        None,
+    )
+    assert entity_step is not None
+    assert entity_step["result"]["canonical_symbol"] == "UNITDSPR"
 
 
 def test_agent_api_routes_natural_search_prompt_through_entity_topic_assessment():
@@ -47,8 +51,12 @@ def test_agent_api_routes_natural_search_prompt_through_entity_topic_assessment(
     execute_plan.assert_called_once_with([
         ("deep_search", {"symbol": "UNITDSPR", "context": "growth strategy"})
     ])
-    assert result["trace"][0]["step"] == "entity_topic_assessment"
-    assert result["trace"][0]["result"]["canonical_symbol"] == "UNITDSPR"
+    entity_step = next(
+        (s for s in result["trace"] if isinstance(s, dict) and s.get("step") == "entity_topic_assessment"),
+        None,
+    )
+    assert entity_step is not None
+    assert entity_step["result"]["canonical_symbol"] == "UNITDSPR"
 
 
 def test_agent_uses_previous_conversation_when_structured_context_missing():

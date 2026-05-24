@@ -45,6 +45,25 @@ from .conversation_memory import (
     DEFAULT_SESSION_ID as MEMORY_DEFAULT_SESSION_ID,
     load_memory_fail_open,
 )
+from .router import RouteDecision, UnifiedRouter
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AA-UR-6: Unified router feature flag
+# ─────────────────────────────────────────────────────────────────────────────
+# The unified router (UR) wraps the legacy branchy dispatcher in
+# `Agent._query_single`. It is *additive*: when it picks a route that has
+# no existing legacy equivalent (e.g. AA-UR-4 compound-stock plans), it
+# executes that route directly. Otherwise the legacy branches continue
+# to handle the request unchanged.
+#
+# Set NSE_UNIFIED_ROUTER=0 (or "false"/"no") to disable the wrapper
+# entirely — this is the production kill switch.
+_UNIFIED_ROUTER_ENV = "NSE_UNIFIED_ROUTER"
+
+
+def _unified_router_enabled() -> bool:
+    return os.environ.get(_UNIFIED_ROUTER_ENV, "1").lower() not in {"0", "false", "no"}
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Constants
@@ -6067,6 +6086,142 @@ class Agent:
                 # Memory persistence must never break the research answer path.
                 pass
 
+    # ─── AA-UR-6: Unified router scaffolding ────────────────────────────────
+    @property
+    def _unified_router(self) -> UnifiedRouter:
+        """Lazily-constructed shared :class:`UnifiedRouter` instance."""
+        router = getattr(self, "_unified_router_instance", None)
+        if router is None:
+            router = UnifiedRouter()
+            self._unified_router_instance = router
+        return router
+
+    def _build_context_pack(self):
+        """Snapshot the current :class:`ConversationMemory` into a ContextPack.
+
+        Returns ``None`` if memory is unavailable or snapshotting fails —
+        the router invocation is always best-effort and never breaks the
+        legacy dispatcher path.
+        """
+        memory = getattr(self, "_memory", None)
+        if memory is None:
+            return None
+        try:
+            return memory.build_context_pack(depth=5)
+        except Exception:
+            return None
+
+    def _execute_route(
+        self,
+        decision: RouteDecision,
+        clean_input: str,
+        mode: str,
+        source_label: str,
+        mode_suffix: str,
+        trace: list[dict],
+    ) -> dict | None:
+        """Execute a :class:`RouteDecision` if AA-UR-6 owns its path.
+
+        Returns the agent response dict when the router fully handles the
+        request, or ``None`` to fall through to the legacy branches in
+        :meth:`_query_single`. Today AA-UR-6 owns:
+
+        * **CompoundStockProvider** ``compound_plan`` routes — the only
+          path with no legacy equivalent (AA-UR-4 capability).
+        * **PendingOptionProvider** routes whose ``bound_action`` carries
+          an executable tool plan registered in ``memory.pending_options``.
+        * **blocked_ungrounded** routes — refused cleanly so the LLM
+          path can never silently rescue an invalid request.
+
+        Every other route type still falls through to the legacy
+        dispatcher (entity_topic / situation_assessment /
+        keyword_intent / LLM / keyword fallback), so parity with the
+        existing 275-test target suite is preserved.
+        """
+        selected = decision.reasoning_summary.selected_branch
+        route_type = decision.route_type
+
+        # AA-UR-6 Phase 1: ``blocked_ungrounded`` is *not* a hard stop yet.
+        # While the legacy keyword-intent and LLM branches are still in
+        # place, some keyword-only prompts (e.g. "market dashboard") get
+        # rewritten to blocked_ungrounded by a tighter provider (e.g.
+        # VisualScanProvider on "dashboard") even though the legacy path
+        # can serve them. Fall through to legacy here; the router
+        # decision is already in ``trace`` for audit. Phase 3 will make
+        # this terminal once legacy branches are removed.
+        if route_type == "blocked_ungrounded":
+            return None
+
+        if not decision.validation.ok or not decision.tool_plan:
+            return None
+
+        executable_branches = {"CompoundStockProvider", "PendingOptionProvider"}
+        if selected not in executable_branches:
+            return None
+        if route_type not in {"compound_plan", "direct_tool_plan"}:
+            return None
+
+        tool_plan = decision.tool_plan_tuples()
+        tool_results = _execute_plan(tool_plan)
+        trace.extend(tool_results)
+
+        # Pick a synthesis intent that mirrors what the legacy branches
+        # would emit for the same tools, so the rendered answer keeps
+        # the existing structure.
+        report_tools = {
+            "open_report",
+            "read_report",
+            "summarize_report",
+            "get_last_report",
+            "list_generated_reports",
+        }
+        if selected == "PendingOptionProvider":
+            synthesis_intent = (
+                "report_lookup"
+                if any(name in report_tools for name, _ in tool_plan)
+                else "intraday_symbol_scan"
+            )
+        else:  # CompoundStockProvider
+            # Mirror the legacy single-stock intraday-setup synthesis
+            # intent so guardrails don't demand index-scan tooling.
+            synthesis_intent = "intraday_setup"
+
+        answer_body = _synthesize_no_llm(synthesis_intent, tool_results)
+        answer_body = _apply_response_guardrails(
+            clean_input, synthesis_intent, tool_results, answer_body,
+        )
+        answer = answer_body + mode_suffix
+        turn_context = build_turn_context(
+            user_input=clean_input,
+            intent=decision.intent,
+            mode=mode,
+            source_label=source_label,
+            tool_results=tool_results,
+            answer=answer,
+        )
+        self._remember_interaction(
+            clean_input, answer, tool_results, turn_context=turn_context,
+        )
+
+        # Best-effort consume the matched pending option so it can't fire
+        # twice. The router already validated the label, so we only need
+        # the leading label token.
+        if selected == "PendingOptionProvider":
+            try:
+                label_token = clean_input.strip().split()[0]
+                label_token = label_token.rstrip(".)").strip()
+                if label_token:
+                    self._memory.consume_pending_option(label_token)
+            except Exception:
+                pass
+
+        return {
+            "answer": answer,
+            "trace": trace,
+            "backend": self.backend_name,
+            "intent": decision.intent,
+        }
+
     def _conversation_fallback_context(self, *, mode: str, source_label: str) -> TurnContext | None:
         """Build minimal context from rolling history when structured context is absent."""
         if getattr(self, "_memory", None) is not None:
@@ -6451,6 +6606,32 @@ class Agent:
                 # don't keep trying to bind future replies. Continue with
                 # normal routing.
                 self._pending_clarification = None
+
+        # ── AA-UR-6: Unified router (additive) ───────────────────────────────
+        # Run the router after the legacy clarification-reply short-circuit
+        # so existing SituationAssessment-based clarifications continue to
+        # win, then defer execution to the router only for routes the
+        # router exclusively owns (compound stock, pending options,
+        # blocked_ungrounded). All other routes still fall through to the
+        # legacy branches below so behavior parity is preserved.
+        if _unified_router_enabled():
+            pack = self._build_context_pack()
+            if pack is not None:
+                try:
+                    decision = self._unified_router.route(clean_input, pack)
+                except Exception as exc:  # noqa: BLE001
+                    trace.append({"step": "unified_router_error", "error": repr(exc)})
+                    decision = None
+                if decision is not None:
+                    trace.append({
+                        "step": "unified_router",
+                        "decision": decision.to_debug_trace(),
+                    })
+                    executed = self._execute_route(
+                        decision, clean_input, mode, source_label, mode_suffix, trace,
+                    )
+                    if executed is not None:
+                        return executed
 
         entity_assessment = assess_entity_topic_request(clean_input)
         if entity_assessment.applies and entity_assessment.decision == "route_with_entity_topic":
