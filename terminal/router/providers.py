@@ -107,6 +107,15 @@ _DIRECT_INTENT_KEYWORDS = (
     ("intraday_quote", ("quote", "price now", "current price", "ltp")),
 )
 
+# AA-UR-5: map provider intent tags to real entries in
+# ``terminal.tools.TOOL_REGISTRY`` so route validation accepts them.
+_INTENT_TOOL_MAP: dict[str, str] = {
+    "mtf": "analyze_mtf",
+    "fundamentals": "search_yahoo_finance",
+    "technicals": "get_technical_setup",
+    "intraday_quote": "get_live_quote",
+}
+
 
 def _norm(text: str) -> str:
     return (text or "").strip().lower()
@@ -255,7 +264,8 @@ class EntityTopicProvider:
         if not intent_tag:
             return []
         primary = symbols[0]
-        tool_plan = (ToolCallSpec(tool=f"{intent_tag}_for_symbol", args={"symbol": primary}),)
+        tool_name = _INTENT_TOOL_MAP.get(intent_tag, "get_live_quote")
+        tool_plan = (ToolCallSpec(tool=tool_name, args={"symbol": primary}),)
         return [
             RouteCandidate(
                 provider=self.name,
@@ -268,7 +278,7 @@ class EntityTopicProvider:
                 ),
                 tool_plan=tool_plan,
                 evidence_requirements=(
-                    EvidenceRequirement(name=intent_tag, required_tools=(tool_plan[0].tool,)),
+                    EvidenceRequirement(name=intent_tag, required_tools=(tool_name,)),
                 ),
             )
         ]
@@ -325,7 +335,7 @@ class VisualScanProvider:
         tool_args: dict[str, object] = {}
         if symbols:
             tool_args["symbol"] = symbols[0]
-        tool_plan = (ToolCallSpec(tool="render_visual_scan", args=tool_args),)
+        tool_plan = (ToolCallSpec(tool="run_visual_scan", args=tool_args),)
         return [
             RouteCandidate(
                 provider=self.name,
@@ -336,7 +346,7 @@ class VisualScanProvider:
                 reasons=(f"Visual phrase '{matched}' matched",),
                 tool_plan=tool_plan,
                 evidence_requirements=(
-                    EvidenceRequirement(name="chart_data", required_tools=("render_visual_scan",)),
+                    EvidenceRequirement(name="chart_data", required_tools=("run_visual_scan",)),
                 ),
             )
         ]
@@ -354,7 +364,7 @@ class MarketSituationProvider:
         matched = next((p for p in _MARKET_PHRASES if p in text), None)
         if not matched:
             return []
-        tool_plan = (ToolCallSpec(tool="run_market_situation", args={}),)
+        tool_plan = (ToolCallSpec(tool="scan_intraday_market", args={}),)
         return [
             RouteCandidate(
                 provider=self.name,
@@ -367,7 +377,7 @@ class MarketSituationProvider:
                 evidence_requirements=(
                     EvidenceRequirement(
                         name="market_snapshot",
-                        required_tools=("run_market_situation",),
+                        required_tools=("scan_intraday_market",),
                     ),
                 ),
                 source_policy=SourcePolicy(allow_stale=False),
@@ -376,7 +386,13 @@ class MarketSituationProvider:
 
 
 class DirectIntentProvider:
-    """Last-resort fallback: keyword → generic tool intent."""
+    """Last-resort fallback: keyword → generic tool intent.
+
+    If a symbol can be derived from the input or the ContextPack, we
+    bind the topic tool; otherwise we emit a ``clarification`` so the
+    user is asked which symbol they mean rather than the agent
+    executing a tool with missing args.
+    """
 
     name = "DirectIntentProvider"
 
@@ -385,7 +401,11 @@ class DirectIntentProvider:
         if not text:
             return []
         for tag, kws in _DIRECT_INTENT_KEYWORDS:
-            if any(kw in text for kw in kws):
+            if not any(kw in text for kw in kws):
+                continue
+            tool_name = _INTENT_TOOL_MAP.get(tag, "get_live_quote")
+            symbols = _input_symbols(user_input) or _pack_symbols(context_pack)
+            if symbols:
                 return [
                     RouteCandidate(
                         provider=self.name,
@@ -393,10 +413,26 @@ class DirectIntentProvider:
                         route_type="direct_tool_plan",
                         confidence="medium",
                         score=0.5,
-                        reasons=(f"Direct intent keyword for {tag!r}",),
-                        tool_plan=(ToolCallSpec(tool=f"{tag}_default", args={}),),
+                        reasons=(
+                            f"Direct intent keyword for {tag!r}; "
+                            f"bound to {symbols[0]!r} from "
+                            f"{'input' if _input_symbols(user_input) else 'context'}",
+                        ),
+                        tool_plan=(ToolCallSpec(tool=tool_name, args={"symbol": symbols[0]}),),
                     )
                 ]
+            return [
+                RouteCandidate(
+                    provider=self.name,
+                    intent=f"direct_{tag}_clarify",
+                    route_type="clarification",
+                    confidence="low",
+                    score=0.5,
+                    reasons=(
+                        f"Direct intent keyword for {tag!r} but no symbol resolved",
+                    ),
+                )
+            ]
         return []
 
 

@@ -21,6 +21,12 @@ from .providers import (
     VisualScanProvider,
 )
 from .router import UnifiedRouter
+from .validation import (
+    enforce_validation,
+    filter_invalid_options,
+    match_option_reply,
+    validate_decision,
+)
 from .schema import (
     ContextBinding,
     EvidenceRequirement,
@@ -60,4 +66,8 @@ __all__ = [
     "UnifiedRouter",
     "VisualScanProvider",
     "WorkflowStep",
+    "enforce_validation",
+    "filter_invalid_options",
+    "match_option_reply",
+    "validate_decision",
 ]

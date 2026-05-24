@@ -359,7 +359,8 @@ def test_entity_topic_provider_binds_symbol_and_topic():
     assert decision.reasoning_summary.selected_branch == "EntityTopicProvider"
     assert decision.intent == "entity_topic_fundamentals"
     tools = decision.tool_plan_tuples()
-    assert tools == [("fundamentals_for_symbol", {"symbol": "DIXON"})]
+    # AA-UR-5: provider now binds a real TOOL_REGISTRY tool.
+    assert tools == [("search_yahoo_finance", {"symbol": "DIXON"})]
     assert decision.validation.ok is True
 
 
@@ -382,7 +383,7 @@ def test_visual_scan_provider_fires_on_chart_phrase():
     pack = _empty_pack(active_symbols=("RELIANCE",))
     decision = UnifiedRouter().route("Show me the candlestick chart for it", pack)
     assert decision.reasoning_summary.selected_branch == "VisualScanProvider"
-    assert decision.tool_plan_tuples()[0][0] == "render_visual_scan"
+    assert decision.tool_plan_tuples()[0][0] == "run_visual_scan"
 
 
 def test_market_situation_provider_handles_market_wide_ask():
@@ -395,10 +396,21 @@ def test_market_situation_provider_handles_market_wide_ask():
 def test_direct_intent_provider_is_last_resort_fallback():
     pack = _empty_pack()
     decision = UnifiedRouter().route("show me the RSI", pack)
-    # EntityTopic doesn't fire (no symbol token), Market doesn't fire,
-    # so DirectIntent picks up "rsi" → technicals.
+    # AA-UR-5: keyword without a symbol now yields a clarification so the
+    # router never executes a tool with missing required args.
+    assert decision.reasoning_summary.selected_branch == "DirectIntentProvider"
+    assert decision.intent == "direct_technicals_clarify"
+    assert decision.route_type == "clarification"
+
+
+def test_direct_intent_provider_binds_pack_symbol_when_available():
+    pack = _empty_pack(active_symbols=("RELIANCE",))
+    decision = UnifiedRouter().route("show me the RSI", pack)
     assert decision.reasoning_summary.selected_branch == "DirectIntentProvider"
     assert decision.intent == "direct_technicals"
+    assert decision.tool_plan_tuples() == [
+        ("get_technical_setup", {"symbol": "RELIANCE"}),
+    ]
 
 
 def test_router_emits_fallback_llm_when_no_provider_proposes():
@@ -421,7 +433,7 @@ def test_route_decision_trace_contains_provider_score_binding_and_reasons():
     assert trace["selected_branch"] == "EntityTopicProvider"
     assert trace["context"]["symbols"] == ["DIXON"]
     assert trace["route_type"] == "direct_tool_plan"
-    assert trace["tools"] == ["technicals_for_symbol"]
+    assert trace["tools"] == ["get_technical_setup"]
     assert decision.reasoning_summary.pot, "winning reason must be recorded"
 
 
@@ -508,6 +520,9 @@ def test_registration_order_breaks_score_ties():
 
 
 def test_decision_validation_flags_missing_tool_plan_for_direct_routes():
+    """AA-UR-5: a direct_tool_plan with no tools is rewritten to
+    blocked_ungrounded rather than executed.
+    """
     class BadProvider:
         name = "BadProvider"
 
@@ -525,8 +540,12 @@ def test_decision_validation_flags_missing_tool_plan_for_direct_routes():
             ]
 
     decision = UnifiedRouter(providers=[BadProvider()]).route("x", _empty_pack())
-    assert decision.validation.ok is False
-    assert any("tool_plan" in err for err in decision.validation.errors)
+    assert decision.route_type == "blocked_ungrounded"
+    assert decision.tool_plan == ()
+    assert any(
+        "AA-UR-5 blocked" in reason
+        for reason in decision.reasoning_summary.rejected_branches
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -657,3 +676,218 @@ def test_compound_validation_passes_for_target_prompt():
 def test_compound_does_not_fire_for_unrelated_market_ask():
     decision = UnifiedRouter().route("run an intraday scan across NIFTY", _empty_pack())
     assert decision.reasoning_summary.selected_branch != "CompoundStockProvider"
+
+
+# ---------------------------------------------------------------------------
+# AA-UR-5 — Route Validation + Executable NEXT OPTIONS
+# ---------------------------------------------------------------------------
+
+from dataclasses import replace as _replace
+
+from terminal.router import (
+    ContextBinding,
+    NextOption,
+    RouteDecision,
+    enforce_validation,
+    filter_invalid_options,
+    match_option_reply,
+    validate_decision,
+)
+from terminal.router.schema import RouteReasoningSummary
+
+
+def _direct_decision(*, tools, options=()):
+    return RouteDecision(
+        decision_id="d1",
+        intent="test",
+        route_type="direct_tool_plan",
+        confidence="high",
+        user_is_asking="test",
+        context_binding=ContextBinding(),
+        tool_plan=tools,
+        next_options=options,
+        reasoning_summary=RouteReasoningSummary(),
+        validation=RouteValidation(ok=False),
+    )
+
+
+def test_validate_decision_accepts_known_tool_with_required_args():
+    decision = _direct_decision(
+        tools=(ToolCallSpec(tool="get_live_quote", args={"symbol": "DIXON"}),),
+    )
+    result = validate_decision(decision)
+    assert result.ok is True
+    assert result.errors == ()
+    assert "get_live_quote" in result.checked_tools
+
+
+def test_validate_decision_flags_unknown_tool():
+    decision = _direct_decision(
+        tools=(ToolCallSpec(tool="not_a_real_tool", args={}),),
+    )
+    result = validate_decision(decision)
+    assert result.ok is False
+    assert any("unknown tool" in err for err in result.errors)
+
+
+def test_validate_decision_flags_missing_required_arg():
+    decision = _direct_decision(
+        tools=(ToolCallSpec(tool="get_live_quote", args={}),),
+    )
+    result = validate_decision(decision)
+    assert result.ok is False
+    assert any("missing required arg 'symbol'" in err for err in result.errors)
+
+
+def test_validate_decision_flags_empty_string_required_arg():
+    decision = _direct_decision(
+        tools=(ToolCallSpec(tool="get_live_quote", args={"symbol": "   "}),),
+    )
+    result = validate_decision(decision)
+    assert result.ok is False
+    assert any("is empty" in err for err in result.errors)
+
+
+def test_validate_decision_rejects_index_only_symbol_binding():
+    """AA-UR-5: silent NIFTY fallback must be caught at validation time."""
+    decision = _direct_decision(
+        tools=(ToolCallSpec(tool="get_live_quote", args={"symbol": "NIFTY"}),),
+    )
+    result = validate_decision(decision)
+    assert result.ok is False
+    assert any("indices" in err.lower() or "nifty" in err.lower() for err in result.errors)
+
+
+def test_validate_decision_accepts_mixed_index_and_stock_symbols():
+    decision = _direct_decision(
+        tools=(
+            ToolCallSpec(tool="get_live_quote", args={"symbol": "NIFTY"}),
+            ToolCallSpec(tool="get_live_quote", args={"symbol": "DIXON"}),
+        ),
+    )
+    result = validate_decision(decision)
+    assert result.ok is True
+
+
+def test_validate_compound_evidence_coverage():
+    """Compound route missing a required evidence tool fails validation."""
+    decision = RouteDecision(
+        decision_id="d1",
+        intent="compound",
+        route_type="compound_plan",
+        confidence="high",
+        user_is_asking="x",
+        context_binding=ContextBinding(),
+        tool_plan=(
+            ToolCallSpec(tool="get_live_quote", args={"symbol": "DIXON"}),
+        ),
+        evidence_requirements=(
+            EvidenceRequirement(
+                name="intraday_setup",
+                required_tools=("explain_intraday_setup",),
+            ),
+        ),
+        validation=RouteValidation(ok=False),
+    )
+    result = validate_decision(decision)
+    assert result.ok is False
+    assert any("intraday_setup" in err and "not covered" in err for err in result.errors)
+
+
+def test_validate_compound_evidence_skips_optional_requirements():
+    decision = RouteDecision(
+        decision_id="d1",
+        intent="compound",
+        route_type="compound_plan",
+        confidence="high",
+        user_is_asking="x",
+        context_binding=ContextBinding(),
+        tool_plan=(
+            ToolCallSpec(tool="get_live_quote", args={"symbol": "DIXON"}),
+        ),
+        evidence_requirements=(
+            EvidenceRequirement(
+                name="fno_overview",
+                required_tools=("get_fno_overview",),
+                optional=True,
+            ),
+        ),
+        validation=RouteValidation(ok=False),
+    )
+    result = validate_decision(decision)
+    assert result.ok is True
+
+
+def test_enforce_validation_rewrites_invalid_direct_route_to_blocked_ungrounded():
+    decision = _direct_decision(
+        tools=(ToolCallSpec(tool="not_a_real_tool", args={}),),
+    )
+    rewritten = enforce_validation(decision)
+    assert rewritten.route_type == "blocked_ungrounded"
+    assert rewritten.tool_plan == ()
+    assert rewritten.confidence == "low"
+    # Original provider name preserved so audit trail survives.
+    assert rewritten.reasoning_summary.selected_branch == decision.reasoning_summary.selected_branch
+    assert any(
+        "AA-UR-5 blocked" in r for r in rewritten.reasoning_summary.rejected_branches
+    )
+
+
+def test_enforce_validation_strips_broken_next_options_and_keeps_route():
+    good = NextOption(
+        label="A",
+        text="run scan",
+        bound_action={
+            "intent": "scan",
+            "tool_plan": [{"tool": "scan_intraday_market", "args": {}}],
+        },
+    )
+    bad = NextOption(
+        label="B",
+        text="do unknown",
+        bound_action={
+            "intent": "x",
+            "tool_plan": [{"tool": "no_such_tool", "args": {}}],
+        },
+    )
+    decision = _direct_decision(
+        tools=(ToolCallSpec(tool="get_live_quote", args={"symbol": "DIXON"}),),
+        options=(good, bad),
+    )
+    rewritten = enforce_validation(decision)
+    assert rewritten.route_type == "direct_tool_plan"  # core route survives
+    assert [opt.label for opt in rewritten.next_options] == ["A"]
+    assert any(
+        "dropped NEXT OPTION 'B'" in r
+        for r in rewritten.reasoning_summary.rejected_branches
+    )
+
+
+def test_filter_invalid_options_reports_reasons():
+    bad = NextOption(label="A", text="x", bound_action={})
+    kept, reasons = filter_invalid_options([bad])
+    assert kept == ()
+    assert reasons and "empty bound_action" in reasons[0]
+
+
+def test_match_option_reply_handles_label_and_text_and_punctuation():
+    opt_a = NextOption(label="A", text="Run intraday scan", bound_action={"intent": "x"})
+    opt_1 = NextOption(label="1", text="Show top gainers", bound_action={"intent": "x"})
+    pool = [opt_a, opt_1]
+    assert match_option_reply("A", pool) is opt_a
+    assert match_option_reply("a", pool) is opt_a
+    assert match_option_reply("A.", pool) is opt_a
+    assert match_option_reply("A)", pool) is opt_a
+    assert match_option_reply("1", pool) is opt_1
+    assert match_option_reply("show top gainers", pool) is opt_1
+    assert match_option_reply("Run intraday scan", pool) is opt_a
+    assert match_option_reply("nope", pool) is None
+    assert match_option_reply("", pool) is None
+
+
+def test_router_returns_validated_decision_for_compound_dixon_prompt():
+    """End-to-end: target compound prompt passes AA-UR-5 validation."""
+    decision = UnifiedRouter().route(COMPOUND_DIXON_PROMPT, _empty_pack())
+    assert decision.route_type == "compound_plan"
+    assert decision.validation.ok is True
+    assert "get_live_quote" in decision.validation.checked_tools

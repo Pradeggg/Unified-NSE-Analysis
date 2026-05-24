@@ -26,6 +26,7 @@ from .schema import (
     RouteDecision,
     RouteValidation,
 )
+from .validation import enforce_validation
 
 
 def _default_providers() -> list[RouteProvider]:
@@ -206,7 +207,11 @@ class UnifiedRouter:
             validation=validation,
             rejected_branches=rejected,
         )
-        return decision
+        # AA-UR-5: rigorous schema-level validation runs after the
+        # candidate->decision projection so unknown tools, missing args,
+        # broken NEXT OPTIONS, and index-only symbol bindings are caught
+        # before the agent shows anything to the user.
+        return enforce_validation(decision)
 
 
 __all__ = ["UnifiedRouter"]
