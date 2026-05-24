@@ -1,3 +1,4 @@
+import os
 import unittest
 from unittest.mock import patch
 
@@ -1242,7 +1243,12 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
                 "live pricies for dixon tech and the analysis of the F&O data and intraday tradesetup in 5 mins"
             )
 
-        self.assertEqual(result["intent"], "intraday_setup")
+        # AA-UR-6 wires AA-UR-4's CompoundStockProvider into Agent. The
+        # prompt now routes through ``compound_plan`` with intent
+        # ``compound_stock_overview`` instead of the legacy
+        # ``intraday_setup`` keyword path. Both render the same
+        # NSE / F&O / intraday-setup evidence via ``_synthesize_no_llm``.
+        self.assertEqual(result["intent"], "compound_stock_overview")
         self.assertIn("DIXON — F&O Overview", result["answer"])
         self.assertIn("▶ INTRADAY SETUP", result["answer"])
         self.assertIn("Timeframe: 5m", result["answer"])
@@ -2088,6 +2094,110 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
         ]
 
         self.assertIsNone(_validate_required_tools(query, "stock_brief", tool_results))
+
+
+class UnifiedRouterAgentWiringTests(unittest.TestCase):
+    """AA-UR-6: Agent ↔ UnifiedRouter wiring parity tests."""
+
+    def _make_agent(self):
+        agent = Agent()
+        agent.backend = None  # force no-LLM path so router/legacy decide
+        agent.backend_name = "TestBackend"
+        return agent
+
+    def test_unified_router_executes_compound_stock_plan_for_dixon_prompt(self):
+        agent = self._make_agent()
+
+        with patch("terminal.agent._execute_plan") as execute_plan:
+            execute_plan.return_value = [
+                {"tool": "resolve_symbol", "args": {"query": "dixon"}, "result": {"symbol": "DIXON"}},
+                {"tool": "get_live_quote", "args": {"symbol": "DIXON"}, "result": {"symbol": "DIXON", "last_price": 11258}},
+                {"tool": "get_fno_overview", "args": {"symbol": "DIXON", "expiry_index": 0}, "result": {"symbol": "DIXON", "pcr": 0.91}},
+                {"tool": "explain_intraday_setup", "args": {"symbol": "DIXON", "timeframe": "5m"}, "result": {"symbol": "DIXON", "timeframe": "5m", "setup_label": "WATCH"}},
+                {"tool": "get_intraday_analysis", "args": {"symbol": "DIXON"}, "result": {"symbol": "DIXON"}},
+            ]
+            result = agent.query(
+                "live pricies for dixon tech and the analysis of the F&O data and intraday tradesetup in 5 mins"
+            )
+
+        self.assertEqual(result["intent"], "compound_stock_overview")
+        ur_steps = [s for s in result["trace"] if isinstance(s, dict) and s.get("step") == "unified_router"]
+        self.assertEqual(len(ur_steps), 1)
+        decision = ur_steps[0]["decision"]
+        self.assertEqual(decision["selected_branch"], "CompoundStockProvider")
+        self.assertEqual(decision["route_type"], "compound_plan")
+        self.assertIn("DIXON", decision["context"]["symbols"])
+        execute_plan.assert_called_once()
+
+    def test_unified_router_kill_switch_disables_router(self):
+        agent = self._make_agent()
+
+        with patch.dict(os.environ, {"NSE_UNIFIED_ROUTER": "0"}), \
+             patch("terminal.agent._execute_plan") as execute_plan:
+            execute_plan.return_value = [
+                {"tool": "resolve_symbol", "args": {"query": "dixon"}, "result": {"symbol": "DIXON"}},
+                {"tool": "get_nse_intraday_snapshot", "args": {"symbol": "DIXON"}, "result": {"symbol": "DIXON"}},
+                {"tool": "get_fno_overview", "args": {"symbol": "DIXON", "expiry_index": 0}, "result": {"symbol": "DIXON"}},
+                {"tool": "explain_intraday_setup", "args": {"symbol": "DIXON", "timeframe": "5m"}, "result": {"symbol": "DIXON"}},
+            ]
+            result = agent.query(
+                "live pricies for dixon tech and the analysis of the F&O data and intraday tradesetup in 5 mins"
+            )
+
+        # With the router disabled, no `unified_router` trace step should appear
+        # and the legacy keyword-intent path should claim the prompt.
+        ur_steps = [s for s in result["trace"] if isinstance(s, dict) and s.get("step") == "unified_router"]
+        self.assertEqual(ur_steps, [])
+        self.assertEqual(result["intent"], "intraday_setup")
+
+    def test_unified_router_executes_pending_option_bound_plan(self):
+        from terminal.router import PendingOption
+
+        agent = self._make_agent()
+        # Pre-register a pending option that binds to a concrete tool plan,
+        # mimicking what a future renderer will do after showing NEXT OPTIONS.
+        agent._memory.register_pending_options([
+            PendingOption(
+                label="A",
+                text="Run the deep DIXON setup",
+                bound_action={
+                    "intent": "intraday_setup",
+                    "tool_plan": [
+                        {"tool": "resolve_symbol", "args": {"query": "DIXON"}},
+                        {"tool": "explain_intraday_setup", "args": {"symbol": "DIXON", "timeframe": "5m"}},
+                    ],
+                },
+            ),
+        ])
+
+        with patch("terminal.agent._execute_plan") as execute_plan:
+            execute_plan.return_value = [
+                {"tool": "resolve_symbol", "args": {"query": "DIXON"}, "result": {"symbol": "DIXON"}},
+                {"tool": "explain_intraday_setup", "args": {"symbol": "DIXON", "timeframe": "5m"}, "result": {"symbol": "DIXON", "timeframe": "5m", "setup_label": "WATCH"}},
+            ]
+            result = agent.query("A")
+
+        self.assertEqual(result["intent"], "intraday_setup")
+        ur_steps = [s for s in result["trace"] if isinstance(s, dict) and s.get("step") == "unified_router"]
+        self.assertEqual(len(ur_steps), 1)
+        self.assertEqual(ur_steps[0]["decision"]["selected_branch"], "PendingOptionProvider")
+        # The bound plan executed verbatim — no symbol resolution against "A".
+        executed_plan = execute_plan.call_args[0][0]
+        self.assertEqual([t for t, _ in executed_plan], ["resolve_symbol", "explain_intraday_setup"])
+        # Consumed: a second "A" reply must no longer match.
+        self.assertIsNone(agent._memory.consume_pending_option("A"))
+
+    def test_unified_router_falls_through_for_greeting(self):
+        agent = self._make_agent()
+
+        with patch("terminal.agent._execute_plan") as execute_plan:
+            execute_plan.return_value = []
+            result = agent.query("Hello")
+
+        # Router records its decision (DirectIntent / blocked / none), but
+        # the legacy greeting branch still owns the answer.
+        self.assertEqual(result["intent"], "greeting")
+        execute_plan.assert_called_once_with([])
 
 
 if __name__ == "__main__":
