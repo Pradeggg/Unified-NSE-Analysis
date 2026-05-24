@@ -265,6 +265,7 @@ def test_unified_router_default_provider_chain_order():
     assert router.provider_names == [
         "PendingOptionProvider",
         "ContextualFollowupProvider",
+        "CompoundStockProvider",
         "EntityTopicProvider",
         "ReportProvider",
         "VisualScanProvider",
@@ -526,3 +527,133 @@ def test_decision_validation_flags_missing_tool_plan_for_direct_routes():
     decision = UnifiedRouter(providers=[BadProvider()]).route("x", _empty_pack())
     assert decision.validation.ok is False
     assert any("tool_plan" in err for err in decision.validation.errors)
+
+
+# ---------------------------------------------------------------------------
+# AA-UR-4 — CompoundStockProvider
+# ---------------------------------------------------------------------------
+
+from terminal.router import CompoundStockProvider
+from terminal.router.compound_stock import coverage_map, _detect_timeframe
+
+
+COMPOUND_DIXON_PROMPT = (
+    "live pricies for dixon tech and the analysis of the F&O data "
+    "and intraday tradesetup in 5 mins"
+)
+
+
+def test_compound_stock_provider_is_registered_in_default_chain():
+    assert "CompoundStockProvider" in UnifiedRouter().provider_names
+
+
+def test_compound_dixon_prompt_routes_to_dixon_not_nifty():
+    """AA-UR-4 acceptance: the exact compound prompt routes to DIXON,
+    never to NIFTY, and produces the five-tool compound_plan.
+    """
+    decision = UnifiedRouter().route(COMPOUND_DIXON_PROMPT, _empty_pack())
+    assert decision.route_type == "compound_plan"
+    assert decision.reasoning_summary.selected_branch == "CompoundStockProvider"
+    assert decision.confidence == "high"
+
+    tools = decision.tool_plan_tuples()
+    tool_names = [t for t, _ in tools]
+    assert tool_names == [
+        "resolve_symbol",
+        "get_live_quote",
+        "get_fno_overview",
+        "explain_intraday_setup",
+        "get_intraday_analysis",
+    ]
+    # Every symbol-bound tool resolves to DIXON. Crucially, none point at NIFTY.
+    bound_symbols = {
+        args.get("symbol")
+        for name, args in tools
+        if name != "resolve_symbol" and isinstance(args, dict) and "symbol" in args
+    }
+    assert bound_symbols == {"DIXON"}
+    assert "NIFTY" not in bound_symbols
+    # Binding surfaces DIXON even though the pack started empty.
+    assert "DIXON" in decision.context_binding.symbols
+    assert "NIFTY" not in decision.context_binding.symbols
+
+
+def test_compound_provider_marks_fno_as_optional_evidence():
+    """F&O unavailable path must be explicit: the evidence requirement
+    is flagged optional, while live + intraday remain required.
+    """
+    cand = CompoundStockProvider().propose(COMPOUND_DIXON_PROMPT, _empty_pack())[0]
+    cov = coverage_map(cand)
+    assert cov == {
+        "live_quote": ["get_live_quote"],
+        "fno_overview": ["get_fno_overview"],
+        "intraday_setup": ["explain_intraday_setup", "get_intraday_analysis"],
+    }
+    by_name = {req.name: req for req in cand.evidence_requirements}
+    assert by_name["fno_overview"].optional is True
+    assert by_name["live_quote"].optional is False
+    assert by_name["intraday_setup"].optional is False
+
+
+def test_compound_provider_requires_two_facets():
+    """A single-facet ask (just live quote) must NOT win compound."""
+    decision = UnifiedRouter().route("show me the live price of dixon tech", _empty_pack())
+    assert decision.reasoning_summary.selected_branch != "CompoundStockProvider"
+
+
+def test_compound_provider_emits_clarification_when_symbol_missing():
+    """Compound shape detected but symbol unresolvable → clarification,
+    not a silent NIFTY fallback.
+    """
+    decision = UnifiedRouter().route(
+        "give me the live price F&O data and intraday tradesetup", _empty_pack()
+    )
+    assert decision.reasoning_summary.selected_branch == "CompoundStockProvider"
+    assert decision.route_type == "clarification"
+    assert decision.confidence == "low"
+    # No symbol arg leaks into the trace.
+    assert all("symbol" not in (spec.args or {}) for spec in decision.tool_plan)
+
+
+def test_compound_provider_prefers_stock_over_nifty_when_both_match():
+    """Even if 'nifty' appears, a stock match (RELIANCE) must win."""
+    prompt = (
+        "live price for reliance and F&O overview vs nifty plus intraday setup"
+    )
+    decision = UnifiedRouter().route(prompt, _empty_pack())
+    assert decision.reasoning_summary.selected_branch == "CompoundStockProvider"
+    bound = {
+        args.get("symbol")
+        for name, args in decision.tool_plan_tuples()
+        if name != "resolve_symbol" and isinstance(args, dict) and "symbol" in args
+    }
+    assert "RELIANCE" in bound
+    assert "NIFTY" not in bound
+
+
+def test_compound_provider_detects_timeframe_15m():
+    decision = UnifiedRouter().route(
+        "live price for dixon tech with F&O analysis on the 15m intraday setup",
+        _empty_pack(),
+    )
+    args_by_tool = {t: a for t, a in decision.tool_plan_tuples()}
+    assert args_by_tool["get_intraday_analysis"]["timeframe"] == "15m"
+
+
+def test_detect_timeframe_helper():
+    assert _detect_timeframe("foo 5m bar") == "5m"
+    assert _detect_timeframe("foo 15 min bar") == "15m"
+    assert _detect_timeframe("foo 30min bar") == "30m"
+    assert _detect_timeframe("no timeframe here") == "5m"
+
+
+def test_compound_validation_passes_for_target_prompt():
+    decision = UnifiedRouter().route(COMPOUND_DIXON_PROMPT, _empty_pack())
+    assert decision.validation.ok is True
+    assert "get_live_quote" in decision.validation.checked_tools
+    assert "get_fno_overview" in decision.validation.checked_tools
+
+
+def test_compound_does_not_fire_for_unrelated_market_ask():
+    decision = UnifiedRouter().route("run an intraday scan across NIFTY", _empty_pack())
+    assert decision.reasoning_summary.selected_branch != "CompoundStockProvider"

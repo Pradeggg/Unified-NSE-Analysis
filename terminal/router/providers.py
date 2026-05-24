@@ -18,6 +18,7 @@ import re
 from typing import Protocol
 
 from .context import ContextPack
+from .compound_stock import CompoundStockProvider as _CompoundStockProvider
 from .schema import (
     EvidenceRequirement,
     NextOption,
@@ -400,9 +401,12 @@ class DirectIntentProvider:
 
 
 # Default registration order; first provider wins ties.
+# CompoundStockProvider runs early (high score 0.95) so multi-facet
+# stock asks bypass the single-facet providers cleanly.
 DEFAULT_PROVIDERS: tuple[type, ...] = (
     PendingOptionProvider,
     ContextualFollowupProvider,
+    _CompoundStockProvider,
     EntityTopicProvider,
     ReportProvider,
     VisualScanProvider,

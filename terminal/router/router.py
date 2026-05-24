@@ -37,9 +37,24 @@ def _binding_from_pack(pack: ContextPack, winner: RouteCandidate) -> ContextBind
     workflow_id = pack.active_workflow.workflow_id if pack.active_workflow else ""
     report_paths = tuple(report.path for report in pack.active_reports)
     binding_type = _binding_type_for(winner)
+
+    # Merge pack symbols with any symbol arg the winning candidate's
+    # tool_plan resolved to, so the binding reflects the route's actual
+    # subject (e.g. AA-UR-4 compound prompts whose pack started empty).
+    merged_symbols: list[str] = []
+    for sym in pack.active_symbols:
+        if sym and sym not in merged_symbols:
+            merged_symbols.append(sym)
+    for spec in winner.tool_plan:
+        sym = spec.args.get("symbol") if isinstance(spec.args, dict) else None
+        if isinstance(sym, str):
+            value = sym.strip().upper()
+            if value and value not in merged_symbols:
+                merged_symbols.append(value)
+
     return ContextBinding(
         binding_type=binding_type,
-        symbols=pack.active_symbols,
+        symbols=tuple(merged_symbols),
         indices=pack.active_indices,
         sectors=pack.active_sectors,
         report_paths=report_paths,
@@ -61,6 +76,8 @@ def _binding_type_for(candidate: RouteCandidate) -> str:
         return "visual_scan"
     if candidate.provider == "MarketSituationProvider":
         return "market_situation"
+    if candidate.provider == "CompoundStockProvider":
+        return "compound_stock"
     if candidate.provider == "DirectIntentProvider":
         return "direct_intent"
     return "none"
