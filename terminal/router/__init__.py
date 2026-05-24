@@ -8,6 +8,7 @@ from .context import (
     RecentTurn,
     WorkflowStep,
 )
+from .compound_stock import CompoundStockProvider
 from .providers import (
     ContextualFollowupProvider,
     DEFAULT_PROVIDERS,
@@ -35,6 +36,7 @@ from .schema import (
 __all__ = [
     "ActiveReport",
     "ActiveWorkflow",
+    "CompoundStockProvider",
     "ContextBinding",
     "ContextPack",
     "ContextualFollowupProvider",
