@@ -46,6 +46,13 @@ def _binding_from_pack(pack: ContextPack, winner: RouteCandidate) -> ContextBind
     for sym in pack.active_symbols:
         if sym and sym not in merged_symbols:
             merged_symbols.append(sym)
+    # AA-UR-7: include workflow-wide symbols so follow-ups against a
+    # Sherlock workflow see every subject the workflow touched, not just
+    # those carried over in last_focus_symbols.
+    if pack.active_workflow is not None:
+        for sym in pack.active_workflow.symbols:
+            if sym and sym not in merged_symbols:
+                merged_symbols.append(sym)
     for spec in winner.tool_plan:
         sym = spec.args.get("symbol") if isinstance(spec.args, dict) else None
         if isinstance(sym, str):

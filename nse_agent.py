@@ -358,7 +358,13 @@ def _remember_ric_sequence_interaction(
     desc: str,
     step_records: list[dict],
 ) -> None:
-    """Persist a completed RIC as one consolidated context for follow-ups."""
+    """Persist a completed RIC as one consolidated context for follow-ups.
+
+    AA-UR-7: also register the RIC as a structured ``ActiveWorkflow`` on
+    the agent's memory so contextual follow-ups (e.g. "based on the above
+    what would be your recommendation") bind to the **full** workflow,
+    not just the final step.
+    """
     if not step_records:
         return
     try:
@@ -404,6 +410,69 @@ def _remember_ric_sequence_interaction(
             result_items=symbols,
         )
         agent._remember_interaction(ctx.user_input, summary, [], turn_context=ctx)
+
+        # AA-UR-7: register the workflow on memory with one structured
+        # step per RIC step. Evidence carries explicit fact/value/
+        # source_label keys (not free prose).
+        memory = getattr(agent, "_memory", None)
+        if memory is not None:
+            try:
+                from terminal.router.context import WorkflowStep as _WorkflowStep
+
+                workflow_id = f"ric_{key}_{symbol or 'market'}".lower()
+                memory.start_workflow(workflow_id, kind=key)
+                for record in step_records:
+                    idx = record.get("index") or 0
+                    label = str(record.get("label") or "").strip() or f"step_{idx}"
+                    answer = " ".join(str(record.get("answer") or "").split())
+                    step_tools: list[str] = []
+                    step_freshness: list[str] = []
+                    for item in record.get("trace") or []:
+                        if not isinstance(item, dict):
+                            continue
+                        tool = str(item.get("tool") or item.get("name") or "").strip()
+                        if tool and tool not in step_tools:
+                            step_tools.append(tool)
+                    for pattern in (
+                        r"Data Freshness:\s*([^·\n]+)",
+                        r"As of:\s*([0-9A-Za-z: -]+)",
+                        r"snapshot\s+(\d{4}-\d{2}-\d{2})",
+                    ):
+                        for match in re.finditer(pattern, answer, flags=re.I):
+                            bit = match.group(1).strip()
+                            if bit and bit not in step_freshness:
+                                step_freshness.append(bit)
+                    step_source = (
+                        f"RIC {clean_name} step {idx}: {label}"
+                        + (f" via {','.join(step_tools)}" if step_tools else "")
+                    )
+                    step_freshness_value = " / ".join(step_freshness[:3])
+                    evidence: list[dict] = [
+                        {
+                            "fact": label.lower().replace(" ", "_") or f"step_{idx}",
+                            "value": answer[:600],
+                            "symbol": symbol,
+                            "source_label": step_source,
+                            "freshness": step_freshness_value,
+                            "tools": list(step_tools),
+                        }
+                    ]
+                    memory.append_workflow_step(
+                        workflow_id,
+                        _WorkflowStep(
+                            step_id=f"{workflow_id}_step_{idx}",
+                            kind=label,
+                            summary=answer[:600],
+                            evidence=tuple(evidence),
+                            source_label=step_source,
+                            freshness=step_freshness_value,
+                        ),
+                    )
+                memory.close_workflow(workflow_id)
+            except Exception:
+                # Workflow registration is best-effort — never break the
+                # RIC just because the structured snapshot failed.
+                pass
     except Exception:
         pass
 

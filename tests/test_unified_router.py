@@ -891,3 +891,148 @@ def test_router_returns_validated_decision_for_compound_dixon_prompt():
     assert decision.route_type == "compound_plan"
     assert decision.validation.ok is True
     assert "get_live_quote" in decision.validation.checked_tools
+
+
+# ---------------------------------------------------------------------------
+# AA-UR-7: Sherlock / multi-step workflow binding
+# ---------------------------------------------------------------------------
+
+from terminal.router import (
+    ActiveWorkflow as _UR7_ActiveWorkflow,
+    ContextPack as _UR7_ContextPack,
+    WorkflowStep as _UR7_WorkflowStep,
+    UnifiedRouter as _UR7_UnifiedRouter,
+)
+from terminal.router.providers import ContextualFollowupProvider as _UR7_FollowupProvider
+
+
+def _ur7_sample_workflow(symbol: str = "MANINDS") -> _UR7_ActiveWorkflow:
+    steps = (
+        _UR7_WorkflowStep(
+            step_id="s1", kind="Live Quote", summary="price 123",
+            evidence=(
+                {"fact": "live_quote", "value": "Rs 123 +1.2%",
+                 "symbol": symbol, "source_label": "NSE live", "freshness": "as of 09:30 IST",
+                 "stance": "bullish"},
+            ),
+            source_label="NSE live", freshness="as of 09:30 IST",
+        ),
+        _UR7_WorkflowStep(
+            step_id="s2", kind="Technical Setup", summary="stage 2 RSI 62",
+            evidence=(
+                {"fact": "weinstein_stage", "value": "Stage 2",
+                 "symbol": symbol, "source_label": "tech engine",
+                 "freshness": "EoD 2026-05-22", "stance": "bullish"},
+            ),
+            source_label="tech engine", freshness="EoD 2026-05-22",
+        ),
+        _UR7_WorkflowStep(
+            step_id="s3", kind="Fundamentals", summary="P/E 28",
+            evidence=(
+                {"fact": "pe_ratio", "value": "28x",
+                 "symbol": symbol, "source_label": "screener.in",
+                 "freshness": "FY26 Q4", "stance": "neutral"},
+            ),
+            source_label="screener.in", freshness="FY26 Q4",
+        ),
+        _UR7_WorkflowStep(
+            step_id="s4", kind="News & Catalysts", summary="order win",
+            evidence=(
+                {"fact": "news", "value": "Order win 200cr",
+                 "symbol": symbol, "source_label": "yfinance news",
+                 "freshness": "2026-05-21", "stance": "bullish"},
+            ),
+            source_label="yfinance news", freshness="2026-05-21",
+        ),
+        _UR7_WorkflowStep(
+            step_id="s5", kind="Trade Setup", summary="entry 120 SL 115",
+            evidence=(
+                {"fact": "trade_setup", "value": "Long 120 SL 115 T 135",
+                 "symbol": symbol, "source_label": "intraday engine",
+                 "freshness": "15:00 IST", "stance": "bullish"},
+            ),
+            source_label="intraday engine", freshness="15:00 IST",
+        ),
+    )
+    return _UR7_ActiveWorkflow(workflow_id="ric_sherlock_maninds", kind="sherlock", steps=steps)
+
+
+def test_ur7_contextual_followup_binds_to_full_workflow():
+    pack = _UR7_ContextPack(
+        session_id="s",
+        active_symbols=("MANINDS",),
+        active_workflow=_ur7_sample_workflow(),
+    )
+    cands = _UR7_FollowupProvider().propose(
+        "Based on the above what would be your recommendation", pack
+    )
+    assert len(cands) == 1
+    cand = cands[0]
+    assert cand.intent == "contextual_followup_workflow"
+    assert cand.route_type == "contextual_answer"
+    # All five step kinds surface in route reasons.
+    reasons_blob = " ".join(cand.reasons).lower()
+    for kind in ("live quote", "technical setup", "fundamentals", "news", "trade setup"):
+        assert kind in reasons_blob
+    # One evidence requirement per unique step kind.
+    req_kinds = {req.name for req in cand.evidence_requirements}
+    assert {"live_quote", "technical_setup", "fundamentals", "news_&_catalysts", "trade_setup"} <= req_kinds
+
+
+def test_ur7_router_binding_includes_workflow_symbols():
+    pack = _UR7_ContextPack(
+        session_id="s",
+        active_symbols=(),  # empty pack — symbols must come from the workflow
+        active_workflow=_ur7_sample_workflow("MANINDS"),
+    )
+    decision = _UR7_UnifiedRouter().route(
+        "Based on the above what would be your recommendation", pack
+    )
+    assert decision.route_type == "contextual_answer"
+    assert "MANINDS" in decision.context_binding.symbols
+    assert decision.context_binding.workflow_id == "ric_sherlock_maninds"
+
+
+def test_ur7_followup_flags_freshness_divergence():
+    pack = _UR7_ContextPack(
+        session_id="s",
+        active_symbols=("MANINDS",),
+        active_workflow=_ur7_sample_workflow(),
+    )
+    cands = _UR7_FollowupProvider().propose("based on the above tell me", pack)
+    reasons_blob = " ".join(cands[0].reasons).lower()
+    assert "freshness divergence" in reasons_blob
+
+
+def test_ur7_followup_flags_conflicting_stances():
+    base = _ur7_sample_workflow()
+    bearish_step = _UR7_WorkflowStep(
+        step_id="s6", kind="Risk",
+        evidence=(
+            {"fact": "risk", "value": "high debt",
+             "symbol": "MANINDS", "source_label": "screener.in",
+             "freshness": "FY26 Q4", "stance": "bearish"},
+        ),
+    )
+    wf = _UR7_ActiveWorkflow(
+        workflow_id=base.workflow_id, kind=base.kind, steps=(*base.steps, bearish_step),
+    )
+    pack = _UR7_ContextPack(
+        session_id="s", active_symbols=("MANINDS",), active_workflow=wf,
+    )
+    cands = _UR7_FollowupProvider().propose("based on the above recommend", pack)
+    reasons_blob = " ".join(cands[0].reasons).lower()
+    assert "conflicting stances" in reasons_blob
+    assert "bullish" in reasons_blob and "bearish" in reasons_blob
+
+
+def test_ur7_followup_falls_back_when_no_workflow():
+    pack = _UR7_ContextPack(
+        session_id="s",
+        active_symbols=("MANINDS",),
+        active_workflow=None,
+    )
+    cands = _UR7_FollowupProvider().propose("based on the above recommend", pack)
+    assert cands and cands[0].intent == "contextual_followup"
+    # No workflow evidence requirements when no workflow.
+    assert cands[0].evidence_requirements == ()
