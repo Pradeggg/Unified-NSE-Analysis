@@ -384,3 +384,123 @@ def test_bucket_h_unrelated_query_does_not_hijack_prior_report(user_input):
         assert not (tools & {"read_report", "summarize_report", "open_report"}), (
             f"unrelated input={user_input!r} hijacked report tools={tools}"
         )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Bucket I — Collective-reference follow-ups against a prior top-movers turn
+#
+# Regression for the bug where 'Fundamental analysis for the above stocks'
+# was extracted as a literal ticker (THE ABOVE STOCKS) by keyword_intent
+# because the situation-assessment gate didn't claim the turn.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _top_movers_context() -> TurnContext:
+    return TurnContext(
+        user_input="top gainers",
+        intent="top_movers",
+        mode="historical",
+        tools=["get_top_gainers_losers", "get_market_breadth"],
+        source_label="NSE live API + DB breadth",
+        result_type="top_movers",
+        result_summary="Top gainers / losers for NIFTY 500.",
+        symbols=[],
+        result_items=[
+            "MODISONLTD", "HARIOMPIPE", "SAGARDEEP", "VIKRAN", "GREENLAM",
+            "KOPRAN", "TRUALT", "ALICON",
+        ],
+        result_groups={
+            "gainers": ["MODISONLTD", "HARIOMPIPE", "SAGARDEEP", "VIKRAN", "GREENLAM", "KOPRAN"],
+            "losers":  ["TRUALT", "ALICON"],
+        },
+    )
+
+
+@pytest.mark.parametrize("user_input", [
+    "Fundamental analysis for the above stocks",
+    "fundamentals for these stocks",
+    "ratios for the above",
+    "show me valuation for those stocks",
+    "earnings for the gainers",
+    "latest results for the above list",
+])
+def test_bucket_i_collective_fundamentals_binds_to_prior_movers(user_input):
+    ctx = _top_movers_context()
+    asm = assess_followup(user_input, ctx)
+    assert asm.applies is True
+    assert asm.decision == "run_tool_plan"
+    assert asm.tool_plan, "expected a non-empty tool_plan"
+    tool_name, args = asm.tool_plan[0]
+    assert tool_name == "compare_stocks"
+    assert args.get("aspects") == ["fundamental"]
+    symbols = args.get("symbols") or []
+    assert symbols, "compare_stocks symbols list must not be empty"
+    # No symbol must be a piece of the literal reference phrase.
+    for s in symbols:
+        assert s not in {"THE", "ABOVE", "STOCKS", "THESE", "THOSE", "THE ABOVE STOCKS"}, (
+            f"collective reference leaked as literal ticker: {s}"
+        )
+
+
+def test_bucket_i_the_gainers_picks_gainers_bucket():
+    ctx = _top_movers_context()
+    asm = assess_followup("fundamentals for the gainers", ctx)
+    assert asm.decision == "run_tool_plan"
+    symbols = asm.tool_plan[0][1]["symbols"]
+    # Must come from the gainers bucket, not the losers bucket.
+    assert set(symbols).issubset(set(ctx.result_groups["gainers"]))
+    assert "TRUALT" not in symbols and "ALICON" not in symbols
+
+
+def test_bucket_i_the_losers_picks_losers_bucket():
+    ctx = _top_movers_context()
+    asm = assess_followup("results for the losers", ctx)
+    assert asm.decision == "run_tool_plan"
+    symbols = asm.tool_plan[0][1]["symbols"]
+    assert set(symbols).issubset(set(ctx.result_groups["losers"]))
+
+
+def test_bucket_i_gate_triggers_for_collective_references():
+    from terminal.situation_assessment import needs_situation_assessment
+    for q in (
+        "Fundamental analysis for the above stocks",
+        "ratios for these stocks",
+        "earnings for the gainers",
+        "results for the losers",
+    ):
+        assert needs_situation_assessment(q) is True, q
+
+
+def test_bucket_i_extract_result_groups_understands_gainers_losers():
+    from terminal.situation_assessment import build_turn_context
+    tool_results = [{
+        "tool": "get_top_gainers_losers",
+        "args": {"index": "NIFTY 500"},
+        "result": {
+            "index": "NIFTY 500",
+            "gainers": [{"symbol": "AAA"}, {"symbol": "BBB"}],
+            "losers":  [{"symbol": "XXX"}, {"symbol": "YYY"}],
+        },
+    }]
+    ctx = build_turn_context(
+        user_input="top gainers", intent="top_movers", mode="historical",
+        source_label="", tool_results=tool_results, answer="",
+    )
+    assert ctx.result_groups.get("gainers") == ["AAA", "BBB"]
+    assert ctx.result_groups.get("losers")  == ["XXX", "YYY"]
+    # Promoted into the flat list so existing rules that key off result_items still match.
+    assert set(ctx.result_items) >= {"AAA", "BBB", "XXX", "YYY"}
+
+
+def test_bucket_i_collective_followup_without_prior_list_falls_through():
+    """When there is no prior context with usable symbols, the assessor
+    must NOT fabricate a tool_plan with literal phrase fragments."""
+    empty_ctx = TurnContext(
+        user_input="hi", intent="greeting", mode="historical",
+        tools=[], source_label="",
+    )
+    asm = assess_followup("fundamentals for the above stocks", empty_ctx)
+    # With no symbols anywhere, the rule must not fire; fall back to clarification/router.
+    if asm.decision == "run_tool_plan":
+        symbols = asm.tool_plan[0][1].get("symbols", [])
+        assert symbols, "tool_plan with empty symbol list is worse than no plan"
