@@ -1419,6 +1419,39 @@ class _AgentCompleter(Completer):
         ("index", "Index pulse"),
     ]
 
+    @staticmethod
+    def _helpfile_catalog():
+        try:
+            from terminal.helpfile import load_helpfile_catalog
+
+            return load_helpfile_catalog()
+        except Exception:
+            return None
+
+    @classmethod
+    def _slash_command_entries(cls) -> list[tuple[str, str]]:
+        entries = list(_SLASH_COMMANDS)
+        seen = {cmd for cmd, _hint in entries}
+        catalog = cls._helpfile_catalog()
+        if catalog:
+            for row in catalog.commands:
+                if row.command and row.command not in seen:
+                    entries.append((row.command, row.description))
+                    seen.add(row.command)
+        return entries
+
+    @classmethod
+    def _help_sections(cls) -> list[tuple[str, str]]:
+        sections = [(s, "Help section") for s in cls._ARG_HELP_SECTIONS]
+        seen = {label.lower() for label, _hint in sections}
+        catalog = cls._helpfile_catalog()
+        if catalog:
+            for name in catalog.section_names():
+                if name and name not in seen:
+                    sections.append((name, "Helpfile section"))
+                    seen.add(name)
+        return sections
+
     # Map root command → list[(label, hint)] argument candidates ------------------
     @classmethod
     def _arg_sources(cls, root: str, head_tokens: list[str] | None = None,
@@ -1493,7 +1526,7 @@ class _AgentCompleter(Completer):
         if root == "/youtube":
             return [("channels", "List channels"), ("transcribe", "Force transcription")]
         if root == "/help":
-            return [(s, "Help section") for s in cls._ARG_HELP_SECTIONS]
+            return cls._help_sections()
         if root == "/prompts":
             return [(c, "Prompt category") for c in cls._ARG_PROMPT_CATS]
         if root == "/model":
@@ -1553,6 +1586,11 @@ class _AgentCompleter(Completer):
         text = document.text_before_cursor
         stripped = text.strip()
 
+        pipe_match = re.search(r"\|\s*/email\b(.*)$", text, flags=re.IGNORECASE)
+        if pipe_match:
+            yield from self._email_pipe_args(text, pipe_match.group(1))
+            return
+
         if text.startswith("/"):
             yield from self._slash(text)
             return
@@ -1576,7 +1614,7 @@ class _AgentCompleter(Completer):
         bare = text[1:] if text.startswith("/") else text
 
         ranked: list[tuple[int, int, str, str, str]] = []
-        for cmd, hint in _SLASH_COMMANDS:
+        for cmd, hint in self._slash_command_entries():
             cmd_score = self._score(bare, cmd[1:]) if bare else 2
             hint_score = self._score(bare, hint) if hint and bare else None
             if cmd_score is not None:
@@ -1597,7 +1635,7 @@ class _AgentCompleter(Completer):
             # "/screen stage2", keep "/screen") so typo correction matches
             # the bare command, not a multi-word alias variant.
             root_to_entry: dict[str, tuple[str, str]] = {}
-            for cmd, hint in _SLASH_COMMANDS:
+            for cmd, hint in self._slash_command_entries():
                 root = cmd.split()[0]
                 root_to_entry.setdefault(root, (root, hint))
             roots_bare = [r[1:] for r in root_to_entry]
@@ -1626,6 +1664,23 @@ class _AgentCompleter(Completer):
             if score is None:
                 continue
             ranked.append((score, len(label), label, hint))
+        ranked.sort(key=lambda r: (r[0], r[1], r[2].lower()))
+        for _, _, label, hint in ranked[: self._MAX_RESULTS]:
+            yield Completion(
+                label,
+                start_position=-len(partial),
+                display=label,
+                display_meta=hint,
+            )
+
+    def _email_pipe_args(self, text: str, tail: str):
+        partial = tail.rsplit(" ", 1)[-1] if tail and not tail.endswith(" ") else ""
+        sources = self._ARG_EMAIL_FLAGS if partial.startswith("-") else self._ARG_EMAIL_TARGETS + self._ARG_EMAIL_FLAGS
+        ranked: list[tuple[int, int, str, str]] = []
+        for label, hint in sources:
+            score = self._multi_score(partial, label, hint)
+            if score is not None:
+                ranked.append((score, len(label), label, hint))
         ranked.sort(key=lambda r: (r[0], r[1], r[2].lower()))
         for _, _, label, hint in ranked[: self._MAX_RESULTS]:
             yield Completion(
@@ -5988,6 +6043,84 @@ def _rewrite_scan_command(text: str) -> tuple[str, str]:
     )
 
 
+_KNOWN_SCAN_INDICES: tuple[str, ...] = (
+    "NIFTY 50", "NIFTY 100", "NIFTY 200", "NIFTY 500",
+    "NIFTY NEXT 50", "NIFTY MIDCAP 50", "NIFTY MIDCAP 100",
+    "NIFTY MIDCAP 150", "NIFTY SMALLCAP 100", "NIFTY SMALLCAP 250",
+    "NIFTY BANK", "NIFTY IT", "NIFTY AUTO", "NIFTY FMCG",
+    "NIFTY PHARMA", "NIFTY METAL", "NIFTY REALTY", "NIFTY ENERGY",
+    "NIFTY FIN SERVICE", "NIFTY INFRA",
+)
+_SCAN_INDEX_ALIASES: dict[str, str] = {
+    "NIFTY50":      "NIFTY 50",
+    "NIFTY500":     "NIFTY 500",
+    "BANKNIFTY":    "NIFTY BANK",
+    "BANK NIFTY":   "NIFTY BANK",
+    "FINNIFTY":     "NIFTY FIN SERVICE",
+    "NIFTY FIN":    "NIFTY FIN SERVICE",
+    "MIDCAP100":    "NIFTY MIDCAP 100",
+    "MIDCAP 100":   "NIFTY MIDCAP 100",
+    "SMALLCAP100":  "NIFTY SMALLCAP 100",
+    "SMALLCAP 100": "NIFTY SMALLCAP 100",
+}
+
+
+def _normalise_scan_index(raw: str) -> tuple[str, str | None]:
+    """Normalise a `/scan` index argument.
+
+    Returns ``(canonical_index, suggestion_or_None)``. ``suggestion`` is set
+    when the raw value did not match a known index but a close match was
+    found (e.g. tab-completion artefacts like ``"NIFTY NIFTY AUTO"`` collapse
+    to ``"NIFTY AUTO"``). When no match is found the canonical falls back
+    to the cleaned-up upper-case form and ``suggestion`` is ``None``.
+    """
+    if not raw:
+        return "NIFTY 50", None
+
+    # 1. Whitespace cleanup + uppercase.
+    cleaned = re.sub(r"\s+", " ", raw).strip().upper()
+
+    # 2. Collapse consecutive duplicate tokens — fixes the tab-completion
+    #    artefact "/scan NIFTY NIFTY AUTO" where the completion appends
+    #    the full index name onto an already-typed prefix.
+    tokens = cleaned.split()
+    deduped: list[str] = []
+    for tok in tokens:
+        if deduped and deduped[-1] == tok:
+            continue
+        deduped.append(tok)
+    cleaned = " ".join(deduped)
+
+    # 3. Direct hits + alias hits.
+    if cleaned in _KNOWN_SCAN_INDICES:
+        return cleaned, None
+    if cleaned in _SCAN_INDEX_ALIASES:
+        return _SCAN_INDEX_ALIASES[cleaned], None
+
+    # 4. Suffix-based recovery: if the user typed "NIFTY NIFTY AUTO"
+    #    that survived dedupe (different casings) or "NIFTY X AUTO", the
+    #    tail tokens often spell the real index. Try the last 2 / last 3
+    #    tokens, prefixed with "NIFTY ".
+    for take in (3, 2):
+        if len(deduped) >= take:
+            tail = " ".join(deduped[-take:])
+            if tail in _KNOWN_SCAN_INDICES:
+                return tail, tail
+            if not tail.startswith("NIFTY "):
+                candidate = f"NIFTY {' '.join(deduped[-(take - 1):])}"
+                if candidate in _KNOWN_SCAN_INDICES:
+                    return candidate, candidate
+
+    # 5. Closest-match by simple containment (for friendly error msg).
+    suggestion: str | None = None
+    for known in _KNOWN_SCAN_INDICES:
+        if known.split()[-1] in cleaned.split():
+            suggestion = known
+            break
+
+    return cleaned, suggestion
+
+
 def _scan_command_tool_call(text: str) -> tuple[str, str, dict]:
     """Return deterministic tool call metadata for a `/scan` shortcut."""
     parts = text.split(maxsplit=1)
@@ -6002,12 +6135,16 @@ def _scan_command_tool_call(text: str) -> tuple[str, str, dict]:
             {"screen_type": screen_type},
         )
 
-    index = arg.upper() if arg else "NIFTY 50"
+    canonical, suggestion = _normalise_scan_index(arg)
+    if suggestion and suggestion != arg.strip().upper():
+        status = f"Intraday scan: {canonical}  (interpreted from {arg!r})"
+    else:
+        status = f"Intraday scan: {canonical}"
     return (
-        f"Intraday scan: {index}",
+        status,
         "scan_intraday_market",
         {
-            "index": index,
+            "index": canonical,
             "interval": "15m",
             "strategies": None,
             "direction_filter": "all",
@@ -6501,6 +6638,20 @@ def _print_briefing_response(result: dict) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _single_query(agent, query: str, show_trace: bool) -> None:
+    q_lower = query.strip().lower()
+
+    if q_lower in ("/help", "?", "/h") or q_lower.startswith("/help "):
+        _print_user(query)
+        from terminal.help import print_help as _print_runtime_help
+
+        _print_runtime_help(console, query.strip()[5:].strip() if q_lower.startswith("/help ") else "")
+        return
+
+    if q_lower == "/commands" or q_lower.startswith("/commands "):
+        _print_user(query)
+        _print_commands(query.strip()[9:].strip() if q_lower.startswith("/commands ") else "")
+        return
+
     if query.strip().lower().startswith("/scan"):
         status, tool_name, args = _scan_command_tool_call(query)
         _print_user(query)
