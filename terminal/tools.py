@@ -738,6 +738,55 @@ def _canonical_symbol(symbol: str) -> str:
     return str(resolved.get("symbol") or symbol).strip().upper()
 
 
+# PG-YFIN-FALLBACK: Yahoo Finance company-name → NSE-ticker resolver.
+# Cached per-process so repeated lookups for the same name don't re-hit
+# the Yahoo search endpoint. Only EQUITY quoteType on NSI/NSE is accepted
+# — we deliberately ignore BSE-only and foreign-listed results so the
+# downstream agent never receives a non-NSE ticker.
+_YFIN_SEARCH_CACHE: dict[str, tuple[str | None, str | None]] = {}
+
+
+def _yahoo_search_nse_symbol(query: str) -> tuple[str | None, str | None]:
+    """Resolve a free-text company name to an NSE ticker via Yahoo Finance.
+
+    Returns ``(symbol, company_name)`` or ``(None, None)`` if no NSE-listed
+    EQUITY match is found. The ``.NS`` suffix is stripped from the Yahoo
+    symbol before it's returned (e.g. ``APOLLO.NS`` → ``APOLLO``).
+    """
+    key = (query or "").strip().upper()
+    if not key or len(key) < 3:
+        return (None, None)
+    if key in _YFIN_SEARCH_CACHE:
+        return _YFIN_SEARCH_CACHE[key]
+    try:
+        from yfinance import Search  # type: ignore[import-not-found]
+    except Exception:
+        _YFIN_SEARCH_CACHE[key] = (None, None)
+        return (None, None)
+    try:
+        quotes = Search(query, max_results=10).quotes or []
+    except Exception:
+        _YFIN_SEARCH_CACHE[key] = (None, None)
+        return (None, None)
+    for q in quotes:
+        if not isinstance(q, dict):
+            continue
+        if (q.get("quoteType") or "").upper() != "EQUITY":
+            continue
+        sym_raw = str(q.get("symbol") or "").strip().upper()
+        # NSE India tickers end in ".NS" (exchange=NSI); BSE end in ".BO".
+        if not sym_raw.endswith(".NS"):
+            continue
+        nse_sym = sym_raw[:-3]
+        if not re.fullmatch(r"[A-Z0-9&-]{2,16}", nse_sym):
+            continue
+        name = q.get("longname") or q.get("shortname") or None
+        _YFIN_SEARCH_CACHE[key] = (nse_sym, name)
+        return (nse_sym, name)
+    _YFIN_SEARCH_CACHE[key] = (None, None)
+    return (None, None)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Tool functions (all return dict)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -908,6 +957,28 @@ def resolve_symbol(query: str) -> dict:
                     }
         except Exception:
             pass
+
+    # PG-YFIN-FALLBACK: Yahoo Finance search — last-resort when local DB,
+    # NSE /api/search, and NSE /api/quote-equity all fail (common when the
+    # name doesn't appear in local data and NSE blocks our cookies).
+    # Yahoo's search returns ``APOLLO.NS`` (NSE India) which we strip to
+    # the bare NSE ticker. Restricted to EQUITY quoteType + NSI/NSE exchange
+    # so we never leak BSE-only or US-listed tickers into the agent.
+    try:
+        yfin_symbol, yfin_name = _yahoo_search_nse_symbol(query)
+    except Exception:
+        yfin_symbol, yfin_name = None, None
+    if yfin_symbol:
+        return {
+            "symbol":           yfin_symbol,
+            "name":             yfin_name,
+            "confidence":       "yfin-search",
+            "confidence_band":  "medium",
+            "score":            0.65,
+            "method":           "yahoo_finance",
+            "query":            query,
+            "candidates":       [yfin_symbol],
+        }
 
     result = {
         "symbol": None,
@@ -4763,12 +4834,167 @@ def _with_intraday_pg_persistence(snapshot: dict) -> dict:
     return out
 
 
+def _nse_quote_payload_to_snapshot(symbol: str, data: dict, *, source: str) -> dict:
+    """Normalize NSE quote-equity JSON into the agent's live snapshot shape."""
+    sym = symbol.strip().upper()
+    info = data.get("info", {}) if isinstance(data, dict) else {}
+    meta = data.get("metadata", {}) if isinstance(data, dict) else {}
+    price = data.get("priceInfo", {}) if isinstance(data, dict) else {}
+    week = price.get("weekHighLow", {}) if isinstance(price, dict) else {}
+    idhl = price.get("intraDayHighLow", {}) if isinstance(price, dict) else {}
+    last = price.get("lastPrice", idhl.get("value"))
+    if last is None:
+        return {"symbol": sym, "error": "No price data returned from NSE browser quote page"}
+    return {
+        "symbol": sym,
+        "name": info.get("companyName", meta.get("symbol", sym)),
+        "series": meta.get("series", "EQ"),
+        "last_price": last,
+        "open": price.get("open"),
+        "day_high": idhl.get("max"),
+        "day_low": idhl.get("min"),
+        "vwap": price.get("vwap"),
+        "prev_close": price.get("previousClose"),
+        "change": round(price.get("change"), 2) if price.get("change") is not None else None,
+        "pct_change": round(price.get("pChange"), 2) if price.get("pChange") is not None else None,
+        "52w_high": week.get("max"),
+        "52w_low": week.get("min"),
+        "52w_high_date": week.get("maxDate"),
+        "52w_low_date": week.get("minDate"),
+        "lower_circuit": price.get("lowerCP"),
+        "upper_circuit": price.get("upperCP"),
+        "sector": meta.get("industry"),
+        "sector_pe": meta.get("pdSectorPe"),
+        "stock_pe": meta.get("pdSymbolPe"),
+        "indices": meta.get("pdSectorIndAll", [])[:5] if isinstance(meta.get("pdSectorIndAll"), list) else [],
+        "as_of": meta.get("lastUpdateTime", datetime.now().strftime("%d-%b-%Y %H:%M:%S")),
+        "source": source,
+    }
+
+
+def _playwright_nse_quote_snapshot(symbol: str) -> dict:
+    """Try NSE's rendered quote page in a real browser and capture quote JSON."""
+    sym = symbol.strip().upper()
+    try:
+        from playwright.sync_api import sync_playwright
+    except Exception as exc:
+        return {"symbol": sym, "error": f"Playwright unavailable: {exc}"}
+
+    try:
+        from urllib.parse import quote
+
+        quote_url = f"https://www.nseindia.com/get-quotes/equity?symbol={quote(sym)}"
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch(
+                headless=True,
+                args=["--disable-blink-features=AutomationControlled", "--no-sandbox"],
+            )
+            try:
+                context = browser.new_context(
+                    viewport={"width": 1440, "height": 900},
+                    locale="en-US",
+                    timezone_id="Asia/Kolkata",
+                    user_agent=(
+                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                        "AppleWebKit/537.36 (KHTML, like Gecko) "
+                        "Chrome/124.0.0.0 Safari/537.36"
+                    ),
+                    extra_http_headers={"Accept-Language": "en-US,en;q=0.9"},
+                )
+                try:
+                    page = context.new_page()
+                    payloads: list[dict] = []
+
+                    def _capture_quote_response(response) -> None:
+                        if "quote-equity" not in response.url or response.status >= 400:
+                            return
+                        try:
+                            data = response.json()
+                        except Exception:
+                            return
+                        if isinstance(data, dict):
+                            payloads.append(data)
+
+                    page.on("response", _capture_quote_response)
+                    page.goto(quote_url, wait_until="domcontentloaded", timeout=12000)
+                    try:
+                        page.wait_for_response(
+                            lambda response: "quote-equity" in response.url and response.status < 400,
+                            timeout=8000,
+                        )
+                    except Exception:
+                        pass
+                    page.wait_for_timeout(1500)
+                    if payloads:
+                        return _nse_quote_payload_to_snapshot(sym, payloads[-1], source="NSE browser quote page")
+                    return {"symbol": sym, "error": "NSE browser quote page did not expose quote-equity JSON"}
+                finally:
+                    context.close()
+            finally:
+                browser.close()
+    except Exception as exc:
+        return {"symbol": sym, "error": f"NSE browser quote page unavailable: {exc}"}
+
+
+def _yfinance_snapshot_from_intraday_candles(symbol: str, fallback_reason: str) -> dict:
+    """Build a degraded live-snapshot shape from yfinance intraday candles."""
+    sym = symbol.strip().upper()
+    try:
+        df = get_intraday_candles(sym, "15m")
+    except Exception as exc:
+        return {
+            "symbol": sym,
+            "error": f"{fallback_reason}; yfinance fallback unavailable: {exc}",
+            "source_priority": ["NSE website live quote", "yfinance candles fallback"],
+        }
+    if df.empty:
+        return {
+            "symbol": sym,
+            "error": f"{fallback_reason}; yfinance fallback returned no candles",
+            "source_priority": ["NSE website live quote", "yfinance candles fallback"],
+        }
+
+    df = df.copy().sort_index()
+    latest = df.iloc[-1]
+    first = df.iloc[0]
+    last_price = float(latest["Close"])
+    open_price = float(first["Open"])
+    change = last_price - open_price
+    try:
+        as_of = pd.to_datetime(df.index[-1])
+        if getattr(as_of, "tzinfo", None) is not None:
+            as_of = as_of.tz_convert(IST_TZ).tz_localize(None)
+        as_of_text = as_of.strftime("%Y-%m-%d %H:%M:%S")
+    except Exception:
+        as_of_text = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    return {
+        "symbol": sym,
+        "name": sym,
+        "last_price": round(last_price, 2),
+        "open": round(open_price, 2),
+        "day_high": round(float(df["High"].max()), 2),
+        "day_low": round(float(df["Low"].min()), 2),
+        "prev_close": None,
+        "change": round(change, 2),
+        "pct_change": round(change / open_price * 100, 2) if open_price else None,
+        "volume": int(df["Volume"].sum()) if "Volume" in df.columns else None,
+        "volume_shares": int(df["Volume"].sum()) if "Volume" in df.columns else None,
+        "as_of": as_of_text,
+        "source": "Yahoo Finance (yfinance) fallback",
+        "source_priority": ["NSE website live quote", "yfinance candles fallback"],
+        "degraded": True,
+        "fallback_reason": fallback_reason,
+        "note": "NSE quote-equity was unavailable; snapshot uses latest yfinance intraday candle.",
+    }
+
+
 def get_nse_intraday_snapshot(symbol: str) -> dict:
     """Fetch the NSE website live snapshot before any yfinance intraday fallback.
 
     NSE's public website APIs provide current quote/index snapshots, not a complete
-    intraday OHLCV candle history. Agent Adda therefore uses this as the mandatory
-    first live source, then uses yfinance only when candle history is needed.
+    intraday OHLCV candle history. Agent Adda therefore tries NSE first, then uses
+    yfinance when NSE blocks stock quotes or when candle history is needed.
     """
     sym = symbol.strip().upper()
     index_name = _canonical_nse_live_index(sym)
@@ -4801,19 +5027,26 @@ def get_nse_intraday_snapshot(symbol: str) -> dict:
             "as_of": overview.get("as_of"),
             "source": overview.get("source", "NSE live API"),
             "source_priority": source_priority,
-            "note": "NSE website snapshot. Use yfinance only if intraday candle history is needed.",
+            "note": "NSE website snapshot. yfinance is used only if NSE quote is unavailable or candle history is needed.",
         })
 
     quote = get_live_quote(sym)
     if quote.get("error"):
-        return {
-            "symbol": sym,
-            "source_priority": source_priority,
-            "error": f"NSE live quote unavailable: {quote['error']}",
-        }
+        browser_quote = _playwright_nse_quote_snapshot(sym)
+        if not browser_quote.get("error"):
+            browser_quote = dict(browser_quote)
+            browser_quote["source_priority"] = source_priority
+            browser_quote["note"] = "NSE quote fetched through browser-rendered quote page."
+            return _with_intraday_pg_persistence(browser_quote)
+        fallback_reason = f"NSE live quote unavailable: {quote['error']}; {browser_quote.get('error')}"
+        fallback = _yfinance_snapshot_from_intraday_candles(
+            sym,
+            fallback_reason,
+        )
+        return _with_intraday_pg_persistence(fallback)
     quote = dict(quote)
     quote["source_priority"] = source_priority
-    quote["note"] = "NSE website snapshot. Use yfinance only if intraday candle history is needed."
+    quote["note"] = "NSE website snapshot. yfinance is used only if NSE quote is unavailable or candle history is needed."
     return _with_intraday_pg_persistence(quote)
 
 
@@ -4919,6 +5152,78 @@ def get_top_gainers_losers(
             )[:top_n]
             result["losers"] = [_fmt_variation_row(x) for x in rows_sorted]
 
+        return result
+    except Exception as e:
+        return {"error": str(e), "index": index}
+
+
+def get_eod_top_movers(
+    index: str = "NIFTY 500",
+    top_n: int = 10,
+    direction: str = "both",
+) -> dict:
+    """Return top EOD gainers and/or losers from the latest snapshot.
+
+    Sourced from `scores.stage_snapshots` (the same daily EOD snapshot
+    that powers the rest of the historical-mode toolkit), ordered by
+    `change_1d_pct`. Use this when the agent is in historical/EOD mode
+    or when the user explicitly asks for end-of-day top movers.
+
+    Args:
+        index: Universe filter. Recognised tokens map to known indices
+               in the snapshot ('NIFTY 50', 'NIFTY BANK', 'NIFTY NEXT 50',
+               'NIFTY 500'). Anything else returns the full snapshot
+               universe.
+        top_n: Number of stocks per list (default 10).
+        direction: 'gainers', 'losers', or 'both' (default 'both').
+    """
+    try:
+        snap_date = _latest_snapshot_date()
+        if not snap_date:
+            return {"error": "no EOD snapshot available", "index": index}
+
+        cols = (
+            "symbol, company_name, price, change_1d_pct, "
+            "stage, investment_score, relative_strength, rsi, "
+            "trading_signal, sector"
+        )
+
+        result: dict = {
+            "index": index,
+            "as_of": snap_date,
+            "source": "PostgreSQL scores.stage_snapshots",
+        }
+
+        def _rows(order: str) -> list[dict]:
+            rows = _pg_fetchall(
+                f"SELECT {cols} FROM scores.stage_snapshots "
+                f"WHERE snapshot_date=%s AND change_1d_pct IS NOT NULL "
+                f"ORDER BY change_1d_pct {order} NULLS LAST LIMIT %s",
+                (snap_date, max(int(top_n), 1)),
+            )
+            keys = (
+                "symbol", "company_name", "price", "change_1d_pct",
+                "stage", "investment_score", "relative_strength", "rsi",
+                "trading_signal", "sector",
+            )
+            out: list[dict] = []
+            for r in rows:
+                d = dict(zip(keys, r))
+                # Map to the live-API shape so renderer.render_gainers_losers
+                # can be reused without a new renderer.
+                d["last_price"] = d.get("price")
+                d["pct_change"] = d.get("change_1d_pct")
+                d["change"] = None
+                d["volume"] = None
+                d["year_high"] = None
+                d["year_low"] = None
+                out.append(d)
+            return out
+
+        if direction in ("gainers", "both"):
+            result["gainers"] = _rows("DESC")
+        if direction in ("losers", "both"):
+            result["losers"] = _rows("ASC")
         return result
     except Exception as e:
         return {"error": str(e), "index": index}
@@ -6630,8 +6935,9 @@ TOOL_REGISTRY: dict[str, Any] = {
         (
             "Fetch the NSE website live quote/index snapshot before any yfinance intraday fallback. "
             "For stocks this calls NSE quote-equity; for indices such as NIFTY50/BANKNIFTY it calls "
-            "NSE allIndices. NSE website APIs provide live snapshot fields, not full candle history, "
-            "so use yfinance only after this when OHLCV candles are needed."
+            "NSE allIndices. If NSE blocks stock quotes, returns a degraded yfinance intraday-candle "
+            "snapshot with fallback_reason. NSE website APIs provide live snapshot fields, not full "
+            "candle history."
         ),
         {"type": "object", "properties": {"symbol": {"type": "string"}}, "required": ["symbol"]},
     ),
@@ -6640,9 +6946,30 @@ TOOL_REGISTRY: dict[str, Any] = {
         (
             "Get top gaining and/or losing stocks from an NSE index RIGHT NOW (live). "
             "Returns symbol, LTP, % change, volume, 52w range for each stock. "
-            "Use for 'top gainers', 'top losers', 'biggest movers', 'what is up/down today'. "
+            "Use for 'top gainers intraday', 'top losers right now', 'biggest movers now'. "
+            "For end-of-day / historical top movers use `get_eod_top_movers` instead. "
             "index can be: 'NIFTY 50', 'NIFTY BANK', 'NIFTY IT', 'NIFTY 500', "
             "'NIFTY MIDCAP 100', 'NIFTY SMALLCAP 100', 'NIFTY PHARMA', etc."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "index":     {"type": "string", "default": "NIFTY 500"},
+                "top_n":     {"type": "integer", "default": 10},
+                "direction": {"type": "string", "enum": ["gainers", "losers", "both"], "default": "both"},
+            },
+            "required": [],
+        },
+    ),
+    "get_eod_top_movers": (
+        get_eod_top_movers,
+        (
+            "Get top EOD gainers/losers from the latest daily snapshot "
+            "(`scores.stage_snapshots`). Use for 'top gainers EOD', "
+            "'top movers end of day', 'yesterday's top gainers', or any "
+            "top-movers request when the agent is in historical mode. "
+            "For LIVE intraday top movers use `get_top_gainers_losers` instead. "
+            "Returns symbol, price, change_1d_pct, stage, RS, RSI, signal, sector."
         ),
         {
             "type": "object",

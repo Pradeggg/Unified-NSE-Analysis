@@ -100,6 +100,34 @@ _MARKET_PHRASES = (
     "breakout scan",
     "vcp scan",
 )
+_TOP_MOVERS_PHRASES = (
+    "top gainers",
+    "top losers",
+    "top movers",
+    "biggest gainers",
+    "biggest losers",
+    "biggest movers",
+)
+_TOP_MOVERS_INTRADAY_HINTS = (
+    "intraday",
+    "live",
+    "right now",
+    "now",
+    "real time",
+    "real-time",
+    "realtime",
+)
+_TOP_MOVERS_EOD_HINTS = (
+    "eod",
+    "end of day",
+    "end-of-day",
+    "yesterday",
+    "close",
+    "closing",
+    "historical",
+    "today's close",
+    "todays close",
+)
 _DIRECT_INTENT_KEYWORDS = (
     ("mtf", ("mtf", "multi time frame", "multi-time-frame", "multi timeframe")),
     ("fundamentals", ("fundamentals", "balance sheet", "financials", "pe ratio")),
@@ -418,6 +446,84 @@ class VisualScanProvider:
         ]
 
 
+class TopMoversProvider:
+    """Routes 'top gainers / losers / movers' asks to the right tool.
+
+    Two distinct backends:
+
+    * `get_top_gainers_losers` — NSE live API; use when the user wants
+      the *current* market (phrases like "intraday", "live", "right now",
+      or no qualifier during market hours).
+    * `get_eod_top_movers` — `scores.stage_snapshots` end-of-day source;
+      use when the user explicitly asks for "EOD", "end of day",
+      "yesterday", or "close".
+
+    Previously these phrases were swept into `MarketSituationProvider`
+    and silently routed to `scan_intraday_market` (which returns trade
+    setups, not movers). That is now fixed.
+    """
+
+    name = "TopMoversProvider"
+
+    def propose(self, user_input: str, context_pack: ContextPack) -> list[RouteCandidate]:
+        text = _norm(user_input)
+        if not text:
+            return []
+        matched = next((p for p in _TOP_MOVERS_PHRASES if p in text), None)
+        if not matched:
+            return []
+
+        # Defer to broader market-situation / breadth handlers when the
+        # ask is compound. A pure "top gainers" query is short; once the
+        # user also asks about breadth, status, or sector context they
+        # want the full market overview synthesis, not just movers.
+        _COMPOUND_MARKET_HINTS = (
+            "breadth", "market status", "market situation", "advance",
+            "declines", "ad ratio", "sector rotation", "and how is",
+            "and indices", "and index", "and sectors",
+        )
+        if any(h in text for h in _COMPOUND_MARKET_HINTS):
+            return []
+
+        direction = "both"
+        if "loser" in text and "gainer" not in text:
+            direction = "losers"
+        elif "gainer" in text and "loser" not in text:
+            direction = "gainers"
+
+        wants_eod = any(h in text for h in _TOP_MOVERS_EOD_HINTS)
+        wants_intraday = any(h in text for h in _TOP_MOVERS_INTRADAY_HINTS)
+
+        if wants_eod and not wants_intraday:
+            tool_name = "get_eod_top_movers"
+            reason = "EOD hint matched"
+        else:
+            tool_name = "get_top_gainers_losers"
+            reason = "intraday default" if not wants_intraday else "intraday hint matched"
+
+        tool_plan = (
+            ToolCallSpec(tool=tool_name, args={"direction": direction}),
+        )
+        return [
+            RouteCandidate(
+                provider=self.name,
+                intent="top_movers",
+                route_type="direct_tool_plan",
+                confidence="high",
+                score=0.85,
+                reasons=(f"'{matched}' matched; {reason}; direction={direction}",),
+                tool_plan=tool_plan,
+                evidence_requirements=(
+                    EvidenceRequirement(
+                        name="top_movers",
+                        required_tools=(tool_name,),
+                    ),
+                ),
+                source_policy=SourcePolicy(allow_stale=False),
+            )
+        ]
+
+
 class MarketSituationProvider:
     """Routes market-wide situation / scan / screener asks."""
 
@@ -512,6 +618,7 @@ DEFAULT_PROVIDERS: tuple[type, ...] = (
     EntityTopicProvider,
     ReportProvider,
     VisualScanProvider,
+    TopMoversProvider,
     MarketSituationProvider,
     DirectIntentProvider,
 )
@@ -526,5 +633,6 @@ __all__ = [
     "PendingOptionProvider",
     "ReportProvider",
     "RouteProvider",
+    "TopMoversProvider",
     "VisualScanProvider",
 ]

@@ -18,6 +18,7 @@ from .providers import (
     PendingOptionProvider,
     ReportProvider,
     RouteProvider,
+    TopMoversProvider,
     VisualScanProvider,
 )
 from .router import UnifiedRouter
@@ -63,6 +64,7 @@ __all__ = [
     "RouteValidation",
     "SourcePolicy",
     "ToolCallSpec",
+    "TopMoversProvider",
     "UnifiedRouter",
     "VisualScanProvider",
     "WorkflowStep",

@@ -711,6 +711,7 @@ def render_bulk_deals(data: dict) -> None:
 # Map tool_name → renderer function
 _TOOL_RENDERERS: dict[str, Any] = {
     "get_top_gainers_losers":    render_gainers_losers,
+    "get_eod_top_movers":        render_gainers_losers,
     "get_market_breadth":        render_market_breadth,
     "get_fii_dii_activity":      render_fii_dii,
     "get_live_market_overview":  render_market_overview,

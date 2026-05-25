@@ -15,8 +15,11 @@ AA-UR-3, the wrapper is exercised exclusively by tests.
 
 from __future__ import annotations
 
+import logging
 import uuid
 from typing import Iterable
+
+logger = logging.getLogger(__name__)
 
 from .context import ContextPack
 from .providers import DEFAULT_PROVIDERS, RouteProvider
@@ -84,6 +87,8 @@ def _binding_type_for(candidate: RouteCandidate) -> str:
         return "visual_scan"
     if candidate.provider == "MarketSituationProvider":
         return "market_situation"
+    if candidate.provider == "TopMoversProvider":
+        return "top_movers"
     if candidate.provider == "CompoundStockProvider":
         return "compound_stock"
     if candidate.provider == "DirectIntentProvider":
@@ -168,6 +173,11 @@ class UnifiedRouter:
                 proposed = provider.propose(user_input, context_pack) or []
             except Exception as exc:  # noqa: BLE001
                 # A misbehaving provider must never crash the router.
+                logger.debug(
+                    "Router provider %s raised an exception — excluded from candidates",
+                    type(provider).__name__,
+                    exc_info=True,
+                )
                 from .schema import RouteCandidate as _RC
 
                 proposed = []

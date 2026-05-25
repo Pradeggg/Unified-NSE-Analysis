@@ -269,6 +269,7 @@ def test_unified_router_default_provider_chain_order():
         "EntityTopicProvider",
         "ReportProvider",
         "VisualScanProvider",
+        "TopMoversProvider",
         "MarketSituationProvider",
         "DirectIntentProvider",
     ]

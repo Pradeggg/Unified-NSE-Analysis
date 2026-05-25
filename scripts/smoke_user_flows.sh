@@ -48,12 +48,23 @@ run_case() {
 echo "Agent Adda — user-flow smoke ($(date '+%Y-%m-%d %H:%M:%S'))"
 echo
 
-# 1. Top gainers must succeed — any tool is fine, as long as no ERROR in the
-#    SOURCE TRAIL and a movers table renders.
-run_case "top gainers"                              \
+# 1. "top gainers" must return a gainers list (live API path).
+run_case "top gainers (intraday default)"          \
     "top gainers"                                   \
-    "(MODISONLTD|GAINERS|Top gainers|Top Movers)"   \
+    "(GAINERS|Top gainers|Top Movers|MODISONLTD|HARIOMPIPE)" \
     "(get_top_gainers_losers: ERROR|scan_intraday_market: ERROR)"
+
+# 1b. Explicit intraday must route to the live tool.
+run_case "top gainers intraday"                     \
+    "top gainers intraday"                          \
+    "get_top_gainers_losers"                        \
+    "get_eod_top_movers"
+
+# 1c. Explicit EOD must route to the snapshot tool.
+run_case "top gainers EOD"                          \
+    "top gainers EOD"                               \
+    "get_eod_top_movers"                            \
+    "get_top_gainers_losers: ERROR"
 
 # 2. Morning briefing must not try to resolve 'Global' as a ticker.
 #    The bug previously produced: resolve_symbol(... 'Global' ...) followed by

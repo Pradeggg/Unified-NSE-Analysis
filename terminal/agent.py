@@ -12,7 +12,9 @@ The agent follows the spec:
 
 from __future__ import annotations
 
+import dataclasses
 import json
+import logging
 import os
 import re
 import shlex
@@ -21,6 +23,8 @@ from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
+
+logger = logging.getLogger(__name__)
 
 # Load .env from project root (two levels up from terminal/)
 load_dotenv(Path(__file__).parent.parent / ".env")
@@ -40,6 +44,10 @@ from .situation_assessment import (
     render_assessment_block,
     render_context_answer,
 )
+# PG-PLAN 2026-05-25: Use the first-class post-assessment planner for the
+# direct (first-turn) multi-symbol "news + results + events" branch too, so the
+# explicit-list query path behaves identically to the follow-up branch.
+from .post_assessment_planner import plan_news_and_results
 from .conversation_memory import (
     ConversationMemory,
     DEFAULT_SESSION_ID as MEMORY_DEFAULT_SESSION_ID,
@@ -1068,6 +1076,59 @@ _SYMBOL_VALIDATION_SKIP: frozenset[str] = frozenset(
     }
 ) | TECHNICAL_NON_SYMBOL_TERMS
 
+# Intents that handle grounded scan/screener data (gainers, RS, breadth, screeners).
+# The LLM must NOT fabricate responses for these — if no deterministic handler claimed
+# the intent, the hallucination guard fires and refuses cleanly.
+#
+# IMPORTANT: This is NOT the same as the keyword-path gate set (agent.py ~line 6796).
+# Keyword-gate answers: "does this intent have a keyword handler?"
+# _GROUNDED_SCAN_INTENTS answers: "would an LLM fabricating a response for this intent
+#   produce a plausible-but-false scan/screener list?"
+# A new intent that handles grounded scan data must be added here. An intent that is
+# only conversational (greeting, youtube_*, stock_brief) must NOT be added here even
+# if it has a keyword handler.
+_GROUNDED_SCAN_INTENTS: frozenset[str] = frozenset({
+    "market_overview",
+    "market_situation_assessment",
+    "market_dashboard",
+    "screener_run",
+    "stage2_screener",
+    "intraday_scan",
+    "intraday_symbol_scan",
+    "gainers_losers",
+    "top_movers",
+    "high_rs",
+    "breakout_scan",
+    "entity_topic_command",
+    "report_lookup",
+    "contextual_tool_plan",
+})
+
+# Static source-label overrides for intents whose sources are known before tool
+# execution.  Maps intent → source_label.  mode_suffix is built at runtime
+# using the label plus the live market_status fields.
+# NOTE: intents whose source_label depends on tool_results (intraday keyword
+# path at ~line 6854) or on transcription sub-type (youtube) are intentionally
+# absent — those are handled by runtime logic below.
+_INTENT_SOURCE_LABEL_OVERRIDES: dict[str, str] = {
+    "market_overview":            "NSE live API + DB breadth",
+    "market_situation_assessment": "situation planner + NSE live API + DB breadth",
+    "market_dashboard":           "dashboard planner + NSE live API + DB breadth + FII/DII + global context",
+    "intraday_market_recap":      "NSE live API + PG intraday.quote_snapshots + DB breadth",
+    "fno_overview":               "NSE options/futures API + F&O EOD fallback",
+    "long_term_growth_research":  "NSE live index constituents + DB growth scores + screener.in",
+}
+
+# Mode label overrides: intents that should display a mode other than the
+# detected data_mode (e.g. market_dashboard always says "Intraday", research
+# intents say "Research" regardless of session mode).
+_INTENT_MODE_LABEL_OVERRIDES: dict[str, str] = {
+    "market_dashboard":          "Intraday",
+    "intraday_market_recap":     "Intraday",
+    "fno_overview":              "Intraday",
+    "long_term_growth_research": "Research",
+}
+
 
 _REQUIRED_TOOLS_BY_INTENT: dict[str, tuple[str, ...]] = {
     "screener": ("run_screener_query",),
@@ -1087,7 +1148,84 @@ _REQUIRED_TOOLS_BY_INTENT: dict[str, tuple[str, ...]] = {
     ),
     "results_feed": ("get_latest_results_feed",),
     "forthcoming_results": ("get_forthcoming_results",),
+    # PG-PLAN 2026-05-25: Follow-up plans that fetch latest results for a
+    # set of symbols already resolved in the previous turn. resolve_symbol
+    # is intentionally NOT required — the symbols are bound by the
+    # situation-assessment planner, not re-resolved from reply text.
+    "collective_news_results": ("get_latest_results",),
 }
+
+
+# PG-SYNTH-INTENT 2026-05-25: When a situation-assessment / clarification /
+# compound-provider branch runs a tool plan, the post-execution synthesis
+# step needs an intent label so the universal claim-gate can pick the right
+# required-tool contract. Historically this was hardcoded to
+# "intraday_symbol_scan" for every non-report plan, which caused the
+# guardrail to demand `scan_symbols_intraday` even for plans that ran
+# only compare_stocks / get_latest_results / get_fno_overview / etc.
+# Result: user-visible "Missing required tool: scan_symbols_intraday" on
+# follow-ups like "any news or results for these top gainers" even though
+# the executed plan was valid for its actual tools. Map first-tool ->
+# synthesis_intent so the gate matches the tools that actually ran.
+_PLAN_TOOL_TO_SYNTHESIS_INTENT: dict[str, str] = {
+    "compare_stocks": "stock_comparison",
+    "validate_strength_watchlist": "strength_validation",
+    "scan_symbols_intraday": "intraday_symbol_scan",
+    "scan_intraday_market": "intraday_index_scan",
+    "run_intraday_screener": "intraday_screener",
+    "run_screener_query": "screener",
+    "explain_intraday_setup": "intraday_setup",
+    "get_nse_intraday_snapshot": "intraday_setup",
+    "get_intraday_levels": "intraday_levels",
+    "get_fno_overview": "fno_overview",
+    "run_visual_scan": "visual_scan",
+    "get_latest_results": "stock_results",
+    "get_latest_results_feed": "results_feed",
+    "get_forthcoming_results": "forthcoming_results",
+    "get_symbol_snapshot": "stock_brief",
+    # AA-UR-6 Phase 2: MarketSituationProvider market-overview tools
+    "get_live_market_overview": "market_situation_assessment",
+    "get_market_breadth": "market_situation_assessment",
+    "get_top_gainers_losers": "market_situation_assessment",
+    "get_eod_top_movers": "market_situation_assessment",
+    # AA-UR-6 Phase 2: DirectIntentProvider single-stock tools
+    "get_technical_setup": "intraday_setup",
+    "analyze_mtf": "intraday_setup",
+    "get_live_quote": "intraday_setup",
+    "search_yahoo_finance": "stock_brief",
+}
+
+_REPORT_LOOKUP_TOOLS: frozenset[str] = frozenset({
+    "open_report",
+    "read_report",
+    "summarize_report",
+    "get_last_report",
+    "list_generated_reports",
+})
+
+
+def _synthesis_intent_from_plan(
+    tool_plan: list[tuple[str, dict]] | tuple,
+    default: str = "intraday_symbol_scan",
+) -> str:
+    """PG-SYNTH-INTENT: derive a synthesis_intent from the executed plan.
+
+    Picks the first plan tool that has a known intent mapping so the
+    universal claim-gate's required-tool check is consistent with the
+    tools that actually ran. Report-tool plans short-circuit to
+    `report_lookup`. Falls back to ``default`` only when no plan tool
+    is recognized (preserves prior behaviour for unknown plans).
+    """
+    if not tool_plan:
+        return default
+    names = [name for name, _ in tool_plan]
+    if any(n in _REPORT_LOOKUP_TOOLS for n in names):
+        return "report_lookup"
+    for name in names:
+        mapped = _PLAN_TOOL_TO_SYNTHESIS_INTENT.get(name)
+        if mapped:
+            return mapped
+    return default
 
 
 _DYNAMIC_EVIDENCE_REQUIRED_INTENTS: frozenset[str] = frozenset(
@@ -2686,6 +2824,31 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
             ("get_latest_results_feed", {"days_back": results_feed_days, "limit": 50}),
         ]}
 
+    # PG-PLAN 2026-05-25: Direct multi-symbol "news / results / events" branch.
+    # When the user spells out two or more tickers AND asks about news,
+    # results, earnings, corporate events, announcements, filings, or
+    # upcoming catalysts, hand off to plan_news_and_results so we run
+    # get_latest_results per symbol PLUS get_event_calendar_summary —
+    # instead of falling through to the single-symbol stock_results branch
+    # that only handles the first ticker.
+    _collective_news_terms = (
+        "news", "headlines", "announcement", "announcements",
+        "corporate event", "corporate events", "corporate action",
+        "corporate actions", "filings", "disclosure", "disclosures",
+        "catalyst", "catalysts", "events", "upcoming",
+        "calendar",
+    )
+    _results_pair_terms = ("results", "earnings", "quarterly")
+    _has_collective_news = any(term in q for term in _collective_news_terms)
+    _has_results_term = any(term in q for term in _results_pair_terms)
+    if (
+        len(symbol_candidates) >= 2
+        and (_has_collective_news or _has_results_term)
+    ):
+        planned = plan_news_and_results(symbol_candidates)
+        if planned is not None:
+            return {"intent": "collective_news_results", "plan": list(planned.tool_plan)}
+
     if (
         candidates and explicit_stock_subject
         and (any(term in q for term in results_stock_terms) or _results_freeform)
@@ -3783,6 +3946,99 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
         lines.append("")
         lines.append("▶ SOURCE TRAIL")
         lines.extend(_source_trail_lines(tool_results))
+        lines.append("\n━━━ Not investment advice. For research and learning only. ━━━")
+        return "\n".join(lines)
+
+    if intent == "collective_news_results":
+        # PG-PLAN 2026-05-25: Render the multi-symbol results + upcoming
+        # events pack. Iterates over EVERY get_latest_results call in
+        # tool_results (not just the first one — _get() returns only the
+        # earliest match) and appends one compact section per symbol, then
+        # the get_event_calendar_summary block.
+        per_symbol = [
+            tr.get("result") for tr in tool_results
+            if tr.get("tool") == "get_latest_results"
+            and isinstance(tr.get("result"), dict)
+        ]
+        ev_summary = None
+        for tr in tool_results:
+            if tr.get("tool") == "get_event_calendar_summary" and isinstance(tr.get("result"), dict):
+                ev_summary = tr.get("result")
+                break
+
+        symbols_listed = [
+            (r.get("symbol") or "—") for r in per_symbol
+        ]
+        header_syms = ", ".join(symbols_listed) if symbols_listed else "—"
+        lines.append(f"━━━ Latest Results + Upcoming Events — {header_syms} ━━━")
+        lines.append("")
+
+        if not per_symbol:
+            lines.append("  No get_latest_results data was collected.")
+        for res in per_symbol:
+            sym_r = res.get("symbol") or "—"
+            lines.append(f"▶ {sym_r} — Latest Results")
+            lines.append(f"  Status: {res.get('status', 'unknown')}")
+            lines.append(f"  Period: {res.get('period', 'latest')}")
+            selected = res.get("selected_filing") or {}
+            if selected:
+                title = selected.get("title") or selected.get("url") or "N/A"
+                lines.append(f"  Filing: {title}")
+                if selected.get("source"):
+                    lines.append(f"  Source: {selected.get('source')}")
+            warning = res.get("warning") or {}
+            if warning.get("message"):
+                lines.append(f"  ⚠ {warning.get('message')}")
+            facts = res.get("facts") or {}
+            fact_bits: list[str] = []
+            for label, key in (("Revenue", "revenue"), ("PAT", "pat"), ("EPS", "eps")):
+                item = facts.get(key)
+                if item:
+                    fact_bits.append(
+                        f"{label} {item.get('value')} "
+                        f"({item.get('period', 'latest')})"
+                    )
+            if fact_bits:
+                lines.append("  " + " · ".join(fact_bits))
+            missing = res.get("missing_facts") or []
+            if missing:
+                lines.append("  Missing: " + ", ".join(missing))
+            lines.append("")
+
+        if ev_summary and not ev_summary.get("error"):
+            lines.append("▶ UPCOMING CORPORATE EVENTS")
+            lines.append(
+                f"  Index: {ev_summary.get('index', '—')} | "
+                f"Window: {ev_summary.get('days_ahead', '—')} days | "
+                f"Total: {ev_summary.get('total_events', '—')}"
+            )
+            counts = ev_summary.get("event_counts") or {}
+            if counts:
+                lines.append("  Mix: " + " | ".join(f"{k}: {v}" for k, v in counts.items()))
+            # Prefer events involving the symbols the user asked about; fall
+            # back to the next ten overall. This keeps the answer focused on
+            # the prompted list while still surfacing the index window.
+            requested = {(s or "").upper() for s in symbols_listed if s and s != "—"}
+            all_events = ev_summary.get("events") or []
+            matched = [ev for ev in all_events if (ev.get("symbol") or "").upper() in requested]
+            shown = matched if matched else all_events[:10]
+            if shown:
+                lines.append("  Upcoming:")
+                for ev in shown[:15]:
+                    lines.append(
+                        f"    - {ev.get('symbol', '—')} | {ev.get('type', '—')} | "
+                        f"{ev.get('ex_date', '—')} | {ev.get('detail', '—')}"
+                    )
+            elif requested:
+                lines.append("  No upcoming events found for the requested symbols in the calendar window.")
+            lines.append("")
+        elif ev_summary and ev_summary.get("error"):
+            lines.append(f"▶ UPCOMING CORPORATE EVENTS\n  ⚠ {ev_summary.get('error')}")
+            lines.append("")
+
+        lines.append("▶ SOURCE TRAIL")
+        for trail_line in _source_trail_lines(tool_results):
+            lines.append(trail_line)
         lines.append("\n━━━ Not investment advice. For research and learning only. ━━━")
         return "\n".join(lines)
 
@@ -5804,6 +6060,28 @@ def _intraday_source_label(intent: str, tool_results: list[dict], default_label:
     return default_label
 
 
+@dataclasses.dataclass
+class _PipelineCtx:
+    """AA-AR-2: Per-turn pipeline state shared across _query_single stages.
+
+    Mutable fields (``source_label``, ``mode_suffix``, ``trace``) are
+    updated in-place by stages that refine the source attribution or
+    accumulate tool/step audit entries.  The ``raw_input`` field carries
+    the original pre-stripped user_input so quality-check helpers that
+    compare input length see the real query, not a pronoun-expanded form.
+    """
+    raw_input: str        # original user_input before prefix stripping
+    clean_input: str      # prefix-stripped + pronoun-contextualized
+    mode: str             # "intraday" | "historical" | "global"
+    source_label: str     # mutable — overridden by keyword/intent stage
+    mode_suffix: str      # mutable — footer appended to every answer
+    mode_context: str     # system hint for LLM prompt
+    mode_sources: dict    # {"intraday": ..., "historical": ..., "global": ...}
+    market_status: object  # MarketSessionStatus (compact_label, clock_label)
+    show_trace: bool
+    trace: list = dataclasses.field(default_factory=list)
+
+
 class Agent:
     """Agent Adda NLP Query Agent."""
 
@@ -6053,8 +6331,15 @@ class Agent:
         answer: str,
         tool_results: list[dict],
         turn_context: TurnContext | None = None,
+        include_in_history: bool = True,
     ) -> None:
-        """Persist compact chat state plus the latest resolved symbols."""
+        """Persist compact chat state plus the latest resolved symbols.
+
+        include_in_history=False skips appending to self._history (used for
+        hallucination-guard refusals and no-match clarification clears so those
+        turns do not pollute the rolling LLM context).  PostgreSQL persistence
+        still fires regardless so the audit trail remains complete.
+        """
         symbols: list[str] = []
         for tr in tool_results:
             args = tr.get("args") if isinstance(tr.get("args"), dict) else {}
@@ -6074,8 +6359,9 @@ class Agent:
         if turn_context is not None:
             self._last_turn_context = turn_context
 
-        self._history.append({"role": "user", "content": user_input})
-        self._history.append({"role": "assistant", "content": answer})
+        if include_in_history:
+            self._history.append({"role": "user", "content": user_input})
+            self._history.append({"role": "assistant", "content": answer})
         memory_context = turn_context or self._last_turn_context
         if getattr(self, "_memory", None) is not None:
             try:
@@ -6084,7 +6370,7 @@ class Agent:
                     self._memory.save_to_postgres()
             except Exception:
                 # Memory persistence must never break the research answer path.
-                pass
+                logger.debug("Memory persistence failed — answer unaffected", exc_info=True)
 
     # ─── AA-UR-6: Unified router scaffolding ────────────────────────────────
     @property
@@ -6109,6 +6395,7 @@ class Agent:
         try:
             return memory.build_context_pack(depth=5)
         except Exception:
+            logger.debug("_build_context_pack failed — router will be skipped", exc_info=True)
             return None
 
     def _execute_route(
@@ -6124,39 +6411,54 @@ class Agent:
 
         Returns the agent response dict when the router fully handles the
         request, or ``None`` to fall through to the legacy branches in
-        :meth:`_query_single`. Today AA-UR-6 owns:
+        :meth:`_query_single`.
 
-        * **CompoundStockProvider** ``compound_plan`` routes — the only
-          path with no legacy equivalent (AA-UR-4 capability).
-        * **PendingOptionProvider** routes whose ``bound_action`` carries
-          an executable tool plan registered in ``memory.pending_options``.
-        * **blocked_ungrounded** routes — refused cleanly so the LLM
-          path can never silently rescue an invalid request.
+        **Phase 1** (original): CompoundStockProvider ``compound_plan``
+        and PendingOptionProvider ``direct_tool_plan`` routes.
 
-        Every other route type still falls through to the legacy
-        dispatcher (entity_topic / situation_assessment /
-        keyword_intent / LLM / keyword fallback), so parity with the
-        existing 275-test target suite is preserved.
+        **Phase 2** (this commit): additionally owns ``direct_tool_plan``
+        routes from EntityTopicProvider, VisualScanProvider,
+        MarketSituationProvider, and DirectIntentProvider.  All four
+        have a validated non-empty tool plan so execution and synthesis
+        are identical to the Phase 1 pattern.
+
+        ``contextual_answer`` routes (ContextualFollowupProvider,
+        ReportProvider) carry no tool plan and still fall through to the
+        legacy situation-assessment and report-recall branches.  They
+        will migrate in Phase 3 once a context-synthesis helper is wired
+        into this method.
+
+        ``blocked_ungrounded`` also falls through while legacy keyword /
+        LLM branches remain in place; Phase 3 will make it terminal.
         """
         selected = decision.reasoning_summary.selected_branch
         route_type = decision.route_type
 
-        # AA-UR-6 Phase 1: ``blocked_ungrounded`` is *not* a hard stop yet.
-        # While the legacy keyword-intent and LLM branches are still in
-        # place, some keyword-only prompts (e.g. "market dashboard") get
-        # rewritten to blocked_ungrounded by a tighter provider (e.g.
-        # VisualScanProvider on "dashboard") even though the legacy path
-        # can serve them. Fall through to legacy here; the router
-        # decision is already in ``trace`` for audit. Phase 3 will make
-        # this terminal once legacy branches are removed.
+        # ``blocked_ungrounded``: still a fall-through in Phase 2.
+        # The legacy keyword-intent and LLM branches remain alive and
+        # can handle some routes that the provider over-triggers on.
+        # Phase 3 makes this terminal once legacy branches are deleted.
         if route_type == "blocked_ungrounded":
             return None
 
+        # ``contextual_answer`` routes have no tool plan — they require
+        # context-synthesis logic not yet wired into _execute_route.
+        # Fall through to the legacy assess_followup / report-recall paths.
         if not decision.validation.ok or not decision.tool_plan:
             return None
 
-        executable_branches = {"CompoundStockProvider", "PendingOptionProvider"}
-        if selected not in executable_branches:
+        # Phase 2: all providers that emit a validated direct_tool_plan
+        # or compound_plan are now owned by the router executor.
+        _P2_DIRECT_PLAN_PROVIDERS = frozenset({
+            "CompoundStockProvider",
+            "PendingOptionProvider",
+            "EntityTopicProvider",    # "RELIANCE technicals/fundamentals/quote"
+            "VisualScanProvider",     # "chart RELIANCE", "visual scan INFY"
+            "MarketSituationProvider",  # "market situation", "intraday scan"
+            "TopMoversProvider",      # "top gainers", "top losers"
+            "DirectIntentProvider",   # last-resort symbol+topic fallback
+        })
+        if selected not in _P2_DIRECT_PLAN_PROVIDERS:
             return None
         if route_type not in {"compound_plan", "direct_tool_plan"}:
             return None
@@ -6165,26 +6467,23 @@ class Agent:
         tool_results = _execute_plan(tool_plan)
         trace.extend(tool_results)
 
-        # Pick a synthesis intent that mirrors what the legacy branches
-        # would emit for the same tools, so the rendered answer keeps
-        # the existing structure.
-        report_tools = {
-            "open_report",
-            "read_report",
-            "summarize_report",
-            "get_last_report",
-            "list_generated_reports",
-        }
-        if selected == "PendingOptionProvider":
-            synthesis_intent = (
-                "report_lookup"
-                if any(name in report_tools for name, _ in tool_plan)
-                else "intraday_symbol_scan"
-            )
-        else:  # CompoundStockProvider
-            # Mirror the legacy single-stock intraday-setup synthesis
-            # intent so guardrails don't demand index-scan tooling.
+        # Derive the synthesis intent from the executed plan tools so the
+        # synthesiser and claim-gate both see a consistent intent label.
+        # CompoundStockProvider keeps "intraday_setup" to match the legacy
+        # multi-stock setup guardrail contract.  EntityTopicProvider always
+        # synthesises a stock-brief regardless of which topic tools ran (the
+        # plan may lead with get_technical_setup which would otherwise map to
+        # "intraday_setup").  All other providers resolve via the tool-to-intent map.
+        if selected == "CompoundStockProvider":
             synthesis_intent = "intraday_setup"
+        elif selected == "EntityTopicProvider":
+            synthesis_intent = "stock_brief"
+        else:
+            # Derive from the tools that actually ran so that synthesis intent
+            # stays consistent with tool_results (matters when _execute_plan is
+            # mocked in tests and the result set diverges from the planned tools).
+            _ran = [(tr["tool"], {}) for tr in tool_results] or tool_plan
+            synthesis_intent = _synthesis_intent_from_plan(_ran)
 
         answer_body = _synthesize_no_llm(synthesis_intent, tool_results)
         answer_body = _apply_response_guardrails(
@@ -6203,9 +6502,7 @@ class Agent:
             clean_input, answer, tool_results, turn_context=turn_context,
         )
 
-        # Best-effort consume the matched pending option so it can't fire
-        # twice. The router already validated the label, so we only need
-        # the leading label token.
+        # Best-effort consume the matched pending option so it can't fire twice.
         if selected == "PendingOptionProvider":
             try:
                 label_token = clean_input.strip().split()[0]
@@ -6220,6 +6517,7 @@ class Agent:
             "trace": trace,
             "backend": self.backend_name,
             "intent": decision.intent,
+            "has_source_trail": True,  # mode_suffix always appended above
         }
 
     def _conversation_fallback_context(self, *, mode: str, source_label: str) -> TurnContext | None:
@@ -6411,23 +6709,42 @@ class Agent:
             # Self-check must never break the response — fail open.
             return answer
 
-    def query(self, user_input: str, show_trace: bool = False) -> dict:
+    def query(
+        self,
+        user_input: str,
+        show_trace: bool = False,
+        entity_assessment=None,
+    ) -> dict:
         """Process a user query. Returns {"answer": str, "trace": list, "backend": str}.
 
         Compound query support: if the user packs multiple distinct questions
         into one prompt (separated by ". ", " and also ", " ; ", "?" boundaries,
         etc.), split them and run each through `_query_single`, then merge the
         answers. Single-question queries are dispatched unchanged.
+
+        entity_assessment: optional pre-computed EntityTopicAssessment from the
+        caller (nse_agent REPL loop). When provided, _query_single skips the
+        second assess_entity_topic_request call that would otherwise repeat
+        symbol resolution.
         """
         parts = _split_compound_query(user_input)
         if len(parts) <= 1:
-            return self._query_single(user_input, show_trace=show_trace)
+            return self._query_single(
+                user_input, show_trace=show_trace, entity_assessment=entity_assessment
+            )
 
         # Multi-part compound query: dispatch each part sequentially.
+        # Snapshot pre-compound state so each sub-query sees the same
+        # starting context and pronoun scope, preventing sub-query N from
+        # inheriting symbols/context written by sub-query N-1.
+        _pre_symbols = list(self._last_symbols)
+        _pre_context = self._last_turn_context
         merged_answers: list[str] = []
         merged_trace: list[dict] = []
         last_backend = self.backend_name
         for idx, part in enumerate(parts, start=1):
+            self._last_symbols = list(_pre_symbols)
+            self._last_turn_context = _pre_context
             res = self._query_single(part, show_trace=show_trace)
             merged_answers.append(
                 f"━━━ Part {idx} of {len(parts)}: {part} ━━━\n\n"
@@ -6444,13 +6761,496 @@ class Agent:
             "intent": "compound",
         }
 
-    def _query_single(self, user_input: str, show_trace: bool = False) -> dict:
-        """Process a single user query. Returns {"answer": str, "trace": list, "backend": str}.
+    # ── AA-AR-2: Pipeline stage helpers ──────────────────────────────────────
+    # _query_single is decomposed into named stages so the dispatch logic reads
+    # as a linear pipeline rather than a 500-line nested if-chain.  Each stage
+    # returns a result dict when it fully handles the turn, or None to fall
+    # through to the next stage.  _stage_keyword_and_llm always returns a dict.
+
+    def _build_pipeline_ctx(self, user_input: str, show_trace: bool) -> _PipelineCtx:
+        """Parse the mode prefix, build mode context and source labels."""
+        clean_input = user_input
+        mode = "historical"
+        if user_input.startswith("/historical "):
+            mode        = "historical"
+            clean_input = user_input[len("/historical "):].strip()
+        elif user_input.startswith("/intraday "):
+            mode        = "intraday"
+            clean_input = user_input[len("/intraday "):].strip()
+        else:
+            if _is_global_query(user_input.lower()):
+                mode = "global"
+            elif _looks_like_intraday_query(user_input):
+                mode = "intraday"
+
+        clean_input = self._contextualize_pronouns(clean_input)
+        market_context = market_context_for_agent()
+        mode_context = (
+            f"Data mode: {mode}. "
+            + (
+                "Use get_global_market_assessment for global indices, commodities, FX, "
+                "correlation context, and India read-through."
+                if mode == "global"
+                else (
+               "Use get_intraday_source_health first for calculations, then PostgreSQL-backed "
+               "get_intraday_bars, compute_intraday_indicators, get_intraday_levels, "
+               "explain_intraday_setup, and run_intraday_screener. If PostgreSQL intraday "
+               "tables are missing or stale for a single-stock/index deep dive, call "
+               "get_nse_intraday_snapshot first from the NSE website, then call "
+               "get_intraday_analysis only when OHLCV candle history is required. Label "
+               "yfinance/EOD fallback clearly, and do not present fallback levels as "
+               "PostgreSQL/NSE live-table data."
+                    if mode == "intraday"
+                    else "Use EOD CSV and DB snapshot tools for historical/technical analysis."
+                )
+            )
+            + f"\n\n{market_context}"
+        )
+        mode_sources = {
+            "global": "cached global indices + correlations",
+            "intraday": "PG intraday.quote_snapshots + PG intraday.ohlcv_bars",
+            "historical": "EOD CSV + DB snapshot",
+        }
+        source_label = mode_sources.get(mode, "EOD CSV + DB snapshot")
+        market_status = market_session_status()
+        mode_suffix = (
+            f"\n\n_Mode: {mode.title()} | Sources: "
+            f"{source_label} | "
+            f"Market: {market_status.compact_label} | "
+            f"Clock: {market_status.clock_label}_"
+        )
+        return _PipelineCtx(
+            raw_input=user_input,
+            clean_input=clean_input,
+            mode=mode,
+            source_label=source_label,
+            mode_suffix=mode_suffix,
+            mode_context=mode_context,
+            mode_sources=mode_sources,
+            market_status=market_status,
+            show_trace=show_trace,
+        )
+
+    def _with_readiness_metadata(self, answer: str, mode: str) -> str:
+        """Append data-readiness metadata block for historical-mode answers."""
+        if mode != "historical":
+            return answer
+        try:
+            return append_readiness_metadata(
+                answer,
+                project_root=Path(__file__).resolve().parent.parent,
+            )
+        except Exception:
+            logger.debug("append_readiness_metadata failed", exc_info=True)
+            return answer
+
+    def _stage_clarification_binding(self, ctx: _PipelineCtx) -> dict | None:
+        """If a structured clarification is pending, match this reply and execute the bound action."""
+        pending_clarification = self._pending_clarification
+        if pending_clarification is None:
+            return None
+
+        from .situation_assessment import (
+            assessment_from_bound_action,
+            match_clarification_reply,
+        )
+
+        def _finalize(
+            answer: str,
+            tool_results_: list,
+            turn_context_: "TurnContext | None" = None,
+            include_in_history: bool = True,
+        ) -> dict:
+            self._remember_interaction(
+                ctx.clean_input, answer, tool_results_,
+                turn_context=turn_context_,
+                include_in_history=include_in_history,
+            )
+            return {
+                "answer":  answer,
+                "trace":   ctx.trace,
+                "backend": self.backend_name,
+                "intent":  "clarification_reply_binding",
+            }
+
+        matched_option = match_clarification_reply(ctx.clean_input, pending_clarification)
+        if matched_option is not None:
+            ctx.trace.append({
+                "step": "clarification_reply_binding",
+                "matched_label": matched_option.label,
+                "matched_text": matched_option.text,
+            })
+            bound = assessment_from_bound_action(
+                matched_option.bound_action,
+                previous_context=self._last_turn_context,
+            )
+            self._pending_clarification = None
+            previous_context = self._last_turn_context or self._conversation_fallback_context(
+                mode=ctx.mode, source_label=ctx.source_label,
+            )
+            _fallback_ctx = previous_context or TurnContext(
+                user_input="", intent="unknown", mode=ctx.mode,
+                tools=[], source_label=ctx.source_label,
+            )
+            if bound.decision == "ask_clarification":
+                answer = render_context_answer(ctx.clean_input, bound, _fallback_ctx)
+                self._pending_clarification = bound
+                return _finalize(answer, [])
+            if bound.decision == "answer_from_context":
+                answer = render_context_answer(ctx.clean_input, bound, _fallback_ctx)
+                return _finalize(answer, [])
+            if bound.decision == "run_tool_plan" and bound.tool_plan:
+                tool_results = _execute_plan(bound.tool_plan)
+                ctx.trace.extend(tool_results)
+                synthesis_intent = (
+                    getattr(bound, "synthesis_intent", "")
+                    or _synthesis_intent_from_plan(bound.tool_plan)
+                )
+                answer_body = (
+                    render_assessment_block(bound)
+                    + "\n\n"
+                    + _synthesize_no_llm(synthesis_intent, tool_results)
+                )
+                answer_body = _apply_response_guardrails(
+                    ctx.clean_input, synthesis_intent, tool_results, answer_body,
+                )
+                answer = answer_body + ctx.mode_suffix
+                turn_ctx = build_turn_context(
+                    user_input=ctx.clean_input,
+                    intent="clarification_reply_binding",
+                    mode=ctx.mode,
+                    source_label=ctx.source_label,
+                    tool_results=tool_results,
+                    answer=answer,
+                )
+                return _finalize(answer, tool_results, turn_ctx)
+        else:
+            # Short typo-like reply that doesn't match any option: re-prompt once.
+            _is_typo_like = (
+                len(ctx.clean_input.strip()) <= 3
+                and " " not in ctx.clean_input.strip()
+            )
+            if _is_typo_like:
+                try:
+                    reprompt = render_assessment_block(pending_clarification)
+                except Exception:
+                    reprompt = None
+                if reprompt:
+                    ctx.trace.append({
+                        "step": "clarification_reprompt",
+                        "original_input": ctx.clean_input,
+                    })
+                    return _finalize(reprompt, [], include_in_history=False)
+            # User typed something that is clearly not an option reply — clear state.
+            self._pending_clarification = None
+        return None
+
+    def _stage_unified_router(self, ctx: _PipelineCtx) -> dict | None:
+        """Run UnifiedRouter and execute the route when the router owns it."""
+        if not (_unified_router_enabled() and not _is_morning_briefing_query(ctx.clean_input)):
+            return None
+        pack = self._build_context_pack()
+        if pack is None:
+            return None
+        try:
+            decision = self._unified_router.route(ctx.clean_input, pack)
+        except Exception as exc:  # noqa: BLE001
+            ctx.trace.append({"step": "unified_router_error", "error": repr(exc)})
+            decision = None
+        if decision is not None:
+            ctx.trace.append({
+                "step": "unified_router",
+                "decision": decision.to_debug_trace(),
+            })
+            executed = self._execute_route(
+                decision, ctx.clean_input, ctx.mode,
+                ctx.source_label, ctx.mode_suffix, ctx.trace,
+            )
+            if executed is not None:
+                return executed
+        return None
+
+    def _stage_entity_topic(
+        self, ctx: _PipelineCtx, entity_assessment=None
+    ) -> dict | None:
+        """Resolve entity-topic queries (e.g. 'RELIANCE technicals') deterministically."""
+        if entity_assessment is None:
+            entity_assessment = assess_entity_topic_request(ctx.clean_input)
+        if not (entity_assessment.applies and entity_assessment.decision == "route_with_entity_topic"):
+            return None
+        ctx.trace.append({"step": "entity_topic_assessment", "result": entity_assessment.__dict__})
+        entity_plan = _entity_topic_execution_plan(entity_assessment)
+        if not entity_plan:
+            return None
+        tool_results = _execute_plan(entity_plan)
+        ctx.trace.extend(tool_results)
+        answer_body = _synthesize_no_llm("entity_topic_command", tool_results)
+        answer_body = _apply_response_guardrails(
+            ctx.clean_input, "entity_topic_command", tool_results, answer_body,
+        )
+        answer = self._with_readiness_metadata(answer_body + ctx.mode_suffix, ctx.mode)
+        turn_context = build_turn_context(
+            user_input=ctx.clean_input,
+            intent="entity_topic_command",
+            mode=ctx.mode,
+            source_label=ctx.source_label,
+            tool_results=tool_results,
+            answer=answer,
+        )
+        self._remember_interaction(ctx.clean_input, answer, tool_results, turn_context=turn_context)
+        return {
+            "answer": answer,
+            "trace": ctx.trace,
+            "backend": self.backend_name,
+            "intent": "entity_topic_command",
+        }
+
+    def _stage_situation_assessment(self, ctx: _PipelineCtx) -> dict | None:
+        """Handle contextual follow-ups via situation assessment."""
+        if not needs_situation_assessment(ctx.clean_input):
+            return None
+        previous_context = self._last_turn_context or self._conversation_fallback_context(
+            mode=ctx.mode, source_label=ctx.source_label,
+        )
+        assessment = assess_followup(ctx.clean_input, previous_context)
+        ctx.trace.append({"step": "situation_assessment", "result": assessment.__dict__})
+
+        if assessment.applies and assessment.decision in {"answer_from_context", "ask_clarification"}:
+            previous_context = previous_context or TurnContext(
+                user_input="", intent="unknown", mode=ctx.mode,
+                tools=[], source_label=ctx.source_label,
+            )
+            answer = render_context_answer(ctx.clean_input, assessment, previous_context)
+            if assessment.decision == "ask_clarification" and assessment.clarification_questions:
+                self._pending_clarification = assessment
+            self._remember_interaction(ctx.clean_input, answer, [])
+            return {
+                "answer": answer,
+                "trace": ctx.trace,
+                "backend": self.backend_name,
+                "intent": "situation_assessment",
+            }
+
+        if assessment.applies and assessment.decision == "run_tool_plan":
+            tool_results = _execute_plan(assessment.tool_plan)
+            ctx.trace.extend(tool_results)
+            synthesis_intent = (
+                getattr(assessment, "synthesis_intent", "")
+                or _synthesis_intent_from_plan(assessment.tool_plan)
+            )
+            answer_body = (
+                render_assessment_block(assessment)
+                + "\n\n"
+                + _synthesize_no_llm(synthesis_intent, tool_results)
+            )
+            answer_body = _apply_response_guardrails(
+                ctx.clean_input, synthesis_intent, tool_results, answer_body,
+            )
+            answer = answer_body + ctx.mode_suffix
+            turn_context = build_turn_context(
+                user_input=ctx.clean_input,
+                intent="contextual_tool_plan",
+                mode=ctx.mode,
+                source_label=ctx.source_label,
+                tool_results=tool_results,
+                answer=answer,
+            )
+            self._remember_interaction(ctx.clean_input, answer, tool_results, turn_context=turn_context)
+            return {
+                "answer": answer,
+                "trace": ctx.trace,
+                "backend": self.backend_name,
+                "intent": "contextual_tool_plan",
+            }
+        return None
+
+    def _stage_keyword_and_llm(self, ctx: _PipelineCtx) -> dict:
+        """Keyword intent dispatch, LLM path with hallucination guard, and keyword fallback."""
+        intent_plan = _keyword_intent(ctx.clean_input, data_mode=ctx.mode)
+        _intent = intent_plan.get("intent") or ""
+
+        # Apply static source-label overrides whose sources are known before tool execution.
+        if _intent in _INTENT_SOURCE_LABEL_OVERRIDES:
+            ctx.source_label = _INTENT_SOURCE_LABEL_OVERRIDES[_intent]
+            _mode_label = _INTENT_MODE_LABEL_OVERRIDES.get(_intent, ctx.mode.title())
+            ctx.mode_suffix = (
+                f"\n\n_Mode: {_mode_label} | Sources: {ctx.source_label} | "
+                f"Market: {ctx.market_status.compact_label} | "
+                f"Clock: {ctx.market_status.clock_label}_"
+            )
+        elif _intent in {
+            "youtube_video_analysis", "youtube_channel_latest",
+            "youtube_video_transcription", "youtube_channel_transcription",
+            "youtube_channels",
+        }:
+            ctx.source_label = "YouTube watch metadata + available captions + preset channel registry"
+            if _intent in {"youtube_video_transcription", "youtube_channel_transcription"}:
+                ctx.source_label += " + explicit audio speech-to-text when captions are unavailable"
+            ctx.mode_suffix = (
+                f"\n\n_Mode: Research | Sources: {ctx.source_label} | "
+                f"Market: {ctx.market_status.compact_label} | "
+                f"Clock: {ctx.market_status.clock_label}_"
+            )
+
+        if _intent in {
+            "greeting", "startup_morning_briefing", "global_market_assessment",
+            "market_situation_assessment", "placeholder_symbol_request",
+            "document_link_help",
+            "strength_validation", "market_knowledge", "entity_topic_command", "stock_brief",
+            "stock_results",
+            "results_feed", "forthcoming_results",
+            "stock_comparison", "portfolio_review",
+            "event_calendar",
+            "fno_overview", "market_dashboard", "screener",
+            "visual_scan",
+            "long_term_growth_research",
+            "market_overview", "intraday_index_scan", "intraday_screener",
+            "intraday_market_recap", "intraday_setup", "intraday_levels",
+            "data_health", "intraday_health",
+            "youtube_video_analysis", "youtube_channel_latest",
+            "youtube_video_transcription", "youtube_channel_transcription",
+            "youtube_channels",
+        }:
+            ctx.trace.append({"step": "intent", "result": intent_plan})
+            tool_results = _execute_plan(intent_plan["plan"])
+            ctx.trace.extend(tool_results)
+            if ctx.mode == "intraday":
+                ctx.source_label = _intraday_source_label(
+                    _intent, tool_results, ctx.mode_sources["intraday"],
+                )
+                ctx.mode_suffix = (
+                    f"\n\n_Mode: Intraday | Sources: {ctx.source_label} | "
+                    f"Market: {ctx.market_status.compact_label} | "
+                    f"Clock: {ctx.market_status.clock_label}_"
+                )
+            answer_body = _synthesize_no_llm(_intent, tool_results, intent_plan.get("assessment_plan"))
+            answer_body = _apply_response_guardrails(ctx.clean_input, _intent, tool_results, answer_body)
+            answer = self._with_readiness_metadata(answer_body + ctx.mode_suffix, ctx.mode)
+            turn_context = build_turn_context(
+                user_input=ctx.clean_input,
+                intent=_intent,
+                mode=ctx.mode,
+                source_label=ctx.source_label,
+                tool_results=tool_results,
+                answer=answer,
+            )
+            self._remember_interaction(ctx.clean_input, answer, tool_results, turn_context=turn_context)
+            return {"answer": answer, "trace": ctx.trace, "backend": self.backend_name, "intent": _intent}
+
+        # ── LLM path ──────────────────────────────────────────────────────
+        if self.backend is not None:
+            try:
+                from .situation_assessment import classify_grounded_intent as _cgi
+                _grounded_tag = _cgi(ctx.clean_input)
+            except Exception:
+                logger.debug(
+                    "classify_grounded_intent failed — hallucination guard disabled for this turn",
+                    exc_info=True,
+                )
+                _grounded_tag = ""
+            _claimed = (intent_plan.get("intent") or "") in _GROUNDED_SCAN_INTENTS
+            if _grounded_tag and not _claimed:
+                ctx.trace.append({
+                    "step": "hallucination_guard_pre_llm",
+                    "reason": "grounded ask with no deterministic handler",
+                    "grounded_intent": _grounded_tag,
+                    "intent_plan": intent_plan.get("intent"),
+                })
+                answer = (
+                    f"_No grounded results available for `{_grounded_tag}` request._\n\n"
+                    "This needs a real scan against live/DB data — I won't "
+                    "fabricate a list. Please specify the universe "
+                    "(e.g. `NIFTY 50`, `NIFTY 500`, `F&O`) or run a deterministic "
+                    "command like `/screen highrs` or `/scan NIFTY 500`.\n\n"
+                    "━━━ Not investment advice. For research and learning only. ━━━"
+                ) + ctx.mode_suffix
+                self._remember_interaction(ctx.clean_input, answer, [], include_in_history=False)
+                return {
+                    "answer": answer,
+                    "trace": ctx.trace,
+                    "backend": self.backend_name,
+                    "intent": "hallucination_guard",
+                }
+
+            result = self._llm_query(ctx.clean_input, ctx.show_trace, ctx.mode_context)
+            if not result.get("has_source_trail", False):
+                result["answer"] = result.get("answer", "") + ctx.mode_suffix
+            result["answer"] = self._with_readiness_metadata(result.get("answer", ""), ctx.mode)
+            return result
+
+        # ── Keyword fallback (no LLM backend) ─────────────────────────────
+        ctx.trace.append({"step": "intent", "result": intent_plan})
+        tool_results = _execute_plan(intent_plan["plan"])
+        ctx.trace.extend(tool_results)
+        if ctx.mode == "intraday":
+            ctx.source_label = _intraday_source_label(
+                intent_plan["intent"], tool_results, ctx.mode_sources["intraday"],
+            )
+            ctx.mode_suffix = (
+                f"\n\n_Mode: Intraday | Sources: {ctx.source_label} | "
+                f"Market: {ctx.market_status.compact_label} | "
+                f"Clock: {ctx.market_status.clock_label}_"
+            )
+        answer_body = _synthesize_no_llm(
+            intent_plan["intent"], tool_results, intent_plan.get("assessment_plan"),
+        )
+        answer_body = _apply_response_guardrails(
+            ctx.clean_input, intent_plan["intent"], tool_results, answer_body,
+        )
+        answer = answer_body + ctx.mode_suffix
+        answer = self._quality_check(
+            ctx.raw_input, intent_plan["intent"], tool_results, answer, ctx.mode_suffix,
+        )
+        answer = self._with_readiness_metadata(answer, ctx.mode)
+        turn_context = build_turn_context(
+            user_input=ctx.clean_input,
+            intent=intent_plan["intent"],
+            mode=ctx.mode,
+            source_label=ctx.source_label,
+            tool_results=tool_results,
+            answer=answer,
+        )
+        self._remember_interaction(ctx.clean_input, answer, tool_results, turn_context=turn_context)
+        return {
+            "answer": answer,
+            "trace": ctx.trace,
+            "backend": self.backend_name,
+            "intent": intent_plan["intent"],
+        }
+
+    def _query_single(
+        self, user_input: str, show_trace: bool = False, entity_assessment=None
+    ) -> dict:
+        """Process a single user query through the named pipeline stages.
 
         Supports optional prefixes:
           /historical <query>  — force EOD / CSV mode
           /intraday <query>    — force live API mode
         Auto-detects intraday intent from keywords if no prefix given.
+
+        Pipeline (AA-AR-2):
+          1. _stage_clarification_binding — match reply to pending structured clarification
+          2. _stage_unified_router        — UnifiedRouter owns compound/entity/market routes
+          3. _stage_entity_topic          — deterministic entity-topic resolution
+          4. _stage_situation_assessment  — contextual follow-up assessment
+          5. _stage_keyword_and_llm       — keyword intent dispatch → LLM path → fallback
+        Each stage returns a result dict or None to fall through to the next stage.
+        """
+        ctx = self._build_pipeline_ctx(user_input, show_trace)
+        return (
+            self._stage_clarification_binding(ctx)
+            or self._stage_unified_router(ctx)
+            or self._stage_entity_topic(ctx, entity_assessment)
+            or self._stage_situation_assessment(ctx)
+            or self._stage_keyword_and_llm(ctx)
+        )
+
+    def _query_single_LEGACY(
+        self, user_input: str, show_trace: bool = False, entity_assessment=None
+    ) -> dict:
+        """LEGACY body of _query_single — kept as reference until AA-UR-6 Phase 3 deletes it.
+
+        DO NOT CALL directly.  Use _query_single instead.
         """
         # ── Determine data mode ───────────────────────────────────────────────
         clean_input = user_input
@@ -6513,6 +7313,7 @@ class Agent:
                     project_root=Path(__file__).resolve().parent.parent,
                 )
             except Exception:
+                logger.debug("append_readiness_metadata failed", exc_info=True)
                 return answer
 
         trace: list[dict] = []
@@ -6523,6 +7324,26 @@ class Agent:
         # verbatim. This bypasses entity/symbol resolution, so a reply like
         # "B" or "summarize its recommendation" cannot be misread as a new
         # ticker (e.g. the SWELECTES → TI bug).
+
+        def _finalize_clarification_turn(
+            answer: str,
+            tool_results_: list[dict],
+            turn_context_: "TurnContext | None" = None,
+            include_in_history: bool = True,
+        ) -> dict:
+            """Persist state and return the standard clarification-reply result dict."""
+            self._remember_interaction(
+                clean_input, answer, tool_results_,
+                turn_context=turn_context_,
+                include_in_history=include_in_history,
+            )
+            return {
+                "answer":  answer,
+                "trace":   trace,
+                "backend": self.backend_name,
+                "intent":  "clarification_reply_binding",
+            }
+
         pending_clarification = self._pending_clarification
         if pending_clarification is not None:
             from .situation_assessment import (
@@ -6546,38 +7367,29 @@ class Agent:
                     mode=mode,
                     source_label=source_label,
                 )
+                _fallback_ctx = previous_context or TurnContext(
+                    user_input="", intent="unknown", mode=mode, tools=[], source_label=source_label,
+                )
                 # Dispatch the bound assessment via the existing handlers.
                 if bound.decision == "ask_clarification":
-                    answer = render_context_answer(clean_input, bound, previous_context or TurnContext(
-                        user_input="", intent="unknown", mode=mode, tools=[], source_label=source_label,
-                    ))
+                    answer = render_context_answer(clean_input, bound, _fallback_ctx)
                     # New clarification round → store it.
                     self._pending_clarification = bound
-                    self._remember_interaction(clean_input, answer, [])
-                    return {
-                        "answer": answer,
-                        "trace": trace,
-                        "backend": self.backend_name,
-                        "intent": "clarification_reply_binding",
-                    }
+                    return _finalize_clarification_turn(answer, [])
                 if bound.decision == "answer_from_context":
-                    answer = render_context_answer(clean_input, bound, previous_context or TurnContext(
-                        user_input="", intent="unknown", mode=mode, tools=[], source_label=source_label,
-                    ))
-                    self._remember_interaction(clean_input, answer, [])
-                    return {
-                        "answer": answer,
-                        "trace": trace,
-                        "backend": self.backend_name,
-                        "intent": "clarification_reply_binding",
-                    }
+                    answer = render_context_answer(clean_input, bound, _fallback_ctx)
+                    return _finalize_clarification_turn(answer, [])
                 if bound.decision == "run_tool_plan" and bound.tool_plan:
                     tool_results = _execute_plan(bound.tool_plan)
                     trace.extend(tool_results)
+                    # PG-SYNTH-INTENT 2026-05-25: derive from plan tools so
+                    # required-tool gating tracks the executed plan (was
+                    # hardcoded to intraday_symbol_scan).
+                    # PG-PLAN 2026-05-25: prefer planner-declared
+                    # synthesis_intent on the bound assessment when set.
                     synthesis_intent = (
-                        "report_lookup"
-                        if any(name in {"open_report", "read_report", "summarize_report", "get_last_report", "list_generated_reports"} for name, _ in bound.tool_plan)
-                        else "intraday_symbol_scan"
+                        getattr(bound, "synthesis_intent", "")
+                        or _synthesis_intent_from_plan(bound.tool_plan)
                     )
                     answer_body = (
                         render_assessment_block(bound)
@@ -6586,7 +7398,7 @@ class Agent:
                     )
                     answer_body = _apply_response_guardrails(clean_input, synthesis_intent, tool_results, answer_body)
                     answer = answer_body + mode_suffix
-                    turn_context = build_turn_context(
+                    turn_ctx = build_turn_context(
                         user_input=clean_input,
                         intent="clarification_reply_binding",
                         mode=mode,
@@ -6594,17 +7406,27 @@ class Agent:
                         tool_results=tool_results,
                         answer=answer,
                     )
-                    self._remember_interaction(clean_input, answer, tool_results, turn_context=turn_context)
-                    return {
-                        "answer": answer,
-                        "trace": trace,
-                        "backend": self.backend_name,
-                        "intent": "clarification_reply_binding",
-                    }
+                    return _finalize_clarification_turn(answer, tool_results, turn_ctx)
             else:
-                # User did not pick an option; clear the pending state so we
-                # don't keep trying to bind future replies. Continue with
-                # normal routing.
+                # AA-AR-6a: if the user typed a single short token (1–3 chars, no
+                # spaces) that does not match any option label, re-prompt once
+                # instead of silently dropping the clarification state.  A typo
+                # like "1" when options are A/B/C should not discard the context.
+                # A multi-word question or longer input clears the state normally.
+                _is_typo_like = (
+                    len(clean_input.strip()) <= 3
+                    and " " not in clean_input.strip()
+                )
+                if _is_typo_like:
+                    try:
+                        reprompt = render_assessment_block(pending_clarification)
+                    except Exception:
+                        reprompt = None
+                    if reprompt:
+                        trace.append({"step": "clarification_reprompt", "original_input": clean_input})
+                        return _finalize_clarification_turn(reprompt, [], include_in_history=False)
+                # User typed something that is clearly not an option reply;
+                # clear state and fall through to normal routing.
                 self._pending_clarification = None
 
         # ── AA-UR-6: Unified router (additive) ───────────────────────────────
@@ -6640,7 +7462,8 @@ class Agent:
                     if executed is not None:
                         return executed
 
-        entity_assessment = assess_entity_topic_request(clean_input)
+        if entity_assessment is None:
+            entity_assessment = assess_entity_topic_request(clean_input)
         if entity_assessment.applies and entity_assessment.decision == "route_with_entity_topic":
             trace.append({"step": "entity_topic_assessment", "result": entity_assessment.__dict__})
             entity_plan = _entity_topic_execution_plan(entity_assessment)
@@ -6706,10 +7529,17 @@ class Agent:
             if assessment.applies and assessment.decision == "run_tool_plan":
                 tool_results = _execute_plan(assessment.tool_plan)
                 trace.extend(tool_results)
+                # PG-SYNTH-INTENT 2026-05-25: derive from plan tools instead
+                # of hardcoding intraday_symbol_scan. Fixes follow-ups like
+                # "any news or results for these top gainers" failing with
+                # a misleading scan_symbols_intraday gate error when the
+                # situation-assessment plan only ran compare_stocks.
+                # PG-PLAN 2026-05-25: prefer the planner-declared
+                # synthesis_intent on the assessment when set; fall back to
+                # plan-tool inference for legacy branches.
                 synthesis_intent = (
-                    "report_lookup"
-                    if any(name in {"open_report", "read_report", "summarize_report", "get_last_report", "list_generated_reports"} for name, _ in assessment.tool_plan)
-                    else "intraday_symbol_scan"
+                    getattr(assessment, "synthesis_intent", "")
+                    or _synthesis_intent_from_plan(assessment.tool_plan)
                 )
                 answer_body = (
                     render_assessment_block(assessment)
@@ -6735,65 +7565,36 @@ class Agent:
                 }
 
         intent_plan = _keyword_intent(clean_input, data_mode=mode)
-        if intent_plan.get("intent") == "market_overview":
-            source_label = "NSE live API + DB breadth"
+        _intent = intent_plan.get("intent") or ""
+        # Apply static source-label overrides for intents whose sources are known
+        # before tool execution (see _INTENT_SOURCE_LABEL_OVERRIDES at module level).
+        # YouTube intents are handled separately below because their source_label
+        # depends on the transcription sub-type. Runtime intraday recalculation
+        # (after tool_results are available) happens further down in the keyword path.
+        if _intent in _INTENT_SOURCE_LABEL_OVERRIDES:
+            source_label = _INTENT_SOURCE_LABEL_OVERRIDES[_intent]
+            _mode_label = _INTENT_MODE_LABEL_OVERRIDES.get(_intent, mode.title())
             mode_suffix = (
-                f"\n\n_Mode: {mode.title()} | Sources: NSE live API + DB breadth | "
+                f"\n\n_Mode: {_mode_label} | Sources: {source_label} | "
                 f"Market: {market_status.compact_label} | "
                 f"Clock: {market_status.clock_label}_"
             )
-        if intent_plan.get("intent") == "market_situation_assessment":
-            source_label = "situation planner + NSE live API + DB breadth"
-            mode_suffix = (
-                f"\n\n_Mode: {mode.title()} | Sources: situation planner + NSE live API + DB breadth | "
-                f"Market: {market_status.compact_label} | "
-                f"Clock: {market_status.clock_label}_"
-            )
-        if intent_plan.get("intent") == "market_dashboard":
-            source_label = "dashboard planner + NSE live API + DB breadth + FII/DII + global context"
-            mode_suffix = (
-                f"\n\n_Mode: Intraday | Sources: dashboard planner + NSE live API + DB breadth + FII/DII + global context | "
-                f"Market: {market_status.compact_label} | "
-                f"Clock: {market_status.clock_label}_"
-            )
-        if intent_plan.get("intent") == "intraday_market_recap":
-            # PG-source-label: be explicit that the recap reads from PG
-            # intraday.quote_snapshots, not SQLite — these snapshots are
-            # captured every 60 s by terminal/intraday_capture.py.
-            source_label = "NSE live API + PG intraday.quote_snapshots + DB breadth"
-            mode_suffix = (
-                f"\n\n_Mode: Intraday | Sources: NSE live API + PG intraday.quote_snapshots + DB breadth | "
-                f"Market: {market_status.compact_label} | "
-                f"Clock: {market_status.clock_label}_"
-            )
-        if intent_plan.get("intent") == "fno_overview":
-            source_label = "NSE options/futures API + F&O EOD fallback"
-            mode_suffix = (
-                f"\n\n_Mode: Intraday | Sources: NSE options/futures API + F&O EOD fallback | "
-                f"Market: {market_status.compact_label} | "
-                f"Clock: {market_status.clock_label}_"
-            )
-        if intent_plan.get("intent") == "long_term_growth_research":
-            source_label = "NSE live index constituents + DB growth scores + screener.in"
-            mode_suffix = (
-                f"\n\n_Mode: Research | Sources: {source_label} | "
-                f"Market: {market_status.compact_label} | "
-                f"Clock: {market_status.clock_label}_"
-            )
-        if intent_plan.get("intent") in {
+        elif _intent in {
             "youtube_video_analysis", "youtube_channel_latest",
             "youtube_video_transcription", "youtube_channel_transcription",
             "youtube_channels",
         }:
+            # PG-source-label: youtube source depends on whether transcription is
+            # needed, so it is handled inline rather than via the static dict.
             source_label = "YouTube watch metadata + available captions + preset channel registry"
-            if intent_plan.get("intent") in {"youtube_video_transcription", "youtube_channel_transcription"}:
+            if _intent in {"youtube_video_transcription", "youtube_channel_transcription"}:
                 source_label += " + explicit audio speech-to-text when captions are unavailable"
             mode_suffix = (
                 f"\n\n_Mode: Research | Sources: {source_label} | "
                 f"Market: {market_status.compact_label} | "
                 f"Clock: {market_status.clock_label}_"
             )
-        if intent_plan.get("intent") in {
+        if _intent in {
             "greeting", "startup_morning_briefing", "global_market_assessment",
             "market_situation_assessment", "placeholder_symbol_request",
             "document_link_help",
@@ -6816,8 +7617,10 @@ class Agent:
             tool_results = _execute_plan(intent_plan["plan"])
             trace.extend(tool_results)
             if mode == "intraday":
+                # Runtime recalculation: intraday source_label depends on tool_results,
+                # so it cannot be staticised in _INTENT_SOURCE_LABEL_OVERRIDES.
                 source_label = _intraday_source_label(
-                    intent_plan["intent"],
+                    _intent,
                     tool_results,
                     mode_sources["intraday"],
                 )
@@ -6827,13 +7630,13 @@ class Agent:
                     f"Clock: {market_status.clock_label}_"
                 )
             answer_body = _synthesize_no_llm(
-                intent_plan["intent"],
+                _intent,
                 tool_results,
                 intent_plan.get("assessment_plan"),
             )
             answer_body = _apply_response_guardrails(
                 clean_input,
-                intent_plan["intent"],
+                _intent,
                 tool_results,
                 answer_body,
             )
@@ -6841,7 +7644,7 @@ class Agent:
             answer = _with_readiness_metadata(answer)
             turn_context = build_turn_context(
                 user_input=clean_input,
-                intent=intent_plan["intent"],
+                intent=_intent,
                 mode=mode,
                 source_label=source_label,
                 tool_results=tool_results,
@@ -6849,7 +7652,7 @@ class Agent:
             )
             self._remember_interaction(clean_input, answer, tool_results, turn_context=turn_context)
             return {"answer": answer, "trace": trace, "backend": self.backend_name,
-                    "intent": intent_plan["intent"]}
+                    "intent": _intent}
 
         # ── LLM path ──────────────────────────────────────────────────────────
         if self.backend is not None:
@@ -6863,24 +7666,9 @@ class Agent:
                 from .situation_assessment import classify_grounded_intent as _cgi
                 _grounded_tag = _cgi(clean_input)
             except Exception:
+                logger.debug("classify_grounded_intent failed — hallucination guard disabled for this turn", exc_info=True)
                 _grounded_tag = ""
-            _deterministic_intents = {
-                "market_overview",
-                "market_situation_assessment",
-                "market_dashboard",
-                "screener_run",
-                "stage2_screener",
-                "intraday_scan",
-                "intraday_symbol_scan",
-                "gainers_losers",
-                "top_movers",
-                "high_rs",
-                "breakout_scan",
-                "entity_topic_command",
-                "report_lookup",
-                "contextual_tool_plan",
-            }
-            _claimed = (intent_plan.get("intent") or "") in _deterministic_intents
+            _claimed = (intent_plan.get("intent") or "") in _GROUNDED_SCAN_INTENTS
             if _grounded_tag and not _claimed:
                 trace.append({
                     "step": "hallucination_guard_pre_llm",
@@ -6896,7 +7684,7 @@ class Agent:
                     "command like `/screen highrs` or `/scan NIFTY 500`.\n\n"
                     "━━━ Not investment advice. For research and learning only. ━━━"
                 ) + mode_suffix
-                self._remember_interaction(clean_input, answer, [])
+                self._remember_interaction(clean_input, answer, [], include_in_history=False)
                 return {
                     "answer": answer,
                     "trace": trace,
@@ -6905,8 +7693,10 @@ class Agent:
                 }
 
             result = self._llm_query(clean_input, show_trace, mode_context)
-            # Only append mode suffix if the LLM didn't include a Source Trail
-            if "Mode:" not in result.get("answer", "")[-600:]:
+            # Append mode suffix only when the LLM response does not already contain
+            # a source-trail footer (detected via has_source_trail from _llm_query,
+            # which avoids the fragile 600-char substring search).
+            if not result.get("has_source_trail", False):
                 result["answer"] = result.get("answer", "") + mode_suffix
             result["answer"] = _with_readiness_metadata(result.get("answer", ""))
             return result
@@ -7022,14 +7812,18 @@ class Agent:
                      and t["result"].get("stock_details")),
                     None,
                 )
+                # Signal whether the LLM already included a source-trail footer so
+                # _query_single can skip appending mode_suffix without fragile text search.
+                _has_trail = "_Mode:" in answer or "Mode: " in answer[-300:]
                 return {
-                    "answer":     answer,
-                    "trace":      tool_results,
-                    "backend":    self.backend_name,
-                    "intent":     "llm_driven",
-                    "catalysts":  catalysts,
-                    "comparison": comparison,
-                    "turn":       self.turn_count,
+                    "answer":          answer,
+                    "trace":           tool_results,
+                    "backend":         self.backend_name,
+                    "intent":          "llm_driven",
+                    "catalysts":       catalysts,
+                    "comparison":      comparison,
+                    "turn":            self.turn_count,
+                    "has_source_trail": _has_trail,
                 }
 
         # If we exhausted rounds without a text response, synthesize from tool results
@@ -7037,5 +7831,7 @@ class Agent:
         answer = _apply_response_guardrails(user_input, "llm_driven_fallback", tool_results, answer)
         # Still save the turn so context is preserved
         self._remember_interaction(user_input, answer, tool_results)
+        _has_trail = "_Mode:" in answer or "Mode: " in answer[-300:]
         return {"answer": answer, "trace": tool_results, "backend": self.backend_name,
-                "intent": "llm_driven_fallback", "turn": self.turn_count}
+                "intent": "llm_driven_fallback", "turn": self.turn_count,
+                "has_source_trail": _has_trail}
