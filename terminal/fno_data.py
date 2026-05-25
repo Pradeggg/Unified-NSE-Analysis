@@ -711,48 +711,104 @@ def _live_chain_from_eod(symbol: str, expiry: str | None) -> dict:
 # ─────────────────────────────────────────────────────────────────────────────
 # Live Futures Chain
 # ─────────────────────────────────────────────────────────────────────────────
+# NSE deprecated /api/quote-derivative in 2025 (returns 404). The current
+# endpoint is /api/liveEquity-derivatives?index={slug}, keyed by per-symbol
+# index slugs. Stock-futures still use the legacy path via _futures_from_eod
+# fallback for now; index futures route through the live endpoint below.
+_INDEX_FUTURE_SLUGS: dict[str, str] = {
+    "NIFTY":      "nse50_fut",
+    "BANKNIFTY":  "nifty_bank_fut",
+    "FINNIFTY":   "finnifty_fut",
+    "MIDCPNIFTY": "niftymidcap_fut",
+    "NIFTYNXT50": "niftynxt50_fut",
+}
+
+
+def _fetch_live_index_futures(sym: str) -> dict | None:
+    """Fetch index futures via NSE's modern liveEquity-derivatives endpoint.
+
+    Returns ``None`` if the symbol has no known index slug, the endpoint
+    fails, or the response carries no Index Futures rows. The caller is
+    expected to fall back to EOD data in that case.
+    """
+    slug = _INDEX_FUTURE_SLUGS.get(sym)
+    if not slug:
+        return None
+
+    endpoint = f"https://www.nseindia.com/api/liveEquity-derivatives?index={slug}"
+
+    # The shared cookie-seeded session in this module has historically
+    # been brittle for derivatives. Prefer the live-session helper from
+    # terminal.tools (warmed against multiple NSE pages) when available.
+    sess: requests.Session
+    try:
+        from terminal.tools import _get_live_session
+        sess = _get_live_session()
+    except Exception:
+        sess = _get_nse_session()
+
+    try:
+        r = sess.get(endpoint, timeout=15)
+        if r.status_code != 200 or not r.text:
+            return None
+        raw = r.json()
+    except Exception:
+        return None
+
+    rows = raw.get("data", []) or []
+    futures: list[dict[str, Any]] = []
+    underlying: float | None = None
+
+    for row in rows:
+        if row.get("instrument") != "Index Futures":
+            continue
+        if underlying is None and row.get("underlyingValue") is not None:
+            try:
+                underlying = float(row.get("underlyingValue"))
+            except (TypeError, ValueError):
+                pass
+        futures.append({
+            "expiry":     row.get("expiryDate"),
+            "last_price": row.get("lastPrice"),
+            "change_pct": row.get("pChange"),
+            "oi":         row.get("openInterest"),
+            # liveEquity-derivatives does not expose changeinOpenInterest;
+            # downstream consumers tolerate None / 0.
+            "oi_change":  None,
+            "volume":     row.get("volume"),
+            "underlying": row.get("underlyingValue"),
+        })
+
+    if not futures or underlying is None:
+        return None
+
+    return {
+        "symbol":     sym,
+        "underlying": underlying,
+        "futures":    futures,
+        "source":     "live-nse-api",
+        "as_of":      datetime.now().strftime("%H:%M:%S"),
+    }
+
+
 def fetch_live_futures(symbol: str) -> dict:
     """
     Fetch live futures data for a symbol from NSE.
-    Falls back to EOD data if market is closed.
+    Falls back to EOD data if the live endpoint is unavailable or
+    returns no usable Index Futures rows (e.g. market closed).
     """
     sym = symbol.upper().strip()
-    endpoint = f"https://www.nseindia.com/api/quote-derivative?symbol={sym}"
 
-    try:
-        sess = _get_nse_session()
-        r = sess.get(endpoint, timeout=15)
-        r.raise_for_status()
-        raw = r.json()
-
-        futures = []
-        for item in raw.get("stocks", []):
-            meta = item.get("metadata", {})
-            if meta.get("instrumentType", "").startswith("Stock Futures") or \
-               meta.get("instrumentType", "").startswith("Index Futures"):
-                futures.append({
-                    "expiry":       meta.get("expiryDate"),
-                    "last_price":   meta.get("lastPrice"),
-                    "change_pct":   meta.get("pChange"),
-                    "oi":           meta.get("openInterest"),
-                    "oi_change":    meta.get("changeinOpenInterest"),
-                    "volume":       meta.get("totalTradedVolume"),
-                    "underlying":   raw.get("underlyingValue"),
-                })
-
-        underlying = raw.get("underlyingValue")
-        if not futures or underlying is None:
-            return _futures_from_eod(sym)
-
-        return {
-            "symbol":     sym,
-            "underlying": underlying,
-            "futures":    futures,
-            "source":     "live-nse-api",
-            "as_of":      datetime.now().strftime("%H:%M:%S"),
-        }
-    except Exception:
+    if sym in _INDEX_FUTURE_SLUGS:
+        result = _fetch_live_index_futures(sym)
+        if result is not None:
+            return result
         return _futures_from_eod(sym)
+
+    # Stock futures still need a working live endpoint; until that
+    # migration lands, return the EOD fallback so callers degrade
+    # gracefully instead of crashing.
+    return _futures_from_eod(sym)
 
 
 def _futures_from_eod(symbol: str) -> dict:
