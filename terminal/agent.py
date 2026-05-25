@@ -6614,7 +6614,14 @@ class Agent:
         # router exclusively owns (compound stock, pending options,
         # blocked_ungrounded). All other routes still fall through to the
         # legacy branches below so behavior parity is preserved.
-        if _unified_router_enabled():
+        #
+        # Skip the router entirely for synthetic agent-internal prompts
+        # (the morning briefing template) — they are long structured
+        # prompts that incidentally mention "F&O", "intraday", "Global",
+        # NIFTY etc. and were getting mis-routed to compound_stock_overview
+        # with a bogus GLOBAL ticker. The legacy `_keyword_intent`
+        # morning-briefing short-circuit owns this path.
+        if _unified_router_enabled() and not _is_morning_briefing_query(clean_input):
             pack = self._build_context_pack()
             if pack is not None:
                 try:

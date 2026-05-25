@@ -2199,6 +2199,38 @@ class UnifiedRouterAgentWiringTests(unittest.TestCase):
         self.assertEqual(result["intent"], "greeting")
         execute_plan.assert_called_once_with([])
 
+    def test_unified_router_skipped_for_morning_briefing_prompt(self):
+        """Regression: the synthetic startup briefing prompt mentions
+        "F&O expiry", "intraday" and "Global Overnight Context", and was
+        being mis-routed by CompoundStockProvider to compound_stock_overview
+        with a bogus GLOBAL ticker. The router must skip this prompt and
+        let the legacy `_keyword_intent` morning-briefing branch own it."""
+        agent = self._make_agent()
+        briefing_prompt = (
+            "You are starting a new trading session on Monday at 09:40 IST (live market).\n"
+            "Give a comprehensive, investigative morning briefing in this EXACT order:\n"
+            "### 🌍 Global Overnight Context\n"
+            "- US markets, Asian markets, SGX Nifty / GIFT Nifty\n"
+            "- USD/INR direction, crude oil price\n"
+            "### 📅 Previous Trading Day Recap (NSE)\n"
+            "- How did NIFTY 50 and NIFTY BANK close yesterday\n"
+            "### 📊 Current Market Status\n"
+            "- Top gainers and losers so far today\n"
+            "### 🎯 Today's Watchlist & Themes\n"
+            "- F&O expiry\n"
+            "- Key support/resistance levels for NIFTY 50 intraday\n"
+        )
+
+        with patch("terminal.agent._execute_plan") as execute_plan:
+            execute_plan.return_value = []
+            result = agent.query(briefing_prompt)
+
+        # The unified_router step must NOT appear — the synthetic briefing
+        # prompt is routed deterministically by _keyword_intent.
+        ur_steps = [s for s in result["trace"] if isinstance(s, dict) and s.get("step") == "unified_router"]
+        self.assertEqual(ur_steps, [])
+        self.assertEqual(result["intent"], "startup_morning_briefing")
+
 
 if __name__ == "__main__":
     unittest.main()
