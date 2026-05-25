@@ -413,6 +413,37 @@ class NSEAgentScanRewriteTests(unittest.TestCase):
                 self.assertEqual(tool_name, "run_intraday_screener")
                 self.assertEqual(args, {"screen_type": screen_type})
 
+    def test_scan_command_dedupes_repeated_index_tokens(self):
+        """Tab-completion artefacts like '/scan NIFTY NIFTY AUTO' (where
+        completion appends the full index name onto an already-typed
+        'NIFTY ' prefix) must collapse to the intended 'NIFTY AUTO'
+        instead of being passed verbatim to scan_intraday_market (which
+        then returns 'No stocks found for index: NIFTY NIFTY AUTO')."""
+        for raw in ("/scan NIFTY NIFTY AUTO", "/scan nifty nifty auto"):
+            with self.subTest(raw=raw):
+                status, tool_name, args = nse_agent._scan_command_tool_call(raw)
+                self.assertEqual(tool_name, "scan_intraday_market")
+                self.assertEqual(args["index"], "NIFTY AUTO")
+                self.assertIn("NIFTY AUTO", status)
+
+    def test_scan_command_resolves_short_aliases_to_canonical_indices(self):
+        for alias, canonical in [
+            ("banknifty", "NIFTY BANK"),
+            ("BANK NIFTY", "NIFTY BANK"),
+            ("nifty50", "NIFTY 50"),
+            ("nifty500", "NIFTY 500"),
+            ("finnifty", "NIFTY FIN SERVICE"),
+            ("midcap100", "NIFTY MIDCAP 100"),
+        ]:
+            with self.subTest(alias=alias):
+                _, tool_name, args = nse_agent._scan_command_tool_call(f"/scan {alias}")
+                self.assertEqual(tool_name, "scan_intraday_market")
+                self.assertEqual(args["index"], canonical)
+
+    def test_scan_command_normalises_extra_whitespace(self):
+        _, _, args = nse_agent._scan_command_tool_call("/scan  NIFTY   IT")
+        self.assertEqual(args["index"], "NIFTY IT")
+
 
 class MarketDashboardLiveTests(unittest.TestCase):
     def _sample_snapshot(self):
