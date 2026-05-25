@@ -210,6 +210,27 @@ _CONTEXTUAL_PATTERNS = (
     "deep dive",
     "deep-dive",
     "details on",
+    # Collective references to a prior result list ("top gainers",
+    # "intraday scan", etc). These let situation_assessment claim the
+    # turn so keyword_intent doesn't extract "the above stocks" as a
+    # literal ticker (observed: 'Fundamental analysis for the above
+    # stocks' → get_latest_results(symbol='THE ABOVE STOCKS')).
+    "above stocks",
+    "above list",
+    "the above",
+    "from above",
+    "these stocks",
+    "those stocks",
+    "for these",
+    "for those",
+    "for the above",
+    "of the above",
+    "the gainers",
+    "the losers",
+    "the movers",
+    "top gainers above",
+    "above gainers",
+    "above losers",
 )
 _AFFIRMATIVE_FOLLOWUPS = {
     "yes",
@@ -757,6 +778,37 @@ def assess_followup(user_input: str, previous_context: TurnContext | None) -> Si
             "A live scan request, but the live analysis scope is ambiguous.",
             "Do you want live quotes, last-30-minute momentum, 15m intraday setups, or news/catalysts for these?",
         )
+
+    # Collective fundamentals/results follow-up: user references the prior
+    # result list ("the above stocks", "these stocks", "the gainers", …)
+    # and asks for fundamental/earnings/ratio analysis. Without this rule
+    # keyword_intent extracts the literal phrase as a ticker (observed:
+    # 'Fundamental analysis for the above stocks' →
+    # get_latest_results(symbol='THE ABOVE STOCKS')).
+    if _refers_to_prior_list(q) and _asks_collective_fundamentals(q):
+        symbols = _symbols_for_collective_reference(q, previous_context)
+        if symbols:
+            symbols = symbols[:5]
+            return SituationAssessment(
+                applies=True,
+                decision="run_tool_plan",
+                confidence="high",
+                user_is_asking=(
+                    f"Fundamental analysis for the prior result list "
+                    f"({', '.join(symbols)})."
+                ),
+                context_found=_context_found(previous_context),
+                source_assessment=_source_assessment(previous_context),
+                resolved_entities=symbols,
+                evidence_plan=["compare_stocks"],
+                tool_plan=[("compare_stocks", {"symbols": symbols, "aspects": ["fundamental"]})],
+                plan=[
+                    f"Bind the reply to the prior result list ({len(symbols)} symbols).",
+                    "Run compare_stocks on those symbols across fundamental ratios "
+                    "(P/E, P/B, ROE, ROCE, debt/equity).",
+                    "Do not resolve the phrase 'the above stocks' as a new ticker.",
+                ],
+            )
 
     # Implicit prior-report follow-up ("summarize", "tldr", "the recommendation",
     # …) without an explicit report path on disk. We still have prior context
@@ -1345,6 +1397,82 @@ def _normalize(text: str) -> str:
     return " ".join((text or "").strip().lower().split())
 
 
+# Phrases that indicate the user is referencing a prior result list rather
+# than naming a specific ticker. Used by the collective-followup rule in
+# assess_followup so 'the above stocks' / 'the gainers' / 'these' don't get
+# treated as literal entities by keyword_intent.
+_PRIOR_LIST_REFERENCES = (
+    "above stocks",
+    "above list",
+    "the above",
+    "from above",
+    "these stocks",
+    "those stocks",
+    "for these",
+    "for those",
+    "for the above",
+    "of the above",
+    "the gainers",
+    "the losers",
+    "the movers",
+    "above gainers",
+    "above losers",
+    "top gainers above",
+)
+
+# Phrases that indicate the user wants fundamental/earnings/ratio evidence
+# for the referenced symbols. Kept narrow so unrelated follow-ups don't get
+# coerced into a multi-symbol fundamentals plan.
+_COLLECTIVE_FUNDAMENTAL_TERMS = (
+    "fundamental analysis",
+    "fundamentals",
+    "ratios",
+    "ratio analysis",
+    "p&l",
+    "profit and loss",
+    "balance sheet",
+    "earnings",
+    "results",
+    "latest results",
+    "quarterly results",
+    "financials",
+    "financial statements",
+    "valuation",
+)
+
+
+def _refers_to_prior_list(q: str) -> bool:
+    return any(ref in q for ref in _PRIOR_LIST_REFERENCES)
+
+
+def _asks_collective_fundamentals(q: str) -> bool:
+    return any(term in q for term in _COLLECTIVE_FUNDAMENTAL_TERMS)
+
+
+def _symbols_for_collective_reference(
+    q: str,
+    previous_context: TurnContext,
+) -> list[str]:
+    """Pick the prior-turn symbol list that matches the user's reference.
+
+    Prefers directional buckets when the user named one explicitly
+    ("the gainers" → result_groups['gainers']); otherwise falls back to
+    the flat result_items, then symbols.
+    """
+    groups = previous_context.result_groups or {}
+    if ("the gainers" in q or "above gainers" in q or "top gainers above" in q) and groups.get("gainers"):
+        return list(groups["gainers"])
+    if ("the losers" in q or "above losers" in q) and groups.get("losers"):
+        return list(groups["losers"])
+    if previous_context.result_items:
+        return list(previous_context.result_items)
+    if groups.get("gainers"):
+        return list(groups["gainers"])
+    if groups.get("losers"):
+        return list(groups["losers"])
+    return list(previous_context.symbols or [])
+
+
 def _is_direct_market_recap_request(q: str) -> bool:
     """True for first-class recent-market recap questions.
 
@@ -1793,6 +1921,8 @@ def _extract_result_groups(tool_results: list[dict[str, Any]]) -> dict[str, list
     """
     long_symbols: list[str] = []
     short_symbols: list[str] = []
+    gainer_symbols: list[str] = []
+    loser_symbols: list[str] = []
     for item in tool_results:
         result = item.get("result") or {}
         if not isinstance(result, dict):
@@ -1805,11 +1935,26 @@ def _extract_result_groups(tool_results: list[dict[str, Any]]) -> dict[str, list
                 for row in rows:
                     if isinstance(row, dict) and row.get("symbol"):
                         bucket.append(str(row["symbol"]).upper())
+        # Top movers family: get_top_gainers_losers returns gainers / losers
+        # lists of {symbol, last_price, change, pct_change, ...} dicts. Expose
+        # them as directional buckets so contextual follow-ups like
+        # "fundamentals for the above stocks" / "results for the gainers"
+        # can bind to the right list deterministically.
+        for key, bucket in (("gainers", gainer_symbols), ("losers", loser_symbols)):
+            rows = result.get(key)
+            if isinstance(rows, list):
+                for row in rows:
+                    if isinstance(row, dict) and row.get("symbol"):
+                        bucket.append(str(row["symbol"]).upper())
     groups: dict[str, list[str]] = {}
     if long_symbols:
         groups["long"] = _dedupe(long_symbols)
     if short_symbols:
         groups["short"] = _dedupe(short_symbols)
+    if gainer_symbols:
+        groups["gainers"] = _dedupe(gainer_symbols)
+    if loser_symbols:
+        groups["losers"] = _dedupe(loser_symbols)
     return groups
 
 
