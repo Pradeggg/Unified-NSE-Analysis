@@ -162,6 +162,8 @@ ROOT      = Path(__file__).parent.parent
 DB_PATH   = ROOT / "data" / "sector_rotation_tracker.db"
 STOCK_CSV = ROOT / "data" / "nse_sec_full_data.csv"
 INDEX_CSV = ROOT / "data" / "nse_index_data.csv"
+# PG-SCAN-FALLBACK: local mapping used when NSE API blocks the constituents call
+INDEX_MAPPING_CSV = ROOT / "data" / "index_stock_mapping.csv"
 GLOBAL_INDEX_CSV = ROOT / "data" / "global_indices.csv"
 GLOBAL_CORR_CSV  = ROOT / "data" / "global_correlations.csv"
 REPORTS   = ROOT / "reports"
@@ -580,6 +582,19 @@ _COMMON_STOCK_ALIASES: dict[str, str] = {
     "PREMIER ENERGIES": "PREMIERENE",
     "HINDUSTAN AERONAUTICS": "HAL",
     "BAJAJ AUTO": "BAJAJ-AUTO",
+    # PG-ALIAS-APOLLO: NSE ticker `APOLLO` is Apollo Micro Systems Ltd
+    # (defence electronics). The ref.instruments table currently mislabels
+    # it as "Apollo Tyres Limited" (Tyres is actually `APOLLOTYRE`), so the
+    # name-based resolver never finds Apollo Micro Systems without these
+    # explicit aliases.
+    "APOLLO MICRO": "APOLLO",
+    "APOLLO MICROSYSTEMS": "APOLLO",
+    "APOLLO MICRO SYSTEMS": "APOLLO",
+    "APOLLO MICRO SYSTEMS LIMITED": "APOLLO",
+    "APOLLO MICRO SYSTEMS LTD": "APOLLO",
+    "APOLLO TYRES": "APOLLOTYRE",
+    "APOLLO HOSPITALS": "APOLLOHOSP",
+    "APOLLO HOSPITALS ENTERPRISE": "APOLLOHOSP",
 }
 
 _SYMBOL_CONTEXT_TOKENS: set[str] = {
@@ -1682,18 +1697,68 @@ def run_screener_query(screen_type: str = "stage2", top_n: int = 10) -> dict:
     }
 
 
+def _normalize_index_name(index_name: str) -> str:
+    """PG-SCAN-FALLBACK: canonicalize index name to NSE form (e.g. 'NIFTY500' -> 'NIFTY 500')."""
+    raw = (index_name or "").strip().upper()
+    raw = re.sub(r"\s+", " ", raw)
+    # Insert a space between "NIFTY" and a trailing number when missing
+    m = re.match(r"^NIFTY(\d{2,4})$", raw)
+    if m:
+        return f"NIFTY {m.group(1)}"
+    # Common shorthand like "NIFTY500" embedded with suffixes is left alone
+    return raw
+
+
+def _load_index_constituents_local(index_name: str) -> list[str]:
+    """PG-SCAN-FALLBACK: load index constituents from the local CSV mapping.
+
+    Returns an empty list if the CSV is missing or the index has no entries.
+    Used as a graceful fallback when the NSE live API is blocked / returns
+    non-JSON (stale cookies, anti-bot challenge, off-hours splash page).
+    """
+    try:
+        if not INDEX_MAPPING_CSV.exists():
+            return []
+        canonical = _normalize_index_name(index_name)
+        symbols: list[str] = []
+        with INDEX_MAPPING_CSV.open("r", encoding="utf-8") as fh:
+            header = fh.readline()  # INDEX_NAME,STOCK_SYMBOL
+            del header
+            for line in fh:
+                parts = line.rstrip("\n").split(",", 1)
+                if len(parts) != 2:
+                    continue
+                idx_name, sym = parts[0].strip().upper(), parts[1].strip().upper()
+                if idx_name == canonical and sym:
+                    symbols.append(sym)
+        return list(dict.fromkeys(symbols))
+    except Exception:
+        return []
+
+
 def _fetch_nse_index_constituents(index_name: str) -> list[str]:
-    """Fetch live NSE constituents for an equity index."""
-    s = _get_live_session()
-    idx_param = index_name.upper().replace(" ", "%20")
-    r = s.get(f"https://www.nseindia.com/api/equity-stockIndices?index={idx_param}", timeout=10)
-    r.raise_for_status()
+    """Fetch live NSE constituents for an equity index.
+
+    PG-SCAN-FALLBACK: routes through :func:`_nse_get_json` (cookie-refresh
+    retry) and falls back to the local ``data/index_stock_mapping.csv`` when
+    the NSE API returns non-JSON / is blocked.
+    """
+    canonical = _normalize_index_name(index_name)
+    idx_param = canonical.replace(" ", "%20")
+    url = f"https://www.nseindia.com/api/equity-stockIndices?index={idx_param}"
     symbols: list[str] = []
-    for row in r.json().get("data", []) or []:
-        sym = str(row.get("symbol") or "").strip().upper()
-        if sym and sym != index_name.upper() and row.get("priority") != 1:
-            symbols.append(sym)
-    return list(dict.fromkeys(symbols))
+    try:
+        payload = _nse_get_json(url, timeout=10)
+        for row in payload.get("data", []) or []:
+            sym = str(row.get("symbol") or "").strip().upper()
+            if sym and sym != canonical and row.get("priority") != 1:
+                symbols.append(sym)
+    except Exception:
+        symbols = []
+    if symbols:
+        return list(dict.fromkeys(symbols))
+    # PG-SCAN-FALLBACK: NSE blocked / empty — use the local mapping CSV.
+    return _load_index_constituents_local(canonical)
 
 
 def _growth_index_names(index_scope: str) -> list[str]:
@@ -4064,6 +4129,62 @@ def _get_live_session():
     return _live_session
 
 
+def _force_refresh_live_session():
+    """Drop the cached NSE session so the next :func:`_get_live_session`
+    call performs a fresh warmup. Used as a recovery step when an NSE
+    endpoint returns a non-JSON body (cookies expired, rate-limited, or
+    the API returned the marketing splash HTML).
+    """
+    global _live_session, _live_session_ts
+    _live_session = None
+    _live_session_ts = 0.0
+
+
+def _nse_get_json(url: str, *, timeout: int = 10) -> dict:
+    """Fetch a JSON payload from an NSE endpoint with one cookie-refresh retry.
+
+    Raises ``RuntimeError`` with a human-readable message when the
+    response cannot be parsed as JSON on both the initial attempt and
+    after a forced session refresh. The legacy callers wrap this in
+    ``try/except`` so the error message ends up in the ``ERROR:`` slot
+    of the rendered ``SOURCE TRAIL`` instead of an opaque
+    ``Expecting value: line 1 column 1 (char 0)``.
+    """
+    import json as _json
+
+    def _attempt(session) -> dict:
+        resp = session.get(url, timeout=timeout)
+        status = getattr(resp, "status_code", 0)
+        body = resp.text if hasattr(resp, "text") else ""
+        body_preview = (body or "").strip()[:160]
+        if status >= 400:
+            raise RuntimeError(
+                f"NSE returned HTTP {status} for {url}; body preview: {body_preview!r}"
+            )
+        if not body_preview:
+            raise RuntimeError(f"NSE returned empty body for {url}")
+        # NSE serves a splash/landing HTML page when cookies are stale.
+        stripped = body_preview.lstrip().lower()
+        if stripped.startswith("<!doctype") or stripped.startswith("<html"):
+            raise RuntimeError(
+                f"NSE returned HTML (likely stale cookies) for {url}; preview: {body_preview!r}"
+            )
+        try:
+            return resp.json()
+        except (_json.JSONDecodeError, ValueError) as exc:
+            raise RuntimeError(
+                f"NSE returned non-JSON body for {url}: {exc}; preview: {body_preview!r}"
+            ) from exc
+
+    try:
+        return _attempt(_get_live_session())
+    except RuntimeError:
+        # Retry once with a freshly-warmed session — covers the common
+        # case where the cached session's cookies have just expired.
+        _force_refresh_live_session()
+        return _attempt(_get_live_session())
+
+
 def get_live_quote(symbol: str) -> dict:
     """Fetch live intraday quote for a single NSE symbol from the NSE API.
 
@@ -4696,56 +4817,108 @@ def get_nse_intraday_snapshot(symbol: str) -> dict:
     return _with_intraday_pg_persistence(quote)
 
 
+_VARIATIONS_BUCKET_FOR_INDEX: dict[str, str] = {
+    "NIFTY":              "NIFTY",
+    "NIFTY 50":           "NIFTY",
+    "NIFTY50":            "NIFTY",
+    "BANKNIFTY":          "BANKNIFTY",
+    "BANK NIFTY":         "BANKNIFTY",
+    "NIFTY BANK":         "BANKNIFTY",
+    "NIFTYNEXT50":        "NIFTYNEXT50",
+    "NIFTY NEXT 50":      "NIFTYNEXT50",
+    "FNO":                "FOSec",
+    "F&O":                "FOSec",
+    "FOSEC":              "FOSec",
+    "NIFTY F&O":          "FOSec",
+    "SHOCKERS":           "SecGtr20",
+    "GTR20":              "SecGtr20",
+}
+
+
+def _variations_bucket_key(index: str) -> str:
+    """Map a user-facing index name to a `live-analysis-variations` bucket.
+
+    NSE replaced the per-index `equity-stockIndices` constituent endpoint
+    with a fixed set of buckets in `live-analysis-variations`. Anything we
+    don't recognise (NIFTY 500, NIFTY MIDCAP 100, etc.) falls back to the
+    `allSec` bucket which covers the broader market.
+    """
+    key = (index or "").strip().upper()
+    key = re.sub(r"\s+", " ", key)
+    return _VARIATIONS_BUCKET_FOR_INDEX.get(key, "allSec")
+
+
+def _fmt_variation_row(x: dict) -> dict:
+    return {
+        "symbol":     x.get("symbol"),
+        "last_price": x.get("ltp"),
+        "change":     round(float(x.get("net_price", 0) or 0), 2),
+        "pct_change": round(float(x.get("perChange", 0) or 0), 2),
+        "volume":     x.get("trade_quantity"),
+        "turnover":   x.get("turnover"),
+        "day_high":   x.get("high_price"),
+        "day_low":    x.get("low_price"),
+        "open_price": x.get("open_price"),
+        "prev_price": x.get("prev_price"),
+    }
+
+
 def get_top_gainers_losers(
     index: str = "NIFTY 500",
     top_n: int = 10,
     direction: str = "both",
 ) -> dict:
-    """Return top gaining and/or losing stocks from an NSE index right now.
+    """Return top gaining and/or losing stocks from NSE right now.
+
+    Backed by NSE's `live-analysis-variations` API (the same data that
+    powers nseindia.com's "Top Gainers / Losers" page). The legacy
+    `equity-stockIndices?index=...` endpoint that this used to call was
+    deprecated by NSE and now returns 404 for every index.
 
     Args:
-        index: Index name — 'NIFTY 50', 'NIFTY BANK', 'NIFTY IT', 'NIFTY 500',
-               'NIFTY MIDCAP 100', 'NIFTY SMALLCAP 100', etc.
+        index: Universe to scan. Recognised: 'NIFTY 50', 'NIFTY BANK',
+               'NIFTY NEXT 50', 'F&O' (F&O securities), 'SHOCKERS'
+               (>20% movers). Anything else (incl. 'NIFTY 500',
+               'NIFTY MIDCAP 100') falls back to all securities.
         top_n: Number of stocks to return in each list (default 10).
         direction: 'gainers', 'losers', or 'both' (default 'both').
     """
     try:
-        s = _get_live_session()
-        from urllib.parse import quote as _urlquote
-        idx_param = _urlquote(index.upper(), safe="")
-        r2 = s.get(
-            f"https://www.nseindia.com/api/equity-stockIndices?index={idx_param}",
-            timeout=10,
-        )
-        stocks = r2.json().get("data", [])
-        # Remove index summary row (priority=1, symbol matches index name). Keep all stocks (priority=0).
-        stocks = [x for x in stocks if x.get("symbol") and x.get("priority") != 1]
-
-        sorted_asc  = sorted(stocks, key=lambda x: float(x.get("pChange", 0) or 0))
-        sorted_desc = sorted(stocks, key=lambda x: float(x.get("pChange", 0) or 0), reverse=True)
-
-        def _fmt(x: dict) -> dict:
-            return {
-                "symbol":     x.get("symbol"),
-                "last_price": x.get("lastPrice"),
-                "change":     round(float(x.get("change",  0) or 0), 2),
-                "pct_change": round(float(x.get("pChange", 0) or 0), 2),
-                "volume":     x.get("totalTradedVolume"),
-                "day_high":   x.get("dayHigh"),
-                "day_low":    x.get("dayLow"),
-                "year_high":  x.get("yearHigh"),
-                "year_low":   x.get("yearLow"),
-            }
-
+        bucket = _variations_bucket_key(index)
         result: dict = {
             "index":  index,
+            "bucket": bucket,
             "as_of":  datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "source": "NSE live API",
+            "source": "NSE live-analysis-variations",
         }
+
         if direction in ("gainers", "both"):
-            result["gainers"] = [_fmt(x) for x in sorted_desc[:top_n]]
+            payload = _nse_get_json(
+                "https://www.nseindia.com/api/live-analysis-variations?index=gainers",
+                timeout=10,
+            )
+            rows = ((payload.get(bucket) or {}).get("data") or [])
+            rows_sorted = sorted(
+                rows,
+                key=lambda x: float(x.get("perChange", 0) or 0),
+                reverse=True,
+            )[:top_n]
+            result["gainers"] = [_fmt_variation_row(x) for x in rows_sorted]
+
         if direction in ("losers", "both"):
-            result["losers"]  = [_fmt(x) for x in sorted_asc[:top_n]]
+            # NSE's endpoint spells the param `loosers` (sic) — using
+            # the correct spelling returns "Missing index or key.".
+            payload = _nse_get_json(
+                "https://www.nseindia.com/api/live-analysis-variations?index=loosers",
+                timeout=10,
+            )
+            rows = ((payload.get(bucket) or {}).get("data") or [])
+            rows_sorted = sorted(
+                rows,
+                key=lambda x: float(x.get("perChange", 0) or 0),
+            )[:top_n]
+            result["losers"] = [_fmt_variation_row(x) for x in rows_sorted]
+
         return result
     except Exception as e:
         return {"error": str(e), "index": index}
@@ -4758,41 +4931,39 @@ def get_most_active_stocks(
 ) -> dict:
     """Return most actively traded stocks by volume or traded value.
 
+    Backed by NSE's `live-analysis-most-active-securities` endpoint
+    (replaces the deprecated `equity-stockIndices` aggregation). The
+    `index` parameter is preserved for backwards compatibility but is
+    no longer honoured — NSE's endpoint returns a single market-wide
+    list — and is echoed back in the result for trace fidelity.
+
     Args:
         by: 'volume' or 'value' (default 'value').
-        index: NSE index to scan (default 'NIFTY 500').
+        index: Echoed back in the response (no longer scoped by NSE).
         top_n: Number of results (default 10).
     """
     try:
-        s = _get_live_session()
-        idx_param = index.upper().replace(" ", "%20")
-        r = s.get(
-            f"https://www.nseindia.com/api/equity-stockIndices?index={idx_param}",
+        sort_param = "volume" if by == "volume" else "value"
+        payload = _nse_get_json(
+            "https://www.nseindia.com/api/live-analysis-most-active-securities"
+            f"?index={sort_param}&limit={max(int(top_n), 1)}",
             timeout=10,
         )
-        stocks = r.json().get("data", [])
-        stocks = [x for x in stocks if x.get("symbol") and x.get("priority") != 1]
-        sort_key = "totalTradedVolume" if by == "volume" else "totalTradedValue"
-        sorted_stocks = sorted(
-            stocks,
-            key=lambda x: float(x.get(sort_key, 0) or 0),
-            reverse=True,
-        )[:top_n]
-
+        rows = payload.get("data", []) or []
         return {
             "by":     by,
             "index":  index,
             "as_of":  datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "source": "NSE live API",
+            "source": "NSE live-analysis-most-active-securities",
             "stocks": [
                 {
                     "symbol":       x.get("symbol"),
                     "last_price":   x.get("lastPrice"),
                     "pct_change":   round(float(x.get("pChange", 0) or 0), 2),
-                    "volume":       x.get("totalTradedVolume"),
-                    "traded_value": x.get("totalTradedValue"),
+                    "volume":       x.get("quantityTraded") or x.get("totalTradedVolume"),
+                    "traded_value": x.get("turnoverInLakhs") or x.get("totalTradedValue"),
                 }
-                for x in sorted_stocks
+                for x in rows[:top_n]
             ],
         }
     except Exception as e:
@@ -4804,56 +4975,61 @@ def get_52week_extremes(
     index: str = "NIFTY 500",
     top_n: int = 15,
 ) -> dict:
-    """Return stocks near their 52-week high or low from an NSE index.
+    """Return stocks at their 52-week high or low.
+
+    Backed by NSE's `live-analysis-data-52weekhighstock` /
+    `live-analysis-data-52weeklowstock` endpoints (replace the
+    deprecated `equity-stockIndices` scan). The `index` parameter is
+    preserved for backwards compatibility but is no longer used — NSE's
+    endpoint returns a single market-wide list — and is echoed back in
+    the result for trace fidelity.
 
     Args:
-        direction: 'high' (near 52w high) or 'low' (near 52w low).
-        index: NSE index name (default 'NIFTY 500').
-        top_n: Number of stocks to return (default 15).
+        direction: 'high' (at 52w high) or 'low' (at 52w low).
+        index:     Echoed back; not used to filter (NSE returns all).
+        top_n:     Number of stocks to return (default 15).
     """
     try:
-        s = _get_live_session()
-        idx_param = index.upper().replace(" ", "%20")
-        r = s.get(
-            f"https://www.nseindia.com/api/equity-stockIndices?index={idx_param}",
-            timeout=10,
+        url = (
+            "https://www.nseindia.com/api/live-analysis-data-52weekhighstock"
+            if direction == "high"
+            else "https://www.nseindia.com/api/live-analysis-data-52weeklowstock"
         )
-        stocks = r.json().get("data", [])
-        stocks = [x for x in stocks if x.get("symbol") and x.get("priority") != 1
-                  and x.get("yearHigh") and x.get("lastPrice")]
+        payload = _nse_get_json(url, timeout=10)
+        rows = payload.get("data", []) or []
 
         results = []
-        for x in stocks:
-            ltp   = float(x.get("lastPrice",  0) or 0)
-            y_hi  = float(x.get("yearHigh",   0) or 0)
-            y_lo  = float(x.get("yearLow",    0) or 0)
-            if y_hi <= 0 or ltp <= 0:
-                continue
-            pct_from_high = round((ltp - y_hi) / y_hi * 100, 1)
-            pct_from_low  = round((ltp - y_lo) / y_lo * 100, 1) if y_lo > 0 else None
-            results.append({
+        for x in rows[:top_n]:
+            ltp = float(x.get("ltp") or 0)
+            new_extreme = float(x.get("new52WHL") or 0)
+            prev_extreme = float(x.get("prev52WHL") or 0)
+            row = {
                 "symbol":         x.get("symbol"),
+                "company":        x.get("comapnyName") or x.get("companyName"),
                 "last_price":     ltp,
-                "52w_high":       y_hi,
-                "52w_low":        y_lo,
-                "pct_from_high":  pct_from_high,
-                "pct_from_low":   pct_from_low,
-                "pct_change_day": round(float(x.get("pChange", 0) or 0), 2),
-            })
-
-        if direction == "high":
-            # closest to 52w high → pct_from_high nearest 0 (from below)
-            filtered = sorted(results, key=lambda x: abs(x["pct_from_high"]))
-        else:
-            # nearest 52w low → smallest pct_from_low
-            filtered = sorted(results, key=lambda x: (x["pct_from_low"] or 999))
+                "prev_52w_extreme":  prev_extreme or None,
+                "prev_extreme_date": x.get("prevHLDate"),
+                "pct_change_day": round(float(x.get("pChange") or 0), 2),
+                "change_day":     round(float(x.get("change") or 0), 2),
+            }
+            if direction == "high":
+                row["52w_high"]      = new_extreme or None
+                row["year_high"]     = new_extreme or None  # backward-compat for renderer
+                row["pct_from_high"] = round((ltp - new_extreme) / new_extreme * 100, 2) \
+                                       if new_extreme > 0 else None
+            else:
+                row["52w_low"]      = new_extreme or None
+                row["year_low"]     = new_extreme or None   # backward-compat for renderer
+                row["pct_from_low"] = round((ltp - new_extreme) / new_extreme * 100, 2) \
+                                      if new_extreme > 0 else None
+            results.append(row)
 
         return {
             "direction": direction,
             "index":     index,
             "as_of":     datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "source":    "NSE live API",
-            "stocks":    filtered[:top_n],
+            "source":    "NSE live-analysis-data-52week",
+            "stocks":    results,
         }
     except Exception as e:
         return {"error": str(e)}
@@ -6322,14 +6498,9 @@ def scan_intraday_market(
         min_rr:           Minimum R:R ratio (default 1.5).
         top_n:            Top signals to highlight.
     """
+    # PG-SCAN-FALLBACK: use the shared helper (NSE live + local CSV fallback)
     try:
-        s = _get_live_session()
-        idx_param = index.upper().replace(" ", "%20")
-        r = s.get(
-            f"https://www.nseindia.com/api/equity-stockIndices?index={idx_param}",
-            timeout=10,
-        )
-        stocks = [x["symbol"] for x in r.json().get("data", []) if x.get("priority") != 1]
+        stocks = _fetch_nse_index_constituents(index)
     except Exception as e:
         return {"error": f"Could not fetch {index} constituents: {e}"}
 
@@ -9103,20 +9274,13 @@ def scan_mtf_aligned(
     if symbols:
         universe = [_canonical_symbol(s) for s in symbols if s and s.strip()]
     elif index:
+        # PG-SCAN-FALLBACK: use the shared helper (NSE live + local CSV fallback)
         try:
-            s = _get_live_session()
-            idx_param = index.upper().replace(" ", "%20")
-            r = s.get(
-                f"https://www.nseindia.com/api/equity-stockIndices?index={idx_param}",
-                timeout=10,
-            )
-            universe = [
-                x["symbol"]
-                for x in r.json().get("data", [])
-                if x.get("priority") != 1 and x.get("symbol")
-            ]
+            universe = _fetch_nse_index_constituents(index)
         except Exception as exc:
             return {"error": f"Could not fetch {index} constituents: {exc}"}
+        if not universe:
+            return {"error": f"No stocks found for index: {index}"}
     else:
         return {"error": "Provide either 'symbols' or 'index'."}
 
