@@ -1,0 +1,205 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# Daily NSE end-to-end refresh — runs ON YOUR MAC via a self-hosted runner.
+#
+# Why self-hosted: daily_refresh.py talks to a local PostgreSQL (`nse_market`
+# on /tmp socket), local SQLite caches under data/, and the workspace .venv.
+# A hosted runner cannot reach any of those.
+#
+# Setup once (see SETUP section at bottom of file).
+# ──────────────────────────────────────────────────────────────────────────────
+name: Daily Refresh (self-hosted, end-to-end)
+
+on:
+  schedule:
+    # 16:30 IST weekdays = 11:00 UTC (post-close + buffer for NSE EOD files)
+    - cron: '0 11 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (no DB writes, just plan steps)'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
+      extra_args:
+        description: 'Extra args passed verbatim to daily_refresh.py (e.g. --skip-analysis --skip-aux)'
+        required: false
+        default: ''
+
+# Avoid concurrent runs stomping each other (e.g. manual trigger during cron)
+concurrency:
+  group: nse-daily-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    name: End-to-end refresh
+    # IMPORTANT: register the runner with these labels (see SETUP below)
+    runs-on: [self-hosted, macOS, nse-mac]
+    permissions:
+      contents: read
+      issues: write     # needed to auto-file an issue on failure
+    timeout-minutes: 90
+
+    # Operate directly on the live workspace so PG, SQLite caches, and the
+    # existing .venv stay coherent. We skip actions/checkout for that reason.
+    defaults:
+      run:
+        working-directory: /Users/pgorai/Documents/Projects/Unified-NSE-Analysis
+        shell: bash -l {0}     # login shell so PATH/brew/launchctl env loads
+
+    steps:
+      # ── Sync code (operates in-place on the live working copy) ──────────
+      - name: Sync latest main
+        run: |
+          set -euo pipefail
+          git fetch --quiet origin main
+          # Refuse to clobber local edits — fail loud rather than silent
+          if ! git diff --quiet HEAD; then
+            echo "::warning::working tree has local changes — running with current code"
+          else
+            git checkout main
+            git reset --hard origin/main
+          fi
+          git log -1 --oneline
+
+      # ── Sanity: Postgres reachable + venv present ───────────────────────
+      - name: Preflight checks
+        run: |
+          set -euo pipefail
+          test -x .venv/bin/python || { echo "::error::.venv missing"; exit 2; }
+          psql -d nse_market -tAc "SELECT 1" >/dev/null || {
+            echo "::error::PostgreSQL nse_market unreachable"; exit 3; }
+          echo "preflight OK"
+
+      # ── The actual run ──────────────────────────────────────────────────
+      - name: Run daily_refresh.py
+        id: refresh
+        env:
+          # Inherit secrets if you use any LLM features inside daily_refresh
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          set -euo pipefail
+          ARGS=()
+          if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS+=(--dry-run); fi
+          # Pass any extra args verbatim (split on whitespace)
+          if [ -n "${{ inputs.extra_args }}" ]; then
+            # shellcheck disable=SC2206
+            EXTRA=( ${{ inputs.extra_args }} )
+            ARGS+=( "${EXTRA[@]}" )
+          fi
+
+          mkdir -p logs
+          LOG="logs/daily_refresh_$(date +%Y%m%d_%H%M%S).log"
+          echo "log=$LOG" >> "$GITHUB_OUTPUT"
+
+          # Tee to both the runner log and a persistent file in logs/
+          .venv/bin/python daily_refresh.py "${ARGS[@]}" 2>&1 | tee "$LOG"
+
+      # ── Quick freshness verdict (informational, never fails the job) ────
+      - name: Post-run freshness snapshot
+        if: always()
+        run: |
+          psql -d nse_market --pset pager=off -tAc "
+            SELECT 'equity_eod=' || MAX(trade_date) FROM market.equity_eod
+            UNION ALL SELECT 'index_eod=' || MAX(trade_date) FROM market.index_eod
+            UNION ALL SELECT 'fno_eod=' || MAX(trade_date) FROM derivatives.fno_eod
+            UNION ALL SELECT 'daily_scores=' || MAX(score_date) FROM scores.daily_scores
+            UNION ALL SELECT 'fundamental_scores=' || MAX(score_date) FROM scores.fundamental_scores
+            UNION ALL SELECT 'stage_snapshots=' || MAX(snapshot_date) FROM scores.stage_snapshots
+            UNION ALL SELECT 'breadth=' || MAX(trade_date) FROM breadth.market_daily
+            UNION ALL SELECT 'screener=' || MAX(run_date) FROM screener.screen_results;" || true
+
+      # ── Upload last 200 lines of log as workflow artifact ───────────────
+      - name: Upload run log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-refresh-log-${{ github.run_id }}
+          path: /Users/pgorai/Documents/Projects/Unified-NSE-Analysis/logs/daily_refresh_*.log
+          retention-days: 14
+
+  # ── Notify on failure: file a GitHub issue with last log tail ───────────
+  notify-on-failure:
+    name: File failure issue
+    needs: refresh
+    if: failure()
+    runs-on: [self-hosted, macOS, nse-mac]
+    permissions:
+      issues: write
+    defaults:
+      run:
+        working-directory: /Users/pgorai/Documents/Projects/Unified-NSE-Analysis
+    steps:
+      - name: Create issue with log tail
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          LATEST_LOG=$(ls -1t logs/daily_refresh_*.log 2>/dev/null | head -1 || true)
+          TAIL=""
+          if [ -n "$LATEST_LOG" ]; then
+            TAIL=$(tail -n 80 "$LATEST_LOG" | sed 's/`/\\`/g')
+          fi
+          TODAY=$(date +%Y-%m-%d)
+          BODY=$(cat <<EOF
+          Daily refresh failed on ${TODAY}.
+
+          - Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          - Commit: ${{ github.sha }}
+          - Trigger: ${{ github.event_name }}
+
+          Last 80 log lines:
+
+          \`\`\`
+          ${TAIL:-<no log file found>}
+          \`\`\`
+          EOF
+          )
+          gh issue create \
+            --title "Daily refresh failure — ${TODAY}" \
+            --label "automation,refresh-failure" \
+            --body "$BODY" || echo "::warning::gh issue create failed (is gh CLI authenticated?)"
+
+# ──────────────────────────────────────────────────────────────────────────────
+# SETUP (one-time)
+#
+# 1. Register a self-hosted runner on this Mac:
+#      GitHub → https://github.com/Pradeggg/Unified-NSE-Analysis/settings/actions/runners/new
+#      OS: macOS, Arch: ARM64 (Apple Silicon) or x64
+#      When asked for labels, ADD: nse-mac
+#      (Default labels self-hosted + macOS are added automatically.)
+#
+#    The installer will give you commands like:
+#      mkdir -p ~/actions-runner && cd ~/actions-runner
+#      curl -o actions-runner-osx-arm64.tar.gz -L <url>
+#      tar xzf actions-runner-osx-arm64.tar.gz
+#      ./config.sh --url https://github.com/Pradeggg/Unified-NSE-Analysis \
+#                  --token <TOKEN> --labels nse-mac
+#
+# 2. Install as a launchd service so it runs at login:
+#      ./svc.sh install
+#      ./svc.sh start
+#
+# 3. Ensure the runner user has:
+#      - psql on PATH (Homebrew Postgres)
+#      - the workspace at /Users/pgorai/Documents/Projects/Unified-NSE-Analysis
+#      - .venv populated
+#      - `gh` CLI authenticated  (for failure-issue creation):
+#          brew install gh && gh auth login
+#
+# 4. Disable the existing launchd daily job so we don't double-run:
+#      launchctl unload ~/Library/LaunchAgents/com.agentadda.daily_refresh.plist
+#      # (or: launchctl bootout gui/$UID/com.agentadda.daily_refresh)
+#
+# 5. Trigger a manual smoke test:
+#      gh workflow run "Daily Refresh (self-hosted, end-to-end)" \
+#          -f dry_run=true
+#
+# Notes:
+#   - The existing `.github/workflows/daily_nse_refresh.yml` runs on
+#     ubuntu-latest and CANNOT reach your local Postgres. Consider disabling
+#     its schedule (delete the `schedule:` block) once this workflow is green.
+#   - 16:30 IST = 11:00 UTC. GitHub cron is always UTC and best-effort
+#     (may drift up to ~15 min during peak load).
+# ──────────────────────────────────────────────────────────────────────────────
