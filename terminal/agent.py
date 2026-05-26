@@ -3379,6 +3379,77 @@ def _execute_plan(plan: list[tuple[str, dict]]) -> list[dict]:
     return results
 
 
+def _execute_plan_layered(
+    specs: "tuple",
+    max_workers: int = 4,
+) -> list[dict]:
+    """Execute a tuple of ``ToolCallSpec`` honouring declared deps.
+
+    Uses ``terminal.router.task_graph.dependency_layers`` to group the
+    plan into layers of mutually-independent calls; each layer is then
+    dispatched in parallel via a ``ThreadPoolExecutor``. Between
+    layers, a freshly resolved symbol is patched into any downstream
+    args that referenced the original fuzzy query (mirrors the
+    sequential ``_execute_plan`` behaviour).
+
+    The returned ``results`` list preserves layered, deterministic
+    order (within a layer, original input order is kept).
+    """
+    from concurrent.futures import ThreadPoolExecutor
+
+    from terminal.router.task_graph import _ensure_ids, dependency_layers
+
+    if not specs:
+        return []
+
+    specs = _ensure_ids(specs)
+    layers = dependency_layers(specs)
+    pending_args: dict[str, dict] = {s.task_id: dict(s.args) for s in specs}
+    results: list[dict] = []
+    resolved_sym: str | None = None
+    resolve_query: str | None = None
+
+    def _apply_resolved(sym: str, query: str | None) -> None:
+        for spec in specs:
+            args = pending_args[spec.task_id]
+            if "symbol" in args and not args["symbol"]:
+                args["symbol"] = sym
+            if query:
+                for k, v in list(args.items()):
+                    if isinstance(v, str) and v.upper() == query.upper():
+                        args[k] = sym
+
+    for layer in layers:
+        if len(layer) == 1:
+            spec = layer[0]
+            args = pending_args[spec.task_id]
+            result = call_tool(spec.tool, args)
+            results.append({"tool": spec.tool, "args": args, "result": result})
+            if spec.tool == "resolve_symbol" and isinstance(result, dict) and result.get("symbol"):
+                resolved_sym = result["symbol"]
+                resolve_query = args.get("query")
+                _apply_resolved(resolved_sym, resolve_query)
+            continue
+
+        workers = min(max_workers, len(layer))
+        with ThreadPoolExecutor(max_workers=workers) as ex:
+            futures = [
+                (spec, ex.submit(call_tool, spec.tool, pending_args[spec.task_id]))
+                for spec in layer
+            ]
+            for spec, fut in futures:
+                result = fut.result()
+                args = pending_args[spec.task_id]
+                results.append({"tool": spec.tool, "args": args, "result": result})
+                if spec.tool == "resolve_symbol" and isinstance(result, dict) and result.get("symbol"):
+                    resolved_sym = result["symbol"]
+                    resolve_query = args.get("query")
+        if resolved_sym:
+            _apply_resolved(resolved_sym, resolve_query)
+
+    return results
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Response synthesis
 # ─────────────────────────────────────────────────────────────────────────────
@@ -6722,7 +6793,14 @@ class Agent:
                 mode_suffix=mode_suffix,
                 trace=trace,
             )
-        tool_results = _execute_plan(tool_plan)
+        has_deps = any(getattr(s, "blocked_by", ()) for s in decision.tool_plan)
+        if has_deps:
+            from terminal.router.task_graph import dependency_layers
+            layers = dependency_layers(decision.tool_plan)
+            tool_results = _execute_plan_layered(decision.tool_plan)
+            trace.append({"step": "layered_execution", "layers": len(layers)})
+        else:
+            tool_results = _execute_plan(tool_plan)
         trace.extend(tool_results)
 
         # Derive the synthesis intent from the executed plan tools so the

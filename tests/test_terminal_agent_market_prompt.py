@@ -280,7 +280,7 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
             result = agent.query(query)
 
         execute_plan.assert_called_once()
-        self.assertEqual(result["intent"], "market_situation_assessment")
+        self.assertEqual(result["intent"], "market_situation")
         self.assertNotIn("SITUATION ASSESSMENT PLAN", result["answer"])
         self.assertNotIn("derived_from=get_live_market_overview", result["answer"])
         self.assertNotIn("recovery/code plan", result["answer"])
@@ -1192,7 +1192,7 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
         agent.backend = object()
         agent.backend_name = "TestBackend"
 
-        with patch("terminal.agent._execute_plan") as execute_plan:
+        with patch("terminal.agent._execute_plan_layered") as execute_plan:
             execute_plan.return_value = [
                 {"tool": "resolve_symbol", "args": {"query": "DIXON"}, "result": {"symbol": "DIXON"}},
                 {
@@ -1485,7 +1485,7 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
             result = agent.query(query)
 
         execute_plan.assert_called_once()
-        self.assertEqual(result["intent"], "intraday_index_scan")
+        self.assertEqual(result["intent"], "market_situation")
         self.assertIn("INTRADAY INDEX SCAN", result["answer"])
         self.assertIn("NIFTY MIDCAP 100", result["answer"])
         self.assertIn("invalidation 97.5", result["answer"])
@@ -1629,6 +1629,7 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
             execute_plan.return_value = [
                 {"tool": "resolve_symbol", "args": {"query": "NAVABUPA"}, "result": {"symbol": "TALBROAUTO"}},
                 {"tool": "get_symbol_snapshot", "args": {"symbol": "TALBROAUTO"}, "result": {"symbol": "TALBROAUTO"}},
+                {"tool": "get_technical_setup", "args": {"symbol": "TALBROAUTO"}, "result": {"symbol": "TALBROAUTO"}},
             ]
             result = agent.query("NAVABUPA technical setup")
 
@@ -1656,6 +1657,56 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
         self.assertNotIn("SYMBOL VALIDATION FAILED", result["answer"])
         self.assertNotIn("Requested symbol(s): SAKAR, ADX, MA", result["answer"])
         self.assertIn("SAKAR", result["answer"])
+
+    def test_bare_symbol_route_runs_full_stock_brief_plan(self):
+        agent = Agent()
+        agent.backend = object()
+        agent.backend_name = "TestBackend"
+
+        with patch("terminal.agent._execute_plan") as execute_plan:
+            execute_plan.return_value = [
+                {"tool": "resolve_symbol", "args": {"query": "PERSISTENT"}, "result": {"symbol": "PERSISTENT"}},
+                {"tool": "scrape_screener_in", "args": {"symbol": "PERSISTENT"}, "result": {"symbol": "PERSISTENT"}},
+                {"tool": "get_symbol_snapshot", "args": {"symbol": "PERSISTENT"}, "result": {"symbol": "PERSISTENT", "price": 100}},
+                {"tool": "get_technical_setup", "args": {"symbol": "PERSISTENT"}, "result": {"symbol": "PERSISTENT", "rsi": 55}},
+                {"tool": "get_sector_context", "args": {"sector_or_symbol": "PERSISTENT"}, "result": {"symbol": "PERSISTENT"}},
+            ]
+            result = agent.query("PERSISTENT")
+
+        planned = execute_plan.call_args.args[0]
+        self.assertEqual(
+            [name for name, _args in planned[:5]],
+            [
+                "resolve_symbol",
+                "scrape_screener_in",
+                "get_symbol_snapshot",
+                "get_technical_setup",
+                "get_sector_context",
+            ],
+        )
+        self.assertEqual(result["intent"], "stock_brief")
+        self.assertNotIn("REQUIRED TOOL VALIDATION FAILED", result["answer"])
+
+    def test_entity_topic_technical_route_runs_stock_brief_required_tools(self):
+        agent = Agent()
+        agent.backend = object()
+        agent.backend_name = "TestBackend"
+
+        with patch("terminal.agent._execute_plan") as execute_plan:
+            execute_plan.return_value = [
+                {"tool": "resolve_symbol", "args": {"query": "PERSISTENT"}, "result": {"symbol": "PERSISTENT"}},
+                {"tool": "get_symbol_snapshot", "args": {"symbol": "PERSISTENT"}, "result": {"symbol": "PERSISTENT", "price": 100}},
+                {"tool": "get_technical_setup", "args": {"symbol": "PERSISTENT"}, "result": {"symbol": "PERSISTENT", "rsi": 55}},
+            ]
+            result = agent.query("PERSISTENT technical setup")
+
+        planned = execute_plan.call_args.args[0]
+        planned_tools = [name for name, _args in planned]
+        self.assertIn("resolve_symbol", planned_tools)
+        self.assertIn("get_symbol_snapshot", planned_tools)
+        self.assertIn("get_technical_setup", planned_tools)
+        self.assertEqual(result["intent"], "stock_brief")
+        self.assertNotIn("REQUIRED TOOL VALIDATION FAILED", result["answer"])
 
     def test_symbol_validator_ignores_generated_stock_360_instruction_words(self):
         from terminal.agent import _validate_symbol_grounding
@@ -2081,6 +2132,29 @@ class TerminalAgentMarketPromptTests(unittest.TestCase):
         self.assertIn("run_forensic_analysis", tools)
         self.assertIn("deep_search", tools)
 
+    def test_report_research_prompt_routes_to_full_360_plan(self):
+        from terminal.agent import _keyword_intent
+        from terminal.reports import get_report_prompt
+
+        prompt = get_report_prompt("research", "MODISONLTD", "html")
+        routed = _keyword_intent(prompt)
+        tools = [name for name, _args in routed["plan"]]
+
+        self.assertEqual(routed["intent"], "stock_brief")
+        self.assertIn(("resolve_symbol", {"query": "MODISONLTD"}), routed["plan"])
+        self.assertIn("get_symbol_snapshot", tools)
+        self.assertIn("scrape_screener_in", tools)
+        self.assertIn("get_technical_setup", tools)
+        self.assertIn("comprehensive_stock_research", tools)
+        self.assertIn("run_forensic_analysis", tools)
+        self.assertIn("search_shareholding_analysis", tools)
+        self.assertIn("search_concall_transcripts", tools)
+        self.assertIn("analyze_concall_sentiment", tools)
+        self.assertIn("search_latest_catalysts", tools)
+        self.assertIn("get_sector_context", tools)
+        self.assertIn("search_broker_research", tools)
+        self.assertIn("get_latest_results", tools)
+
     def test_required_tool_validator_allows_stock_brief_when_dynamic_tools_run(self):
         from terminal.agent import _validate_required_tools
 
@@ -2108,7 +2182,7 @@ class UnifiedRouterAgentWiringTests(unittest.TestCase):
     def test_unified_router_executes_compound_stock_plan_for_dixon_prompt(self):
         agent = self._make_agent()
 
-        with patch("terminal.agent._execute_plan") as execute_plan:
+        with patch("terminal.agent._execute_plan_layered") as execute_plan:
             execute_plan.return_value = [
                 {"tool": "resolve_symbol", "args": {"query": "dixon"}, "result": {"symbol": "DIXON"}},
                 {"tool": "get_live_quote", "args": {"symbol": "DIXON"}, "result": {"symbol": "DIXON", "last_price": 11258}},
