@@ -94,7 +94,9 @@ jobs:
           echo "log=$LOG" >> "$GITHUB_OUTPUT"
 
           # Tee to both the runner log and a persistent file in logs/
-          .venv/bin/python daily_refresh.py "${ARGS[@]}" 2>&1 | tee "$LOG"
+          # NOTE: "${ARGS[@]+"${ARGS[@]}"}" — safe-expand empty array under `set -u`
+          # (plain "${ARGS[@]}" trips "unbound variable" on bash 3.2 / macOS).
+          .venv/bin/python daily_refresh.py "${ARGS[@]+"${ARGS[@]}"}" 2>&1 | tee "$LOG"
 
       # ── Quick freshness verdict (informational, never fails the job) ────
       - name: Post-run freshness snapshot
