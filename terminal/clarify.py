@@ -98,17 +98,32 @@ class Option:
         tools: list[tuple[str, dict[str, Any]]],
         resolved_entities: Iterable[str] = (),
         preview: str = "",
+        evidence_plan: Iterable[str] | None = None,
+        user_is_asking: str = "",
+        context_found: str = "",
     ) -> "Option":
-        """Build an option that runs a tool plan when selected."""
+        """Build an option that runs a tool plan when selected.
+
+        Optional ``evidence_plan`` / ``user_is_asking`` / ``context_found``
+        propagate into ``bound_action`` for downstream evidence-gate and
+        synthesis-intent inference once the user picks this option.
+        """
+        action: dict[str, Any] = {
+            "decision": "run_tool_plan",
+            "tool_plan": list(tools),
+            "resolved_entities": list(resolved_entities),
+        }
+        if evidence_plan is not None:
+            action["evidence_plan"] = list(evidence_plan)
+        if user_is_asking:
+            action["user_is_asking"] = user_is_asking
+        if context_found:
+            action["context_found"] = context_found
         return cls(
             label=label,
             text=text,
             preview=preview,
-            bound_action={
-                "decision": "run_tool_plan",
-                "tool_plan": list(tools),
-                "resolved_entities": list(resolved_entities),
-            },
+            bound_action=action,
         )
 
     @classmethod
@@ -166,6 +181,8 @@ class AskUserQuestion:
     context_found: str = ""
     source_assessment: str = ""
     confidence: str = "medium"
+    clarification_question: str = ""
+    plan: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         self._validate()
@@ -221,9 +238,11 @@ class AskUserQuestion:
             user_is_asking=self.user_is_asking,
             context_found=self.context_found,
             source_assessment=self.source_assessment,
+            clarification_question=self.clarification_question,
             clarification_questions=tuple(
                 q.to_clarification_question() for q in self.questions
             ),
+            plan=list(self.plan),
         )
 
 

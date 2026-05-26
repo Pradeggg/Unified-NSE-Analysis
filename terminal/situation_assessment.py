@@ -725,51 +725,63 @@ def assess_followup(user_input: str, previous_context: TurnContext | None) -> Si
         # Genuinely ambiguous — ask with structured options. Each option
         # carries a bound_action so the reply binds straight to the tool
         # plan without re-running symbol resolution.
-        options: list[ClarificationOption] = []
+        # AA-CC-1: built via the AskUserQuestion ergonomic builder.
         if report_path:
-            options = [
-                ClarificationOption(
-                    label="A",
-                    text="Open the report",
-                    bound_action={
-                        "decision": "run_tool_plan",
-                        "tool_plan": [("open_report", {"path": report_path})],
-                        "evidence_plan": ["open_report"],
-                        "resolved_entities": list(previous_context.symbols),
-                        "user_is_asking": "Open the prior report referenced by the previous conversation.",
-                        "context_found": _report_context_found(previous_context, report_path),
-                    },
+            from .clarify import AskUserQuestion, Option, Question
+
+            ctx_found = _report_context_found(previous_context, report_path)
+            resolved = list(previous_context.symbols)
+            ask = AskUserQuestion(
+                user_is_asking="The user is asking a report-based follow-up.",
+                context_found=_context_found(previous_context),
+                source_assessment=_source_assessment(previous_context),
+                clarification_question=(
+                    "Do you want me to open the report, summarize its recommendation, "
+                    "or read the report contents?"
                 ),
-                ClarificationOption(
-                    label="B",
-                    text="Summarize its recommendation",
-                    bound_action={
-                        "decision": "run_tool_plan",
-                        "tool_plan": [
-                            ("read_report", {"path": report_path, "max_chars": 12000}),
-                            ("summarize_report", {"path": report_path}),
+                plan=[
+                    "Use prior conversation/report context.",
+                    "Ask for the desired report evaluation before running new tools.",
+                ],
+                questions=[
+                    Question(
+                        prompt="What would you like me to do with the prior report?",
+                        default_label="B",
+                        options=[
+                            Option.run_tool_plan(
+                                label="A", text="Open the report",
+                                tools=[("open_report", {"path": report_path})],
+                                evidence_plan=["open_report"],
+                                resolved_entities=resolved,
+                                user_is_asking="Open the prior report referenced by the previous conversation.",
+                                context_found=ctx_found,
+                            ),
+                            Option.run_tool_plan(
+                                label="B", text="Summarize its recommendation",
+                                tools=[
+                                    ("read_report", {"path": report_path, "max_chars": 12000}),
+                                    ("summarize_report", {"path": report_path}),
+                                ],
+                                evidence_plan=["read_report", "summarize_report"],
+                                resolved_entities=resolved,
+                                user_is_asking="Summarize the prior report's recommendation.",
+                                context_found=ctx_found,
+                            ),
+                            Option.run_tool_plan(
+                                label="C", text="Read report contents",
+                                tools=[
+                                    ("read_report", {"path": report_path, "max_chars": 12000}),
+                                ],
+                                evidence_plan=["read_report"],
+                                resolved_entities=resolved,
+                                user_is_asking="Read the prior report contents.",
+                                context_found=ctx_found,
+                            ),
                         ],
-                        "evidence_plan": ["read_report", "summarize_report"],
-                        "resolved_entities": list(previous_context.symbols),
-                        "user_is_asking": "Summarize the prior report's recommendation.",
-                        "context_found": _report_context_found(previous_context, report_path),
-                    },
-                ),
-                ClarificationOption(
-                    label="C",
-                    text="Read report contents",
-                    bound_action={
-                        "decision": "run_tool_plan",
-                        "tool_plan": [
-                            ("read_report", {"path": report_path, "max_chars": 12000}),
-                        ],
-                        "evidence_plan": ["read_report"],
-                        "resolved_entities": list(previous_context.symbols),
-                        "user_is_asking": "Read the prior report contents.",
-                        "context_found": _report_context_found(previous_context, report_path),
-                    },
-                ),
-            ]
+                    ),
+                ],
+            )
+            return ask.to_assessment()
         return SituationAssessment(
             applies=True,
             decision="ask_clarification",
@@ -781,13 +793,6 @@ def assess_followup(user_input: str, previous_context: TurnContext | None) -> Si
                 "Do you want me to open the report, summarize its recommendation, "
                 "or read the report contents?"
             ),
-            clarification_questions=(
-                ClarificationQuestion(
-                    prompt="What would you like me to do with the prior report?",
-                    options=tuple(options),
-                    default_label="B" if options else "",
-                ),
-            ) if options else (),
             plan=[
                 "Use prior conversation/report context.",
                 "Ask for the desired report evaluation before running new tools.",
