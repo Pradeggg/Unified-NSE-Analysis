@@ -2,9 +2,19 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass, field
 from typing import Any
+
+# PG-PLAN 2026-05-25: first-class planner used after situation assessment.
+from .post_assessment_planner import (
+    plan_compare_fundamentals,
+    plan_news_and_results,
+    plan_review_setups,
+)
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -37,10 +47,16 @@ class ClarificationOption:
     "tool_plan": [...], "resolved_entities": [...]}`. The agent must NOT
     re-resolve symbols or topics from the reply text; this binding is the
     authoritative routing.
+
+    `preview` is an optional display-only hint shown alongside the option
+    in NEXT OPTIONS rendering. It does not affect routing — use it to give
+    the user a 1-line teaser of what running this option would surface
+    ("shows 15m setup for RELIANCE", "fetches last 30m bars", etc.).
     """
     label: str
     text: str
     bound_action: dict = field(default_factory=dict)
+    preview: str = ""
 
 
 @dataclass(frozen=True)
@@ -72,6 +88,12 @@ class SituationAssessment:
     # PG-HALL-GUARD: Tag identifying the grounded intent family, e.g.
     # "intraday_rs", "index_scan", "screener", "gainers_losers".
     grounded_intent: str = ""
+    # PG-PLAN 2026-05-25: Explicit synthesis_intent declared by the
+    # post-assessment planner. When non-empty, the agent's executor uses
+    # this verbatim for the universal claim-gate's required-tool lookup
+    # instead of inferring an intent from the first plan tool. Keeps
+    # planning + required-tool contract co-located.
+    synthesis_intent: str = ""
 
 
 # PG-HALL-GUARD: Phrase fragments that signal a data-grounded scan/ranking
@@ -779,6 +801,31 @@ def assess_followup(user_input: str, previous_context: TurnContext | None) -> Si
             "Do you want live quotes, last-30-minute momentum, 15m intraday setups, or news/catalysts for these?",
         )
 
+    # PG-PLAN 2026-05-25: Collective NEWS-or-RESULTS follow-up — user
+    # references the prior result list ("these top gainers", "the above
+    # stocks", …) AND explicitly asks for news/announcements/earnings
+    # ("any news or results for …"). This must be checked BEFORE the
+    # fundamentals branch because "results" also matches the fundamentals
+    # predicate, but news+results requires per-symbol get_latest_results
+    # plus the event calendar, NOT compare_stocks(fundamental).
+    if _refers_to_prior_list(q) and _asks_collective_news_or_results(q):
+        symbols = _symbols_for_collective_reference(q, previous_context)
+        planned = plan_news_and_results(symbols)
+        if planned is not None:
+            return SituationAssessment(
+                applies=True,
+                decision="run_tool_plan",
+                confidence="high",
+                user_is_asking=planned.user_is_asking,
+                context_found=_context_found(previous_context),
+                source_assessment=_source_assessment(previous_context),
+                resolved_entities=planned.resolved_entities,
+                evidence_plan=planned.evidence_plan,
+                tool_plan=planned.tool_plan,
+                plan=planned.narrative,
+                synthesis_intent=planned.synthesis_intent,
+            )
+
     # Collective fundamentals/results follow-up: user references the prior
     # result list ("the above stocks", "these stocks", "the gainers", …)
     # and asks for fundamental/earnings/ratio analysis. Without this rule
@@ -787,27 +834,22 @@ def assess_followup(user_input: str, previous_context: TurnContext | None) -> Si
     # get_latest_results(symbol='THE ABOVE STOCKS')).
     if _refers_to_prior_list(q) and _asks_collective_fundamentals(q):
         symbols = _symbols_for_collective_reference(q, previous_context)
-        if symbols:
-            symbols = symbols[:5]
+        # PG-PLAN 2026-05-25: delegate the concrete tool_plan + intent to
+        # the planner so the required-tool contract lives next to the plan.
+        planned = plan_compare_fundamentals(symbols)
+        if planned is not None:
             return SituationAssessment(
                 applies=True,
                 decision="run_tool_plan",
                 confidence="high",
-                user_is_asking=(
-                    f"Fundamental analysis for the prior result list "
-                    f"({', '.join(symbols)})."
-                ),
+                user_is_asking=planned.user_is_asking,
                 context_found=_context_found(previous_context),
                 source_assessment=_source_assessment(previous_context),
-                resolved_entities=symbols,
-                evidence_plan=["compare_stocks"],
-                tool_plan=[("compare_stocks", {"symbols": symbols, "aspects": ["fundamental"]})],
-                plan=[
-                    f"Bind the reply to the prior result list ({len(symbols)} symbols).",
-                    "Run compare_stocks on those symbols across fundamental ratios "
-                    "(P/E, P/B, ROE, ROCE, debt/equity).",
-                    "Do not resolve the phrase 'the above stocks' as a new ticker.",
-                ],
+                resolved_entities=planned.resolved_entities,
+                evidence_plan=planned.evidence_plan,
+                tool_plan=planned.tool_plan,
+                plan=planned.narrative,
+                synthesis_intent=planned.synthesis_intent,
             )
 
     # Implicit prior-report follow-up ("summarize", "tldr", "the recommendation",
@@ -869,28 +911,21 @@ def assess_followup(user_input: str, previous_context: TurnContext | None) -> Si
             symbols = list(groups.get("short") or [])
         else:
             symbols = list(groups.get("long") or []) + list(groups.get("short") or [])
-        symbols = _dedupe(symbols)[:10]
-        if symbols:
-            label = (
-                "long setups" if direction == "long"
-                else "short setups" if direction == "short"
-                else "setups"
-            )
+        # PG-PLAN 2026-05-25: delegate plan construction to the planner.
+        planned = plan_review_setups(symbols, direction)
+        if planned is not None:
             return SituationAssessment(
                 applies=True,
                 decision="run_tool_plan",
                 confidence="high",
-                user_is_asking=f"Deep-dive review of the prior intraday scan's {label}.",
+                user_is_asking=planned.user_is_asking,
                 context_found=_context_found(previous_context),
                 source_assessment=_source_assessment(previous_context),
-                resolved_entities=symbols,
-                evidence_plan=["compare_stocks"],
-                tool_plan=[("compare_stocks", {"symbols": symbols, "aspects": ["both"]})],
-                plan=[
-                    f"Bind the reply to the prior scan's {label} ({len(symbols)} symbols).",
-                    "Run compare_stocks on those symbols across technical + fundamental aspects.",
-                    "Do not resolve a new symbol from the reply text; the binding is authoritative.",
-                ],
+                resolved_entities=planned.resolved_entities,
+                evidence_plan=planned.evidence_plan,
+                tool_plan=planned.tool_plan,
+                plan=planned.narrative,
+                synthesis_intent=planned.synthesis_intent,
             )
 
     if _asks_last_window(q) and previous_context.result_type == "stage2_screener":
@@ -1324,6 +1359,8 @@ def _render_structured_clarifications(
         for opt in q.options:
             marker = "*" if opt.label == q.default_label else " "
             lines.append(f"      [{opt.label}]{marker} {opt.text} — Use: `{opt.label}` or `{opt.text}`")
+            if opt.preview:
+                lines.append(f"           ↪ {opt.preview}")
         if len(questions) > 1:
             lines.append("")
     lines.append("  Reply with A, B, or C, or use the option text.")
@@ -1447,6 +1484,53 @@ def _refers_to_prior_list(q: str) -> bool:
 
 def _asks_collective_fundamentals(q: str) -> bool:
     return any(term in q for term in _COLLECTIVE_FUNDAMENTAL_TERMS)
+
+
+# PG-PLAN 2026-05-25: True when the user explicitly asks for news/announcements/
+# results/catalysts on a prior result list. Distinct from the fundamentals
+# predicate so "any news or results for these top gainers" routes to
+# get_latest_results + get_event_calendar_summary instead of
+# compare_stocks(fundamental).
+_COLLECTIVE_NEWS_RESULTS_TERMS: tuple[str, ...] = (
+    "news",
+    "headlines",
+    "announcement",
+    "announcements",
+    "corporate action",
+    "corporate actions",
+    "filings",
+    "disclosure",
+    "disclosures",
+    "catalyst",
+    "catalysts",
+    "events",
+    "upcoming",
+)
+
+# Terms that, combined with the news terms above, signal a results-or-news
+# follow-up rather than a fundamentals deep-dive. Bare "results" alone is
+# ambiguous (the fundamentals predicate also claims it), so we require
+# either an explicit news term OR the "news"+"results" co-occurrence.
+_RESULTS_NEWS_PAIR_TERMS: tuple[str, ...] = (
+    "results",
+    "earnings",
+    "quarterly",
+)
+
+
+def _asks_collective_news_or_results(q: str) -> bool:
+    """Detect 'any news or results / announcements / catalysts ...' follow-ups.
+
+    Matches when:
+      * the query contains any news/announcement/catalyst/event term, OR
+      * the query mentions BOTH "news" and a results term (e.g.
+        "news or results", "news and earnings").
+    """
+    has_news_term = any(term in q for term in _COLLECTIVE_NEWS_RESULTS_TERMS)
+    if has_news_term:
+        return True
+    has_results_term = any(term in q for term in _RESULTS_NEWS_PAIR_TERMS)
+    return "news" in q and has_results_term
 
 
 def _symbols_for_collective_reference(
