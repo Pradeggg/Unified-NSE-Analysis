@@ -1255,6 +1255,21 @@ _DYNAMIC_EVIDENCE_REQUIRED_INTENTS: frozenset[str] = frozenset(
 )
 
 
+# AA-UR-6: routing providers whose RouteDecision carries an executable
+# tool plan that ``Agent._execute_route`` should run directly without
+# falling through to subsequent pipeline stages.  Kept module-level so
+# we don't rebuild it on every router invocation.
+_ROUTER_DIRECT_PLAN_PROVIDERS: frozenset[str] = frozenset({
+    "CompoundStockProvider",
+    "PendingOptionProvider",
+    "EntityTopicProvider",     # "RELIANCE technicals/fundamentals/quote"
+    "VisualScanProvider",      # "chart RELIANCE", "visual scan INFY"
+    "MarketSituationProvider", # "market situation", "intraday scan"
+    "TopMoversProvider",       # "top gainers", "top losers"
+    "DirectIntentProvider",    # last-resort symbol+topic fallback
+})
+
+
 def _explicit_requested_symbols(query: str) -> list[str]:
     """Return explicit ticker-looking symbols from user text without fuzzy substitution."""
     requested = validate_requested_symbols(query or "").get("requested_symbols", [])
@@ -6571,58 +6586,44 @@ class Agent:
         mode_suffix: str,
         trace: list[dict],
     ) -> dict | None:
-        """Execute a :class:`RouteDecision` if AA-UR-6 owns its path.
+        """Execute a :class:`RouteDecision` if the unified router owns its path.
 
         Returns the agent response dict when the router fully handles the
-        request, or ``None`` to fall through to the legacy branches in
-        :meth:`_query_single`.
+        request, or ``None`` to fall through to subsequent stages of
+        :meth:`_query_single` (entity topic → situation assessment →
+        keyword + LLM).
 
-        **Phase 1** (original): CompoundStockProvider ``compound_plan``
-        and PendingOptionProvider ``direct_tool_plan`` routes.
+        Owned route types: ``compound_plan`` and ``direct_tool_plan``
+        emitted by providers in :data:`_ROUTER_DIRECT_PLAN_PROVIDERS`.
 
-        **Phase 2** (this commit): additionally owns ``direct_tool_plan``
-        routes from EntityTopicProvider, VisualScanProvider,
-        MarketSituationProvider, and DirectIntentProvider.  All four
-        have a validated non-empty tool plan so execution and synthesis
-        are identical to the Phase 1 pattern.
-
-        ``contextual_answer`` routes (ContextualFollowupProvider,
-        ReportProvider) carry no tool plan and still fall through to the
-        legacy situation-assessment and report-recall branches.  They
-        will migrate in Phase 3 once a context-synthesis helper is wired
-        into this method.
-
-        ``blocked_ungrounded`` also falls through while legacy keyword /
-        LLM branches remain in place; Phase 3 will make it terminal.
+        Fall through (return ``None``):
+          * ``blocked_ungrounded`` — validation rewrote the plan to a
+            refusal.  Subsequent stages may still serve the prompt
+            (e.g. the LLM path can answer a generic question that the
+            router considered ungrounded).
+          * ``contextual_answer`` — ContextualFollowupProvider and
+            ReportProvider carry no executable plan; the
+            situation-assessment stage handles them with
+            context-synthesis logic.
+          * Validation failure or empty tool plan — defensive guard.
+          * Selected provider not in the direct-plan set.
         """
         selected = decision.reasoning_summary.selected_branch
         route_type = decision.route_type
 
-        # ``blocked_ungrounded``: still a fall-through in Phase 2.
-        # The legacy keyword-intent and LLM branches remain alive and
-        # can handle some routes that the provider over-triggers on.
-        # Phase 3 makes this terminal once legacy branches are deleted.
         if route_type == "blocked_ungrounded":
+            trace.append({"step": "router_fallthrough", "reason": "blocked_ungrounded"})
             return None
 
-        # ``contextual_answer`` routes have no tool plan — they require
-        # context-synthesis logic not yet wired into _execute_route.
-        # Fall through to the legacy assess_followup / report-recall paths.
         if not decision.validation.ok or not decision.tool_plan:
+            trace.append({
+                "step": "router_fallthrough",
+                "reason": "no_executable_plan",
+                "route_type": route_type,
+            })
             return None
 
-        # Phase 2: all providers that emit a validated direct_tool_plan
-        # or compound_plan are now owned by the router executor.
-        _P2_DIRECT_PLAN_PROVIDERS = frozenset({
-            "CompoundStockProvider",
-            "PendingOptionProvider",
-            "EntityTopicProvider",    # "RELIANCE technicals/fundamentals/quote"
-            "VisualScanProvider",     # "chart RELIANCE", "visual scan INFY"
-            "MarketSituationProvider",  # "market situation", "intraday scan"
-            "TopMoversProvider",      # "top gainers", "top losers"
-            "DirectIntentProvider",   # last-resort symbol+topic fallback
-        })
-        if selected not in _P2_DIRECT_PLAN_PROVIDERS:
+        if selected not in _ROUTER_DIRECT_PLAN_PROVIDERS:
             return None
         if route_type not in {"compound_plan", "direct_tool_plan"}:
             return None
