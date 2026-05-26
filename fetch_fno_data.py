@@ -735,6 +735,28 @@ def main():
         SIGNALS_CSV.unlink()
 
     ref_date = datetime.strptime(args.date, "%Y-%m-%d") if args.date else datetime.now()
+
+    # ── Optimus/2026-05-27: top up F&O bhavcopy cache before signal generation.
+    # generate_fno_signals() short-circuits when Postgres already has signals,
+    # which meant fresh bhavcopy CSVs never landed in data/_fno_cache/ and the
+    # daily refresh stayed stuck on a stale max(trade_date) in derivatives.fno_eod.
+    # Always perform an incremental cache top-up so postgres/loader.py --fno-only
+    # can ingest the latest sessions.  --backfill N controls how many days back.
+    if args.backfill and args.backfill > 0:
+        days_to_check = [ref_date] + _previous_trading_days(args.backfill, ref_date)
+        print(f"  Topping up F&O bhavcopy cache: checking {len(days_to_check)} day(s) back to "
+              f"{days_to_check[-1].strftime('%Y-%m-%d')}…")
+        fetched = 0
+        for dt in days_to_check:
+            cache_csv = CACHE_DIR / f"fo_bhav_{dt.strftime('%Y%m%d')}.csv"
+            if cache_csv.exists() and cache_csv.stat().st_size > 100:
+                continue
+            df = fetch_fo_bhavcopy(dt)
+            if df is not None and not df.empty:
+                fetched += 1
+            time.sleep(0.5)
+        print(f"  Cache top-up complete: {fetched} new file(s) downloaded.")
+
     signals = generate_fno_signals(reference_date=ref_date)
 
     if signals.empty:

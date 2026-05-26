@@ -147,7 +147,11 @@ def step_fetch_auxiliary(dry_run: bool) -> dict[str, bool]:
 
     scripts = [
         ("FII/DII Flows",        [PYTHON, "fetch_fii_dii_flows.py"]),
-        ("F&O OI + PCR",         [PYTHON, "fetch_fno_data.py"]),
+        # Optimus/2026-05-27: pass --backfill 7 so missing FO bhavcopy CSVs are
+        # downloaded into data/_fno_cache/ before STEP 1B loads them into Postgres.
+        # Without this, generate_fno_signals() short-circuits on stale PG cache
+        # and derivatives.fno_eod stays frozen at the last successful bhavcopy date.
+        ("F&O OI + PCR",         [PYTHON, "fetch_fno_data.py", "--backfill", "7"]),
         ("Corporate Events",     [PYTHON, "fetch_corporate_events.py"]),
         ("Insider Alerts",       [PYTHON, "fetch_insider_alerts.py"]),
         ("Macro Proxies",        [PYTHON, "fetch_macro_proxies.py"]),
