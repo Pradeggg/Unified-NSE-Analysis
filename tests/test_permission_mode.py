@@ -173,5 +173,59 @@ class TestPlanModeRender(unittest.TestCase):
         self.assertIn("0 steps", result["answer"])
 
 
+class TestModeSlashCommand(unittest.TestCase):
+    """AA-CC-2: ``/mode`` runtime control surface."""
+
+    def _agent(self):
+        from terminal.agent import Agent
+        return Agent()
+
+    def test_bare_mode_shows_current(self):
+        a = self._agent()
+        result = a.query("/mode")
+        self.assertEqual(result["intent"], "mode_command")
+        self.assertIn("PERMISSION MODE", result["answer"])
+        self.assertIn(a.permission_mode.value, result["answer"])
+
+    def test_mode_help_lists_modes(self):
+        a = self._agent()
+        result = a.query("/mode help")
+        self.assertEqual(result["intent"], "mode_command")
+        for m in PermissionMode:
+            self.assertIn(m.value, result["answer"])
+
+    def test_mode_set_updates_policy(self):
+        a = self._agent()
+        result = a.query("/mode plan")
+        self.assertEqual(result["intent"], "mode_command")
+        self.assertEqual(a.permission_mode, PermissionMode.PLAN)
+        self.assertIn("plan", result["answer"])
+
+    def test_mode_set_accepts_camel_and_kebab_variants(self):
+        a = self._agent()
+        a.query("/mode dont-ask")
+        self.assertEqual(a.permission_mode, PermissionMode.DONT_ASK)
+        a.query("/mode bypasspermissions")
+        self.assertEqual(a.permission_mode, PermissionMode.BYPASS_PERMISSIONS)
+
+    def test_mode_invalid_keeps_current(self):
+        a = self._agent()
+        a.set_permission_mode("plan")
+        result = a.query("/mode bogus")
+        self.assertEqual(result["intent"], "mode_command")
+        self.assertIn("error", result["answer"].lower())
+        # Current mode is preserved.
+        self.assertEqual(a.permission_mode, PermissionMode.PLAN)
+
+    def test_non_mode_input_falls_through(self):
+        a = self._agent()
+        # Sanity: ``/mode`` must not short-circuit lookalike prefixes.
+        from terminal.agent import Agent
+        # The handler should return None for anything not starting with /mode.
+        self.assertIsNone(a._handle_mode_command("/modest investment"))
+        self.assertIsNone(a._handle_mode_command("hello"))
+        self.assertIsNone(a._handle_mode_command(""))
+
+
 if __name__ == "__main__":
     unittest.main()
