@@ -37,11 +37,14 @@ import shutil
 import subprocess
 import sys
 import threading
+import logging
 import time
 import webbrowser
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
+
+logger = logging.getLogger(__name__)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # venv self-bootstrap — re-exec inside ./.venv/bin/python if launched with the
@@ -346,7 +349,7 @@ def _remember_terminal_interaction(
         )
         agent._remember_interaction(user_input, answer, [], turn_context=ctx)
     except Exception:
-        pass
+        logger.debug("_remember_terminal_interaction failed", exc_info=True)
 
 
 def _remember_ric_sequence_interaction(
@@ -472,9 +475,9 @@ def _remember_ric_sequence_interaction(
             except Exception:
                 # Workflow registration is best-effort — never break the
                 # RIC just because the structured snapshot failed.
-                pass
+                logger.debug("RIC workflow registration failed", exc_info=True)
     except Exception:
-        pass
+        logger.debug("_remember_ric_sequence_interaction failed", exc_info=True)
 
 
 def _normalise_interactive_input(raw_text: str, followups: list[str] | None = None) -> tuple[str, str]:
@@ -1087,6 +1090,11 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/model ollama",     "Switch main chat backend to Ollama default model"),
     ("/model ollama granite4:latest", "Switch main chat backend to a specific Ollama model"),
     ("/model keyword",    "Disable LLM backend and use deterministic keyword/tool routing"),
+    ("/mode",             "Show current permission mode (default / auto / plan / dontAsk / bypassPermissions)"),
+    ("/mode help",        "List every supported permission mode + meaning"),
+    ("/mode plan",        "Switch to plan mode (render plan, do not execute tools)"),
+    ("/mode auto",        "Switch to auto-approve safe tools, prompt for risky ones"),
+    ("/mode default",     "Restore default permission-prompt behaviour"),
     ("/global",           "Global market assessment + India read-through"),
     ("/context",          "Show conversation history & context budget"),
     ("/new",              "Start a fresh session (clear history)"),
@@ -1193,6 +1201,7 @@ _CMD_CATEGORIES: dict[str, tuple[str, str]] = {
     "/eod":      ("Session",             "💾"),
     "/auto":     ("Session",             "💾"),
     "/model":    ("Settings & Data",     "⚙️"),
+    "/mode":     ("Settings & Data",     "⚙️"),
     "/context":  ("Session",             "💾"),
     "/new":      ("Session",             "💾"),
     "/reset":    ("Session",             "💾"),
@@ -1406,6 +1415,7 @@ class _AgentCompleter(Completer):
         ("--send", "Send immediately"),
         ("--draft", "Save as Outlook draft (default)"),
         ("--dry-run", "Preview without touching Outlook"),
+        ("--subject", "Override generated subject"),
         ("--note", "Extra context for the LLM"),
         ("--attach", "Path to an extra attachment"),
     ]
@@ -2484,8 +2494,117 @@ def _dashboard_pct_style(value) -> str:
     return "bold green" if fv > 0 else ("bold red" if fv < 0 else "bold yellow")
 
 
+# PG-DASHLIVE: yfinance ticker map for NIFTY index fallback when NSE allIndices fails.
+#   Mirrors terminal/tools.py::_SECTOR_YF_MAP plus broad-market + VIX so the
+#   dashboard never has to invent placeholder index values.
+_DASHBOARD_YF_INDEX_TICKERS: dict[str, str] = {
+    "NIFTY 50":        "^NSEI",
+    "NIFTY BANK":      "^NSEBANK",
+    "NIFTY IT":        "^CNXIT",
+    "NIFTY AUTO":      "^CNXAUTO",
+    "NIFTY FMCG":      "^CNXFMCG",
+    "NIFTY METAL":     "^CNXMETAL",
+    "NIFTY PHARMA":    "^CNXPHARMA",
+    "NIFTY REALTY":    "^CNXREALTY",
+    "NIFTY ENERGY":    "^CNXENERGY",
+    "NIFTY INFRA":     "^CNXINFRA",
+    "NIFTY MEDIA":     "^CNXMEDIA",
+    "NIFTY PSU BANK":  "^CNXPSUBANK",
+    "NIFTY FIN SERVICE": "^CNXFIN",
+    "INDIA VIX":       "^INDIAVIX",
+}
+
+
+def _fetch_indices_via_yfinance(timeout_per_ticker: float = 4.0) -> dict:
+    """PG-DASHLIVE: fallback live-market-overview shape built from yfinance.
+
+    Used when NSE allIndices is blocked or returns errors. Returns the same shape
+    as terminal/tools.py::get_live_market_overview so the dashboard renderer
+    needs no special-casing. `source` is stamped to make provenance visible.
+    """
+    try:
+        import yfinance as yf  # type: ignore[import-not-found]
+    except Exception as exc:
+        return {"error": f"yfinance unavailable: {exc}", "indices": {}, "source": "yfinance fallback (failed import)"}
+
+    indices: dict[str, dict] = {}
+    failures: list[str] = []
+    for name, ticker in _DASHBOARD_YF_INDEX_TICKERS.items():
+        try:
+            t = yf.Ticker(ticker)
+            # PG-DASHLIVE: prefer fast_info (single HTTP hit) then fall back to history.
+            last = prev = None
+            fast = getattr(t, "fast_info", None)
+            if fast is not None:
+                last = fast.get("last_price") if hasattr(fast, "get") else getattr(fast, "last_price", None)
+                prev = fast.get("previous_close") if hasattr(fast, "get") else getattr(fast, "previous_close", None)
+            if last is None or prev is None:
+                hist = t.history(period="5d", interval="1d", auto_adjust=False)
+                if hist is None or hist.empty or len(hist) < 2:
+                    failures.append(f"{name}: no history")
+                    continue
+                last = float(hist["Close"].iloc[-1])
+                prev = float(hist["Close"].iloc[-2])
+            last_f = float(last)
+            prev_f = float(prev)
+            change = round(last_f - prev_f, 2)
+            pct    = round(change / prev_f * 100, 2) if prev_f else 0.0
+            indices[name] = {
+                "last":       round(last_f, 2),
+                "change":     change,
+                "pct_change": pct,
+                "day_high":   None,
+                "day_low":    None,
+            }
+        except Exception as exc:
+            failures.append(f"{name}: {exc}")
+            continue
+
+    if not indices:
+        return {
+            "error":   "yfinance fallback returned no indices",
+            "indices": {},
+            "source":  "yfinance fallback (empty)",
+            "failures": failures,
+        }
+
+    # Approximate top/bottom sectors using the indices we did fetch.
+    sectoral = {k: v for k, v in indices.items() if k not in ("NIFTY 50", "INDIA VIX")}
+    s_sorted = sorted(sectoral.items(), key=lambda kv: kv[1].get("pct_change") or 0, reverse=True)
+    top_sectors = [{"name": k, **v} for k, v in s_sorted[:5]]
+    bot_sectors = [{"name": k, **v} for k, v in s_sorted[-5:][::-1]] if len(s_sorted) >= 5 else []
+    return {
+        "indices":      indices,
+        "broad_market": {k: v for k, v in indices.items() if k in ("NIFTY 50", "INDIA VIX")},
+        "sectoral":     sectoral,
+        "top_sectors":  top_sectors,
+        "bottom_sectors": bot_sectors,
+        "adv_dec":      {},
+        "as_of":        datetime.now(_IST).strftime("%Y-%m-%d %H:%M:%S"),
+        "source":       "yfinance fallback",
+        "degraded":     True,
+        "failures":     failures,
+    }
+
+
+def _live_overview_is_usable(payload: dict | None) -> bool:
+    """PG-DASHLIVE: a live-overview is 'usable' if it has ≥3 NIFTY indices and no error."""
+    if not isinstance(payload, dict):
+        return False
+    if payload.get("error"):
+        return False
+    indices = payload.get("indices") or {}
+    return sum(1 for n in indices if isinstance(n, str) and n.upper().startswith("NIFTY")) >= 3
+
+
 def _fetch_market_dashboard_snapshot(focus: str = "", llm_backend=None) -> dict:
-    """Fetch one live dashboard snapshot from existing tools."""
+    """Fetch one live dashboard snapshot from existing tools.
+
+    PG-DASHLIVE: If NSE allIndices fails or returns a sparse payload, fall back
+    to a yfinance-backed index snapshot so the dashboard always reflects real
+    live tape (never a fixture, never empty). Provenance is stamped on the
+    returned snapshot via `data_source` / `degraded` / `source_chain`.
+    """
     from terminal.tools import call_tool
 
     plan = [
@@ -2511,6 +2630,31 @@ def _fetch_market_dashboard_snapshot(focus: str = "", llm_backend=None) -> dict:
             out[key] = call_tool(name, args)
         except Exception as exc:
             out[key] = {"error": str(exc)}
+
+    # PG-DASHLIVE: stamp provenance + auto-fallback to yfinance for indices.
+    source_chain: list[str] = []
+    live = out.get("get_live_market_overview") or {}
+    if _live_overview_is_usable(live):
+        source_chain.append("NSE live API")
+        out["data_source"] = "NSE live API"
+        out["degraded"] = False
+    else:
+        nse_error = str(live.get("error") or "NSE allIndices returned empty/sparse payload")
+        source_chain.append(f"NSE live API failed ({nse_error})")
+        yf_payload = _fetch_indices_via_yfinance()
+        if _live_overview_is_usable(yf_payload):
+            yf_payload["fallback_reason"] = nse_error
+            out["get_live_market_overview"] = yf_payload
+            source_chain.append("yfinance fallback")
+            out["data_source"] = "yfinance fallback"
+            out["degraded"] = True
+        else:
+            source_chain.append("yfinance fallback failed")
+            out["data_source"] = "unavailable"
+            out["degraded"] = True
+            out["live_data_unavailable"] = True
+    out["source_chain"] = source_chain
+
     if llm_backend is not None:
         narrative = _generate_dashboard_llm_narrative(out, llm_backend)
         if narrative:
@@ -3777,6 +3921,15 @@ def _render_market_dashboard_html(snapshot: dict, *, drilldown: bool = False) ->
     indices = live.get("indices") or {}
     focus = html.escape(str(snapshot.get("focus") or "whole market"))
     fetched_at = html.escape(str(snapshot.get("fetched_at") or datetime.now(_IST).strftime("%Y-%m-%d %H:%M:%S")))
+    # PG-DASHLIVE: surface provenance in header + source panel.
+    data_source = html.escape(str(snapshot.get("data_source") or "unknown"))
+    degraded_flag_str = "true" if snapshot.get("degraded") else "false"
+    degraded_badge = (
+        '<b class="warning">[DEGRADED — yfinance fallback]</b>'
+        if snapshot.get("degraded")
+        else '<b class="positive">[LIVE]</b>'
+    )
+    source_chain_text = html.escape(" → ".join(snapshot.get("source_chain") or ["unknown"]))
 
     def esc(value) -> str:
         return html.escape(str(value if value is not None else ""))
@@ -3837,7 +3990,24 @@ def _render_market_dashboard_html(snapshot: dict, *, drilldown: bool = False) ->
     movers_panel = card("Movers", mover_rows or "<p>Movers unavailable.</p>")
     news_panel = card("Catalyst Tape", f"<p>{esc(_dashboard_news_tape(snapshot, limit=4))}</p>")
     rs_panel = card("RS Leaders", f"<p>{esc(_dashboard_rs_screener_line(snapshot, limit=6))}</p>")
-    source_panel = card("Source/Freshness Audit", f"<p>Fetched {fetched_at}. Missing data is labeled unavailable. Research only, not investment advice.</p>", "wide")
+    # PG-DASHLIVE: surface real data provenance in the audit panel so a fixture
+    # or yfinance-fallback dashboard cannot masquerade as a live NSE pull.
+    data_source = esc(snapshot.get("data_source") or "unknown")
+    degraded_flag = bool(snapshot.get("degraded"))
+    badge_color = "warning" if degraded_flag else "positive"
+    badge_text = "DEGRADED" if degraded_flag else "LIVE"
+    source_chain_text = esc(" → ".join(snapshot.get("source_chain") or ["unknown"]))
+    source_panel = card(
+        "Source/Freshness Audit",
+        (
+            f"<p>Fetched {fetched_at}. "
+            f"<b class=\"{badge_color}\">[{badge_text}]</b> "
+            f"Data source: <b>{data_source}</b>. "
+            f"Source chain: {source_chain_text}. "
+            f"Missing data is labeled unavailable. Research only, not investment advice.</p>"
+        ),
+        "wide",
+    )
 
     return f"""<!doctype html>
 <html lang="en">
@@ -3869,7 +4039,8 @@ summary {{ cursor:pointer; color:var(--cyan); font-weight:700; }}
 </style>
 </head>
 <body>
-<header><h1>Market Dashboard Command Center</h1><div class="sub">focus: {focus} · fetched: {fetched_at} · research-only opportunity radar</div></header>
+<header><h1>Market Dashboard Command Center</h1><div class="sub">focus: {focus} · fetched: {fetched_at} · source: {data_source} · {degraded_badge} · research-only opportunity radar</div></header>
+<!-- PG-DASHLIVE provenance: data_source={data_source} degraded={degraded_flag_str} chain={source_chain_text} -->
 <main class="grid">
 {pulse}
 {reaction_panel}
@@ -3893,6 +4064,14 @@ document.querySelectorAll('[data-index-card]').forEach(function(card) {{
 
 
 def _write_market_dashboard_html(snapshot: dict, *, drilldown: bool = False, open_browser: bool = False) -> Path:
+    # PG-DASHLIVE: refuse to write a dashboard if no live indices are present.
+    # Stops fixtures, empty fetches, and offline runs from polluting reports/dashboards/.
+    if not _live_overview_is_usable(snapshot.get("get_live_market_overview")):
+        raise RuntimeError(
+            "Refusing to write dashboard HTML: live market overview is unavailable. "
+            f"source_chain={snapshot.get('source_chain')}. "
+            "Try again when NSE allIndices or yfinance is reachable."
+        )
     out_dir = Path("reports") / "dashboards"
     out_dir.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now(_IST).strftime("%Y%m%d_%H%M%S")
@@ -5767,7 +5946,7 @@ def _start_alert_autodisplay() -> threading.Thread:
                     if _should_auto_render_monitor_event(ev):
                         _render_monitor_event_live(ev)
             except Exception:
-                pass
+                logger.debug("Alert autodisplay loop error", exc_info=True)
 
     _alert_autodisplay_thread = threading.Thread(target=_loop, daemon=True, name="alert-autodisplay")
     _alert_autodisplay_thread.start()
@@ -6036,6 +6215,14 @@ def _rewrite_scan_command(text: str) -> tuple[str, str]:
             f"Run intraday screener {args['screen_type']} on NIFTY 500 on 15m charts",
             status,
         )
+    # PG-SCAN-SYM 2026-05-26: `/scan <TICKER>` now routes to scan_symbols_intraday.
+    if tool_name == "scan_symbols_intraday":
+        syms = args.get("symbols") or []
+        sym_str = ", ".join(syms) if syms else "—"
+        return (
+            f"Scan {sym_str} for intraday research setups using all strategies on 15m charts",
+            status,
+        )
     index = args.get("index", "NIFTY 50")
     return (
         f"Scan {index} for intraday research setups using all strategies on 15m charts",
@@ -6121,6 +6308,48 @@ def _normalise_scan_index(raw: str) -> tuple[str, str | None]:
     return cleaned, suggestion
 
 
+# PG-SCAN-SYM 2026-05-26: helper for `/scan <TICKER>` / `/scan A,B,C` routing.
+_TICKER_LIKE_RE = re.compile(r"^[A-Z][A-Z0-9&\-]{1,14}$")
+
+
+def _scan_arg_as_symbols(raw: str) -> list[str]:
+    """Return a list of NSE tickers if ``raw`` looks like a ticker (or list
+    of tickers), else an empty list.
+
+    Rules:
+    - Splits on commas, semicolons, slashes, or whitespace.
+    - Every token must match ``^[A-Z][A-Z0-9&-]{1,14}$`` after uppercasing.
+    - Rejects anything that looks like an index name (token == "NIFTY",
+      or normalises to a known scan index / alias).
+    - Empty input → empty list.
+    """
+    if not raw or not raw.strip():
+        return []
+
+    cleaned = raw.strip().upper()
+
+    # If the cleaned form is itself an index or alias, this is NOT a symbol
+    # scan — fall through to the index normaliser.
+    if cleaned in _KNOWN_SCAN_INDICES or cleaned in _SCAN_INDEX_ALIASES:
+        return []
+    # Anything containing the literal "NIFTY" token is treated as an index
+    # attempt (e.g. typos like "NIFTY AUTOX") so the existing index error
+    # path can guide the user.
+    tokens = [t for t in re.split(r"[\s,;/]+", cleaned) if t]
+    if not tokens:
+        return []
+    if any(t == "NIFTY" for t in tokens):
+        return []
+
+    out: list[str] = []
+    for tok in tokens:
+        if not _TICKER_LIKE_RE.match(tok):
+            return []  # any non-ticker token → not a symbol scan
+        if tok not in out:
+            out.append(tok)
+    return out
+
+
 def _scan_command_tool_call(text: str) -> tuple[str, str, dict]:
     """Return deterministic tool call metadata for a `/scan` shortcut."""
     parts = text.split(maxsplit=1)
@@ -6133,6 +6362,28 @@ def _scan_command_tool_call(text: str) -> tuple[str, str, dict]:
             f"Intraday screener: {label}",
             "run_intraday_screener",
             {"screen_type": screen_type},
+        )
+
+    # PG-SCAN-SYM 2026-05-26: detect explicit-ticker scans BEFORE index
+    # normalisation. `/scan MODISONLTD` used to fall through to
+    # scan_intraday_market(index="MODISONLTD") and return "No stocks found
+    # for index". Now we route ticker-shaped args (single symbol, or a
+    # comma / space-separated list) to scan_symbols_intraday so the user
+    # gets entry / target / SL / R:R for the named stock(s).
+    sym_list = _scan_arg_as_symbols(arg)
+    if sym_list:
+        label = ", ".join(sym_list) if len(sym_list) <= 3 else f"{len(sym_list)} symbols"
+        return (
+            f"Intraday scan: {label}",
+            "scan_symbols_intraday",
+            {
+                "symbols": sym_list,
+                "interval": "15m",
+                "strategies": None,
+                "direction_filter": "all",
+                "min_rr": 1.3,
+                "top_n": 10,
+            },
         )
 
     canonical, suggestion = _normalise_scan_index(arg)
@@ -6385,7 +6636,9 @@ def _print_help() -> None:
 # Spinner (runs while agent is querying)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _run_with_spinner(agent, query: str, show_trace: bool, animated: bool = True) -> dict:
+def _run_with_spinner(
+    agent, query: str, show_trace: bool, animated: bool = True, entity_assessment=None
+) -> dict:
     """Run agent query. animated=True: braille spinner for --query mode.
     animated=False: static status line for the interactive chat loop."""
     result: dict = {}
@@ -6395,7 +6648,9 @@ def _run_with_spinner(agent, query: str, show_trace: bool, animated: bool = True
         # Chat loop — print static status, then block synchronously
         console.print("[cyan]  ⏳  Agent Adda is thinking…[/cyan]")
         try:
-            result = agent.query(query, show_trace=show_trace)
+            result = agent.query(
+                query, show_trace=show_trace, entity_assessment=entity_assessment
+            )
         except Exception as e:
             raise e
         return result
@@ -6405,7 +6660,11 @@ def _run_with_spinner(agent, query: str, show_trace: bool, animated: bool = True
 
     def _worker():
         try:
-            result.update(agent.query(query, show_trace=show_trace))
+            result.update(
+                agent.query(
+                    query, show_trace=show_trace, entity_assessment=entity_assessment
+                )
+            )
         except Exception as e:
             exc.append(e)
         finally:
@@ -6634,128 +6893,202 @@ def _print_briefing_response(result: dict) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Single-query mode  (no TUI, just print result and exit)
+# Shared command registry  (dispatched by both _single_query and _chat_loop)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _single_query(agent, query: str, show_trace: bool) -> None:
-    q_lower = query.strip().lower()
+def _build_command_registry():
+    """Build and return the shared CommandRegistry for _single_query dispatch."""
+    from terminal.command_registry import CommandHandler, CommandRegistry
 
-    if q_lower in ("/help", "?", "/h") or q_lower.startswith("/help "):
+    registry = CommandRegistry()
+
+    # /help
+    def _h_help(query, agent, show_trace):
+        from terminal.help import print_help as _ph
         _print_user(query)
-        from terminal.help import print_help as _print_runtime_help
+        _ph(console, query.strip()[5:].strip() if query.strip().lower().startswith("/help ") else "")
+        return True
+    registry.register(CommandHandler(
+        name="help",
+        match_fn=lambda q: q in ("/help", "?", "/h") or q.startswith("/help "),
+        handler_fn=_h_help,
+        description="Slash-command help",
+    ))
 
-        _print_runtime_help(console, query.strip()[5:].strip() if q_lower.startswith("/help ") else "")
-        return
-
-    if q_lower == "/commands" or q_lower.startswith("/commands "):
+    # /commands
+    def _h_commands(query, agent, show_trace):
         _print_user(query)
-        _print_commands(query.strip()[9:].strip() if q_lower.startswith("/commands ") else "")
-        return
+        kw = query.strip()[9:].strip() if query.strip().lower().startswith("/commands ") else ""
+        _print_commands(kw)
+        return True
+    registry.register(CommandHandler(
+        name="commands",
+        match_fn=lambda q: q == "/commands" or q.startswith("/commands "),
+        handler_fn=_h_commands,
+        description="Search or list available commands",
+    ))
 
-    if query.strip().lower().startswith("/scan"):
+    # /scan
+    def _h_scan(query, agent, show_trace):
         status, tool_name, args = _scan_command_tool_call(query)
         _print_user(query)
         console.print(f"[dim]  → {status}[/dim]")
-        from terminal.tools import run_intraday_screener, scan_intraday_market
-        result = (
-            run_intraday_screener(**args)
-            if tool_name == "run_intraday_screener"
-            else scan_intraday_market(**args)
+        # PG-SCAN-SYM 2026-05-26: dispatch table now covers the 3rd tool
+        # (scan_symbols_intraday) introduced for `/scan <TICKER>` routing.
+        from terminal.tools import (
+            run_intraday_screener,
+            scan_intraday_market,
+            scan_symbols_intraday,
         )
+        if tool_name == "run_intraday_screener":
+            result = run_intraday_screener(**args)
+        elif tool_name == "scan_symbols_intraday":
+            result = scan_symbols_intraday(**args)
+        else:
+            result = scan_intraday_market(**args)
         _print_intraday_scan_result(status, result)
-        return
+        return True
+    registry.register(CommandHandler(
+        name="scan",
+        match_fn=lambda q: q.startswith("/scan"),
+        handler_fn=_h_scan,
+        description="Intraday screener",
+    ))
 
-    if query.strip().lower().startswith("/strategy-council"):
+    # /strategy-council
+    def _h_strategy_council(query, agent, show_trace):
         from terminal.strategy_council import handle_strategy_council_command
         _print_user(query)
         output = handle_strategy_council_command(query, data_mode=_mode)
         _remember_generated_report(output)
         console.print(Markdown(_linkify_markdown(output)))
-        return
+        return True
+    registry.register(CommandHandler(
+        name="strategy-council",
+        match_fn=lambda q: q.startswith("/strategy-council"),
+        handler_fn=_h_strategy_council,
+        description="Multi-agent strategy council deliberation",
+    ))
 
-    if query.strip().lower().startswith(("/backtest", "/strategy-lab")):
+    # /backtest and /strategy-lab
+    def _h_backtest(query, agent, show_trace):
         from terminal.backtest import handle_backtest_command
         _print_user(query)
         console.print(Markdown(_linkify_markdown(handle_backtest_command(query))))
-        return
+        return True
+    registry.register(CommandHandler(
+        name="backtest",
+        match_fn=lambda q: q.startswith(("/backtest", "/strategy-lab")),
+        handler_fn=_h_backtest,
+        description="Backtest or strategy-lab run",
+    ))
 
-    if query.strip().lower().startswith("/data-coverage"):
+    # /data-coverage
+    def _h_data_coverage(query, agent, show_trace):
         from terminal.data_coverage import handle_data_coverage_command
         _print_user(query)
         console.print(Markdown(_linkify_markdown(handle_data_coverage_command(query))))
-        return
+        return True
+    registry.register(CommandHandler(
+        name="data-coverage",
+        match_fn=lambda q: q.startswith("/data-coverage"),
+        handler_fn=_h_data_coverage,
+        description="Data coverage report",
+    ))
 
-    if _is_open_last_report_request(query):
+    # open-last-report (natural language)
+    def _h_open_report(query, agent, show_trace):
         _print_user(query)
         console.print(Markdown(_linkify_markdown(_open_last_generated_report())))
-        return
+        return True
+    registry.register(CommandHandler(
+        name="open-last-report",
+        match_fn=lambda q: _is_open_last_report_request(q),
+        handler_fn=_h_open_report,
+        description="Open the most-recently generated report",
+    ))
 
-    if query.strip().lower().startswith(("/visual-scan", "/visual_scan")):
+    # /visual-scan
+    def _h_visual_scan(query, agent, show_trace):
         _print_user(query)
         _handle_visual_scan_command(query, agent)
-        return
+        return True
+    registry.register(CommandHandler(
+        name="visual-scan",
+        match_fn=lambda q: q.startswith(("/visual-scan", "/visual_scan")),
+        handler_fn=_h_visual_scan,
+        description="Grounded EOD chart-pattern visual scan",
+    ))
 
-    if query.strip().lower().startswith("/doctor"):
+    # /doctor
+    def _h_doctor(query, agent, show_trace):
         _print_user(query)
         try:
             from terminal.postgres_tools import render_postgres_doctor
-
             parts = query.strip().split()
             output = render_postgres_doctor(repair="--repair" in parts)
             console.print(output)
         except Exception as exc:
             console.print(f"[bold red]  ❌ PostgreSQL doctor failed: {exc}[/bold red]")
-        return
+        return True
+    registry.register(CommandHandler(
+        name="doctor",
+        match_fn=lambda q: q.startswith("/doctor"),
+        handler_fn=_h_doctor,
+        description="PostgreSQL connectivity and readiness check",
+    ))
 
-    _mtf_rewrite, _mtf_conf = _detect_mtf_intent_scored(query)
-    if _mtf_rewrite is not None:
-        console.print(f"[dim]  ⤳ Routing freeform MTF prompt → [bold]{_mtf_rewrite}[/bold][/dim]")
-        if _mtf_conf is not None:
-            from terminal.confidence import render_clarification as _render_clarif
-            _render_clarif(_mtf_conf, console)
-        query = _mtf_rewrite
-
-    if query.strip().lower().startswith("/mtf"):
+    # /mtf (after MTF rewrite has already been applied by caller)
+    def _h_mtf(query, agent, show_trace):
         _print_user(query)
         _handle_mtf_command(query)
-        return
+        return True
+    registry.register(CommandHandler(
+        name="mtf",
+        match_fn=lambda q: q.startswith("/mtf"),
+        handler_fn=_h_mtf,
+        description="Multi-timeframe analysis",
+    ))
 
-    if query.strip().lower().startswith("/strength"):
+    # /strength
+    def _h_strength(query, agent, show_trace):
         parts = query.strip().split()[1:]
         symbols = [re.sub(r"[^A-Za-z0-9&-]", "", p).upper() for p in parts]
         symbols = [s for s in symbols if s]
         _print_user(query)
         if not symbols:
             console.print("[dim]  Usage: /strength MANINDS THERMAX BAJAJCON[/dim]")
-            return
+            return True
         from terminal.tools import validate_strength_watchlist
         _print_strength_validation(validate_strength_watchlist(symbols))
-        return
+        return True
+    registry.register(CommandHandler(
+        name="strength",
+        match_fn=lambda q: q.startswith("/strength"),
+        handler_fn=_h_strength,
+        description="Relative-strength watchlist validator",
+    ))
 
-    # ── /email — first-class report mailer (PG 2026-05-19) ───────────────
-    # Mirrors the handler in _chat_loop. Without this branch, --query "/email …"
-    # falls through to the LLM path which mis-classifies report aliases/notes
-    # as stock symbols and fails symbol validation.
-    if query.strip().lower().startswith("/email"):
+    # /email
+    def _h_email(query, agent, show_trace):
         _print_user(query)
         try:
-            from terminal.email_dispatcher import (
-                run_email_command,
-                email_command_usage,
-            )
+            from terminal.email_dispatcher import run_email_command, email_command_usage
             arg_part = query.strip()[len("/email"):].strip()
             if not arg_part or arg_part.lower() in {"help", "-h", "--help"}:
                 console.print(f"[cyan]  /email usage:[/cyan]\n{email_command_usage()}")
-                return
+                return True
             console.print("[dim]  → Composing email via LLM…[/dim]")
             result = run_email_command(query, agent)
             if not result.get("ok"):
-                console.print(f"[red]  ✗ /email failed:[/red] {result.get('message', 'unknown error')}")
+                console.print(
+                    f"[red]  ✗ /email failed:[/red] {result.get('message', 'unknown error')}"
+                )
                 console.print(f"[dim]  Usage:[/dim]\n{email_command_usage()}")
-                return
-            subj  = result.get("subject", "")
+                return True
+            subj = result.get("subject", "")
             recip = result.get("recipients", {})
-            to_str  = ", ".join(recip.get("to", []))
+            to_str = ", ".join(recip.get("to", []))
             bcc_str = ", ".join(recip.get("bcc", []))
             console.print(f"[green]  ✓ /email {result.get('message', '')}[/green]")
             console.print(f"[dim]    subject: [bold]{subj}[/bold][/dim]")
@@ -6765,9 +7098,51 @@ def _single_query(agent, query: str, show_trace: bool) -> None:
             if result.get("dry_run"):
                 console.print(f"[dim]    preview: {result.get('body_path', '')}[/dim]")
             else:
-                console.print(f"[dim]    mode: {result.get('mode', '')}  ·  report: {result.get('report', '')}[/dim]")
+                console.print(
+                    f"[dim]    mode: {result.get('mode', '')}  ·  report: {result.get('report', '')}[/dim]"
+                )
         except Exception as exc:
             console.print(f"[red]  ✗ /email crashed:[/red] {exc}")
+        return True
+    registry.register(CommandHandler(
+        name="email",
+        match_fn=lambda q: q.startswith("/email"),
+        handler_fn=_h_email,
+        description="First-class report mailer",
+    ))
+
+    return registry
+
+
+_shared_command_registry = None  # built lazily on first _single_query call
+
+
+def _get_shared_registry():
+    global _shared_command_registry
+    if _shared_command_registry is None:
+        _shared_command_registry = _build_command_registry()
+    return _shared_command_registry
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Single-query mode  (no TUI, just print result and exit)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _single_query(agent, query: str, show_trace: bool) -> None:
+    # MTF rewrite must happen before registry dispatch so /mtf handler sees
+    # the normalised form.
+    _mtf_rewrite, _mtf_conf = _detect_mtf_intent_scored(query)
+    if _mtf_rewrite is not None:
+        console.print(
+            f"[dim]  ⤳ Routing freeform MTF prompt → [bold]{_mtf_rewrite}[/bold][/dim]"
+        )
+        if _mtf_conf is not None:
+            from terminal.confidence import render_clarification as _render_clarif
+            _render_clarif(_mtf_conf, console)
+        query = _mtf_rewrite
+
+    registry = _get_shared_registry()
+    if registry.dispatch(query, agent, show_trace, mode="single_query"):
         return
 
     _print_user(query)
@@ -6965,10 +7340,12 @@ def _chat_loop(agent, show_trace: bool) -> None:
                     clear=False, inline_styles=True, code_format=None
                 )
             except Exception:
+                logger.debug("console.export_html failed", exc_info=True)
                 _turn_html = ""
             try:
                 _turn_text = console.export_text(clear=True)
             except Exception:
+                logger.debug("console.export_text failed", exc_info=True)
                 _turn_text = ""
             if (_turn_text or "").strip():
                 _set_last_turn_capture(_turn_html, _turn_text)
@@ -7030,6 +7407,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
                 pass
             console.print(f"[dim]  ⤳ piping output to /email after upstream completes…[/dim]")
             text = _upstream_text
+        _entity_assessment = None
         try:
             from terminal.situation_assessment import assess_entity_topic_request as _assess_entity_topic_request
             _entity_assessment = _assess_entity_topic_request(text)
@@ -7040,7 +7418,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
             ):
                 text = _entity_assessment.rewritten_input
         except Exception:
-            pass
+            logger.debug("Entity assessment failed in REPL loop", exc_info=True)
 
         # ── Exit ──────────────────────────────────────────────────────
         if text.lower() in ("exit", "quit", "q", ":q"):
@@ -7551,12 +7929,19 @@ def _chat_loop(agent, show_trace: bool) -> None:
             status, tool_name, args = _scan_command_tool_call(text)
             console.print(f"[dim]  → {status}[/dim]")
             try:
-                from terminal.tools import run_intraday_screener, scan_intraday_market
-                result = (
-                    run_intraday_screener(**args)
-                    if tool_name == "run_intraday_screener"
-                    else scan_intraday_market(**args)
+                # PG-SCAN-SYM 2026-05-26: route to scan_symbols_intraday
+                # when /scan was given an explicit ticker list.
+                from terminal.tools import (
+                    run_intraday_screener,
+                    scan_intraday_market,
+                    scan_symbols_intraday,
                 )
+                if tool_name == "run_intraday_screener":
+                    result = run_intraday_screener(**args)
+                elif tool_name == "scan_symbols_intraday":
+                    result = scan_symbols_intraday(**args)
+                else:
+                    result = scan_intraday_market(**args)
                 _print_intraday_scan_result(status, result)
             except Exception as exc:
                 console.print(f"[bold red]  ❌  Scan failed: {exc}[/bold red]")
@@ -9207,7 +9592,10 @@ def _chat_loop(agent, show_trace: bool) -> None:
         _print_user(text)
 
         try:
-            result = _run_with_spinner(agent, query, show_trace, animated=False)
+            result = _run_with_spinner(
+                agent, query, show_trace, animated=False,
+                entity_assessment=_entity_assessment,
+            )
             _print_response(result)
             voice_result = speak_answer_when_enabled(text, result, voice_mode)
             if voice_result.get("status") == "ok":

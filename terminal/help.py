@@ -22,6 +22,20 @@ class HelpEntry(NamedTuple):
     section: str      # section key
 
 
+_HELPFILE_SECTION_ALIASES = {
+    "all": "all slash commands",
+    "helpfile": "all slash commands",
+    "pipe": "email piping: detailed usage",
+    "piping": "email piping: detailed usage",
+    "email pipe": "email piping: detailed usage",
+    "email piping": "email piping: detailed usage",
+    "prompt library": "full prompt library",
+    "full prompts": "full prompt library",
+    "slash commands": "all slash commands",
+    "commands": "all slash commands",
+}
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # All help entries — one source of truth
 # ─────────────────────────────────────────────────────────────────────────────
@@ -93,7 +107,7 @@ SECTIONS: dict[str, dict] = {
         "title":  "Charts",
         "icon":   "📈",
         "color":  "green",
-        "aliases": ["chart", "charts", "html", "ascii", "candle"],
+        "aliases": ["chart", "charts", "html", "ascii", "candle", "visual-scan"],
         "entries": [
             ("/chart RELIANCE",             "ASCII candlestick (3mo, volume + RSI)"),
             ("/chart NIFTY 6mo rsi macd",   "Custom timeframe + indicators"),
@@ -459,17 +473,35 @@ SECTIONS: dict[str, dict] = {
             ("/scale large",        "Large: 120×28 — wide charts, spacious tables"),
         ],
     },
+    "permissions": {
+        "title":  "Permission Mode",
+        "icon":   "🛡️",
+        "color":  "cyan",
+        "aliases": ["permission", "permissions", "permission mode", "permissionmode", "plan mode", "bypass", "approve", "approvals", "dontask"],
+        "entries": [
+            ("/mode",                   "Show the current permission mode"),
+            ("/mode help",              "List every supported mode + meaning"),
+            ("/mode default",           "Default: prompt for tool approvals"),
+            ("/mode auto",              "Auto-approve safe tools, prompt for risky ones"),
+            ("/mode dontAsk",           "Never prompt; run any whitelisted tool"),
+            ("/mode plan",              "Plan mode: render the plan, do NOT execute"),
+            ("/mode bypassPermissions", "Bypass all permission checks (use with care)"),
+            ("--permission-mode plan",  "CLI flag — start a session in plan mode"),
+            ("--mode auto",             "CLI flag alias — start in auto-approve mode"),
+        ],
+    },
     "session": {
         "title":  "Session & Context",
         "icon":   "💬",
         "color":  "cyan",
-        "aliases": ["context", "new", "reset", "session", "clear", "history", "model", "commands", "help"],
+        "aliases": ["context", "new", "reset", "session", "clear", "history", "model", "mode", "permission", "commands", "help"],
         "entries": [
             ("/commands",           "Browse all slash commands by category"),
             ("/commands alert",     "Filter commands by keyword, e.g. /commands alert"),
             ("/help",               "Show this help table of contents"),
             ("/help charts",        "Open a detailed help section"),
             ("/help rsi",           "Search help by keyword"),
+            ("/mode",               "Show / change runtime permission mode (plan, auto, …) — see /help permissions"),
             ("/model",              "Show active main chat model/backend"),
             ("/model gpt-4o",       "Switch main chat backend to OpenAI gpt-4o"),
             ("/model ollama",       "Switch main chat backend to Ollama default model"),
@@ -500,6 +532,25 @@ def _all_entries() -> list[HelpEntry]:
             item = (cmd, desc)
             if item not in known:
                 entries.append(HelpEntry(cmd=cmd, desc=desc, section="commands"))
+    except Exception:
+        pass
+    try:
+        from terminal.helpfile import load_helpfile_catalog
+
+        known = {(entry.cmd, entry.desc) for entry in entries}
+        catalog = load_helpfile_catalog()
+        for row in catalog.commands:
+            item = (row.command, row.description)
+            if item not in known:
+                entries.append(HelpEntry(cmd=row.command, desc=row.description, section="commands"))
+                known.add(item)
+        for row in catalog.prompts:
+            cmd = row.shortcut
+            desc = f"{row.title}: {row.prompt}"
+            item = (cmd, desc)
+            if item not in known:
+                entries.append(HelpEntry(cmd=cmd, desc=desc, section="commands"))
+                known.add(item)
     except Exception:
         pass
     return entries
@@ -602,7 +653,7 @@ def _render_search(console: Console, query: str) -> None:
         cmd_l  = entry.cmd.lower()
         desc_l = entry.desc.lower()
         sec_l  = entry.section.lower()
-        aliases = " ".join(SECTIONS[entry.section].get("aliases", []))
+        aliases = " ".join(SECTIONS.get(entry.section, {}).get("aliases", []))
 
         if q in cmd_l:
             score += 3
@@ -636,7 +687,7 @@ def _render_search(console: Console, query: str) -> None:
         if not entry.cmd or entry.cmd in seen:
             continue
         seen.add(entry.cmd)
-        sec_title = SECTIONS[entry.section]["title"]
+        sec_title = SECTIONS.get(entry.section, {}).get("title", entry.section.title())
         # Highlight the matched part in description
         desc = entry.desc
         idx = desc.lower().find(q)
@@ -656,6 +707,26 @@ def _render_search(console: Console, query: str) -> None:
     )
 
 
+def _render_helpfile_section(console: Console, section_name: str) -> bool:
+    try:
+        from terminal.helpfile import load_helpfile_catalog
+    except Exception:
+        return False
+    catalog = load_helpfile_catalog()
+    text = catalog.section_text(section_name)
+    if not text:
+        return False
+    console.print()
+    console.print(Panel(
+        text,
+        title=f"[bold cyan]{section_name.title()}[/bold cyan]",
+        border_style="cyan",
+        padding=(0, 1),
+    ))
+    console.print(f"  [dim]Full helpfile: [bold]{catalog.path}[/bold][/dim]\n")
+    return True
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Public entry point
 # ─────────────────────────────────────────────────────────────────────────────
@@ -671,6 +742,10 @@ def print_help(console: Console, args: str = "") -> None:
 
     if not query:
         _render_toc(console)
+        return
+
+    helpfile_section = _HELPFILE_SECTION_ALIASES.get(query)
+    if helpfile_section and _render_helpfile_section(console, helpfile_section):
         return
 
     key = _section_key(query)
