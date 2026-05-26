@@ -774,12 +774,30 @@ def write_snapshot(
     fund_scores_lookup = _load_fundamental_score_lookup()
 
     def _get_fund_score(sym_up: str, comp_row: dict, key_upper: str, key_lower: str) -> float | None:
-        """Get fund score: comp_lookup first (comprehensive CSV), fall back to fundamental_scores_database."""
+        """Get fund score: comp_lookup first (comprehensive CSV), fall back to fundamental_scores_database.
+
+        PG-FUND-CASE 2026-05-26: The PG view ``scores.v_latest_fundamental_scores``
+        returns lowercase column names (``earnings_quality``, ``sales_growth``,
+        ``financial_strength``, ``institutional_backing``), but the legacy CSV
+        uses uppercase. Earlier call sites passed UPPER for both ``key_upper``
+        and ``key_lower``, so symbols present only in PG (e.g. AVL) showed
+        ``Enh Fund: 73`` from the comprehensive CSV but ``—`` for every
+        sub-score because the lowercase PG keys never matched the uppercase
+        lookup. Try BOTH casings on every source defensively.
+        """
+        # 1) Comprehensive CSV (always UPPER keys, fed through pandas)
         v = _f(comp_row.get(key_upper))
+        if v is None:
+            v = _f(comp_row.get(key_lower))
         if v is not None:
             return v
+        # 2) fundamental_scores lookup (PG → lowercase; CSV → uppercase)
         fs_row = fund_scores_lookup.get(sym_up, {})
-        return _f(fs_row.get(key_lower) if fs_row.get(key_lower) is not None else fs_row.get(key_upper))
+        for k in (key_lower, key_upper):
+            val = _f(fs_row.get(k))
+            if val is not None:
+                return val
+        return None
 
     change_1m_series = pd.to_numeric(
         screener_df["CHANGE_1M"] if "CHANGE_1M" in screener_df.columns else pd.Series(dtype=float),
@@ -826,11 +844,15 @@ def write_snapshot(
             "source_csv": csv_path.name,
             "sector": sector_map.get(sym_up, "Other"),
             "fundamental_score": _f(comp_row.get("FUNDAMENTAL_SCORE")),
-            "enhanced_fund_score": _get_fund_score(sym_up, comp_row, "ENHANCED_FUND_SCORE", "ENHANCED_FUND_SCORE"),
-            "earnings_quality": _get_fund_score(sym_up, comp_row, "EARNINGS_QUALITY", "EARNINGS_QUALITY"),
-            "sales_growth": _get_fund_score(sym_up, comp_row, "SALES_GROWTH", "SALES_GROWTH"),
-            "financial_strength": _get_fund_score(sym_up, comp_row, "FINANCIAL_STRENGTH", "FINANCIAL_STRENGTH"),
-            "institutional_backing": _get_fund_score(sym_up, comp_row, "INSTITUTIONAL_BACKING", "INSTITUTIONAL_BACKING"),
+            # PG-FUND-CASE 2026-05-26: pass lowercase fallback keys so the PG
+            # view (lowercase columns) is consulted correctly when the
+            # comprehensive CSV omits the sub-score (root cause of AVL showing
+            # ``Enh Fund: 73`` with all 4 sub-scores as ``—``).
+            "enhanced_fund_score": _get_fund_score(sym_up, comp_row, "ENHANCED_FUND_SCORE", "enhanced_fund_score"),
+            "earnings_quality": _get_fund_score(sym_up, comp_row, "EARNINGS_QUALITY", "earnings_quality"),
+            "sales_growth": _get_fund_score(sym_up, comp_row, "SALES_GROWTH", "sales_growth"),
+            "financial_strength": _get_fund_score(sym_up, comp_row, "FINANCIAL_STRENGTH", "financial_strength"),
+            "institutional_backing": _get_fund_score(sym_up, comp_row, "INSTITUTIONAL_BACKING", "institutional_backing"),
             "can_slim_score": _f(comp_row.get("CAN_SLIM_SCORE")),
             "minervini_score": _f(comp_row.get("MINERVINI_SCORE")),
         }

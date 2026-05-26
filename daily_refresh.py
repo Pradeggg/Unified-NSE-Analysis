@@ -128,6 +128,18 @@ def step_postgres_eod_load(dry_run: bool) -> bool:
     )
 
 
+def step_fno_postgres_load(dry_run: bool) -> bool:
+    """Load cached historical/latest F&O EOD bhavcopy into PostgreSQL before reports."""
+    _section("STEP 1B — PostgreSQL F&O EOD Load")
+    if not _ensure_postgres_running(dry_run=dry_run):
+        return False
+    return _run(
+        "Load cached F&O bhavcopy history → derivatives.fno_eod + analytics",
+        [PYTHON, "postgres/loader.py", "--fno-only"],
+        dry_run=dry_run,
+    )
+
+
 def step_fetch_auxiliary(dry_run: bool) -> dict[str, bool]:
     """Fetch FII/DII, F&O, corporate events, insider alerts, macro proxies."""
     _section("STEP 1 — Fetch Auxiliary Market Data")
@@ -217,6 +229,24 @@ def step_postgres_load(dry_run: bool) -> bool:
     return _run(
         "PostgreSQL loader + screeners",
         [PYTHON, "postgres/loader.py"],
+        dry_run=dry_run,
+    )
+
+
+# PG-FUND-ORDER 2026-05-26: refresh fundamentals BEFORE the sector rotation
+# tracker snapshot so HTML detail cards include all 5 fund sub-scores. Prior
+# behaviour deferred fundamentals refresh to STEP 7 (after HTML render), which
+# caused only `enhanced_fund_score` (sourced from a fallback CSV) to appear in
+# the rendered card while the other 4 sub-scores showed "—".
+def step_fundamentals_refresh(dry_run: bool) -> bool:
+    """Pre-snapshot fundamentals refresh — guarantees the tracker snapshot
+    sees fresh scores.fundamental_scores rows for the current universe."""
+    _section("STEP 2B — PostgreSQL Fundamentals Pre-Refresh")
+    if not _ensure_postgres_running(dry_run=dry_run):
+        return False
+    return _run(
+        "Fundamentals refresh (scores.fundamental_scores)",
+        [PYTHON, "postgres/loader.py", "--fundamentals-only"],
         dry_run=dry_run,
     )
 
@@ -358,11 +388,25 @@ def main() -> int:
         aux_results = step_fetch_auxiliary(args.dry_run)
         # Don't fail pipeline on auxiliary errors — they use cached data
 
+    # F&O analytics are consumed by the sector rotation report before the full
+    # PostgreSQL loader runs, so refresh them from cached bhavcopy files here.
+    if not step_fno_postgres_load(args.dry_run):
+        failed.append("PostgreSQL F&O EOD load")
+        print("\n  ⚠️  PostgreSQL F&O load failed — sector report may use stale derivatives analytics")
+
     # 2. Comprehensive analysis
     if not args.skip_analysis:
         if not step_comprehensive_analysis(args.dry_run):
             failed.append("Comprehensive analysis")
             print("\n  ⚠️  Analysis failed — will use latest existing CSV for tracker")
+
+    # PG-FUND-ORDER 2026-05-26: Refresh fundamentals BEFORE snapshot so the
+    # HTML detail cards render all 5 fund sub-scores (Enh Fund, Earn Qual,
+    # Sales Gr, Fin Str, Inst Back). Previously this only happened in STEP 7,
+    # after the HTML was already written.
+    if not step_fundamentals_refresh(args.dry_run):
+        failed.append("Fundamentals pre-refresh")
+        print("\n  ⚠️  Fundamentals pre-refresh failed — tracker snapshot may render NULL sub-scores")
 
     # 3. Tracker snapshot (full: screener + live prices)
     if not step_tracker_snapshot(args.dry_run, live_only=False):

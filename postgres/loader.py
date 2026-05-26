@@ -824,43 +824,45 @@ def load_breadth(cur):
 
 
 # ---------------------------------------------------------------------------
-# Load today's FNO bhavcopy from _fno_cache
+# Load cached FNO bhavcopy history from _fno_cache
 # ---------------------------------------------------------------------------
 
-def load_fno_today(cur):
+def fno_cache_csv_paths():
     cache = DATA / "_fno_cache"
     if not cache.exists():
-        return 0
-    # Get newest file
-    files = sorted(cache.glob("fo_bhav_*.csv"))
-    files = [f for f in files if "test" not in f.name]
-    if not files:
-        return 0
-    # Try from newest, skip malformed
-    for latest in reversed(files):
-        try:
-            df = pd.read_csv(latest, low_memory=False)
-            if not df.empty and "TradDt" in df.columns:
-                break
-        except Exception:
-            continue
-    else:
-        return 0
+        return []
+    return sorted(
+        path for path in cache.glob("fo_bhav_*.csv")
+        if "test" not in path.name.lower()
+    )
+
+
+def _fno_rows_from_csv(csv_path: Path):
+    try:
+        df = pd.read_csv(csv_path, low_memory=False)
+    except Exception as exc:
+        print(f"  derivatives.fno_eod: skipped {display_path(csv_path)} ({type(exc).__name__}: {exc})")
+        return []
+    if df.empty or "TradDt" not in df.columns:
+        return []
+
     rows = []
     for _, r in df.iterrows():
-        sym = str(r.get("SYMBOL", "")).strip()
-        dt  = norm_date(r.get("TradDt"))
+        sym = clean_text(r.get("SYMBOL"))
+        dt = norm_date(r.get("TradDt"))
         exp = norm_date(r.get("EXPIRY_DATE"))
-        if not sym or not dt or not exp:
+        instrument = clean_text(r.get("INSTRUMENT"))
+        if not sym or not dt or not exp or not instrument:
             continue
-        raw_option_type = str(r.get("OPTION_TYPE", "")).strip()
-        option_type = "FUT" if raw_option_type.lower() in ("", "nan", "none", "na", "null") else raw_option_type
+        raw_option_type = clean_text(r.get("OPTION_TYPE"))
+        option_type = "FUT" if not raw_option_type or raw_option_type.lower() in ("nan", "none", "na", "null") else raw_option_type
+        turnover = safe_float(r.get("TtlTrfVal"))
         rows.append({
             "trade_date":       dt,
-            "symbol":           sym,
+            "symbol":           sym.strip().upper(),
             "expiry_date":      exp,
-            "instrument":       str(r.get("INSTRUMENT", "")).strip(),
-            "option_type":      option_type,
+            "instrument":       instrument.strip(),
+            "option_type":      option_type.strip().upper(),
             "strike":           safe_float(r.get("STRIKE_PRICE")) or 0.0,
             "open":             safe_float(r.get("OpnPric")),
             "high":             safe_float(r.get("HghPric")),
@@ -873,12 +875,43 @@ def load_fno_today(cur):
             "open_interest":    safe_int(r.get("OPEN_INTEREST")),
             "oi_change":        safe_int(r.get("CHANGE_IN_OI")),
             "volume":           safe_int(r.get("VOLUME")),
-            "turnover_cr":      round(safe_float(r.get("TtlTrfVal")) / 1e7, 4) if safe_float(r.get("TtlTrfVal")) else None,
+            "turnover_cr":      round(turnover / 1e7, 4) if turnover is not None else None,
             "total_trades":     safe_int(r.get("TtlNbOfTxsExctd")),
             "lot_size":         safe_int(r.get("NewBrdLotQty")),
         })
+    print(f"  derivatives.fno_eod: read {len(rows)} rows from {display_path(csv_path)}")
+    return rows
+
+
+def load_fno_today(cur):
+    files = fno_cache_csv_paths()
+    if not files:
+        print("  derivatives.fno_eod: no fo_bhav_*.csv files found")
+        return 0
+
+    rows = []
+    for csv_path in files:
+        rows.extend(_fno_rows_from_csv(csv_path))
     if not rows:
         return 0
+
+    deduped = {}
+    for row in rows:
+        deduped[
+            (
+                row["trade_date"],
+                row["symbol"],
+                row["expiry_date"],
+                row["instrument"],
+                row["option_type"],
+                row["strike"],
+            )
+        ] = row
+    rows = sorted(
+        deduped.values(),
+        key=lambda r: (r["trade_date"], r["symbol"], r["expiry_date"], r["instrument"], r["option_type"], r["strike"]),
+    )
+
     trade_dates = sorted({row["trade_date"] for row in rows if row.get("trade_date")})
     for trade_date in trade_dates:
         cur.execute("SELECT derivatives.ensure_fno_monthly_partition(%s)", (trade_date,))
@@ -887,10 +920,15 @@ def load_fno_today(cur):
     sql = (f"INSERT INTO derivatives.fno_eod ({', '.join(cols)}) VALUES %s "
            f"ON CONFLICT ON CONSTRAINT fno_eod_pkey DO UPDATE SET "
            f"open=EXCLUDED.open, high=EXCLUDED.high, low=EXCLUDED.low, "
-           f"close=EXCLUDED.close, open_interest=EXCLUDED.open_interest, "
-           f"oi_change=EXCLUDED.oi_change, volume=EXCLUDED.volume")
+           f"close=EXCLUDED.close, last_price=EXCLUDED.last_price, "
+           f"prev_close=EXCLUDED.prev_close, underlying_price=EXCLUDED.underlying_price, "
+           f"settle_price=EXCLUDED.settle_price, open_interest=EXCLUDED.open_interest, "
+           f"oi_change=EXCLUDED.oi_change, volume=EXCLUDED.volume, "
+           f"turnover_cr=EXCLUDED.turnover_cr, total_trades=EXCLUDED.total_trades, "
+           f"lot_size=EXCLUDED.lot_size")
     execute_values(cur, sql, values, page_size=PAGE_SIZE)
-    print(f"  derivatives.fno_eod: {len(values)} rows ({latest.name})")
+    suffix = f" ({trade_dates[0]} → {trade_dates[-1]})" if trade_dates else ""
+    print(f"  derivatives.fno_eod: {len(values)} rows upserted from {len(files)} cached files{suffix}")
     return len(values)
 
 
@@ -1017,6 +1055,12 @@ def main():
     ap.add_argument("--skip-fno", action="store_true", help="Skip FNO load")
     ap.add_argument("--eod-only", action="store_true",
                     help="Only load data/nse_sec_full_data.csv into market.equity_eod")
+    ap.add_argument("--fno-only", action="store_true",
+                    help="Only load cached F&O EOD bhavcopy files into derivatives.fno_eod and refresh F&O analytics")
+    # PG-FUND-ORDER 2026-05-26: refresh fundamentals BEFORE the sector rotation
+    # tracker snapshot/HTML so the snapshot captures fresh fund sub-scores.
+    ap.add_argument("--fundamentals-only", action="store_true",
+                    help="Only refresh scores.fundamental_scores (+ screener fundamentals) — fast pre-snapshot refresh")
     ap.add_argument("--load-csv-scores", action="store_true",
                     help="Legacy mode: import comprehensive_nse_enhanced_*.csv into scores.daily_scores")
     args = ap.parse_args()
@@ -1041,6 +1085,25 @@ def main():
             load_index_eod(cur)
             conn.commit()
             print(f"\n✅ PostgreSQL EOD load complete for {run_date}")
+            return
+
+        if args.fno_only:
+            load_fno_today(cur)
+            conn.commit()
+            run_fno_analytics(cur)
+            conn.commit()
+            print(f"\n✅ PostgreSQL F&O EOD load complete for {run_date}")
+            return
+
+        # PG-FUND-ORDER 2026-05-26: fast path for refreshing fundamentals
+        # ahead of the sector rotation tracker snapshot. Avoids the bug where
+        # the snapshot wrote NULLs because fundamentals had not been reloaded
+        # since the previous day's universe drifted.
+        if args.fundamentals_only:
+            load_fundamental_scores(cur)
+            load_screener_fundamentals(cur, run_date)
+            conn.commit()
+            print(f"\n✅ PostgreSQL fundamentals refresh complete for {run_date}")
             return
 
         load_equity_eod(cur)
