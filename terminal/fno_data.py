@@ -713,8 +713,10 @@ def _live_chain_from_eod(symbol: str, expiry: str | None) -> dict:
 # ─────────────────────────────────────────────────────────────────────────────
 # NSE deprecated /api/quote-derivative in 2025 (returns 404). The current
 # endpoint is /api/liveEquity-derivatives?index={slug}, keyed by per-symbol
-# index slugs. Stock-futures still use the legacy path via _futures_from_eod
-# fallback for now; index futures route through the live endpoint below.
+# index slugs. Index futures use the per-index slug below; **stock futures**
+# share a single bulk slug ``stock_fut`` that returns the top-by-volume
+# contracts in one payload — we filter client-side and cache briefly to
+# avoid hammering NSE when multiple stock symbols are requested in sequence.
 _INDEX_FUTURE_SLUGS: dict[str, str] = {
     "NIFTY":      "nse50_fut",
     "BANKNIFTY":  "nifty_bank_fut",
@@ -722,6 +724,96 @@ _INDEX_FUTURE_SLUGS: dict[str, str] = {
     "MIDCPNIFTY": "niftymidcap_fut",
     "NIFTYNXT50": "niftynxt50_fut",
 }
+
+# Bulk stock-futures cache (TTL=30s). Keeps the live payload warm for the
+# common case where a compound query asks about several stock futures in
+# quick succession.
+_STOCK_FUT_BULK_CACHE: dict[str, Any] = {"ts": 0.0, "rows": None}
+_STOCK_FUT_BULK_TTL = 30.0
+
+
+def _fetch_stock_futures_bulk() -> list[dict] | None:
+    """Fetch and cache the bulk ``stock_fut`` liveEquity-derivatives payload.
+
+    Returns the raw ``data`` list (every contract row), or ``None`` when
+    NSE refuses the request. Cached for ``_STOCK_FUT_BULK_TTL`` seconds.
+    """
+    cached_ts = _STOCK_FUT_BULK_CACHE["ts"]
+    cached_rows = _STOCK_FUT_BULK_CACHE["rows"]
+    if cached_rows is not None and (time.time() - cached_ts) < _STOCK_FUT_BULK_TTL:
+        return cached_rows
+
+    endpoint = "https://www.nseindia.com/api/liveEquity-derivatives?index=stock_fut"
+    try:
+        from terminal.tools import _get_live_session
+        sess = _get_live_session()
+    except Exception:
+        sess = _get_nse_session()
+
+    try:
+        r = sess.get(endpoint, timeout=15)
+        if r.status_code != 200 or not r.text:
+            return None
+        raw = r.json()
+    except Exception:
+        return None
+
+    rows = raw.get("data") or []
+    if not isinstance(rows, list):
+        return None
+    _STOCK_FUT_BULK_CACHE["ts"] = time.time()
+    _STOCK_FUT_BULK_CACHE["rows"] = rows
+    return rows
+
+
+def _fetch_live_stock_futures(sym: str) -> dict | None:
+    """Fetch live stock-futures contracts for ``sym`` from the bulk payload.
+
+    The NSE ``liveEquity-derivatives?index=stock_fut`` endpoint returns the
+    most-active stock-futures contracts in a single payload. We filter by
+    ``underlying`` so heavily-traded names (RELIANCE, HDFCBANK, TCS, etc.)
+    get live prices instead of falling through to EOD. Returns ``None``
+    when no rows match — the caller is expected to fall back to EOD.
+    """
+    rows = _fetch_stock_futures_bulk()
+    if not rows:
+        return None
+    matched = [
+        r for r in rows
+        if str(r.get("underlying", "")).upper() == sym
+        and r.get("instrument") == "Stock Futures"
+    ]
+    if not matched:
+        return None
+
+    futures: list[dict[str, Any]] = []
+    underlying: float | None = None
+    for row in matched:
+        if underlying is None and row.get("underlyingValue") is not None:
+            try:
+                underlying = float(row.get("underlyingValue"))
+            except (TypeError, ValueError):
+                pass
+        futures.append({
+            "expiry":     row.get("expiryDate"),
+            "last_price": row.get("lastPrice"),
+            "change_pct": row.get("pChange"),
+            "oi":         row.get("openInterest"),
+            "oi_change":  None,
+            "volume":     row.get("volume"),
+            "underlying": row.get("underlyingValue"),
+        })
+
+    if not futures or underlying is None:
+        return None
+
+    return {
+        "symbol":     sym,
+        "underlying": underlying,
+        "futures":    futures,
+        "source":     "live-nse-api",
+        "as_of":      datetime.now().strftime("%H:%M:%S"),
+    }
 
 
 def _fetch_live_index_futures(sym: str) -> dict | None:
@@ -805,9 +897,13 @@ def fetch_live_futures(symbol: str) -> dict:
             return result
         return _futures_from_eod(sym)
 
-    # Stock futures still need a working live endpoint; until that
-    # migration lands, return the EOD fallback so callers degrade
-    # gracefully instead of crashing.
+    # Stock futures: try the bulk liveEquity-derivatives?index=stock_fut
+    # payload first (covers most-active contracts in a single call).
+    # Fall back to EOD when the symbol isn't present in the live payload
+    # (illiquid names, market closed, NSE refused, etc.).
+    result = _fetch_live_stock_futures(sym)
+    if result is not None:
+        return result
     return _futures_from_eod(sym)
 
 
