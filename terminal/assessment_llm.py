@@ -24,7 +24,6 @@ import re
 from typing import Any
 
 from .situation_assessment import (
-    ClarificationOption,
     ClarificationQuestion,
     SituationAssessment,
     TurnContext,
@@ -359,26 +358,39 @@ def _parse_response(
 
 
 def _parse_questions(raw: list) -> tuple[ClarificationQuestion, ...]:
+    """Parse LLM-emitted clarification questions into ``ClarificationQuestion``s.
+
+    Uses the :class:`terminal.clarify.Option` / :class:`Question` builder
+    dataclasses for type-safe construction (single source of truth with
+    the static-builder callsites) and then converts via the builder's
+    ``to_clarification_*()`` adapters. Parsing stays lenient — malformed
+    entries are skipped silently instead of raising, since LLM output is
+    untrusted.
+    """
+    from .clarify import Option, Question
+
     out: list[ClarificationQuestion] = []
     for q in raw:
         if not isinstance(q, dict):
             continue
-        opts: list[ClarificationOption] = []
+        builder_opts: list[Option] = []
         for o in (q.get("options") or []):
             if not isinstance(o, dict):
                 continue
-            opts.append(ClarificationOption(
+            builder_opts.append(Option(
                 label=str(o.get("label") or ""),
                 text=str(o.get("text") or ""),
                 bound_action=dict(o.get("bound_action") or {}),
+                preview=str(o.get("preview") or ""),
             ))
-        if not opts:
+        if not builder_opts:
             continue
-        out.append(ClarificationQuestion(
+        question = Question(
             prompt=str(q.get("prompt") or ""),
-            options=tuple(opts),
+            options=builder_opts,
             default_label=str(q.get("default_label") or ""),
-        ))
+        )
+        out.append(question.to_clarification_question())
     return tuple(out)
 
 
