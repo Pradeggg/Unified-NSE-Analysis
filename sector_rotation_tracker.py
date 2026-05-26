@@ -698,6 +698,10 @@ def write_snapshot(
     analysis_override: Optional[pd.DataFrame] = None,
     csv_path_override: Optional[Path] = None,
     recompute_changes: bool = True,
+    enrich_missing: int = 0,
+    enrich_delay: float = 2.5,
+    enrich_jitter: float = 0.5,
+    enrich_yfinance_fallback: bool = False,
 ) -> int:
     """
     Capture today's stage screener results and write to DB.
@@ -761,6 +765,33 @@ def write_snapshot(
                 fund_cache[str(fcr.get("SYMBOL", "")).upper()] = fcr.to_dict()
     except Exception as e:
         print(f"  Warning: could not load fund cache: {e}")
+
+    # Just-in-time enrichment: live-scrape screener.in for symbols missing
+    # from the PG fund cache so the current snapshot picks up fundamentals
+    # for stocks outside the NIFTY 500 backfill universe. Off unless
+    # ``--enrich-missing N`` is passed (default cap=0). Persists to PG so
+    # the gap closes incrementally across daily runs.
+    if enrich_missing > 0:
+        try:
+            universe_syms = [
+                str(s).strip().upper()
+                for s in screener_df["SYMBOL"].tolist()
+                if str(s).strip()
+            ]
+            missing = [s for s in universe_syms if s not in fund_cache]
+            if missing:
+                _enrich_missing_fundamentals(
+                    missing,
+                    fund_cache,
+                    cap=enrich_missing,
+                    delay=enrich_delay,
+                    jitter=enrich_jitter,
+                    yfinance_fallback=enrich_yfinance_fallback,
+                )
+            else:
+                print("  Enrichment: 0 missing symbols — universe fully covered")
+        except Exception as e:
+            print(f"  Warning: enrichment loop failed: {e}")
 
     comp_lookup: dict[str, dict] = {}
     try:
@@ -1076,6 +1107,159 @@ def _text_or_none(v) -> Optional[str]:
     if not text or text.lower() in {"nan", "none", "null"}:
         return None
     return text
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Live fundamental enrichment (screener.in → yfinance fallback)
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# Why this exists: the tracker universe (~970 NSE symbols across NIFTY 500 +
+# midcap + smallcap + microcap) is broader than the weekly screener.in
+# backfill (NIFTY 500 only). Without this just-in-time enrichment, ~470
+# symbols never get a ``fund_details`` populated and the Stage 2 Tracker
+# HTML report shows em-dash placeholders for P/E, ROE, EPS, etc.
+#
+# Each tracker run filling N missing symbols means PG gradually closes the
+# gap: cap=60 + delay=2.5s ⇒ ~150s overhead, ~60 symbols filled per run,
+# full universe covered in ~8 daily runs.
+def _enrich_missing_fundamentals(
+    missing_syms: list[str],
+    fund_cache: dict[str, dict],
+    *,
+    cap: int,
+    delay: float,
+    jitter: float,
+    yfinance_fallback: bool,
+) -> dict[str, int]:
+    """Live-scrape screener.in for ``missing_syms`` (capped) and update caches.
+
+    For each symbol up to ``cap``:
+      1. Calls ``terminal.web_research.scrape_screener_in`` (HTTP + parse).
+      2. Builds 4 section summaries (pnl/quarterly/balance_sheet/ratios)
+         via the helpers in ``scripts.backfill_screener_fundamentals``.
+      3. Persists everything to ``scores.fundamental_snapshots`` /
+         ``scores.fundamentals`` / ``scores.fundamental_section_snapshots``
+         and the structured tables via ``upsert_symbol``.
+      4. Updates the in-memory ``fund_cache`` so the current tracker run
+         picks up the fresh values immediately.
+      5. On screener error, optionally falls back to ``yfinance`` ratios
+         (no PG persistence — yfinance is in-memory-only because its
+         column shape doesn't match the screener summary schema).
+
+    Returns a counter dict with ``screener_ok``, ``screener_err``,
+    ``yfinance_ok``, ``skipped`` for visibility in the run summary.
+    """
+    counts = {"screener_ok": 0, "screener_err": 0, "yfinance_ok": 0, "skipped": 0}
+    if cap <= 0 or not missing_syms:
+        return counts
+
+    try:
+        from terminal.web_research import scrape_screener_in
+        try:
+            from terminal.web_research import _get_yfinance_ratios
+        except ImportError:
+            _get_yfinance_ratios = None  # type: ignore
+        from scripts.backfill_screener_fundamentals import (
+            build_balance_sheet_summary,
+            build_pnl_summary,
+            build_quarterly_summary,
+            build_ratios_summary,
+            upsert_symbol,
+        )
+        from postgres.loader import pg
+    except Exception as e:
+        print(f"  Warning: enrichment helpers unavailable, skipping: {e}")
+        return counts
+
+    import random
+    import time
+
+    targets = list(missing_syms)[:cap]
+    print(f"  Enriching {len(targets)} missing-fundamental symbols via screener.in "
+          f"(delay={delay}s±{jitter}s, yfinance_fallback={yfinance_fallback})")
+
+    pg_conn = None
+    try:
+        pg_conn = pg()
+        pg_conn.autocommit = False
+    except Exception as e:
+        print(f"  Warning: PostgreSQL unavailable, in-memory enrichment only: {e}")
+        pg_conn = None
+
+    source_tag = "tracker_enrich"
+    try:
+        for i, sym in enumerate(targets, start=1):
+            try:
+                payload = scrape_screener_in(sym)
+            except Exception as e:
+                print(f"    [{i}/{len(targets)}] {sym}: screener exception {e}")
+                payload = {"error": str(e)}
+
+            if payload and not payload.get("error"):
+                summary = {
+                    "pnl_summary": build_pnl_summary(payload),
+                    "quarterly_summary": build_quarterly_summary(payload),
+                    "balance_sheet_summary": build_balance_sheet_summary(payload),
+                    "ratios_summary": build_ratios_summary(payload),
+                }
+                if any(summary.values()):
+                    fund_cache[sym.upper()] = {"SYMBOL": sym, **summary}
+                    counts["screener_ok"] += 1
+                    if pg_conn is not None:
+                        try:
+                            with pg_conn.cursor() as cur:
+                                upsert_symbol(cur, sym.upper(), payload, source_tag)
+                            pg_conn.commit()
+                        except Exception as e:
+                            pg_conn.rollback()
+                            print(f"    [{i}/{len(targets)}] {sym}: PG persist failed: {e}")
+                else:
+                    counts["skipped"] += 1
+            else:
+                counts["screener_err"] += 1
+                if yfinance_fallback and _get_yfinance_ratios is not None:
+                    try:
+                        yf_ratios = _get_yfinance_ratios(sym)
+                    except Exception:
+                        yf_ratios = {}
+                    if yf_ratios:
+                        bits = []
+                        for label, key in (
+                            ("P/E", "Stock P/E"),
+                            ("ROE", "ROE"),
+                            ("Div Yield", "Dividend Yield"),
+                            ("Book Value", "Book Value"),
+                            ("Mkt Cap", "Market Cap"),
+                        ):
+                            v = yf_ratios.get(key)
+                            if v and v not in ("N/A", "N/A (see financials)"):
+                                bits.append(f"{label}: {v}")
+                        if bits:
+                            fund_cache[sym.upper()] = {
+                                "SYMBOL": sym,
+                                "pnl_summary": None,
+                                "quarterly_summary": None,
+                                "balance_sheet_summary": None,
+                                "ratios_summary": "; ".join(bits) + " [yfinance]",
+                            }
+                            counts["yfinance_ok"] += 1
+
+            # Polite delay between symbols (skip on the last)
+            if i < len(targets):
+                sleep_for = delay + random.uniform(-jitter, jitter)
+                if sleep_for > 0:
+                    time.sleep(sleep_for)
+    finally:
+        if pg_conn is not None:
+            try:
+                pg_conn.close()
+            except Exception:
+                pass
+
+    print(f"  Enrichment complete: screener_ok={counts['screener_ok']} "
+          f"screener_err={counts['screener_err']} "
+          f"yfinance_ok={counts['yfinance_ok']} skipped={counts['skipped']}")
+    return counts
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -2803,6 +2987,17 @@ def main() -> None:
     parser.add_argument("--backfill", action="store_true", help="Build historical EOD snapshots from local price history")
     parser.add_argument("--days", type=int, default=30, help="Number of EOD trading dates to backfill")
     parser.add_argument("--to", help="Backfill through this EOD date (YYYY-MM-DD); default latest local EOD date")
+    parser.add_argument("--enrich-missing", type=int, default=0, metavar="N",
+                        help="During --snapshot, live-scrape screener.in (then yfinance fallback) "
+                             "for up to N symbols missing from the PG fund cache; persists to PG so "
+                             "the gap closes over daily runs. Default 0 (off). Recommended: 60.")
+    parser.add_argument("--enrich-delay", type=float, default=2.5,
+                        help="Seconds between screener.in calls during enrichment (default: 2.5)")
+    parser.add_argument("--enrich-jitter", type=float, default=0.5,
+                        help="±jitter seconds applied to --enrich-delay (default: 0.5)")
+    parser.add_argument("--enrich-yfinance-fallback", action="store_true",
+                        help="When screener.in scrape fails for a symbol, fall back to yfinance ratios "
+                             "(in-memory only, not persisted to PG).")
     args = parser.parse_args()
 
     if args.backfill:
@@ -2830,7 +3025,15 @@ def main() -> None:
 
     if args.snapshot or args.all:
         print(f"[1/2] Writing EOD snapshot …")
-        n = write_snapshot(snap_date=args.date, fetch_live=not args.no_live, force=args.force)
+        n = write_snapshot(
+            snap_date=args.date,
+            fetch_live=not args.no_live,
+            force=args.force,
+            enrich_missing=args.enrich_missing,
+            enrich_delay=args.enrich_delay,
+            enrich_jitter=args.enrich_jitter,
+            enrich_yfinance_fallback=args.enrich_yfinance_fallback,
+        )
         if n == 0 and not args.force:
             pass  # already logged inside write_snapshot
 

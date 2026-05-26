@@ -174,8 +174,21 @@ def step_comprehensive_analysis(dry_run: bool) -> bool:
     )
 
 
-def step_tracker_snapshot(dry_run: bool, live_only: bool = False) -> bool:
-    """Capture EOD snapshot with live prices, compute changes."""
+def step_tracker_snapshot(
+    dry_run: bool,
+    live_only: bool = False,
+    *,
+    enrich_missing: int = 0,
+    enrich_delay: float = 2.5,
+    enrich_yfinance_fallback: bool = False,
+) -> bool:
+    """Capture EOD snapshot with live prices, compute changes.
+
+    When ``enrich_missing`` > 0, the tracker live-scrapes screener.in (and
+    optionally yfinance) for up to that many symbols missing from the
+    PG fund cache, persisting results so the universe gap closes
+    incrementally across daily runs.
+    """
     _section("STEP 3 — Sector Rotation Tracker")
 
     if live_only:
@@ -186,10 +199,18 @@ def step_tracker_snapshot(dry_run: bool, live_only: bool = False) -> bool:
             dry_run=dry_run,
         )
     else:
+        cmd = [PYTHON, "sector_rotation_tracker.py", "--snapshot"]
+        if enrich_missing > 0:
+            cmd += [
+                "--enrich-missing", str(enrich_missing),
+                "--enrich-delay", str(enrich_delay),
+            ]
+            if enrich_yfinance_fallback:
+                cmd += ["--enrich-yfinance-fallback"]
         # Full snapshot: re-run screener from PostgreSQL scores + fetch live prices
         ok = _run(
             "EOD snapshot (screener + live prices)",
-            [PYTHON, "sector_rotation_tracker.py", "--snapshot"],
+            cmd,
             dry_run=dry_run,
         )
         return ok
@@ -347,13 +368,22 @@ def main() -> int:
     parser.add_argument("--comprehensive",   action="store_true",
                         help="Also run R-based comprehensive index + sector HTML reports")
     parser.add_argument("--fundamentals-backfill", action="store_true",
-                        help="Force NIFTY 500 fundamentals backfill (otherwise runs only on Sundays)")
+                        help="Force fundamentals backfill (otherwise runs only on Sundays)")
     parser.add_argument("--skip-fundamentals", action="store_true",
                         help="Skip fundamentals backfill even on its scheduled day")
     parser.add_argument("--skip-results-feed", action="store_true",
                         help="Skip daily results-feed cache refresh")
-    parser.add_argument("--fundamentals-index", default="NIFTY 500",
-                        help="Index label for fundamentals backfill (default: NIFTY 500)")
+    parser.add_argument("--fundamentals-index",
+                        default="NIFTY 500,NIFTY MICROCAP 250",
+                        help="Index label(s) for fundamentals backfill (comma-separated). "
+                             "Default: NIFTY 500 ∪ NIFTY MICROCAP 250 (~750 symbols).")
+    parser.add_argument("--enrich-missing", type=int, default=60, metavar="N",
+                        help="During tracker snapshot, live-scrape screener.in for up to N "
+                             "symbols missing from the PG fund cache (default 60). Set 0 to disable.")
+    parser.add_argument("--enrich-delay", type=float, default=2.5,
+                        help="Seconds between enrichment screener.in calls (default: 2.5)")
+    parser.add_argument("--enrich-yfinance-fallback", action="store_true", default=True,
+                        help="On screener failure, fall back to yfinance ratios (default: ON)")
     parser.add_argument("--dry-run",         action="store_true",
                         help="Print plan without executing anything")
     args = parser.parse_args()
@@ -413,7 +443,13 @@ def main() -> int:
         print("\n  ⚠️  Fundamentals pre-refresh failed — tracker snapshot may render NULL sub-scores")
 
     # 3. Tracker snapshot (full: screener + live prices)
-    if not step_tracker_snapshot(args.dry_run, live_only=False):
+    if not step_tracker_snapshot(
+        args.dry_run,
+        live_only=False,
+        enrich_missing=args.enrich_missing,
+        enrich_delay=args.enrich_delay,
+        enrich_yfinance_fallback=args.enrich_yfinance_fallback,
+    ):
         # Fallback: try live-only update if screener failed
         print("  Snapshot failed — trying live-price update only …")
         if not step_tracker_snapshot(args.dry_run, live_only=True):

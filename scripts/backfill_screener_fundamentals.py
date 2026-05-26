@@ -57,13 +57,28 @@ INDEX_CSV = BASE / "data" / "index_stock_mapping.csv"
 # ---------------------------------------------------------------------------
 
 def load_symbols_for_index(index_name: str) -> list[str]:
+    """Load symbols for one or more index labels.
+
+    ``index_name`` may be a single label (``"NIFTY 500"``) or a
+    comma-separated list (``"NIFTY 500, NIFTY MIDCAP 150"``). When
+    multiple labels are passed, the union is returned, preserving
+    first-seen order and deduplicating across indices.
+    """
     if not INDEX_CSV.exists():
         raise SystemExit(f"index mapping CSV not found: {INDEX_CSV}")
+    requested = {
+        token.strip().upper()
+        for token in str(index_name or "").split(",")
+        if token.strip()
+    }
+    if not requested:
+        return []
     out: list[str] = []
     with INDEX_CSV.open() as f:
         reader = csv.DictReader(f)
         for row in reader:
-            if (row.get("INDEX_NAME") or "").strip().upper() == index_name.upper():
+            label = (row.get("INDEX_NAME") or "").strip().upper()
+            if label in requested:
                 sym = (row.get("STOCK_SYMBOL") or "").strip().upper()
                 if sym:
                     out.append(sym)
