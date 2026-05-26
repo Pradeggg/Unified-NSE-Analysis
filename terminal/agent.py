@@ -35,6 +35,7 @@ from .market_calendar import market_context_for_agent, market_session_status
 from .data_readiness import append_readiness_metadata
 from .entity_resolution import TECHNICAL_NON_SYMBOL_TERMS, validate_requested_symbols
 from .evidence_gate import validate_required_tools_executed
+from .permission_mode import PermissionMode, PermissionPolicy
 from .situation_assessment import (
     SituationAssessment,
     TurnContext,
@@ -1262,11 +1263,9 @@ _DYNAMIC_EVIDENCE_REQUIRED_INTENTS: frozenset[str] = frozenset(
 _ROUTER_DIRECT_PLAN_PROVIDERS: frozenset[str] = frozenset({
     "CompoundStockProvider",
     "PendingOptionProvider",
-    "EntityTopicProvider",     # "RELIANCE technicals/fundamentals/quote"
     "VisualScanProvider",      # "chart RELIANCE", "visual scan INFY"
     "MarketSituationProvider", # "market situation", "intraday scan"
     "TopMoversProvider",       # "top gainers", "top losers"
-    "DirectIntentProvider",    # last-resort symbol+topic fallback
 })
 
 
@@ -4335,25 +4334,70 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
         if not rows:
             lines.append("\n  No results filings found.")
         else:
+            def _qtr(period: str) -> str:
+                p = period.lower()
+                if "first"  in p: return "Q1"
+                if "second" in p: return "Q2"
+                if "third"  in p: return "Q3"
+                if "fourth" in p or "annual" in p: return "Q4"
+                if "half"   in p: return "H1" if "first" in p else "H2"
+                return period[:4]
+
+            def _fy(raw: str) -> str:
+                import re as _re
+                # "2024-25" → FY25
+                m = _re.search(r"\d{4}-(\d{2})\b", raw)
+                if m:
+                    return f"FY{m.group(1)}"
+                # "01-Apr-2024" or "01-Jan-2025" — Indian FY starts in April
+                _MON = {"jan":1,"feb":2,"mar":3,"apr":4,"may":5,"jun":6,
+                        "jul":7,"aug":8,"sep":9,"oct":10,"nov":11,"dec":12}
+                m = _re.search(r"\d{1,2}-([A-Za-z]{3})-(\d{4})", raw)
+                if m:
+                    mo = _MON.get(m.group(1).lower(), 0)
+                    yr = int(m.group(2))
+                    fy_yr = yr + 1 if mo >= 4 else yr
+                    return f"FY{str(fy_yr)[-2:]}"
+                m = _re.search(r"(\d{4})", raw)
+                if m:
+                    return f"FY{str(int(m.group(1)))[-2:]}"
+                return raw[:5]
+
+            def _filed(raw: str) -> str:
+                return raw[:11] if raw else ""
+
+            def _aud(raw: str) -> str:
+                r = (raw or "").lower()
+                if "un" in r: return "UA"
+                if "aud" in r: return "A"
+                return raw[:2]
+
+            def _cons(raw: str) -> str:
+                r = (raw or "").lower()
+                if "non" in r: return "NC"
+                if "consol" in r: return "C"
+                return raw[:2]
+
             lines.append("")
-            lines.append("| # | Symbol | Company | Period | FY | Filed | Audited | Cons | Industry |")
-            lines.append("|---|--------|---------|--------|----|-------|---------|------|----------|")
+            lines.append("| # | Symbol | Company | Qtr | FY | Filed | A | C |")
+            lines.append("|--:|--------|---------|:---:|:--:|-------|:-:|:-:|")
             for i, r in enumerate(rows[:50], 1):
-                sym_c   = (r.get("symbol") or "")[:12]
-                co      = (r.get("company") or "")[:32]
-                period  = (r.get("period")  or "")[:18]
-                fy      = (r.get("financial_year") or "")[:7]
-                filed   = (r.get("filing_date") or "")[:17]
-                aud     = (r.get("audited") or "")[:10]
-                cons    = (r.get("consolidated") or "")[:6]
-                ind     = (r.get("industry") or "")[:22]
-                lines.append(f"| {i} | {sym_c} | {co} | {period} | {fy} | {filed} | {aud} | {cons} | {ind} |")
+                sym_c = (r.get("symbol") or "")[:14]
+                co    = (r.get("company") or "")[:38]
+                qtr   = _qtr(r.get("period") or "")
+                fy    = _fy(r.get("financial_year") or r.get("from_date") or "")
+                filed = _filed(r.get("filing_date") or "")
+                aud   = _aud(r.get("audited") or "")
+                cons  = _cons(r.get("consolidated") or "")
+                lines.append(f"| {i} | {sym_c} | {co} | {qtr} | {fy} | {filed} | {aud} | {cons} |")
             xbrl_links = [(r.get("symbol",""), r.get("xbrl_url","")) for r in rows[:8] if r.get("xbrl_url")]
             if xbrl_links:
                 lines.append("")
                 lines.append("▶ XBRL FILINGS (top 8)")
                 for s_, u_ in xbrl_links:
                     lines.append(f"  • {s_}: {u_}")
+            lines.append("")
+            lines.append("  _A = Audited · UA = Un-Audited · C = Consolidated · NC = Non-Consolidated_")
         lines.append("")
         lines.append("▶ SOURCE TRAIL")
         for trail_line in _source_trail_lines(tool_results):
@@ -4383,14 +4427,14 @@ def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: d
             lines.append("\n  No forthcoming results events found.")
         else:
             lines.append("")
-            lines.append("| # | Date | Symbol | Company | Purpose |")
-            lines.append("|---|------|--------|---------|---------|")
+            lines.append("| # | Date | Symbol | Company | Period / Notes |")
+            lines.append("|--:|------|--------|---------|----------------|")
             for i, r in enumerate(rows[:50], 1):
-                dt_     = (r.get("date") or "")[:12]
-                sym_c   = (r.get("symbol") or "")[:14]
-                co      = (r.get("company") or "")[:34]
-                purpose = (r.get("purpose") or "")[:40]
-                lines.append(f"| {i} | {dt_} | {sym_c} | {co} | {purpose} |")
+                dt_   = (r.get("date") or "")[:12]
+                sym_c = (r.get("symbol") or "")[:14]
+                co    = (r.get("company") or "")[:36]
+                desc  = (r.get("description") or r.get("purpose") or "")[:44]
+                lines.append(f"| {i} | {dt_} | {sym_c} | {co} | {desc} |")
         lines.append("")
         lines.append("▶ SOURCE TRAIL")
         for trail_line in _source_trail_lines(tool_results):
@@ -6310,11 +6354,24 @@ class Agent:
             if self._memory_pg_enabled
             else ConversationMemory(session_id=self._memory_session_id)
         )
+        # AA-CC-2: permission policy controls clarification asking,
+        # tool execution (plan mode), and future approval gates.
+        # Defaults from AGENT_ADDA_PERMISSION_MODE env var.
+        self._permission_policy: PermissionPolicy = PermissionPolicy.from_env()
         # Most recent assistant clarification (set when we render an
         # ask_clarification turn). The next user input is matched against
         # its options; the bound_action is executed verbatim without
         # re-running symbol/entity resolution. Cleared after one turn.
         self._pending_clarification: SituationAssessment | None = None
+
+    def set_permission_mode(self, mode: str | PermissionMode | None) -> PermissionMode:
+        """Update the permission policy at runtime; returns the resolved mode."""
+        self._permission_policy = PermissionPolicy.of(mode)
+        return self._permission_policy.mode
+
+    @property
+    def permission_mode(self) -> PermissionMode:
+        return self._permission_policy.mode
 
     @staticmethod
     def _tool_schema_name(schema: dict) -> str:
@@ -6635,14 +6692,10 @@ class Agent:
         # Derive the synthesis intent from the executed plan tools so the
         # synthesiser and claim-gate both see a consistent intent label.
         # CompoundStockProvider keeps "intraday_setup" to match the legacy
-        # multi-stock setup guardrail contract.  EntityTopicProvider always
-        # synthesises a stock-brief regardless of which topic tools ran (the
-        # plan may lead with get_technical_setup which would otherwise map to
-        # "intraday_setup").  All other providers resolve via the tool-to-intent map.
+        # multi-stock setup guardrail contract.  All other providers resolve
+        # via the tool-to-intent map.
         if selected == "CompoundStockProvider":
             synthesis_intent = "intraday_setup"
-        elif selected == "EntityTopicProvider":
-            synthesis_intent = "stock_brief"
         else:
             # Derive from the tools that actually ran so that synthesis intent
             # stays consistent with tool_results (matters when _execute_plan is
@@ -7183,6 +7236,96 @@ class Agent:
             "intent": "entity_topic_command",
         }
 
+    def _auto_dispatch_default_clarification(
+        self,
+        assessment: "SituationAssessment",
+        ctx: "_PipelineCtx",
+        previous_context: "TurnContext",
+    ) -> dict | None:
+        """AA-CC-2: pick the default-labelled option and execute its bound_action.
+
+        Used when the permission policy says "don't ask" — instead of
+        surfacing the clarification, the default option's bound_action
+        is dispatched as if the user had typed that label. Returns the
+        same response shape as the regular pipeline stages, or ``None``
+        if no usable default can be found.
+        """
+        from .situation_assessment import assessment_from_bound_action
+
+        default_option = None
+        for q in assessment.clarification_questions or ():
+            label = (q.default_label or "").strip()
+            if not label:
+                continue
+            for opt in q.options:
+                if opt.label == label:
+                    default_option = opt
+                    break
+            if default_option is not None:
+                break
+        if default_option is None:
+            ctx.trace.append({
+                "step": "permission_mode_auto_dispatch_skipped",
+                "mode": self._permission_policy.mode.value,
+                "reason": "no_default_option",
+            })
+            return None
+
+        ctx.trace.append({
+            "step": "permission_mode_auto_dispatch",
+            "mode": self._permission_policy.mode.value,
+            "label": default_option.label,
+            "text": default_option.text,
+        })
+
+        bound = assessment_from_bound_action(
+            default_option.bound_action,
+            previous_context=previous_context,
+        )
+        if bound.decision == "answer_from_context":
+            answer = render_context_answer(ctx.clean_input, bound, previous_context)
+            self._remember_interaction(ctx.clean_input, answer, [])
+            return {
+                "answer": answer,
+                "trace": ctx.trace,
+                "backend": self.backend_name,
+                "intent": "permission_mode_auto_dispatch",
+            }
+        if bound.decision == "run_tool_plan" and bound.tool_plan:
+            tool_results = _execute_plan(bound.tool_plan)
+            ctx.trace.extend(tool_results)
+            synthesis_intent = (
+                getattr(bound, "synthesis_intent", "")
+                or _synthesis_intent_from_plan(bound.tool_plan)
+            )
+            answer_body = (
+                render_assessment_block(bound)
+                + "\n\n"
+                + _synthesize_no_llm(synthesis_intent, tool_results)
+            )
+            answer_body = _apply_response_guardrails(
+                ctx.clean_input, synthesis_intent, tool_results, answer_body,
+            )
+            answer = answer_body + ctx.mode_suffix
+            turn_ctx = build_turn_context(
+                user_input=ctx.clean_input,
+                intent="permission_mode_auto_dispatch",
+                mode=ctx.mode,
+                source_label=ctx.source_label,
+                tool_results=tool_results,
+                answer=answer,
+            )
+            self._remember_interaction(
+                ctx.clean_input, answer, tool_results, turn_context=turn_ctx,
+            )
+            return {
+                "answer": answer,
+                "trace": ctx.trace,
+                "backend": self.backend_name,
+                "intent": "permission_mode_auto_dispatch",
+            }
+        return None
+
     def _stage_situation_assessment(self, ctx: _PipelineCtx) -> dict | None:
         """Handle contextual follow-ups via situation assessment."""
         if not needs_situation_assessment(ctx.clean_input):
@@ -7198,6 +7341,18 @@ class Agent:
                 user_input="", intent="unknown", mode=ctx.mode,
                 tools=[], source_label=ctx.source_label,
             )
+            # AA-CC-2: in dontAsk / bypassPermissions modes, auto-dispatch
+            # the default-labelled option's bound_action instead of asking.
+            if (
+                assessment.decision == "ask_clarification"
+                and assessment.clarification_questions
+                and not self._permission_policy.should_ask_clarification()
+            ):
+                auto = self._auto_dispatch_default_clarification(
+                    assessment, ctx, previous_context,
+                )
+                if auto is not None:
+                    return auto
             answer = render_context_answer(ctx.clean_input, assessment, previous_context)
             if assessment.decision == "ask_clarification" and assessment.clarification_questions:
                 self._pending_clarification = assessment
