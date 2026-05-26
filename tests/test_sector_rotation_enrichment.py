@@ -224,7 +224,8 @@ def test_enrich_zero_cap_short_circuits(fund_cache):
     counts = srt._enrich_missing_fundamentals(
         ["A", "B"], fund_cache, cap=0, delay=0, jitter=0, yfinance_fallback=False
     )
-    assert counts == {"screener_ok": 0, "screener_err": 0, "yfinance_ok": 0, "skipped": 0}
+    assert counts == {"screener_ok": 0, "screener_err": 0, "yfinance_ok": 0, "skipped": 0,
+                      "scores_ok": 0, "scores_err": 0}
     assert fund_cache == {}
 
 
@@ -232,7 +233,8 @@ def test_enrich_empty_list_short_circuits(fund_cache):
     counts = srt._enrich_missing_fundamentals(
         [], fund_cache, cap=10, delay=0, jitter=0, yfinance_fallback=False
     )
-    assert counts == {"screener_ok": 0, "screener_err": 0, "yfinance_ok": 0, "skipped": 0}
+    assert counts == {"screener_ok": 0, "screener_err": 0, "yfinance_ok": 0, "skipped": 0,
+                      "scores_ok": 0, "scores_err": 0}
 
 
 def test_enrich_summary_all_none_marks_skipped(fund_cache):

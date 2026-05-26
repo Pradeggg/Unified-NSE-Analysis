@@ -778,8 +778,48 @@ def write_snapshot(
                 for s in screener_df["SYMBOL"].tolist()
                 if str(s).strip()
             ]
-            missing = [s for s in universe_syms if s not in fund_cache]
+            # Symbols missing raw screener fundamentals
+            missing_fund = [s for s in universe_syms if s not in fund_cache]
+
+            # Symbols missing derived score components in PG. These have
+            # summaries but no row in scores.fundamental_scores (or a stale
+            # row > 90 days old). We enrich them too so the next snapshot
+            # picks up the freshly-derived sub-scores via the latest view.
+            missing_scores: list[str] = []
+            try:
+                from postgres.loader import pg as _pg
+                with _pg() as _conn, _conn.cursor() as _cur:
+                    _cur.execute(
+                        """
+                        SELECT symbol, MAX(score_date) AS latest
+                        FROM scores.fundamental_scores
+                        WHERE symbol = ANY(%s)
+                        GROUP BY symbol
+                        """,
+                        (universe_syms,),
+                    )
+                    have_scores = {
+                        row[0].upper(): row[1] for row in _cur.fetchall()
+                    }
+                import datetime as _dt
+                staleness = _dt.date.today() - _dt.timedelta(days=90)
+                for s in universe_syms:
+                    latest = have_scores.get(s)
+                    if latest is None or latest < staleness:
+                        if s not in missing_fund:
+                            missing_scores.append(s)
+            except Exception as e:
+                print(f"  Warning: could not query scores.fundamental_scores: {e}")
+
+            # Prioritise the raw-summary gap first (those rows feed the
+            # report's fund_details JSON), then top up with score-only gaps.
+            missing = missing_fund + missing_scores
+
             if missing:
+                print(
+                    f"  Enrichment targets: {len(missing_fund)} missing summaries, "
+                    f"{len(missing_scores)} missing/stale scores (cap={enrich_missing})"
+                )
                 _enrich_missing_fundamentals(
                     missing,
                     fund_cache,
@@ -1149,7 +1189,8 @@ def _enrich_missing_fundamentals(
     Returns a counter dict with ``screener_ok``, ``screener_err``,
     ``yfinance_ok``, ``skipped`` for visibility in the run summary.
     """
-    counts = {"screener_ok": 0, "screener_err": 0, "yfinance_ok": 0, "skipped": 0}
+    counts = {"screener_ok": 0, "screener_err": 0, "yfinance_ok": 0, "skipped": 0,
+              "scores_ok": 0, "scores_err": 0}
     if cap <= 0 or not missing_syms:
         return counts
 
@@ -1159,6 +1200,7 @@ def _enrich_missing_fundamentals(
             from terminal.web_research import _get_yfinance_ratios
         except ImportError:
             _get_yfinance_ratios = None  # type: ignore
+        from terminal.fund_score_derivation import derive_fund_scores
         from scripts.backfill_screener_fundamentals import (
             build_balance_sheet_summary,
             build_pnl_summary,
@@ -1213,6 +1255,53 @@ def _enrich_missing_fundamentals(
                         except Exception as e:
                             pg_conn.rollback()
                             print(f"    [{i}/{len(targets)}] {sym}: PG persist failed: {e}")
+
+                    # Derive enhanced fund sub-scores from the screener payload
+                    # and persist to scores.fundamental_scores so the tracker's
+                    # next snapshot picks them up via v_latest_fundamental_scores.
+                    try:
+                        scores = derive_fund_scores(payload)
+                        if pg_conn is not None:
+                            try:
+                                with pg_conn.cursor() as cur:
+                                    cur.execute(
+                                        """
+                                        INSERT INTO scores.fundamental_scores
+                                          (score_date, symbol, enhanced_fund_score,
+                                           earnings_quality, sales_growth,
+                                           financial_strength, institutional_backing,
+                                           processed_date, source_file)
+                                        VALUES
+                                          (CURRENT_DATE, %s, %s, %s, %s, %s, %s,
+                                           CURRENT_DATE, %s)
+                                        ON CONFLICT (score_date, symbol) DO UPDATE SET
+                                          enhanced_fund_score   = EXCLUDED.enhanced_fund_score,
+                                          earnings_quality      = EXCLUDED.earnings_quality,
+                                          sales_growth          = EXCLUDED.sales_growth,
+                                          financial_strength    = EXCLUDED.financial_strength,
+                                          institutional_backing = EXCLUDED.institutional_backing,
+                                          source_file           = EXCLUDED.source_file,
+                                          loaded_at             = now()
+                                        """,
+                                        (
+                                            sym.upper(),
+                                            scores["enhanced_fund_score"],
+                                            scores["earnings_quality"],
+                                            scores["sales_growth"],
+                                            scores["financial_strength"],
+                                            scores["institutional_backing"],
+                                            "tracker_enrich_derived",
+                                        ),
+                                    )
+                                pg_conn.commit()
+                                counts["scores_ok"] += 1
+                            except Exception as e:
+                                pg_conn.rollback()
+                                counts["scores_err"] += 1
+                                print(f"    [{i}/{len(targets)}] {sym}: scores persist failed: {e}")
+                    except Exception as e:
+                        counts["scores_err"] += 1
+                        print(f"    [{i}/{len(targets)}] {sym}: score derivation failed: {e}")
                 else:
                     counts["skipped"] += 1
             else:
@@ -1257,6 +1346,7 @@ def _enrich_missing_fundamentals(
                 pass
 
     print(f"  Enrichment complete: screener_ok={counts['screener_ok']} "
+          f"scores_ok={counts['scores_ok']} "
           f"screener_err={counts['screener_err']} "
           f"yfinance_ok={counts['yfinance_ok']} skipped={counts['skipped']}")
     return counts
