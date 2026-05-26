@@ -12,6 +12,7 @@ The agent follows the spec:
 
 from __future__ import annotations
 
+import concurrent.futures
 import dataclasses
 import json
 import logging
@@ -20,7 +21,7 @@ import re
 import shlex
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from dotenv import load_dotenv
 
@@ -613,6 +614,15 @@ class _OpenAIBackend:
             kwargs["tool_choice"] = "auto"
         resp = self.client.chat.completions.create(**kwargs)
         msg = resp.choices[0].message
+        u = resp.usage or None
+        pd = getattr(u, "prompt_tokens_details", None) if u else None
+        usage = {
+            "input_tokens":               getattr(u, "prompt_tokens", 0) or 0,
+            "output_tokens":              getattr(u, "completion_tokens", 0) or 0,
+            "cache_read_input_tokens":    getattr(pd, "cached_tokens", 0) or 0,
+            "cache_creation_input_tokens": 0,
+            "model":                      getattr(resp, "model", None) or self.model,
+        }
         return {
             "content":    msg.content or "",
             "tool_calls": [
@@ -620,6 +630,7 @@ class _OpenAIBackend:
                 for tc in (msg.tool_calls or [])
             ],
             "finish_reason": resp.choices[0].finish_reason,
+            "usage": usage,
         }
 
     def tool_result_message(self, tool_call_id: str, result: dict) -> dict:
@@ -678,6 +689,8 @@ class _OllamaBackend:
             "content":     msg.get("content", ""),
             "tool_calls":  tool_calls,
             "finish_reason": "stop",
+            "usage": {"input_tokens": 0, "output_tokens": 0,
+                      "cache_read_input_tokens": 0, "cache_creation_input_tokens": 0},
         }
 
     def tool_result_message(self, tool_call_id: str, result: dict) -> dict:
@@ -1189,7 +1202,7 @@ _PLAN_TOOL_TO_SYNTHESIS_INTENT: dict[str, str] = {
     "get_top_gainers_losers": "market_situation_assessment",
     "get_eod_top_movers": "market_situation_assessment",
     # AA-UR-6 Phase 2: DirectIntentProvider single-stock tools
-    "get_technical_setup": "intraday_setup",
+    "get_technical_setup": "stock_brief",
     "analyze_mtf": "intraday_setup",
     "get_live_quote": "intraday_setup",
     "search_yahoo_finance": "stock_brief",
@@ -1352,6 +1365,142 @@ def _source_trail_lines(tool_results: list[dict]) -> list[str]:
             if candidates:
                 lines.append(f"    Suggestions: {', '.join(str(c) for c in candidates[:5])}")
     return lines
+
+
+_SEARCH_TOOLS = frozenset({
+    "search_latest_catalysts", "search_broker_research", "search_concall_transcripts",
+    "search_yahoo_finance", "multi_source_web_search", "comprehensive_stock_research",
+    "search_market_knowledge", "web_search",
+})
+
+
+def _tool_stats_from_results(tool_results: list[dict]) -> dict:
+    read_count = search_count = 0
+    for tr in tool_results or []:
+        name = tr.get("tool") or ""
+        if name in _SEARCH_TOOLS:
+            search_count += 1
+        else:
+            read_count += 1
+    return {"readCount": read_count, "searchCount": search_count}
+
+
+# USD per 1M tokens. Keys are matched as case-insensitive prefixes against
+# the model identifier so variants like "gpt-4o-2024-08-06" hit the gpt-4o
+# row. Update when OpenAI publishes new pricing.
+_LLM_PRICING_USD_PER_M: dict[str, dict[str, float]] = {
+    "gpt-5-mini":   {"in": 0.25, "cached_in": 0.025, "out": 2.00},
+    "gpt-5":        {"in": 1.25, "cached_in": 0.125, "out": 10.00},
+    "gpt-4o-mini":  {"in": 0.15, "cached_in": 0.075, "out": 0.60},
+    "gpt-4o":       {"in": 2.50, "cached_in": 1.25,  "out": 10.00},
+    "gpt-4.1-mini": {"in": 0.40, "cached_in": 0.10,  "out": 1.60},
+    "gpt-4.1":      {"in": 2.00, "cached_in": 0.50,  "out": 8.00},
+    "o3-mini":      {"in": 1.10, "cached_in": 0.55,  "out": 4.40},
+    "o3":           {"in": 2.00, "cached_in": 0.50,  "out": 8.00},
+}
+
+
+def _usd_cost_for_usage(usage: dict) -> float | None:
+    """Return USD cost for a usage dict, or None if the model is unpriced."""
+    model = (usage.get("model") or "").strip().lower()
+    if not model:
+        return None
+    # Longest-prefix match so "gpt-4o-mini" wins over "gpt-4o".
+    price = None
+    matched_len = -1
+    for key, row in _LLM_PRICING_USD_PER_M.items():
+        if model.startswith(key) and len(key) > matched_len:
+            price = row
+            matched_len = len(key)
+    if price is None:
+        return None
+    cached = usage.get("cache_read_input_tokens", 0) or 0
+    fresh_in = max(0, (usage.get("input_tokens", 0) or 0) - cached)
+    out = usage.get("output_tokens", 0) or 0
+    return (
+        fresh_in * price["in"]
+        + cached * price["cached_in"]
+        + out * price["out"]
+    ) / 1_000_000.0
+
+
+def _cost_trail_block(usage: dict, tool_results: list[dict]) -> str:
+    """Render a compact ▶ COST line summarising token spend and tool stats."""
+    if not usage or not any(usage.get(k, 0) for k in (
+        "input_tokens", "output_tokens",
+        "cache_read_input_tokens", "cache_creation_input_tokens",
+    )):
+        return ""
+    ts = _tool_stats_from_results(tool_results)
+    parts = [
+        f"in={usage.get('input_tokens', 0)}",
+        f"out={usage.get('output_tokens', 0)}",
+    ]
+    if usage.get("cache_read_input_tokens"):
+        parts.append(f"cache_read={usage['cache_read_input_tokens']}")
+    if usage.get("cache_creation_input_tokens"):
+        parts.append(f"cache_create={usage['cache_creation_input_tokens']}")
+    usd = _usd_cost_for_usage(usage)
+    if usd is not None:
+        parts.append(f"cost=${usd:.4f}")
+    parts.append(f"tools: read={ts['readCount']} search={ts['searchCount']}")
+    return "\n▶ COST  " + "  ".join(parts)
+
+
+def _accumulate_usage(acc: dict, new: dict) -> dict:
+    """Merge two usage dicts by summing every key. Carries the model id from
+    the newest non-empty value so cost pricing has something to match against."""
+    for k in ("input_tokens", "output_tokens",
+               "cache_read_input_tokens", "cache_creation_input_tokens"):
+        acc[k] = acc.get(k, 0) + (new.get(k, 0) or 0)
+    if new.get("model"):
+        acc["model"] = new["model"]
+    return acc
+
+
+# Tools that write to shared state (caches, DBs) and must run sequentially.
+# All other tools are assumed pure-read and are safe to dispatch concurrently.
+_SERIAL_TOOLS: frozenset[str] = frozenset({
+    "run_screener_query",           # writes screener result cache
+    "scan_symbols_intraday",        # writes intraday scan cache
+    "refresh_market_data",          # mutates local data files
+    "cache_symbol_snapshot",        # explicit cache writer
+    "write_report",                 # filesystem writer
+})
+
+_PARALLEL_WORKERS = 6
+
+
+def _parallel_tool_dispatch(
+    tool_calls: list[dict],
+    call_tool_fn: Callable,
+) -> list[tuple[str, dict, Any, str]]:
+    """Execute tool calls concurrently when all are parallel-safe.
+
+    Returns a list of (name, args, result, call_id) in the original call order.
+    Falls back to sequential dispatch if any tool is in _SERIAL_TOOLS.
+    """
+    if len(tool_calls) <= 1 or any(tc["name"] in _SERIAL_TOOLS for tc in tool_calls):
+        return [
+            (tc["name"], tc.get("args", {}),
+             call_tool_fn(tc["name"], tc.get("args", {})), tc["id"])
+            for tc in tool_calls
+        ]
+
+    # All parallel-safe: submit concurrently, collect in original order.
+    with concurrent.futures.ThreadPoolExecutor(max_workers=_PARALLEL_WORKERS) as pool:
+        futures = {
+            idx: pool.submit(call_tool_fn, tc["name"], tc.get("args", {}))
+            for idx, tc in enumerate(tool_calls)
+        }
+    results = []
+    for idx, tc in enumerate(tool_calls):
+        try:
+            result = futures[idx].result()
+        except Exception as exc:
+            result = {"error": f"tool dispatch error: {exc}"}
+        results.append((tc["name"], tc.get("args", {}), result, tc["id"]))
+    return results
 
 
 def _required_tools_for_query(intent: str, query: str) -> tuple[str, ...]:
@@ -2065,15 +2214,18 @@ def _with_dynamic_stock_evidence(plan: list[tuple[str, dict]], q: str, symbol: s
 
 
 def _stock_360_prompt_symbol(query: str) -> str:
-    """Extract the symbol from Agent-generated /analyze <symbol> 360 prompts."""
-    match = re.search(
+    """Extract the symbol from Agent-generated 360 stock-analysis/report prompts."""
+    text = re.sub(r"[*_`]+", "", query or "")
+    patterns = (
         r"\bcomprehensive\s+360(?:°|\s*degree)?\s+analysis\s+(?:of|for)\s+([A-Z][A-Z0-9&-]{1,20})\b",
-        query or "",
-        flags=re.IGNORECASE,
+        r"\bcomprehensive(?:\s+institutional-grade)?\s+360(?:°|\s*degree)?\s+research\s+report\s+on\s+([A-Z][A-Z0-9&-]{1,20})\b",
     )
-    if not match:
-        return ""
-    symbol = match.group(1).upper()
+    symbol = ""
+    for pattern in patterns:
+        match = re.search(pattern, text, flags=re.IGNORECASE)
+        if match:
+            symbol = match.group(1).upper()
+            break
     return symbol if re.fullmatch(r"[A-Z0-9&-]{2,20}", symbol) else ""
 
 
@@ -2082,11 +2234,16 @@ def _stock_360_prompt_plan(symbol: str, query: str) -> list[tuple[str, dict]]:
     plan: list[tuple[str, dict]] = [
         ("resolve_symbol", {"query": sym}),
         ("get_symbol_snapshot", {"symbol": sym}),
+        ("scrape_screener_in", {"symbol": sym}),
         ("get_technical_setup", {"symbol": sym}),
         ("comprehensive_stock_research", {"symbol": sym}),
         ("run_forensic_analysis", {"symbol": sym}),
+        ("search_shareholding_analysis", {"symbol": sym}),
+        ("search_concall_transcripts", {"symbol": sym}),
+        ("analyze_concall_sentiment", {"symbol": sym}),
         ("search_latest_catalysts", {"symbol": sym}),
         ("get_sector_context", {"sector_or_symbol": sym}),
+        ("search_broker_research", {"symbol": sym}),
         (
             "deep_search",
             {
@@ -2265,6 +2422,13 @@ def _keyword_intent(query: str, data_mode: str = "historical") -> dict:
 
     if _contains_placeholder_symbol(routing_text):
         return {"intent": "placeholder_symbol_request", "plan": []}
+
+    stock_360_symbol = _stock_360_prompt_symbol(routing_text)
+    if stock_360_symbol:
+        return {
+            "intent": "stock_brief",
+            "plan": _stock_360_prompt_plan(stock_360_symbol, routing_text),
+        }
 
     if _is_document_link_followup(q):
         return {"intent": "document_link_help", "plan": []}
@@ -6742,6 +6906,11 @@ class Agent:
         merged_answers: list[str] = []
         merged_trace: list[dict] = []
         last_backend = self.backend_name
+        compound_usage: dict = {
+            "input_tokens": 0, "output_tokens": 0,
+            "cache_read_input_tokens": 0, "cache_creation_input_tokens": 0,
+        }
+        compound_tool_results: list[dict] = []
         for idx, part in enumerate(parts, start=1):
             self._last_symbols = list(_pre_symbols)
             self._last_turn_context = _pre_context
@@ -6754,11 +6923,19 @@ class Agent:
                                  "intent": res.get("intent"),
                                  "trace": res.get("trace", [])})
             last_backend = res.get("backend") or last_backend
+            _accumulate_usage(compound_usage, res.get("usage") or {})
+            compound_tool_results.extend(
+                tr for tr in (res.get("trace") or [])
+                if isinstance(tr, dict) and tr.get("tool")
+            )
+        answer = "\n\n".join(merged_answers)
+        answer += _cost_trail_block(compound_usage, compound_tool_results)
         return {
-            "answer": "\n\n".join(merged_answers),
+            "answer": answer,
             "trace": merged_trace,
             "backend": last_backend,
             "intent": "compound",
+            "usage": compound_usage,
         }
 
     # ── AA-AR-2: Pipeline stage helpers ──────────────────────────────────────
@@ -7175,6 +7352,9 @@ class Agent:
             result = self._llm_query(ctx.clean_input, ctx.show_trace, ctx.mode_context)
             if not result.get("has_source_trail", False):
                 result["answer"] = result.get("answer", "") + ctx.mode_suffix
+            result["answer"] += _cost_trail_block(
+                result.get("usage") or {}, result.get("trace") or []
+            )
             result["answer"] = self._with_readiness_metadata(result.get("answer", ""), ctx.mode)
             return result
 
@@ -7762,20 +7942,24 @@ class Agent:
         ]
         tool_results: list[dict] = []
         max_rounds = 10
+        _usage: dict = {
+            "input_tokens": 0, "output_tokens": 0,
+            "cache_read_input_tokens": 0, "cache_creation_input_tokens": 0,
+        }
 
         for round_n in range(max_rounds):
             resp = self.backend.chat(messages, tools=self._tool_schemas_for_query(self._tool_selection_text(user_input)))
+            _accumulate_usage(_usage, resp.get("usage") or {})
 
             if resp["tool_calls"]:
-                # Execute each tool call
+                # Execute tool calls — concurrently when all are pure-read, sequentially otherwise.
                 asst_msg = self.backend.format_tool_calls_in_message(resp["tool_calls"])
                 messages.append(asst_msg)
 
-                for tc in resp["tool_calls"]:
-                    result = call_tool(tc["name"], tc["args"])
-                    tool_results.append({"tool": tc["name"], "args": tc["args"], "result": result})
-                    tool_msg = self.backend.tool_result_message(tc["id"], result)
-                    messages.append(tool_msg)
+                dispatched = _parallel_tool_dispatch(resp["tool_calls"], call_tool)
+                for name, args, result, call_id in dispatched:
+                    tool_results.append({"tool": name, "args": args, "result": result})
+                    messages.append(self.backend.tool_result_message(call_id, result))
             else:
                 # Final text response
                 answer = resp["content"]
@@ -7824,6 +8008,7 @@ class Agent:
                     "comparison":      comparison,
                     "turn":            self.turn_count,
                     "has_source_trail": _has_trail,
+                    "usage":           _usage,
                 }
 
         # If we exhausted rounds without a text response, synthesize from tool results
@@ -7834,4 +8019,4 @@ class Agent:
         _has_trail = "_Mode:" in answer or "Mode: " in answer[-300:]
         return {"answer": answer, "trace": tool_results, "backend": self.backend_name,
                 "intent": "llm_driven_fallback", "turn": self.turn_count,
-                "has_source_trail": _has_trail}
+                "has_source_trail": _has_trail, "usage": _usage}
