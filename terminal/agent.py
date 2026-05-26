@@ -1912,7 +1912,7 @@ def _build_market_situation_assessment_plan(query: str, data_mode: str = "histor
             "current-index-status",
             "Fetch current Indian index levels and live session breadth.",
             tool="get_live_market_overview",
-            fallback="NSE live API equity-stockIndices endpoints; if unavailable, label data stale and use latest EOD index snapshot.",
+            fallback="NSE live API broad-market index endpoints + live-analysis-variations for breadth; if unavailable, label data stale and use latest EOD index snapshot.",
             recovery_plan="If the tool is missing, implement a wrapper over nseindia.com index APIs and normalize last, pct_change, advances, declines, and as_of.",
         ),
         _planner_task(
@@ -1931,8 +1931,8 @@ def _build_market_situation_assessment_plan(query: str, data_mode: str = "histor
                 "Fetch top gaining and losing stocks from the broad NSE universe.",
                 tool="get_top_gainers_losers",
                 args={"index": "NIFTY 500", "top_n": 5, "direction": "both"},
-                fallback="Use NSE equity-stockIndices for NIFTY 500; if live source fails, derive movers from market.equity_eod latest daily percent change.",
-                recovery_plan="If no tool exists, implement an NSE variations/equity-stockIndices client with PostgreSQL EOD fallback.",
+                fallback="Use NSE live-analysis-variations for the gainers/losers buckets; if live source fails, derive movers from market.equity_eod latest daily percent change.",
+                recovery_plan="If no tool exists, implement an NSE live-analysis-variations client with PostgreSQL EOD fallback.",
             )
         )
         tasks.append(

@@ -1810,25 +1810,14 @@ def _load_index_constituents_local(index_name: str) -> list[str]:
 def _fetch_nse_index_constituents(index_name: str) -> list[str]:
     """Fetch live NSE constituents for an equity index.
 
-    PG-SCAN-FALLBACK: routes through :func:`_nse_get_json` (cookie-refresh
-    retry) and falls back to the local ``data/index_stock_mapping.csv`` when
-    the NSE API returns non-JSON / is blocked.
+    The legacy ``equity-stockIndices?index=...`` endpoint that this used
+    to call was deprecated by NSE in 2024 and now returns 404 for every
+    index. The function therefore reads exclusively from the local
+    ``data/index_stock_mapping.csv`` bundled mapping. The 10-second
+    cookie-refreshed API attempt was removed because it could only ever
+    waste the request budget and slow the caller down.
     """
     canonical = _normalize_index_name(index_name)
-    idx_param = canonical.replace(" ", "%20")
-    url = f"https://www.nseindia.com/api/equity-stockIndices?index={idx_param}"
-    symbols: list[str] = []
-    try:
-        payload = _nse_get_json(url, timeout=10)
-        for row in payload.get("data", []) or []:
-            sym = str(row.get("symbol") or "").strip().upper()
-            if sym and sym != canonical and row.get("priority") != 1:
-                symbols.append(sym)
-    except Exception:
-        symbols = []
-    if symbols:
-        return list(dict.fromkeys(symbols))
-    # PG-SCAN-FALLBACK: NSE blocked / empty — use the local mapping CSV.
     return _load_index_constituents_local(canonical)
 
 
@@ -4191,7 +4180,7 @@ def _get_live_session():
         s.headers.update(_NSE_HEADERS)
         try:
             s.get("https://www.nseindia.com/", timeout=8)
-            # Second warmup required for equity-stockIndices and gated endpoints
+            # Second warmup is required for gated NSE endpoints (cookie/csrf).
             s.get("https://www.nseindia.com/market-data/live-equity-market?symbol=NIFTY+50", timeout=8)
         except Exception:
             pass
@@ -4539,13 +4528,25 @@ def get_live_market_overview() -> dict:
 
         adv_dec = {}
         try:
-            url2 = "https://www.nseindia.com/api/equity-stockIndices?index=NIFTY%20500"
-            r2   = s.get(url2, timeout=10)
-            items = r2.json().get("data", [])
-            advances = sum(1 for x in items if float(x.get("pChange", 0) or 0) > 0)
-            declines = sum(1 for x in items if float(x.get("pChange", 0) or 0) < 0)
-            adv_dec  = {"advances": advances, "declines": declines,
-                        "unchanged": len(items) - advances - declines}
+            # Migrated from deprecated `equity-stockIndices?index=NIFTY%20500`
+            # to `live-analysis-variations` (the documented replacement).
+            # The variations payload exposes advance/decline counts both at
+            # the bucket level and via per-row `pChange` — derive defensively.
+            url2 = "https://www.nseindia.com/api/live-analysis-variations?index=gainers"
+            r2 = s.get(url2, timeout=10)
+            payload2 = r2.json() or {}
+            bucket = payload2.get("allSec") or payload2.get("NIFTY") or {}
+            items = bucket.get("data") or []
+            adv = bucket.get("advances")
+            dec = bucket.get("declines")
+            unc = bucket.get("unchanged")
+            if adv is None or dec is None:
+                # Fall back to row-level tally when the bucket summary is absent.
+                adv = sum(1 for x in items if float(x.get("perChange", x.get("pChange", 0)) or 0) > 0)
+                dec = sum(1 for x in items if float(x.get("perChange", x.get("pChange", 0)) or 0) < 0)
+                unc = len(items) - adv - dec
+            adv_dec = {"advances": int(adv), "declines": int(dec),
+                       "unchanged": int(unc) if unc is not None else 0}
         except Exception:
             pass
         return {
