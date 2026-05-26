@@ -934,71 +934,62 @@ def assess_followup(user_input: str, previous_context: TurnContext | None) -> Si
             )
 
     if _asks_last_window(q) and previous_context.result_type == "stage2_screener":
+        from .clarify import AskUserQuestion, Option, Question
+
         symbols = _dedupe(list(previous_context.result_items or previous_context.symbols))[:20]
         top_n = max(10, len(symbols) or 10)
-        return SituationAssessment(
-            applies=True,
-            decision="ask_clarification",
-            confidence="high",
+        ctx_found = _context_found(previous_context)
+        prompt = "What should I check next for the prior Stage 2 stocks?"
+        ask = AskUserQuestion(
             user_is_asking="Whether the prior Stage 2 screener results were pulled from the last 30 minutes.",
-            context_found=_context_found(previous_context),
+            context_found=ctx_found,
             source_assessment=(
                 f"The prior Stage 2 list was not generated from last-30-minute intraday data. "
                 f"It used {previous_context.source_label}"
                 f"{_freshness_suffix(previous_context)}."
             ),
-            clarification_question="What should I check next for the prior Stage 2 stocks?",
-            clarification_questions=(
-                ClarificationQuestion(
-                    prompt="What should I check next for the prior Stage 2 stocks?",
-                    options=(
-                        ClarificationOption(
-                            label="A",
-                            text="Check last-30-minute intraday movement",
-                            bound_action={
-                                "decision": "run_tool_plan",
-                                "tool_plan": [("scan_symbols_intraday", {"symbols": symbols, "interval": "5m"})],
-                                "evidence_plan": ["scan_symbols_intraday"],
-                                "resolved_entities": symbols,
-                                "user_is_asking": "Check last-30-minute intraday movement for the prior Stage 2 stocks.",
-                                "context_found": _context_found(previous_context),
-                            },
-                        ),
-                        ClarificationOption(
-                            label="B",
-                            text="Run 15m intraday setups",
-                            bound_action={
-                                "decision": "run_tool_plan",
-                                "tool_plan": [("scan_symbols_intraday", {"symbols": symbols, "interval": "15m"})],
-                                "evidence_plan": ["scan_symbols_intraday"],
-                                "resolved_entities": symbols,
-                                "user_is_asking": "Run 15m intraday setups for the prior Stage 2 stocks.",
-                                "context_found": _context_found(previous_context),
-                            },
-                        ),
-                        ClarificationOption(
-                            label="C",
-                            text="Refresh Stage 2 EOD scan",
-                            bound_action={
-                                "decision": "run_tool_plan",
-                                "tool_plan": [("run_screener_query", {"screen_type": "stage2", "top_n": top_n})],
-                                "evidence_plan": ["run_screener_query"],
-                                "resolved_entities": symbols,
-                                "user_is_asking": "Refresh the Stage 2 EOD scan and compare it with the prior list.",
-                                "context_found": _context_found(previous_context),
-                            },
-                        ),
-                    ),
-                    default_label="B",
-                ),
-            ),
-            resolved_entities=symbols,
+            confidence="high",
+            clarification_question=prompt,
             plan=[
                 "Answer directly from the previous turn context.",
                 "Do not route to a generic market recap.",
                 "Offer bound next-step options for intraday or refreshed EOD checks.",
             ],
+            resolved_entities=symbols,
+            questions=[
+                Question(
+                    prompt=prompt,
+                    default_label="B",
+                    options=[
+                        Option.run_tool_plan(
+                            label="A", text="Check last-30-minute intraday movement",
+                            tools=[("scan_symbols_intraday", {"symbols": symbols, "interval": "5m"})],
+                            evidence_plan=["scan_symbols_intraday"],
+                            resolved_entities=symbols,
+                            user_is_asking="Check last-30-minute intraday movement for the prior Stage 2 stocks.",
+                            context_found=ctx_found,
+                        ),
+                        Option.run_tool_plan(
+                            label="B", text="Run 15m intraday setups",
+                            tools=[("scan_symbols_intraday", {"symbols": symbols, "interval": "15m"})],
+                            evidence_plan=["scan_symbols_intraday"],
+                            resolved_entities=symbols,
+                            user_is_asking="Run 15m intraday setups for the prior Stage 2 stocks.",
+                            context_found=ctx_found,
+                        ),
+                        Option.run_tool_plan(
+                            label="C", text="Refresh Stage 2 EOD scan",
+                            tools=[("run_screener_query", {"screen_type": "stage2", "top_n": top_n})],
+                            evidence_plan=["run_screener_query"],
+                            resolved_entities=symbols,
+                            user_is_asking="Refresh the Stage 2 EOD scan and compare it with the prior list.",
+                            context_found=ctx_found,
+                        ),
+                    ],
+                ),
+            ],
         )
+        return ask.to_assessment()
 
     if _asks_source(q):
         return SituationAssessment(

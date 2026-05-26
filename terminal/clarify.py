@@ -183,6 +183,7 @@ class AskUserQuestion:
     confidence: str = "medium"
     clarification_question: str = ""
     plan: list[str] = field(default_factory=list)
+    resolved_entities: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         self._validate()
@@ -243,6 +244,7 @@ class AskUserQuestion:
                 q.to_clarification_question() for q in self.questions
             ),
             plan=list(self.plan),
+            resolved_entities=list(self.resolved_entities),
         )
 
 
