@@ -36,6 +36,7 @@ from .schema import (
     SourcePolicy,
     ToolCallSpec,
 )
+from .task_graph import add_blocks
 
 
 # Phrases that indicate each evidence facet the prompt is asking for.
@@ -223,18 +224,30 @@ class CompoundStockProvider:
 
         symbol, matched_phrase = resolution
 
-        # The five-tool plan. resolve_symbol is included as the first
-        # step so the validator/executor can re-verify the resolution
-        # at run time without us baking the resolver into the router.
-        tool_plan = (
-            ToolCallSpec(tool="resolve_symbol", args={"query": matched_phrase}),
-            ToolCallSpec(tool="get_live_quote", args={"symbol": symbol}),
-            ToolCallSpec(tool="get_fno_overview", args={"symbol": symbol}),
-            ToolCallSpec(tool="explain_intraday_setup", args={"symbol": symbol}),
+        # The five-tool plan with declared dependencies (AA-CC-4):
+        # - `resolve` must complete first; it blocks every fetch step.
+        # - `intraday_setup_explain` blocks `intraday_setup_analysis`
+        #   because the analysis consumes the explanation context.
+        # - `live_quote` and `fno_overview` are independent of each
+        #   other once `resolve` is done — they form a parallel layer.
+        base_plan = (
+            ToolCallSpec(tool="resolve_symbol", args={"query": matched_phrase}, task_id="resolve"),
+            ToolCallSpec(tool="get_live_quote", args={"symbol": symbol}, task_id="live_quote"),
+            ToolCallSpec(tool="get_fno_overview", args={"symbol": symbol}, task_id="fno_overview"),
+            ToolCallSpec(tool="explain_intraday_setup", args={"symbol": symbol}, task_id="intraday_setup_explain"),
             ToolCallSpec(
                 tool="get_intraday_analysis",
                 args={"symbol": symbol, "timeframe": _detect_timeframe(text)},
+                task_id="intraday_setup_analysis",
             ),
+        )
+        tool_plan = add_blocks(
+            base_plan,
+            "resolve",
+            "live_quote", "fno_overview", "intraday_setup_explain", "intraday_setup_analysis",
+        )
+        tool_plan = add_blocks(
+            tool_plan, "intraday_setup_explain", "intraday_setup_analysis",
         )
 
         # Evidence map — F&O is optional so a downstream "unavailable"

@@ -31,17 +31,39 @@ CONFIDENCE_VALUES = {"low", "medium", "high"}
 class ToolCallSpec:
     tool: str
     args: dict[str, Any] = field(default_factory=dict)
+    task_id: str = ""
+    blocked_by: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.tool:
             raise ValueError("tool must be a non-empty string")
         object.__setattr__(self, "args", dict(self.args or {}))
+        object.__setattr__(self, "blocked_by", tuple(self.blocked_by or ()))
 
     def to_tuple(self) -> tuple[str, dict[str, Any]]:
         return self.tool, dict(self.args)
 
     def to_dict(self) -> dict[str, Any]:
-        return {"tool": self.tool, "args": dict(self.args)}
+        out: dict[str, Any] = {"tool": self.tool, "args": dict(self.args)}
+        if self.task_id:
+            out["task_id"] = self.task_id
+        if self.blocked_by:
+            out["blocked_by"] = list(self.blocked_by)
+        return out
+
+    def with_deps(
+        self,
+        *,
+        task_id: str | None = None,
+        blocked_by: tuple[str, ...] | None = None,
+    ) -> "ToolCallSpec":
+        """Return a copy with task_id and/or blocked_by updated."""
+        return ToolCallSpec(
+            tool=self.tool,
+            args=dict(self.args),
+            task_id=self.task_id if task_id is None else task_id,
+            blocked_by=self.blocked_by if blocked_by is None else tuple(blocked_by),
+        )
 
 
 @dataclass(frozen=True)
