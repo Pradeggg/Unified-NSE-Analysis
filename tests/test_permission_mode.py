@@ -126,5 +126,52 @@ class TestAgentIntegration(unittest.TestCase):
         self.assertEqual(a.set_permission_mode(PermissionMode.PLAN), PermissionMode.PLAN)
 
 
+class TestPlanModeRender(unittest.TestCase):
+    """AA-CC-2 plan-mode preview helper."""
+
+    def _agent_in_plan(self):
+        from terminal.agent import Agent
+        a = Agent()
+        a.set_permission_mode("plan")
+        return a
+
+    def test_preview_lists_steps_with_args(self):
+        a = self._agent_in_plan()
+        trace: list = []
+        plan = [
+            ("get_live_quote", {"symbol": "RELIANCE"}),
+            ("get_fno_overview", {"symbol": "RELIANCE"}),
+        ]
+        result = a._render_plan_preview(
+            plan, intent="demo", clean_input="show reliance",
+            mode_suffix="\n_Mode_", trace=trace,
+        )
+        self.assertIn("▶ PLAN MODE", result["answer"])
+        self.assertIn("2 steps", result["answer"])
+        self.assertIn("get_live_quote(symbol='RELIANCE')", result["answer"])
+        self.assertIn("get_fno_overview(symbol='RELIANCE')", result["answer"])
+        self.assertTrue(result["answer"].endswith("_Mode_"))
+        self.assertEqual(result["intent"], "plan_preview:demo")
+        self.assertTrue(
+            any(step.get("step") == "plan_mode_preview" for step in trace),
+        )
+
+    def test_preview_singular_step_grammar(self):
+        a = self._agent_in_plan()
+        result = a._render_plan_preview(
+            [("resolve_symbol", {"query": "RELI"})],
+            intent="solo", clean_input="reli", mode_suffix="", trace=[],
+        )
+        self.assertIn("(1 step)", result["answer"])
+        self.assertNotIn("(1 steps)", result["answer"])
+
+    def test_preview_empty_plan_renders_zero_steps(self):
+        a = self._agent_in_plan()
+        result = a._render_plan_preview(
+            [], intent="empty", clean_input="x", mode_suffix="", trace=[],
+        )
+        self.assertIn("0 steps", result["answer"])
+
+
 if __name__ == "__main__":
     unittest.main()

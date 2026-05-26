@@ -3380,11 +3380,39 @@ def _execute_plan(plan: list[tuple[str, dict]]) -> list[dict]:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Response synthesis (no-LLM path)
+# Response synthesis
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: dict | None = None) -> str:
-    """Build a structured text response from tool results without an LLM."""
+    """Route to the appropriate per-intent renderer in terminal.renderers."""
+    from terminal.renderers import render as _render
+    return _render(intent, tool_results, assessment_plan)
+
+
+def _synthesize_and_narrate(
+    intent: str,
+    query: str,
+    tool_results: list[dict],
+    backend,
+    assessment_plan: dict | None = None,
+) -> str:
+    """Synthesize + optionally append an LLM narrative paragraph.
+
+    Uses the deterministic renderer first (always fast, always present),
+    then appends a short interpretation if the intent is in NARRATION_INTENTS
+    and a backend is available.
+    """
+    from terminal.renderers import render as _render, build_narrative, attach_narrative
+    structured = _render(intent, tool_results, assessment_plan)
+    narrative = build_narrative(intent, query, tool_results, structured, backend)
+    return attach_narrative(structured, narrative)
+
+
+# Legacy monolith kept below for reference during transition.
+# It is no longer called — _synthesize_no_llm now delegates to terminal.renderers.
+# TODO: remove after full validation.
+def _LEGACY_synthesize_no_llm(intent: str, tool_results: list[dict], assessment_plan: dict | None = None) -> str:  # noqa: N802
+    """[LEGACY] Retained for diff/rollback purposes only."""
     lines: list[str] = []
 
     def _get(name: str) -> dict | None:
@@ -6686,6 +6714,14 @@ class Agent:
             return None
 
         tool_plan = decision.tool_plan_tuples()
+        if self._permission_policy.is_plan:
+            return self._render_plan_preview(
+                tool_plan,
+                intent=decision.intent,
+                clean_input=clean_input,
+                mode_suffix=mode_suffix,
+                trace=trace,
+            )
         tool_results = _execute_plan(tool_plan)
         trace.extend(tool_results)
 
@@ -7131,6 +7167,14 @@ class Agent:
                 answer = render_context_answer(ctx.clean_input, bound, _fallback_ctx)
                 return _finalize(answer, [])
             if bound.decision == "run_tool_plan" and bound.tool_plan:
+                if self._permission_policy.is_plan:
+                    return self._render_plan_preview(
+                        bound.tool_plan,
+                        intent="clarification_reply_binding",
+                        clean_input=ctx.clean_input,
+                        mode_suffix=ctx.mode_suffix,
+                        trace=ctx.trace,
+                    )
                 tool_results = _execute_plan(bound.tool_plan)
                 ctx.trace.extend(tool_results)
                 synthesis_intent = (
@@ -7213,6 +7257,14 @@ class Agent:
         entity_plan = _entity_topic_execution_plan(entity_assessment)
         if not entity_plan:
             return None
+        if self._permission_policy.is_plan:
+            return self._render_plan_preview(
+                entity_plan,
+                intent="entity_topic_command",
+                clean_input=ctx.clean_input,
+                mode_suffix=ctx.mode_suffix,
+                trace=ctx.trace,
+            )
         tool_results = _execute_plan(entity_plan)
         ctx.trace.extend(tool_results)
         answer_body = _synthesize_no_llm("entity_topic_command", tool_results)
@@ -7234,6 +7286,66 @@ class Agent:
             "trace": ctx.trace,
             "backend": self.backend_name,
             "intent": "entity_topic_command",
+        }
+
+    def _render_plan_preview(
+        self,
+        tool_plan,
+        *,
+        intent: str,
+        clean_input: str,
+        mode_suffix: str,
+        trace: list[dict],
+        extra_lines: list[str] | None = None,
+    ) -> dict:
+        """AA-CC-2 plan mode: produce a non-executing preview of a tool plan.
+
+        Callers guard with ``self._permission_policy.is_plan`` and skip
+        :func:`_execute_plan` when this returns a response dict.
+        """
+        plan_list = list(tool_plan or [])
+        steps = len(plan_list)
+        lines = [
+            "▶ PLAN MODE — no tools executed",
+            f"  Intent: {intent}",
+            f"  Mode: {self._permission_policy.mode.value}",
+            "",
+            f"▶ TOOL PLAN ({steps} step{'s' if steps != 1 else ''})",
+        ]
+        for idx, item in enumerate(plan_list, start=1):
+            try:
+                tool, args = item
+            except (TypeError, ValueError):
+                lines.append(f"  {idx}. {item!r}")
+                continue
+            try:
+                args_repr = ", ".join(f"{k}={v!r}" for k, v in (args or {}).items())
+            except Exception:
+                args_repr = "<args>"
+            lines.append(f"  {idx}. {tool}({args_repr})")
+        if extra_lines:
+            lines.append("")
+            lines.extend(extra_lines)
+        lines.append("")
+        lines.append(
+            "Switch to `default` mode (or unset AGENT_ADDA_PERMISSION_MODE) "
+            "and re-issue the same query to execute this plan."
+        )
+        answer = "\n".join(lines) + (mode_suffix or "")
+        trace.append({
+            "step": "plan_mode_preview",
+            "intent": intent,
+            "tool_count": steps,
+        })
+        try:
+            self._remember_interaction(clean_input, answer, [], include_in_history=False)
+        except TypeError:
+            self._remember_interaction(clean_input, answer, [])
+        return {
+            "answer": answer,
+            "trace": trace,
+            "backend": self.backend_name,
+            "intent": f"plan_preview:{intent}",
         }
 
     def _auto_dispatch_default_clarification(
@@ -7292,6 +7404,14 @@ class Agent:
                 "intent": "permission_mode_auto_dispatch",
             }
         if bound.decision == "run_tool_plan" and bound.tool_plan:
+            if self._permission_policy.is_plan:
+                return self._render_plan_preview(
+                    bound.tool_plan,
+                    intent="permission_mode_auto_dispatch",
+                    clean_input=ctx.clean_input,
+                    mode_suffix=ctx.mode_suffix,
+                    trace=ctx.trace,
+                )
             tool_results = _execute_plan(bound.tool_plan)
             ctx.trace.extend(tool_results)
             synthesis_intent = (
@@ -7365,6 +7485,14 @@ class Agent:
             }
 
         if assessment.applies and assessment.decision == "run_tool_plan":
+            if self._permission_policy.is_plan:
+                return self._render_plan_preview(
+                    assessment.tool_plan,
+                    intent="situation_assessment",
+                    clean_input=ctx.clean_input,
+                    mode_suffix=ctx.mode_suffix,
+                    trace=ctx.trace,
+                )
             tool_results = _execute_plan(assessment.tool_plan)
             ctx.trace.extend(tool_results)
             synthesis_intent = (
@@ -7445,6 +7573,14 @@ class Agent:
             "youtube_channels",
         }:
             ctx.trace.append({"step": "intent", "result": intent_plan})
+            if self._permission_policy.is_plan:
+                return self._render_plan_preview(
+                    intent_plan["plan"],
+                    intent=intent_plan.get("intent") or _intent or "intent_plan",
+                    clean_input=ctx.clean_input,
+                    mode_suffix=ctx.mode_suffix,
+                    trace=ctx.trace,
+                )
             tool_results = _execute_plan(intent_plan["plan"])
             ctx.trace.extend(tool_results)
             if ctx.mode == "intraday":
@@ -7456,7 +7592,10 @@ class Agent:
                     f"Market: {ctx.market_status.compact_label} | "
                     f"Clock: {ctx.market_status.clock_label}_"
                 )
-            answer_body = _synthesize_no_llm(_intent, tool_results, intent_plan.get("assessment_plan"))
+            answer_body = _synthesize_and_narrate(
+                _intent, ctx.clean_input, tool_results, self.backend,
+                intent_plan.get("assessment_plan"),
+            )
             answer_body = _apply_response_guardrails(ctx.clean_input, _intent, tool_results, answer_body)
             answer = self._with_readiness_metadata(answer_body + ctx.mode_suffix, ctx.mode)
             turn_context = build_turn_context(
@@ -7516,6 +7655,14 @@ class Agent:
 
         # ── Keyword fallback (no LLM backend) ─────────────────────────────
         ctx.trace.append({"step": "intent", "result": intent_plan})
+        if self._permission_policy.is_plan:
+            return self._render_plan_preview(
+                intent_plan["plan"],
+                intent=intent_plan.get("intent") or "keyword_fallback",
+                clean_input=ctx.clean_input,
+                mode_suffix=ctx.mode_suffix,
+                trace=ctx.trace,
+            )
         tool_results = _execute_plan(intent_plan["plan"])
         ctx.trace.extend(tool_results)
         if ctx.mode == "intraday":
@@ -7527,8 +7674,9 @@ class Agent:
                 f"Market: {ctx.market_status.compact_label} | "
                 f"Clock: {ctx.market_status.clock_label}_"
             )
-        answer_body = _synthesize_no_llm(
-            intent_plan["intent"], tool_results, intent_plan.get("assessment_plan"),
+        answer_body = _synthesize_and_narrate(
+            intent_plan["intent"], ctx.clean_input, tool_results, self.backend,
+            intent_plan.get("assessment_plan"),
         )
         answer_body = _apply_response_guardrails(
             ctx.clean_input, intent_plan["intent"], tool_results, answer_body,
