@@ -292,7 +292,6 @@ def _build_postgres_research_context(symbol: str) -> str:
         f"| Relative strength source | {_fmt_text(rs_source)} |",
         f"| CANSLIM score | {_fmt_num(row.get('can_slim_score'))} |",
         f"| Minervini score | {_fmt_num(row.get('minervini_score'))} |",
-        f"| Fundamental score | {_fmt_num(row.get('fundamental_score'))} |",
         f"| Enhanced fund score | {_fmt_num(row.get('enhanced_fund_score'))} |",
         f"| Investment score | {_fmt_num(row.get('investment_score'))} |",
         f"| Screener conviction | {_fmt_text(row.get('conviction_tier'))} |",
@@ -1310,24 +1309,45 @@ body {{
 }}
 
 @media(max-width:720px) {{
+  html,
+  body {{
+    max-width:100%;
+    overflow-x:hidden;
+  }}
   .topbar.app-bar {{
-    padding:18px 24px;
+    padding:18px 16px;
   }}
   .topbar.app-bar .hdr-inner {{
     flex-direction:column;
     gap:12px;
+    min-width:0;
+    width:calc(100vw - 32px);
+    max-width:100%;
+  }}
+  .topbar.app-bar .hdr-brand,
+  .topbar.app-bar .topbar-actions {{
+    min-width:0;
+    width:100%;
+    max-width:100%;
   }}
   .topbar.app-bar .hdr-title {{
     white-space:normal;
     overflow-wrap:anywhere;
-    font-size:1.25rem;
+    word-break:break-word;
+    max-width:100%;
+    font-size:1.15rem;
   }}
   .hdr-subtitle {{
     line-height:1.45;
+    overflow-wrap:anywhere;
   }}
   .topbar.app-bar .topbar-actions {{
     width:100%;
     justify-content:flex-start;
+  }}
+  .topbar.app-bar .btn {{
+    max-width:100%;
+    white-space:normal;
   }}
   .topbar.app-bar .search-wrap,
   .topbar.app-bar .search-wrap.active,
@@ -1337,12 +1357,73 @@ body {{
   .page-layout,
   .content {{
     padding:20px 16px;
+    width:100%;
+    max-width:100%;
+    overflow:hidden;
+  }}
+  .content-area {{
+    width:100%;
+    max-width:100%;
+    min-width:0;
+  }}
+  .content *,
+  .page-layout * {{
+    min-width:0;
+  }}
+  .metrics-row.summary-grid {{
+    display:grid;
+    grid-template-columns:minmax(0, 1fr);
+    gap:12px;
   }}
   .metric-card.sum-card {{
-    min-width:150px;
+    min-width:0;
+    width:100%;
+    max-width:100%;
+    flex-basis:auto;
+  }}
+  .section,
+  .summary-card {{
+    width:100%;
+    max-width:100%;
+    min-width:0;
   }}
   .section-body {{
     padding:14px 18px;
+    width:100%;
+    max-width:100%;
+    overflow:hidden;
+    overflow-wrap:anywhere;
+  }}
+  .section-body > *:not(.tbl-wrap) {{
+    max-width:100%;
+  }}
+  .section-body p,
+  .section-body li,
+  .section-body h1,
+  .section-body h2,
+  .section-body h3,
+  .section-body h4 {{
+    width:100%;
+    max-width:100%;
+    overflow-wrap:anywhere;
+    word-break:break-word;
+  }}
+  .section-body code {{
+    white-space:normal;
+    overflow-wrap:anywhere;
+  }}
+  .tbl-wrap {{
+    max-width:100%;
+    overflow-x:auto;
+  }}
+  .data-table {{
+    width:100%;
+    min-width:100%;
+  }}
+  .data-table th,
+  .data-table td {{
+    white-space:normal;
+    overflow-wrap:anywhere;
   }}
 }}
 
