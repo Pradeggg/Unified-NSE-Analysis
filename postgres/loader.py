@@ -975,6 +975,34 @@ def load_deals_today(cur):
 # Load MA breadth snapshot + compute aggregated pct
 # ---------------------------------------------------------------------------
 
+def load_global_index_levels(cur):
+    """Load data/global_indices.csv (wide format: Date,S&P 500,Nasdaq,…) into
+    market.global_index_levels. Each row of the CSV is exploded into one row
+    per index_name, skipping NA values."""
+    gi = DATA / "global_indices.csv"
+    if not gi.exists():
+        return 0
+    df = pd.read_csv(gi, low_memory=False)
+    rows = []
+    for _, r in df.iterrows():
+        dt = norm_date(r.get("Date"))
+        if not dt:
+            continue
+        for col in df.columns:
+            if col == "Date":
+                continue
+            v = safe_float(r.get(col))
+            if v is None:
+                continue
+            rows.append({"trade_date": dt, "index_name": col, "close": v})
+    if not rows:
+        return 0
+    n = upsert(cur, "market.global_index_levels", rows,
+               ["trade_date", "index_name"], ["close"])
+    print(f"  market.global_index_levels: {n} rows")
+    return n
+
+
 def load_ma_breadth(cur):
     csvs = sorted((BASE / "reports" / "generated_csv" / "2026").glob("NIFTY500_Market_Breadth_*.csv"))
     if not csvs:
@@ -1120,6 +1148,7 @@ def main():
         load_fii_dii(cur)
         load_breadth(cur)
         load_ma_breadth(cur)
+        load_global_index_levels(cur)
         load_deals_today(cur)
         if not args.skip_fno:
             load_fno_today(cur)
