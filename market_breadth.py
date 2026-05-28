@@ -281,6 +281,7 @@ def compute_trin(universe_df: pd.DataFrame) -> pd.DataFrame:
         )
 
     out = pd.DataFrame(rows).set_index("DATE").sort_index()
+    out["trin"] = pd.to_numeric(out["trin"], errors="coerce")
     out["trin_5d"] = out["trin"].rolling(5, min_periods=1).mean().round(2)
     out["trin_signal"] = out["trin"].apply(_trin_signal)
     out["trin_5d_signal"] = out["trin_5d"].apply(_trin_5d_signal)

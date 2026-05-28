@@ -38,6 +38,7 @@ import math
 import os
 import subprocess
 import sys
+import time
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -73,9 +74,10 @@ _NSE_INDEX_TARGETS = {
 # ===== FETCHING =====
 
 def _curl_text(url: str, cookies: str | None = None, referer: str | None = None,
-               max_time: int = 20) -> str:
+               max_time: int = 20, retries: int = 1) -> str:
     """Fetch URL via curl subprocess (avoids macOS requests SSL hangs).
-    Uses --http1.1 to avoid HTTP/2 stream reset errors on some endpoints."""
+    Uses --http1.1 to avoid HTTP/2 stream reset errors on some endpoints.
+    Retries once on failure / timeout with a short backoff."""
     cmd = ["curl", "-sS", "--http1.1", "--max-time", str(max_time), "-L", url]
     if cookies and Path(cookies).exists():
         cmd += ["-b", cookies]
@@ -85,17 +87,21 @@ def _curl_text(url: str, cookies: str | None = None, referer: str | None = None,
     cmd += ["-H", "Accept: text/csv, text/plain, application/json, */*"]
     cmd += ["-H", "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
             "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"]
-    try:
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=max_time + 10)
-        if r.returncode != 0 and not r.stdout:
-            print(f"  curl failed ({r.returncode}) for {url}: {r.stderr[:100]}", file=sys.stderr)
-        return r.stdout
-    except subprocess.TimeoutExpired:
-        print(f"  curl timeout ({max_time}s) for {url}", file=sys.stderr)
-        return ""
-    except Exception as exc:
-        print(f"  curl error for {url}: {exc}", file=sys.stderr)
-        return ""
+    last_err = ""
+    for attempt in range(max(1, retries + 1)):
+        try:
+            r = subprocess.run(cmd, capture_output=True, text=True, timeout=max_time + 10)
+            if r.returncode == 0 and r.stdout:
+                return r.stdout
+            last_err = f"rc={r.returncode} {r.stderr[:80]}"
+        except subprocess.TimeoutExpired:
+            last_err = f"timeout({max_time}s)"
+        except Exception as exc:
+            last_err = f"err {exc}"
+        if attempt < retries:
+            time.sleep(1.5 * (attempt + 1))
+    print(f"  curl failed after {retries + 1} tries for {url}: {last_err}", file=sys.stderr)
+    return ""
 
 
 def fetch_fred_series(series_id: str, start_date: str = "",
