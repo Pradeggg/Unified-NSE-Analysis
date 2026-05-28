@@ -975,6 +975,87 @@ def load_deals_today(cur):
 # Load MA breadth snapshot + compute aggregated pct
 # ---------------------------------------------------------------------------
 
+def load_sector_top_stocks(cur, snapshot_date: str = None) -> int:
+    """Rebuild scores.sector_top_stocks for ``snapshot_date`` directly from
+    scores.stage_snapshots — replaces the deprecated R-script CSV pipeline.
+
+    For each sector, rank stocks by technical_score DESC, keep the top 5,
+    compute sector_strength = mean(top5.technical_score), total_stocks =
+    count of sector members on that date.
+    """
+    snapshot_date = snapshot_date or TODAY
+    cur.execute(
+        """
+        WITH src AS (
+            SELECT s.*, d.trading_value
+              FROM scores.stage_snapshots s
+              LEFT JOIN scores.daily_scores d
+                     ON d.score_date = s.snapshot_date
+                    AND d.symbol     = s.symbol
+             WHERE s.snapshot_date = %s
+               AND s.sector IS NOT NULL
+               AND s.technical_score IS NOT NULL
+        ),
+        ranked AS (
+            SELECT s.*,
+                   ROW_NUMBER() OVER (PARTITION BY sector
+                                      ORDER BY technical_score DESC NULLS LAST,
+                                               trading_value     DESC NULLS LAST) AS rnk,
+                   COUNT(*)     OVER (PARTITION BY sector)                        AS total_stocks
+              FROM src s
+        ),
+        top5 AS (
+            SELECT * FROM ranked WHERE rnk <= 5
+        ),
+        strength AS (
+            SELECT sector,
+                   AVG(technical_score)::numeric(6,2) AS sector_strength,
+                   MAX(total_stocks)                  AS total_stocks
+              FROM top5
+             GROUP BY sector
+        )
+        INSERT INTO scores.sector_top_stocks (
+            score_date, sector_name, sector_strength, total_stocks,
+            rank, symbol, company_name, market_cap_cat,
+            current_price, change_1d_pct, change_1w_pct, change_1m_pct,
+            technical_score, rsi, relative_strength,
+            can_slim_score, minervini_score, enhanced_fund_score,
+            trend_signal, trading_signal, trading_value
+        )
+        SELECT t.snapshot_date, t.sector, s.sector_strength, s.total_stocks,
+               t.rnk, t.symbol, t.company_name, t.market_cap_cat,
+               t.price, t.change_1d_pct, t.change_1w_pct, t.change_1m_pct,
+               t.technical_score, t.rsi, t.relative_strength,
+               t.can_slim_score, t.minervini_score, t.enhanced_fund_score,
+               t.trend_signal, t.trading_signal, t.trading_value
+          FROM top5 t JOIN strength s USING (sector)
+        ON CONFLICT (score_date, sector_name, symbol) DO UPDATE SET
+               sector_strength    = EXCLUDED.sector_strength,
+               total_stocks       = EXCLUDED.total_stocks,
+               rank               = EXCLUDED.rank,
+               company_name       = EXCLUDED.company_name,
+               market_cap_cat     = EXCLUDED.market_cap_cat,
+               current_price      = EXCLUDED.current_price,
+               change_1d_pct      = EXCLUDED.change_1d_pct,
+               change_1w_pct      = EXCLUDED.change_1w_pct,
+               change_1m_pct      = EXCLUDED.change_1m_pct,
+               technical_score    = EXCLUDED.technical_score,
+               rsi                = EXCLUDED.rsi,
+               relative_strength  = EXCLUDED.relative_strength,
+               can_slim_score     = EXCLUDED.can_slim_score,
+               minervini_score    = EXCLUDED.minervini_score,
+               enhanced_fund_score= EXCLUDED.enhanced_fund_score,
+               trend_signal       = EXCLUDED.trend_signal,
+               trading_signal     = EXCLUDED.trading_signal,
+               trading_value      = EXCLUDED.trading_value
+        """,
+        (snapshot_date,),
+    )
+    n = cur.rowcount
+    print(f"  scores.sector_top_stocks: {n} rows for {snapshot_date}")
+    return n
+
+
 def load_global_index_levels(cur):
     """Load data/global_indices.csv (wide format: Date,S&P 500,Nasdaq,…) into
     market.global_index_levels. Each row of the CSV is exploded into one row
@@ -1152,6 +1233,10 @@ def main():
         load_deals_today(cur)
         if not args.skip_fno:
             load_fno_today(cur)
+        # Rebuild scores.sector_top_stocks from today's stage_snapshots — this
+        # replaces the deprecated R-script CSV pipeline (analyze_all_sectors.R)
+        # whose CSV output stopped flowing after STEP 6 was repurposed.
+        load_sector_top_stocks(cur, run_date)
         conn.commit()
         print("\n  ✓ Data loaded")
 
