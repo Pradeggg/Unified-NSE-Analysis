@@ -236,6 +236,16 @@ def step_sector_rotation_report(dry_run: bool) -> bool:
     )
 
 
+def step_top_picks_report(dry_run: bool) -> bool:
+    """Generate Top Investment Picks Analysis (merges sector rotation + stage-2 tracker)."""
+    _section("STEP 5B — Top Investment Picks Analysis")
+    return _run(
+        "Top Investment Picks Analysis",
+        [PYTHON, "top_picks_report.py"],
+        dry_run=dry_run,
+    )
+
+
 def step_voice_briefing(dry_run: bool) -> bool:
     """Generate today's voice briefing script from fresh signal_log.csv data."""
     _section("STEP 6 — Voice Briefing (script only, no audio)")
@@ -462,6 +472,10 @@ def main() -> int:
     # 5. Sector rotation report (now always runs — populates signal_log.csv for voice briefing)
     if not step_sector_rotation_report(args.dry_run):
         failed.append("Sector rotation report")
+
+    # 5B. Top Investment Picks Analysis (merges sector rotation + stage-2 tracker)
+    if not step_top_picks_report(args.dry_run):
+        failed.append("Top investment picks report")
 
     # 6. Voice briefing — generates script from fresh signal_log.csv (fast, no LLM)
     if not step_voice_briefing(args.dry_run):
