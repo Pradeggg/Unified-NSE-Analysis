@@ -63,8 +63,22 @@ jobs:
           fi
           git log -1 --oneline
 
+      # ── Trading day gate (skip weekends & NSE holidays) ─────────────────
+      - name: Trading day gate
+        id: tradingday
+        run: |
+          set -euo pipefail
+          if .venv/bin/python -c "from datetime import date; from terminal.market_calendar import is_nse_trading_day; import sys; sys.exit(0 if is_nse_trading_day(date.today()) else 1)"; then
+            echo "is_trading=true" >> "$GITHUB_OUTPUT"
+            echo "Today is an NSE trading day — proceeding"
+          else
+            echo "is_trading=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Today is not an NSE trading day (weekend or holiday) — skipping refresh"
+          fi
+
       # ── Ensure local PostgreSQL is up (idempotent) ──────────────────────
       - name: Ensure PostgreSQL running
+        if: github.event_name == 'workflow_dispatch' || steps.tradingday.outputs.is_trading == 'true'
         run: |
           set -euo pipefail
           if ! psql -d nse_market -tAc "SELECT 1" >/dev/null 2>&1; then
@@ -85,6 +99,7 @@ jobs:
 
       # ── Sanity: Postgres reachable + venv present ───────────────────────
       - name: Preflight checks
+        if: github.event_name == 'workflow_dispatch' || steps.tradingday.outputs.is_trading == 'true'
         run: |
           set -euo pipefail
           test -x .venv/bin/python || { echo "::error::.venv missing"; exit 2; }
@@ -94,6 +109,7 @@ jobs:
 
       # ── The actual run ──────────────────────────────────────────────────
       - name: Run daily_refresh.py
+        if: github.event_name == 'workflow_dispatch' || steps.tradingday.outputs.is_trading == 'true'
         id: refresh
         env:
           # Inherit secrets if you use any LLM features inside daily_refresh

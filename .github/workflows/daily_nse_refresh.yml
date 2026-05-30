@@ -150,11 +150,25 @@ jobs:
           key: pip-${{ env.PYTHON_VERSION }}-lite
           restore-keys: pip-${{ env.PYTHON_VERSION }}-
 
+      - name: Trading day gate
+        id: tradingday
+        run: |
+          set -euo pipefail
+          if python -c "from datetime import date; from terminal.market_calendar import is_nse_trading_day; import sys; sys.exit(0 if is_nse_trading_day(date.today()) else 1)"; then
+            echo "is_trading=true" >> "$GITHUB_OUTPUT"
+            echo "Today is an NSE trading day — proceeding"
+          else
+            echo "is_trading=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Today is not an NSE trading day (weekend or holiday) — skipping live refresh"
+          fi
+
       - name: Install dependencies (minimal)
+        if: github.event_name == 'workflow_dispatch' || steps.tradingday.outputs.is_trading == 'true'
         run: |
           pip install pandas numpy requests yfinance openpyxl
 
       - name: Restore cached DB
+        if: github.event_name == 'workflow_dispatch' || steps.tradingday.outputs.is_trading == 'true'
         uses: actions/cache@v4
         with:
           path: |
@@ -164,9 +178,11 @@ jobs:
           restore-keys: nse-data-cache-
 
       - name: Update live prices + regenerate report
+        if: github.event_name == 'workflow_dispatch' || steps.tradingday.outputs.is_trading == 'true'
         run: python daily_refresh.py --live-only
 
       - name: Check for changes
+        if: github.event_name == 'workflow_dispatch' || steps.tradingday.outputs.is_trading == 'true'
         id: changes
         run: |
           git diff --quiet && echo "changed=false" >> $GITHUB_OUTPUT \
