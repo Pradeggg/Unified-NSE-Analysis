@@ -2,14 +2,14 @@
 
 *Agent Adda - Market Intelligence Agent*
 
-**Generated:** 2026-05-31 01:10 IST  
+**Generated:** 2026-05-31 01:18 IST  
 **Sources:** Sector Rotation Report + Stage 2 Tracker + PostgreSQL `scores.*`, `market.equity_eod`
 
 > **Disclaimer:** This report is not investment advice. It is a learning journey demonstrating how AI and rules-based agents can be applied to financial markets. Validate all data, prices, liquidity, corporate events, and risk independently before making any financial decision.
 
 ## Executive Summary
 
-Mechanically-screened list of 10 stocks combining sector-rotation leadership and stage-2 momentum. Rule-based narrative (LLM unavailable).
+Mechanically-synthesised basket of 10 stocks combining sector-rotation leadership and Weinstein stage-2 momentum, deep-screened across P&L, BS, CF, fundamental scores and corporate events. LLM unavailable — rule-based narrative.
 
 **Macro context:** Snapshot 2026-05-29: 1028 stocks scanned; Stage 2 count 232 vs Stage 4 187; BUY/STRONG_BUY signals 99; mean RS vs Nifty 500 13.8%.
 
@@ -43,11 +43,26 @@ Dual-confirmed names (both screens) are prioritised. Per-stock deep dive uses 26
 
 **Why selected:** Dual-confirmed: sector-rotation leader AND stage-2 momentum (inv.score 69.80)
 
-**Thesis:** Classical Stage-2 trend stack (Price > EMA20 > EMA50 > EMA200) · Within 5% of 52w high — breakout proximity · Outpacing Nifty 500 by 51% (RS)
+**Thesis:** Stage-2 EMA stack (Price ₹4983 > EMA20 > EMA50 > EMA200) · RS 51% vs Nifty 500 · Within 5% of 52w high · PAT 4Y CAGR 23%
 
-**Key risks:** RSI 73 — overbought; pullback risk
+**Technical view:** RSI 73.3, 1Y return 38.5%, dist from 52w high -1.8%.
 
-**Action:** BUY bias; stage STAGE_2
+**Fundamental view:** Latest qtr revenue 12.5% YoY, PAT 18.4% YoY; 4Y CAGR revenue 14.9% / PAT 23.3%; ROCE 17.0%; debt trend rising; OCF/PAT 0.75.
+
+**Sector view:** Sector strength 72.28
+
+**Valuation:** Quantitative valuation not in dossier — defer to qualitative read.
+
+**Key catalysts:**
+- OPM expanded 220bps vs 4Q avg
+
+**Key risks:**
+- RSI 73 overbought
+- Debt rising ₹+1076 Cr (3Y)
+
+**Action:** BUY bias; stage STAGE_2; size per regime
+
+**Conviction:** **MEDIUM** — 4 positive · 2 negative factors flagged
 
 **Snapshot:**
 
@@ -91,11 +106,25 @@ Dual-confirmed names (both screens) are prioritised. Per-stock deep dive uses 26
 
 **Why selected:** Dual-confirmed: sector-rotation leader AND stage-2 momentum (inv.score 67.20)
 
-**Thesis:** Classical Stage-2 trend stack (Price > EMA20 > EMA50 > EMA200) · Strong momentum (RSI 67) · Within 5% of 52w high — breakout proximity
+**Thesis:** Stage-2 EMA stack (Price ₹774 > EMA20 > EMA50 > EMA200) · Momentum RSI 67 · Within 5% of 52w high · PAT YoY +33% · Revenue YoY +23% · OCF/PAT 1.33
 
-**Key risks:** No quantitative red flags surfaced.
+**Technical view:** RSI 67.5, 1Y return 49.9%, dist from 52w high -3.8%.
 
-**Action:** BUY bias; stage STAGE_2
+**Fundamental view:** Latest qtr revenue 22.9% YoY, PAT 32.9% YoY; 4Y CAGR revenue 9.3% / PAT 9.6%; ROCE 13.0%; debt trend rising; OCF/PAT 1.33.
+
+**Sector view:** Sector strength 67.06
+
+**Valuation:** Quantitative valuation not in dossier — defer to qualitative read.
+
+**Key catalysts:**
+- OPM expanded 320bps vs 4Q avg
+
+**Key risks:**
+- Debt rising ₹+197 Cr (3Y)
+
+**Action:** BUY bias; stage STAGE_2; size per regime
+
+**Conviction:** **HIGH** — 6 positive · 1 negative factors flagged
 
 **Snapshot:**
 
@@ -139,11 +168,25 @@ Dual-confirmed names (both screens) are prioritised. Per-stock deep dive uses 26
 
 **Why selected:** Top of leading sector (Pharma & Healthcare); inv.score 66.90, RS 39.1700%
 
-**Thesis:** Mechanical pick from screen overlap; manual review recommended.
+**Thesis:** PAT YoY +123% · Revenue YoY +20% · Net cash ₹126 Cr · OCF/PAT 1.31
 
-**Key risks:** RSI 70 — overbought; pullback risk
+**Technical view:** RSI 70.2, 1Y return 51.0%, dist from 52w high -68.6%.
 
-**Action:** HOLD bias; stage STAGE_1
+**Fundamental view:** Latest qtr revenue 19.8% YoY, PAT 122.7% YoY; 4Y CAGR revenue 8.9% / PAT -1.9%; ROCE —%; debt trend stable; OCF/PAT 1.31.
+
+**Sector view:** Sector strength 67.06
+
+**Valuation:** Quantitative valuation not in dossier — defer to qualitative read.
+
+**Key catalysts:**
+- OPM expanded 440bps vs 4Q avg
+
+**Key risks:**
+- RSI 70 overbought
+
+**Action:** HOLD bias; stage STAGE_1; size per regime
+
+**Conviction:** **MEDIUM** — 4 positive · 1 negative factors flagged
 
 **Snapshot:**
 
@@ -187,11 +230,25 @@ Dual-confirmed names (both screens) are prioritised. Per-stock deep dive uses 26
 
 **Why selected:** Top of leading sector (Capital Markets); inv.score 66.00, RS 44.7700%
 
-**Thesis:** Classical Stage-2 trend stack (Price > EMA20 > EMA50 > EMA200) · Strong momentum (RSI 62)
+**Thesis:** Stage-2 EMA stack (Price ₹4146 > EMA20 > EMA50 > EMA200) · Momentum RSI 62 · PAT YoY +61% · Revenue YoY +85% · PAT 4Y CAGR 78% · Net cash ₹3837 Cr · OCF/PAT 1.25
 
-**Key risks:** No quantitative red flags surfaced.
+**Technical view:** RSI 62.1, 1Y return 69.4%, dist from 52w high -6.8%.
 
-**Action:** BUY bias; stage STAGE_2
+**Fundamental view:** Latest qtr revenue 84.7% YoY, PAT 60.9% YoY; 4Y CAGR revenue 54.8% / PAT 78.5%; ROCE —%; debt trend stable; OCF/PAT 1.25.
+
+**Sector view:** Sector strength 57.72
+
+**Valuation:** Quantitative valuation not in dossier — defer to qualitative read.
+
+**Key catalysts:**
+- OPM expanded 1180bps vs 4Q avg
+
+**Key risks:**
+- No quantitative red flag in dossier
+
+**Action:** BUY bias; stage STAGE_2; size per regime
+
+**Conviction:** **HIGH** — 7 positive · 0 negative factors flagged
 
 **Snapshot:**
 
@@ -235,11 +292,25 @@ Dual-confirmed names (both screens) are prioritised. Per-stock deep dive uses 26
 
 **Why selected:** Top of leading sector (Pharma & Healthcare); inv.score 65.60, RS 56.0400%
 
-**Thesis:** Classical Stage-2 trend stack (Price > EMA20 > EMA50 > EMA200) · Strong momentum (RSI 69) · Outpacing Nifty 500 by 56% (RS)
+**Thesis:** Stage-2 EMA stack (Price ₹499 > EMA20 > EMA50 > EMA200) · RS 56% vs Nifty 500 · Momentum RSI 69 · PAT YoY +620% · Revenue YoY +32% · PAT 4Y CAGR 41% · OCF/PAT 1.41
 
-**Key risks:** No quantitative red flags surfaced.
+**Technical view:** RSI 68.7, 1Y return 27.4%, dist from 52w high -5.8%.
 
-**Action:** HOLD bias; stage STAGE_2
+**Fundamental view:** Latest qtr revenue 32.0% YoY, PAT 620.0% YoY; 4Y CAGR revenue 7.8% / PAT 41.3%; ROCE 6.0%; debt trend falling; OCF/PAT 1.41.
+
+**Sector view:** Sector strength 67.06
+
+**Valuation:** Quantitative valuation not in dossier — defer to qualitative read.
+
+**Key catalysts:**
+- Watch next quarterly print
+
+**Key risks:**
+- No quantitative red flag in dossier
+
+**Action:** HOLD bias; stage STAGE_2; size per regime
+
+**Conviction:** **HIGH** — 7 positive · 0 negative factors flagged
 
 **Snapshot:**
 
@@ -283,11 +354,26 @@ Dual-confirmed names (both screens) are prioritised. Per-stock deep dive uses 26
 
 **Why selected:** Top of leading sector (Capital Goods & Industrials); inv.score 65.00, RS 28.2800%
 
-**Thesis:** Classical Stage-2 trend stack (Price > EMA20 > EMA50 > EMA200) · Within 5% of 52w high — breakout proximity
+**Thesis:** Stage-2 EMA stack (Price ₹9478 > EMA20 > EMA50 > EMA200) · Within 5% of 52w high · Revenue YoY +27% · PAT 4Y CAGR 31% · Net cash ₹3169 Cr · OCF/PAT 1.41 · ROCE 34%
 
-**Key risks:** RSI 70 — overbought; pullback risk
+**Technical view:** RSI 70.2, 1Y return 61.1%, dist from 52w high -2.8%.
 
-**Action:** BUY bias; stage STAGE_2
+**Fundamental view:** Latest qtr revenue 26.9% YoY, PAT 7.1% YoY; 4Y CAGR revenue 24.0% / PAT 31.1%; ROCE 34.0%; debt trend rising; OCF/PAT 1.41.
+
+**Sector view:** Sector strength 72.28
+
+**Valuation:** Quantitative valuation not in dossier — defer to qualitative read.
+
+**Key catalysts:**
+- Watch next quarterly print
+
+**Key risks:**
+- RSI 70 overbought
+- Debt rising ₹+75 Cr (3Y)
+
+**Action:** BUY bias; stage STAGE_2; size per regime
+
+**Conviction:** **HIGH** — 7 positive · 2 negative factors flagged
 
 **Snapshot:**
 
@@ -331,11 +417,25 @@ Dual-confirmed names (both screens) are prioritised. Per-stock deep dive uses 26
 
 **Why selected:** Top of leading sector (Capital Goods & Industrials); inv.score 64.60, RS 57.7500%
 
-**Thesis:** Classical Stage-2 trend stack (Price > EMA20 > EMA50 > EMA200) · Strong momentum (RSI 70) · Within 5% of 52w high — breakout proximity · Outpacing Nifty 500 by 58% (RS)
+**Thesis:** Stage-2 EMA stack (Price ₹417 > EMA20 > EMA50 > EMA200) · RS 58% vs Nifty 500 · Momentum RSI 70 · Within 5% of 52w high · PAT YoY +156% · Revenue YoY +37% · PAT 4Y CAGR 38% · OCF/PAT 3.65
 
-**Key risks:** No quantitative red flags surfaced.
+**Technical view:** RSI 69.6, 1Y return 63.6%, dist from 52w high -1.9%.
 
-**Action:** BUY bias; stage STAGE_2
+**Fundamental view:** Latest qtr revenue 36.9% YoY, PAT 156.0% YoY; 4Y CAGR revenue 12.3% / PAT 37.7%; ROCE 5.0%; debt trend falling; OCF/PAT 3.65.
+
+**Sector view:** Sector strength 72.28
+
+**Valuation:** Quantitative valuation not in dossier — defer to qualitative read.
+
+**Key catalysts:**
+- OPM expanded 1060bps vs 4Q avg
+
+**Key risks:**
+- No quantitative red flag in dossier
+
+**Action:** BUY bias; stage STAGE_2; size per regime
+
+**Conviction:** **HIGH** — 8 positive · 0 negative factors flagged
 
 **Snapshot:**
 
@@ -379,11 +479,25 @@ Dual-confirmed names (both screens) are prioritised. Per-stock deep dive uses 26
 
 **Why selected:** Top of leading sector (Capital Goods & Industrials); inv.score 64.50, RS 42.4700%
 
-**Thesis:** Classical Stage-2 trend stack (Price > EMA20 > EMA50 > EMA200) · Strong momentum (RSI 61) · Within 5% of 52w high — breakout proximity
+**Thesis:** Stage-2 EMA stack (Price ₹13118 > EMA20 > EMA50 > EMA200) · Momentum RSI 61 · Within 5% of 52w high · Revenue YoY +16% · PAT 4Y CAGR 40% · OCF/PAT 1.33 · ROCE 33%
 
-**Key risks:** No quantitative red flags surfaced.
+**Technical view:** RSI 60.8, 1Y return 69.1%, dist from 52w high -3.4%.
 
-**Action:** BUY bias; stage STAGE_2
+**Fundamental view:** Latest qtr revenue 16.2% YoY, PAT 19.4% YoY; 4Y CAGR revenue 23.3% / PAT 39.5%; ROCE 33.0%; debt trend rising; OCF/PAT 1.33.
+
+**Sector view:** Sector strength 72.28
+
+**Valuation:** Quantitative valuation not in dossier — defer to qualitative read.
+
+**Key catalysts:**
+- Watch next quarterly print
+
+**Key risks:**
+- Debt rising ₹+228 Cr (3Y)
+
+**Action:** BUY bias; stage STAGE_2; size per regime
+
+**Conviction:** **HIGH** — 7 positive · 1 negative factors flagged
 
 **Snapshot:**
 
@@ -427,11 +541,25 @@ Dual-confirmed names (both screens) are prioritised. Per-stock deep dive uses 26
 
 **Why selected:** Top of leading sector (Defence & Aerospace); inv.score 64.40, RS 49.6300%
 
-**Thesis:** Classical Stage-2 trend stack (Price > EMA20 > EMA50 > EMA200) · Within 5% of 52w high — breakout proximity
+**Thesis:** Stage-2 EMA stack (Price ₹2056 > EMA20 > EMA50 > EMA200) · Within 5% of 52w high · PAT YoY +30% · Revenue YoY +34% · PAT 4Y CAGR 23% · ROCE 20%
 
-**Key risks:** RSI 72 — overbought; pullback risk
+**Technical view:** RSI 71.7, 1Y return 59.9%, dist from 52w high -2.9%.
 
-**Action:** BUY bias; stage STAGE_2
+**Fundamental view:** Latest qtr revenue 33.6% YoY, PAT 30.2% YoY; 4Y CAGR revenue 22.0% / PAT 23.1%; ROCE 20.0%; debt trend stable; OCF/PAT 0.60.
+
+**Sector view:** Sector strength 63.72
+
+**Valuation:** Quantitative valuation not in dossier — defer to qualitative read.
+
+**Key catalysts:**
+- OPM expanded 140bps vs 4Q avg
+
+**Key risks:**
+- RSI 72 overbought
+
+**Action:** BUY bias; stage STAGE_2; size per regime
+
+**Conviction:** **HIGH** — 6 positive · 1 negative factors flagged
 
 **Snapshot:**
 
@@ -475,11 +603,25 @@ Dual-confirmed names (both screens) are prioritised. Per-stock deep dive uses 26
 
 **Why selected:** Top of leading sector (Metals & Mining); inv.score 63.70, RS 68.6000%
 
-**Thesis:** Classical Stage-2 trend stack (Price > EMA20 > EMA50 > EMA200) · Strong momentum (RSI 69) · Within 5% of 52w high — breakout proximity · Outpacing Nifty 500 by 69% (RS)
+**Thesis:** Stage-2 EMA stack (Price ₹1377 > EMA20 > EMA50 > EMA200) · RS 69% vs Nifty 500 · Momentum RSI 69 · Within 5% of 52w high · PAT 4Y CAGR 77% · OCF/PAT 1.64
 
-**Key risks:** No quantitative red flags surfaced.
+**Technical view:** RSI 69.0, 1Y return 80.7%, dist from 52w high -1.3%.
 
-**Action:** BUY bias; stage STAGE_2
+**Fundamental view:** Latest qtr revenue 9.9% YoY, PAT -46.9% YoY; 4Y CAGR revenue 13.8% / PAT 76.9%; ROCE 18.0%; debt trend rising; OCF/PAT 1.64.
+
+**Sector view:** Sector strength 68.94
+
+**Valuation:** Quantitative valuation not in dossier — defer to qualitative read.
+
+**Key catalysts:**
+- Watch next quarterly print
+
+**Key risks:**
+- Debt rising ₹+1233 Cr (3Y)
+
+**Action:** BUY bias; stage STAGE_2; size per regime
+
+**Conviction:** **HIGH** — 6 positive · 1 negative factors flagged
 
 **Snapshot:**
 
@@ -521,7 +663,7 @@ Dual-confirmed names (both screens) are prioritised. Per-stock deep dive uses 26
 
 ## Portfolio Construction
 
-Equal-weight 10% per name baseline. Under elevated VIX/bear regimes, scale gross exposure to 60-70% and hold residual in cash; cap per-trade risk at 1-2% of portfolio via stop-distance × position size.
+Equal-weight 10% per name baseline. Overweight HIGH-conviction names by +2%, halve LOW-conviction sizes. Cap sector exposure at 30%. Scale gross to 60-70% in elevated VIX regimes; cap per-trade risk at 1-2% of NAV via stop-distance × size.
 
 **Sector spread:**
 
