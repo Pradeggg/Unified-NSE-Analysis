@@ -34,6 +34,7 @@ class ReplayResult:
     orders: list[Order] = field(default_factory=list)
     fills: list[Fill] = field(default_factory=list)
     equity_snapshots: list[dict[str, Any]] = field(default_factory=list)
+    strategy_positions: dict[tuple[str, str], int] = field(default_factory=dict)
 
     @property
     def trade_ledger(self) -> list[dict[str, Any]]:
@@ -45,7 +46,18 @@ class ReplayResult:
 
     @property
     def positions(self) -> list[dict[str, Any]]:
-        return self.account.positions_as_dicts()
+        rows = []
+        for position in self.account.positions_as_dicts():
+            symbol = str(position["symbol"]).upper()
+            strategy_ids = tuple(
+                sorted(
+                    strategy_id
+                    for (strategy_id, owned_symbol), quantity in self.strategy_positions.items()
+                    if owned_symbol == symbol and quantity > 0
+                )
+            )
+            rows.append({**position, "strategy_ids": strategy_ids})
+        return rows
 
     def to_audit_dict(self) -> dict[str, Any]:
         return {
@@ -136,6 +148,7 @@ def run_replay(df: pd.DataFrame, strategy_specs: list[dict[str, Any]], config: R
         emit(PortfolioSnapshotEvent, date_str, payload=snapshot)
 
     result.orders = [account.orders[order.order_id] for order in result.orders]
+    result.strategy_positions = dict(strategy_positions)
     return result
 
 
@@ -330,6 +343,7 @@ def _normalize(df: pd.DataFrame) -> pd.DataFrame:
     out = out.dropna(subset=["date", "symbol", "open", "high", "low", "close"])
     out["symbol"] = out["symbol"].astype(str).str.strip()
     out = out[out["symbol"] != ""]
+    out = out[~out["symbol"].str.casefold().isin(_SYMBOL_SENTINELS)]
     out["symbol"] = out["symbol"].str.upper()
     for col in ("open", "high", "low", "close"):
         out[col] = pd.to_numeric(out[col], errors="coerce")
@@ -361,3 +375,6 @@ def _positive_float(value: Any) -> float | None:
 
 def _date_str(value: Any) -> str:
     return str(pd.to_datetime(value).date())
+
+
+_SYMBOL_SENTINELS = {"nan", "none", "null", "na", "n/a", "nat"}

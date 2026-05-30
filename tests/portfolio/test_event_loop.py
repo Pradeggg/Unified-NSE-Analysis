@@ -224,3 +224,76 @@ def test_null_and_empty_symbols_are_dropped_before_event_or_order_generation():
     assert "" not in emitted_symbols
     assert emitted_symbols == {"AAA"}
     assert ordered_symbols == {"AAA"}
+
+
+def test_string_sentinel_symbols_are_dropped_without_cash_use():
+    rows = pd.DataFrame(
+        {
+            "date": pd.to_datetime(["2025-01-02", "2025-01-02", "2025-01-03", "2025-01-03"]),
+            "symbol": ["None", "nan", "NaN", "NULL"],
+            "open": [100.0, 100.0, 101.0, 101.0],
+            "high": [102.0, 102.0, 103.0, 103.0],
+            "low": [99.0, 99.0, 100.0, 100.0],
+            "close": [101.0, 101.0, 102.0, 102.0],
+            "volume": [100000, 100000, 100000, 100000],
+            "stage": ["STAGE_2", "STAGE_2", "STAGE_2", "STAGE_2"],
+            "rsi_14": [55.0, 55.0, 55.0, 55.0],
+            "sma_50": [90.0, 90.0, 90.0, 90.0],
+            "atr_14": [3.0, 3.0, 3.0, 3.0],
+            "volume_ratio_20d": [1.0, 1.0, 1.0, 1.0],
+        }
+    )
+
+    result = run_replay(rows, [valid_strategy_spec()], ReplayConfig(initial_capital=100_000.0))
+
+    emitted_symbols = {event.symbol for event in result.events if event.symbol is not None}
+    assert emitted_symbols == set()
+    assert result.orders == []
+    assert result.fills == []
+    assert result.account.cash == 100_000.0
+
+
+def test_exposed_positions_remove_strategy_after_partial_multi_strategy_exit():
+    rows = pd.concat(
+        [
+            sample_ohlcv().iloc[[1, 2]],
+            pd.DataFrame(
+                {
+                    "date": pd.to_datetime(["2025-01-06", "2025-01-07"]),
+                    "symbol": ["AAA", "AAA"],
+                    "open": [109.0, 111.0],
+                    "high": [113.0, 112.0],
+                    "low": [108.0, 105.0],
+                    "close": [96.0, 106.0],
+                    "volume": [160000, 170000],
+                    "stage": ["STAGE_2", "STAGE_2"],
+                    "rsi_14": [65.0, 48.0],
+                    "sma_50": [101.0, 102.0],
+                    "atr_14": [5.0, 5.0],
+                    "volume_ratio_20d": [1.1, 0.8],
+                }
+            ),
+        ],
+        ignore_index=True,
+    )
+
+    still_long_strategy = _strategy("stage2_fixture_b", stage_exit=False)
+    still_long_strategy["exit"] = {"any": [{"indicator": "close", "operator": "below", "value": 0.0}]}
+
+    result = run_replay(
+        rows,
+        [_strategy("stage2_fixture_a"), still_long_strategy],
+        ReplayConfig(initial_capital=100_000.0),
+    )
+
+    assert [fill.side.value for fill in result.fills] == ["BUY", "BUY", "SELL"]
+    remaining_buy = next(fill for fill in result.fills if fill.strategy_id == "stage2_fixture_b")
+    assert result.positions == [
+        {
+            "symbol": "AAA",
+            "quantity": remaining_buy.quantity,
+            "avg_price": 105.0,
+            "avg_cost": 105.0,
+            "strategy_ids": ("stage2_fixture_b",),
+        }
+    ]
