@@ -259,6 +259,60 @@ def test_direct_fill_with_invalid_fee_rejects_order_without_raw_exception_or_mut
     assert account.orders["o1"].status == OrderStatus.REJECTED
 
 
+def test_direct_fill_numeric_string_price_and_fee_are_normalized_before_apply():
+    account = PortfolioAccount(initial_capital=10_000.0)
+    order = _order()
+    fill = Fill(
+        fill_id="direct-normalized",
+        order_id="o1",
+        symbol="AAA",
+        side=OrderSide.BUY,
+        quantity=10,
+        price="100.0",
+        fees="1.25",
+        slippage=0.0,
+        timestamp="2025-01-02",
+        strategy_id="s1",
+    )
+
+    account.submit_order(order)
+    account.apply_fill(fill)
+
+    assert account.cash == 8_998.75
+    assert account.positions["AAA"].quantity == 10
+    assert account.positions["AAA"].avg_price == 100.0
+    assert account.positions["AAA"].avg_cost == 100.125
+    assert account.fills[0].price == 100.0
+    assert account.fills[0].fees == 1.25
+    assert account.orders["o1"].status == OrderStatus.FILLED
+
+
+def test_direct_fill_fractional_quantity_rejects_order_without_mutation():
+    account = PortfolioAccount(initial_capital=10_000.0)
+    order = _order()
+    fill = Fill(
+        fill_id="direct-fractional-quantity",
+        order_id="o1",
+        symbol="AAA",
+        side=OrderSide.BUY,
+        quantity=1.5,
+        price=100.0,
+        fees=0.0,
+        slippage=0.0,
+        timestamp="2025-01-02",
+        strategy_id="s1",
+    )
+
+    account.submit_order(order)
+    with pytest.raises(PortfolioAccountError, match="quantity must be positive"):
+        account.apply_fill(fill)
+
+    assert account.cash == 10_000.0
+    assert account.positions == {}
+    assert account.fills == []
+    assert account.orders["o1"].status == OrderStatus.REJECTED
+
+
 def test_slippage_and_fees_are_deterministic_by_side():
     model = NextOpenExecutionModel(slippage_bps=10.0, brokerage_bps=5.0)
 

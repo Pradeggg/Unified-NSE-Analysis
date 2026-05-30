@@ -149,7 +149,18 @@ class PortfolioAccount:
 
     def _normalize_fill(self, fill: Fill | dict[str, Any]) -> Fill:
         if isinstance(fill, Fill):
-            return fill
+            return Fill(
+                fill_id=str(fill.fill_id),
+                order_id=str(fill.order_id),
+                symbol=str(fill.symbol).upper(),
+                side=fill.side,
+                quantity=_strict_int_or_zero(fill.quantity),
+                price=_float_or_nan(fill.price),
+                fees=_float_or_nan(fill.fees),
+                slippage=_float_or_zero(fill.slippage),
+                timestamp=str(fill.timestamp),
+                strategy_id=str(fill.strategy_id),
+            )
         side = fill.get("side")
         order_id = str(fill.get("order_id") or "")
         try:
@@ -203,6 +214,14 @@ def _int_or_zero(value: Any) -> int:
         return int(value)
     except (TypeError, ValueError):
         return 0
+
+
+def _strict_int_or_zero(value: Any) -> int:
+    if isinstance(value, bool):
+        return 0
+    if isinstance(value, int):
+        return value
+    return 0
 
 
 def _positive_price(value: Any) -> float | None:
