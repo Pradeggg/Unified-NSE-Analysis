@@ -313,6 +313,31 @@ def test_direct_fill_fractional_quantity_rejects_order_without_mutation():
     assert account.orders["o1"].status == OrderStatus.REJECTED
 
 
+def test_dict_fill_fractional_quantity_rejects_order_without_mutation():
+    account = PortfolioAccount(initial_capital=10_000.0)
+    order = _order()
+
+    account.submit_order(order)
+    with pytest.raises(PortfolioAccountError, match="quantity must be positive"):
+        account.apply_fill(_fill_dict(quantity=1.5))
+
+    assert account.cash == 10_000.0
+    assert account.positions == {}
+    assert account.fills == []
+    assert account.orders["o1"].status == OrderStatus.REJECTED
+
+
+def test_fractional_order_quantity_is_rejected_and_not_filled():
+    account = PortfolioAccount(initial_capital=10_000.0)
+    order = _order(quantity=1.5)
+
+    with pytest.raises(PortfolioAccountError, match="quantity must be positive"):
+        account.submit_order(order)
+
+    assert account.orders == {}
+    assert NextOpenExecutionModel().try_fill(order, _bar(100.0)) is None
+
+
 def test_slippage_and_fees_are_deterministic_by_side():
     model = NextOpenExecutionModel(slippage_bps=10.0, brokerage_bps=5.0)
 

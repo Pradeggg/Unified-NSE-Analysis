@@ -35,7 +35,7 @@ class PortfolioAccount:
         self.nav_history: list[dict[str, Any]] = []
 
     def submit_order(self, order: Order) -> Order:
-        quantity = _positive_quantity(order.quantity)
+        quantity = _positive_int_quantity(order.quantity)
         if quantity is None:
             raise PortfolioAccountError("quantity must be positive")
         if order.side not in {OrderSide.BUY, OrderSide.SELL}:
@@ -173,7 +173,7 @@ class PortfolioAccount:
             order_id=order_id,
             symbol=str(fill["symbol"]).upper(),
             side=normalized_side,
-            quantity=_int_or_zero(fill.get("quantity")),
+            quantity=_strict_int_or_zero(fill.get("quantity")),
             price=_float_or_nan(fill.get("price", fill.get("fill_price"))),
             fees=_float_or_nan(fill.get("fees")),
             slippage=_float_or_zero(fill.get("slippage")),
@@ -182,7 +182,7 @@ class PortfolioAccount:
         )
 
     def _validate_fill(self, fill: Fill) -> None:
-        if _positive_quantity(fill.quantity) is None:
+        if _positive_int_quantity(fill.quantity) is None:
             self._set_order_status(fill.order_id, OrderStatus.REJECTED)
             raise PortfolioAccountError("quantity must be positive")
         if _positive_price(fill.price) is None:
@@ -199,21 +199,11 @@ class PortfolioAccount:
             self.orders[order_id] = order.with_status(status)
 
 
-def _positive_quantity(value: Any) -> int | None:
-    try:
-        quantity = int(value)
-    except (TypeError, ValueError):
-        return None
+def _positive_int_quantity(value: Any) -> int | None:
+    quantity = _strict_int_or_zero(value)
     if quantity <= 0:
         return None
     return quantity
-
-
-def _int_or_zero(value: Any) -> int:
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return 0
 
 
 def _strict_int_or_zero(value: Any) -> int:

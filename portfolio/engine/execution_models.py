@@ -14,7 +14,8 @@ class NextOpenExecutionModel:
         self.slippage_bps = float(slippage_bps)
 
     def try_fill(self, order: Order, next_bar: pd.Series) -> Fill | None:
-        if int(order.quantity) <= 0:
+        quantity = _positive_int_quantity(order.quantity)
+        if quantity is None:
             return None
         if order.order_type != OrderType.MARKET_NEXT_OPEN:
             return None
@@ -23,7 +24,6 @@ class NextOpenExecutionModel:
         if open_price is None:
             return None
 
-        quantity = int(order.quantity)
         price = self._slipped_price(open_price, order.side)
         notional = price * quantity
         return Fill(
@@ -53,6 +53,14 @@ def _positive_float(value: Any) -> float | None:
     if not math.isfinite(parsed) or parsed <= 0:
         return None
     return parsed
+
+
+def _positive_int_quantity(value: Any) -> int | None:
+    if isinstance(value, bool) or not isinstance(value, int):
+        return None
+    if value <= 0:
+        return None
+    return value
 
 
 def _timestamp(value: Any) -> str:
