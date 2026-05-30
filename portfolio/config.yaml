@@ -1,0 +1,19 @@
+simulation:
+  start_date: "2025-01-01"
+  initial_capital: 1000000.0
+  fill_policy: "next_open"
+
+risk_rails:
+  max_risk_per_trade_pct: 2.0
+  max_position_pct: 15.0
+  max_portfolio_exposure_pct: 95.0
+  max_open_positions: 20
+
+costs:
+  brokerage_bps: 0.0
+  slippage_bps: 0.0
+
+paths:
+  state_dir: "portfolio/data/state"
+  logs_dir: "portfolio/data/logs"
+  reports_dir: "portfolio/data/reports"
