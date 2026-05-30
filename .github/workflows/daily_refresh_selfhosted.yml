@@ -63,6 +63,26 @@ jobs:
           fi
           git log -1 --oneline
 
+      # ── Ensure local PostgreSQL is up (idempotent) ──────────────────────
+      - name: Ensure PostgreSQL running
+        run: |
+          set -euo pipefail
+          if ! psql -d nse_market -tAc "SELECT 1" >/dev/null 2>&1; then
+            echo "PostgreSQL not reachable — starting via postgres/start_pg.sh"
+            ./postgres/start_pg.sh start
+            # Wait up to ~15s for socket to come up
+            for i in $(seq 1 15); do
+              if psql -d nse_market -tAc "SELECT 1" >/dev/null 2>&1; then
+                echo "PostgreSQL is up"
+                exit 0
+              fi
+              sleep 1
+            done
+            echo "::error::PostgreSQL failed to start within 15s"
+            exit 1
+          fi
+          echo "PostgreSQL already running"
+
       # ── Sanity: Postgres reachable + venv present ───────────────────────
       - name: Preflight checks
         run: |

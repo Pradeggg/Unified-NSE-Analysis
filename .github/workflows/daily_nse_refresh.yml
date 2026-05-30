@@ -2,9 +2,11 @@ name: Daily NSE Data Refresh
 
 on:
   schedule:
-    # Full pipeline: Mon–Fri at 10:30 UTC (4:00 PM IST) — 30 min after NSE close
-    - cron: '30 10 * * 1-5'
     # Live-price refresh: Mon–Fri at 13:00 UTC (6:30 PM IST) — end-of-day settle
+    # NOTE: Full-pipeline schedule removed — it's structurally incompatible with
+    # ubuntu-latest (no local PostgreSQL, no Rscript). Use the self-hosted
+    # "Daily Refresh (self-hosted, end-to-end)" workflow for the full pipeline.
+    # Full mode is still available here via workflow_dispatch for debugging.
     - cron: '0 13 * * 1-5'
   workflow_dispatch:
     inputs:
@@ -26,9 +28,9 @@ jobs:
   full-refresh:
     name: Full Pipeline Refresh
     runs-on: ubuntu-latest
-    # Run on schedule at 10:30 UTC, OR manual dispatch with mode=full/skip-analysis
+    # Manual dispatch only — full mode is broken on ubuntu-latest (see top of file).
+    # The self-hosted workflow handles scheduled full runs.
     if: |
-      (github.event_name == 'schedule' && github.event.schedule == '30 10 * * 1-5') ||
       (github.event_name == 'workflow_dispatch' && (inputs.mode == 'full' || inputs.mode == 'skip-analysis'))
     permissions:
       contents: write
