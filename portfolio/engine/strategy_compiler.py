@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import math
 from dataclasses import replace
 from typing import Any
 
 import pandas as pd
 
-from portfolio.engine.strategy_schema import RiskSpec, Rule, StrategySpec, validate_strategy_spec
+from portfolio.engine.strategy_schema import Rule, StrategySpec, validate_strategy_spec
 
 
 MAX_RISK_PER_TRADE_PCT = 2.0
@@ -34,6 +35,8 @@ def compile_strategy(raw: dict[str, Any]) -> CompiledStrategy:
 
 
 def _eval_rule(rule: Rule, row: pd.Series) -> bool:
+    if rule.indicator not in row:
+        return False
     left = row.get(rule.indicator)
     right = row.get(rule.value) if isinstance(rule.value, str) and rule.value in row else rule.value
     if rule.operator == "eq":
@@ -41,22 +44,45 @@ def _eval_rule(rule: Rule, row: pd.Series) -> bool:
     if rule.operator == "in":
         return str(left).upper() in {str(item).upper() for item in (right or [])}
     if rule.operator == "above":
-        return _float(left) > _float(right)
+        left_value = _float(left)
+        right_value = _float(right)
+        return left_value is not None and right_value is not None and left_value > right_value
     if rule.operator == "below":
-        return _float(left) < _float(right)
+        left_value = _float(left)
+        right_value = _float(right)
+        return left_value is not None and right_value is not None and left_value < right_value
     if rule.operator == "gte":
-        return _float(left) >= _float(right)
+        left_value = _float(left)
+        right_value = _float(right)
+        return left_value is not None and right_value is not None and left_value >= right_value
     if rule.operator == "lte":
-        return _float(left) <= _float(right)
+        left_value = _float(left)
+        right_value = _float(right)
+        return left_value is not None and right_value is not None and left_value <= right_value
     if rule.operator == "between":
-        low, high = list(right)
+        if isinstance(right, str):
+            return False
+        try:
+            low, high = list(right)
+        except (TypeError, ValueError):
+            return False
         value = _float(left)
-        return _float(low) <= value <= _float(high)
+        low_value = _float(low)
+        high_value = _float(high)
+        return (
+            value is not None
+            and low_value is not None
+            and high_value is not None
+            and low_value <= value <= high_value
+        )
     return False
 
 
-def _float(value: Any) -> float:
+def _float(value: Any) -> float | None:
     try:
-        return float(value)
-    except Exception:
-        return 0.0
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(parsed):
+        return None
+    return parsed

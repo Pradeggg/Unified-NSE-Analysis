@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import math
+from collections.abc import Sequence
+from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any
 
@@ -60,9 +63,9 @@ def validate_strategy_spec(raw: dict[str, Any]) -> StrategySpec:
         raise StrategyValidationError("strategy spec must be a dict")
     strategy_id = _required_str(raw, "strategy_id")
     name = _required_str(raw, "name")
-    entry = raw.get("entry") or {}
-    exit_spec = raw.get("exit") or {}
-    risk = raw.get("risk") or {}
+    entry = _optional_dict(raw, "entry")
+    exit_spec = _optional_dict(raw, "exit")
+    risk = _optional_dict(raw, "risk")
     entry_rules = tuple(_parse_rule(rule) for rule in entry.get("all") or [])
     exit_rules = tuple(_parse_rule(rule) for rule in exit_spec.get("any") or [])
     if not entry_rules:
@@ -74,16 +77,16 @@ def validate_strategy_spec(raw: dict[str, Any]) -> StrategySpec:
     return StrategySpec(
         strategy_id=strategy_id,
         name=name,
-        universe=dict(raw.get("universe") or {}),
+        universe=deepcopy(_optional_dict(raw, "universe")),
         entry_all=entry_rules,
         exit_any=exit_rules,
         risk=RiskSpec(
-            initial_stop=dict(risk["initial_stop"]),
-            risk_per_trade_pct=float(risk.get("risk_per_trade_pct", 1.0)),
-            max_position_pct=float(risk.get("max_position_pct", 10.0)),
+            initial_stop=deepcopy(_required_dict(risk, "risk.initial_stop")),
+            risk_per_trade_pct=_positive_float(risk.get("risk_per_trade_pct", 1.0), "risk_per_trade_pct"),
+            max_position_pct=_positive_float(risk.get("max_position_pct", 10.0), "max_position_pct"),
         ),
-        add_rules=tuple(dict(rule) for rule in raw.get("add_rules") or []),
-        raw=dict(raw),
+        add_rules=tuple(deepcopy(rule) for rule in raw.get("add_rules") or []),
+        raw=deepcopy(raw),
     )
 
 
@@ -95,6 +98,8 @@ def _required_str(raw: dict[str, Any], key: str) -> str:
 
 
 def _parse_rule(raw: dict[str, Any]) -> Rule:
+    if not isinstance(raw, dict):
+        raise StrategyValidationError("rule must be a dict")
     indicator = str(raw.get("indicator") or "").strip()
     operator = str(raw.get("operator") or "").strip()
     if indicator not in ALLOWED_INDICATORS:
@@ -103,4 +108,66 @@ def _parse_rule(raw: dict[str, Any]) -> Rule:
         raise StrategyValidationError(f"unknown operator: {operator}")
     if "value" not in raw:
         raise StrategyValidationError(f"rule value is required for {indicator}")
-    return Rule(indicator=indicator, operator=operator, value=raw["value"])
+    return Rule(indicator=indicator, operator=operator, value=_validate_rule_value(operator, raw["value"]))
+
+
+def _optional_dict(raw: dict[str, Any], key: str) -> dict[str, Any]:
+    value = raw.get(key)
+    if value is None:
+        return {}
+    if not isinstance(value, dict):
+        raise StrategyValidationError(f"{key} must be a dict")
+    return value
+
+
+def _required_dict(raw: dict[str, Any], key: str) -> dict[str, Any]:
+    value = raw.get(key.rsplit(".", 1)[-1])
+    if not isinstance(value, dict):
+        raise StrategyValidationError(f"{key} must be a dict")
+    return value
+
+
+def _positive_float(value: Any, field_name: str) -> float:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError) as exc:
+        raise StrategyValidationError(f"{field_name} must be numeric") from exc
+    if not math.isfinite(parsed) or parsed <= 0:
+        raise StrategyValidationError(f"{field_name} must be positive and finite")
+    return parsed
+
+
+def _validate_rule_value(operator: str, value: Any) -> Any:
+    if operator == "between":
+        if isinstance(value, str) or not isinstance(value, Sequence) or len(value) != 2:
+            raise StrategyValidationError("between value must contain exactly two numeric values")
+        return tuple(_numeric_rule_value(item, "between") for item in value)
+    if operator == "in":
+        if isinstance(value, str) or not isinstance(value, Sequence):
+            raise StrategyValidationError("in value must be a non-string sequence")
+        return tuple(_immutable_copy(item) for item in value)
+    if operator in {"above", "below", "gte", "lte"}:
+        if isinstance(value, str) and value in ALLOWED_INDICATORS:
+            return value
+        return _numeric_rule_value(value, operator)
+    return _immutable_copy(value)
+
+
+def _numeric_rule_value(value: Any, operator: str) -> float:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError) as exc:
+        raise StrategyValidationError(f"{operator} value must be numeric") from exc
+    if not math.isfinite(parsed):
+        raise StrategyValidationError(f"{operator} value must be finite")
+    return parsed
+
+
+def _immutable_copy(value: Any) -> Any:
+    if isinstance(value, dict):
+        return tuple((key, _immutable_copy(item)) for key, item in deepcopy(value).items())
+    if isinstance(value, list):
+        return tuple(_immutable_copy(item) for item in value)
+    if isinstance(value, tuple):
+        return tuple(_immutable_copy(item) for item in value)
+    return deepcopy(value)
