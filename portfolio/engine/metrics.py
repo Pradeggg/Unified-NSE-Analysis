@@ -43,6 +43,7 @@ def calculate_metrics(
     fill_rows = list(fills if fills is not None else _attr(replay_result, "fills", []))
     position_rows = list(positions if positions is not None else _attr(replay_result, "positions", []))
     account = _attr(replay_result, "account", None)
+    trade_pnls = _closed_trade_pnls(fill_rows)
 
     if starting_equity is None:
         starting_equity = _number(_attr(account, "initial_capital", None))
@@ -61,14 +62,13 @@ def calculate_metrics(
     if realized_pnl is None and snapshots:
         realized_pnl = _number(_field(snapshots[-1], "realized_pnl"))
     if realized_pnl is None:
-        realized_pnl = 0.0
+        realized_pnl = sum(trade_pnls) if trade_pnls else 0.0
 
     nav_values = [_number(_field(row, "nav")) for row in snapshots]
     nav_values = [value for value in nav_values if value is not None]
     if nav_values and (not _same_money(nav_values[0], starting_equity)):
         nav_values.insert(0, float(starting_equity))
 
-    trade_pnls = _closed_trade_pnls(fill_rows)
     strategy_ids = sorted(
         {
             strategy_id

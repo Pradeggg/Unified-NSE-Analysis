@@ -48,6 +48,41 @@ def test_empty_metrics_behavior_is_stable_for_missing_inputs():
     assert metrics.open_positions_count == 0
 
 
+def test_plain_closed_fill_pair_derives_realized_pnl_when_no_account_or_snapshot_pnl():
+    fills = [
+        {
+            "fill_id": "buy-1",
+            "order_id": "order-buy",
+            "strategy_id": "plain_strategy",
+            "symbol": "AAA",
+            "side": "BUY",
+            "quantity": 10,
+            "price": 100.0,
+            "fees": 5.0,
+            "timestamp": "2025-01-02",
+        },
+        {
+            "fill_id": "sell-1",
+            "order_id": "order-sell",
+            "strategy_id": "plain_strategy",
+            "symbol": "AAA",
+            "side": "SELL",
+            "quantity": 10,
+            "price": 110.0,
+            "fees": 3.0,
+            "timestamp": "2025-01-03",
+        },
+    ]
+
+    metrics = calculate_metrics(starting_equity=10_000.0, fills=fills)
+
+    assert metrics.number_of_fills == 2
+    assert metrics.number_of_trades == 1
+    assert metrics.winning_trades == 1
+    assert metrics.losing_trades == 0
+    assert metrics.realized_pnl == 92.0
+
+
 def test_jsonl_audit_writing_and_readback_is_deterministic(tmp_path):
     path = tmp_path / "nested" / "audit.jsonl"
     record = AuditRecord(
