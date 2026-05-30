@@ -2,7 +2,7 @@
 
 *Agent Adda - Market Intelligence Agent*
 
-**Generated:** 2026-05-31 01:07 IST  
+**Generated:** 2026-05-31 01:10 IST  
 **Sources:** Sector Rotation Report + Stage 2 Tracker + PostgreSQL `scores.*`, `market.equity_eod`
 
 > **Disclaimer:** This report is not investment advice. It is a learning journey demonstrating how AI and rules-based agents can be applied to financial markets. Validate all data, prices, liquidity, corporate events, and risk independently before making any financial decision.
@@ -81,7 +81,7 @@ Dual-confirmed names (both screens) are prioritised. Per-stock deep dive uses 26
 | Revenue growth 3Y | — |
 | PAT growth 3Y | — |
 | ROE | — |
-| ROCE | — |
+| ROCE | 17.0% |
 | Debt / Equity | — |
 | Promoter holding | — |
 
@@ -129,7 +129,7 @@ Dual-confirmed names (both screens) are prioritised. Per-stock deep dive uses 26
 | Revenue growth 3Y | — |
 | PAT growth 3Y | — |
 | ROE | — |
-| ROCE | — |
+| ROCE | 13.0% |
 | Debt / Equity | — |
 | Promoter holding | — |
 
@@ -273,7 +273,7 @@ Dual-confirmed names (both screens) are prioritised. Per-stock deep dive uses 26
 | Revenue growth 3Y | — |
 | PAT growth 3Y | — |
 | ROE | — |
-| ROCE | — |
+| ROCE | 6.0% |
 | Debt / Equity | — |
 | Promoter holding | — |
 
@@ -321,7 +321,7 @@ Dual-confirmed names (both screens) are prioritised. Per-stock deep dive uses 26
 | Revenue growth 3Y | — |
 | PAT growth 3Y | — |
 | ROE | — |
-| ROCE | — |
+| ROCE | 34.0% |
 | Debt / Equity | — |
 | Promoter holding | — |
 
@@ -369,7 +369,7 @@ Dual-confirmed names (both screens) are prioritised. Per-stock deep dive uses 26
 | Revenue growth 3Y | — |
 | PAT growth 3Y | — |
 | ROE | — |
-| ROCE | — |
+| ROCE | 5.0% |
 | Debt / Equity | — |
 | Promoter holding | — |
 
@@ -417,7 +417,7 @@ Dual-confirmed names (both screens) are prioritised. Per-stock deep dive uses 26
 | Revenue growth 3Y | — |
 | PAT growth 3Y | — |
 | ROE | — |
-| ROCE | — |
+| ROCE | 33.0% |
 | Debt / Equity | — |
 | Promoter holding | — |
 
@@ -465,7 +465,7 @@ Dual-confirmed names (both screens) are prioritised. Per-stock deep dive uses 26
 | Revenue growth 3Y | — |
 | PAT growth 3Y | — |
 | ROE | — |
-| ROCE | — |
+| ROCE | 20.0% |
 | Debt / Equity | — |
 | Promoter holding | — |
 
@@ -513,7 +513,7 @@ Dual-confirmed names (both screens) are prioritised. Per-stock deep dive uses 26
 | Revenue growth 3Y | — |
 | PAT growth 3Y | — |
 | ROE | — |
-| ROCE | — |
+| ROCE | 18.0% |
 | Debt / Equity | — |
 | Promoter holding | — |
 

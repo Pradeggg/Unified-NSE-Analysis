@@ -23,6 +23,7 @@ import argparse
 import html as html_mod
 import json
 import os
+import re
 import sys
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -274,13 +275,87 @@ def get_snapshot(conn, sym: str, snap_date: str) -> dict | None:
     """, (snap_date, sym))
 
 
+_NUM_RE = re.compile(r"-?\d+(?:\.\d+)?")
+
+
+def _grab(pattern: str, text: str) -> float | None:
+    if not text:
+        return None
+    m = re.search(pattern, text, re.I)
+    if not m:
+        return None
+    try:
+        return float(m.group(1))
+    except (ValueError, IndexError):
+        return None
+
+
+def _parse_summaries(fund: dict) -> dict:
+    """Extract numeric metrics from the free-text summary columns.
+
+    The `scores.fundamentals` numeric columns are largely NULL right now;
+    the actual data lives in pnl_summary / ratios_summary / balance_sheet_summary.
+    Parse them so the report can still show real numbers.
+    """
+    if not fund:
+        return {}
+    pnl = fund.get("pnl_summary") or ""
+    ratios = fund.get("ratios_summary") or ""
+    bs = fund.get("balance_sheet_summary") or ""
+    qtr = fund.get("quarterly_summary") or ""
+
+    parsed: dict = {}
+    parsed["sales_latest_cr"] = _grab(r"Sales[: ]+([\d.]+)\s*Cr", pnl)
+    parsed["sales_yoy_pct"] = _grab(r"Sales[^()]*\(YoY\s*([+\-]?[\d.]+)%\)", pnl)
+    parsed["pat_latest_cr"] = _grab(r"NetProfit[: ]+([\d.]+)\s*Cr", pnl)
+    parsed["pat_yoy_pct"] = _grab(r"NetProfit[^()]*\(YoY\s*([+\-]?[\d.]+)%\)", pnl)
+    parsed["eps"] = _grab(r"EPS[: ]+([\d.]+)", pnl) or _grab(r"EPS[: ]+([\d.]+)", ratios)
+    parsed["roce_pct"] = _grab(r"ROCE[: ]+([\d.]+)\s*%", ratios)
+    parsed["roe_pct"] = _grab(r"ROE[: ]+([\d.]+)\s*%", ratios)
+    parsed["npm_pct"] = _grab(r"NPM[: ]+([\d.]+)\s*%", ratios)
+    parsed["debt_cr"] = _grab(r"Debt[: ]+([\d.]+)\s*Cr", bs)
+
+    # Quarterly trajectory
+    msales = re.search(r"Sales last 4Q[: ]+([\d.,\s]+)Cr", qtr)
+    if msales:
+        nums = [float(x) for x in _NUM_RE.findall(msales.group(1))]
+        if len(nums) >= 2:
+            parsed["sales_qoq_pct"] = round((nums[-1] - nums[-2]) / nums[-2] * 100, 1) if nums[-2] else None
+            parsed["sales_q_trend"] = nums
+    mpat = re.search(r"Net Profit last 4Q[: ]+([\d.,\s]+)Cr", qtr)
+    if mpat:
+        nums = [float(x) for x in _NUM_RE.findall(mpat.group(1))]
+        if len(nums) >= 2:
+            parsed["pat_qoq_pct"] = round((nums[-1] - nums[-2]) / nums[-2] * 100, 1) if nums[-2] else None
+            parsed["pat_q_trend"] = nums
+    return parsed
+
+
 def get_fundamentals(conn, sym: str) -> dict | None:
-    return _fetchone(conn, """
+    fund = _fetchone(conn, """
         SELECT symbol, piotroski_score, beneish_m_score, altman_z_score,
                forensic_risk, revenue_growth_3y, pat_growth_3y, roe, roce,
-               debt_to_equity, promoter_holding, updated_at
+               debt_to_equity, promoter_holding,
+               pnl_summary, quarterly_summary, balance_sheet_summary,
+               cash_flow_summary, investor_summary, ratios_summary,
+               updated_at
         FROM scores.fundamentals WHERE symbol=%s
     """, (sym,))
+    if fund is None:
+        return None
+    parsed = _parse_summaries(fund)
+    fund["_parsed"] = parsed
+    # Backfill canonical numeric fields when they're NULL but text-derivable
+    if fund.get("roce") is None and parsed.get("roce_pct") is not None:
+        fund["roce"] = parsed["roce_pct"]
+    if fund.get("roe") is None and parsed.get("roe_pct") is not None:
+        fund["roe"] = parsed["roe_pct"]
+    if fund.get("pat_growth_3y") is None and parsed.get("pat_yoy_pct") is not None:
+        # YoY isn't 3Y CAGR but at least surfaces growth direction
+        fund["pat_growth_3y_proxy"] = parsed["pat_yoy_pct"]
+    if fund.get("revenue_growth_3y") is None and parsed.get("sales_yoy_pct") is not None:
+        fund["revenue_growth_3y_proxy"] = parsed["sales_yoy_pct"]
+    return fund
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -321,6 +396,13 @@ def _serialize_stocks_for_llm(stocks: list[dict]) -> str:
             "debt_to_equity": float(fund.get("debt_to_equity") or 0) if fund.get("debt_to_equity") is not None else None,
             "pat_growth_3y_pct": float(fund.get("pat_growth_3y") or 0) if fund.get("pat_growth_3y") is not None else None,
             "promoter_holding_pct": float(fund.get("promoter_holding") or 0) if fund.get("promoter_holding") is not None else None,
+            "filings_extract": {
+                k: fund.get(k) for k in ("pnl_summary", "quarterly_summary",
+                                          "balance_sheet_summary", "ratios_summary",
+                                          "cash_flow_summary", "investor_summary")
+                if fund.get(k)
+            } if fund else {},
+            "parsed_fundamentals": fund.get("_parsed") if fund else {},
         })
     return json.dumps(rows, indent=1)
 
@@ -617,15 +699,38 @@ def _stock_card_html(idx: int, p: PickRationale, e: dict, narr: dict) -> str:
 
     rows_fund = []
     if fund:
-        rows_fund.append(("Piotroski F-score", f"{_nz(fund.get('piotroski_score'))} / 9"))
-        rows_fund.append(("Altman Z", _nz(fund.get('altman_z_score'))))
-        rows_fund.append(("Beneish M", _nz(fund.get('beneish_m_score'))))
-        rows_fund.append(("Forensic risk", fund.get('forensic_risk') or '—'))
-        rows_fund.append(("Revenue 3Y CAGR", _pct(fund.get('revenue_growth_3y'))))
-        rows_fund.append(("PAT 3Y CAGR", _pct(fund.get('pat_growth_3y'))))
-        rows_fund.append(("ROE / ROCE", f"{_pct(fund.get('roe'))} / {_pct(fund.get('roce'))}"))
-        rows_fund.append(("Debt / Equity", _nz(fund.get('debt_to_equity'))))
-        rows_fund.append(("Promoter holding", _pct(fund.get('promoter_holding'))))
+        p_ = fund.get("_parsed") or {}
+        def _add(label, v):
+            if v not in (None, ""):
+                rows_fund.append((label, v))
+        _add("Piotroski F-score", f"{fund['piotroski_score']:.0f} / 9" if fund.get('piotroski_score') is not None else None)
+        _add("Altman Z", _nz(fund.get('altman_z_score')) if fund.get('altman_z_score') is not None else None)
+        _add("Beneish M", _nz(fund.get('beneish_m_score')) if fund.get('beneish_m_score') is not None else None)
+        _add("Forensic risk", fund.get('forensic_risk'))
+        sales_g = fund.get('revenue_growth_3y')
+        if sales_g is not None:
+            _add("Revenue 3Y CAGR", _pct(sales_g))
+        elif p_.get("sales_yoy_pct") is not None:
+            _add("Revenue YoY", _pct(p_['sales_yoy_pct']))
+        pat_g = fund.get('pat_growth_3y')
+        if pat_g is not None:
+            _add("PAT 3Y CAGR", _pct(pat_g))
+        elif p_.get("pat_yoy_pct") is not None:
+            _add("PAT YoY", _pct(p_['pat_yoy_pct']))
+        roe, roce = fund.get('roe'), fund.get('roce')
+        if roe is not None or roce is not None:
+            _add("ROE / ROCE", f"{_pct(roe) if roe is not None else '—'} / {_pct(roce) if roce is not None else '—'}")
+        _add("NPM", _pct(p_.get('npm_pct')) if p_.get('npm_pct') is not None else None)
+        _add("EPS", _nz(p_.get('eps')) if p_.get('eps') is not None else None)
+        if fund.get('debt_to_equity') is not None:
+            _add("Debt / Equity", _nz(fund.get('debt_to_equity')))
+        elif p_.get('debt_cr') is not None:
+            _add("Total Debt", f"₹{p_['debt_cr']:.0f} Cr")
+        _add("Promoter holding", _pct(fund.get('promoter_holding')) if fund.get('promoter_holding') is not None else None)
+        if p_.get("sales_qoq_pct") is not None:
+            _add("Sales QoQ (latest)", _pct(p_['sales_qoq_pct']))
+        if p_.get("pat_qoq_pct") is not None:
+            _add("PAT QoQ (latest)", _pct(p_['pat_qoq_pct']))
 
     def _table(rows):
         if not rows:
@@ -645,6 +750,28 @@ def _stock_card_html(idx: int, p: PickRationale, e: dict, narr: dict) -> str:
         f'<div class="metric-card" style="flex:1 1 120px"><div class="metric-label">{h(lbl)}</div>'
         f'<div class="metric-value" style="font-size:1.2rem">{val}</div></div>'
         for lbl, val in headline_metrics
+    )
+
+    # Verbatim filings extract (the text-summary columns from scores.fundamentals)
+    filings_bits = []
+    if fund:
+        for label, key in [
+            ("P&L", "pnl_summary"),
+            ("Quarterly", "quarterly_summary"),
+            ("Balance Sheet", "balance_sheet_summary"),
+            ("Cash Flow", "cash_flow_summary"),
+            ("Ratios", "ratios_summary"),
+            ("Investors", "investor_summary"),
+        ]:
+            v = fund.get(key)
+            if v:
+                filings_bits.append(
+                    f"<li><strong>{h(label)}:</strong> {h(str(v))}</li>"
+                )
+    filings_html = (
+        f'<div class="summary-card" style="margin-top:12px"><h3>Latest Filings Snapshot</h3>'
+        f'<ul class="rotation-context-list" style="font-size:12px">{"".join(filings_bits)}</ul></div>'
+        if filings_bits else ""
     )
 
     return f"""
@@ -686,6 +813,7 @@ def _stock_card_html(idx: int, p: PickRationale, e: dict, narr: dict) -> str:
       {_table(rows_fund) if rows_fund else '<p style="color:#64748b">No fundamentals row in scores.fundamentals.</p>'}
     </div>
   </div>
+  {filings_html}
 </div>
 """
 
