@@ -139,6 +139,30 @@ def test_malformed_atr_stop_value_is_rejected():
         validate_strategy_spec(raw)
 
 
+def test_atr_stop_rejects_non_atr_indicator():
+    raw = valid_strategy_spec()
+    raw["risk"]["initial_stop"]["indicator"] = "close"
+
+    with pytest.raises(StrategyValidationError, match="ATR indicator"):
+        validate_strategy_spec(raw)
+
+
+def test_atr_stop_rejects_extra_incompatible_fields():
+    raw = valid_strategy_spec()
+    raw["risk"]["initial_stop"]["percent"] = 50
+
+    with pytest.raises(StrategyValidationError, match="initial_stop"):
+        validate_strategy_spec(raw)
+
+
+def test_initial_stop_fails_closed_for_malformed_runtime_values():
+    compiled = compile_strategy(valid_strategy_spec())
+
+    assert compiled.initial_stop("bad", pd.Series({"atr_14": 5.0})) is None
+    assert compiled.initial_stop(125.0, pd.Series({"atr_14": "bad"})) is None
+    assert compiled.initial_stop(125.0, pd.Series({})) is None
+
+
 @pytest.mark.parametrize(
     ("field", "value", "message"),
     [

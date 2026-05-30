@@ -60,6 +60,8 @@ ALLOWED_TOP_LEVEL_KEYS = {
     "add_rules",
 } | set(ENTRY_BLOCK_KEYS)
 ALLOWED_STOP_TYPES = {"atr"}
+ALLOWED_ATR_STOP_INDICATORS = {"atr_14"}
+ALLOWED_ATR_STOP_KEYS = {"type", "multiple", "indicator"}
 ALLOWED_ADD_RULE_KINDS = {"pullback_add", "breakout_add", "trend_add"}
 
 
@@ -210,12 +212,15 @@ def _parse_initial_stop(raw: dict[str, Any]) -> InitialStopSpec:
     if stop_type not in ALLOWED_STOP_TYPES:
         raise StrategyValidationError(f"unsupported initial stop type: {stop_type}")
     if stop_type == "atr":
+        unknown = set(raw) - ALLOWED_ATR_STOP_KEYS
+        if unknown:
+            raise StrategyValidationError(f"risk.initial_stop includes unsupported field: {sorted(unknown)[0]}")
         if "multiple" not in raw:
             raise StrategyValidationError("risk.initial_stop.multiple is required for atr stops")
         multiple = _positive_float(raw["multiple"], "risk.initial_stop.multiple")
         indicator = str(raw.get("indicator") or "atr_14").strip()
-        if indicator not in ALLOWED_INDICATORS:
-            raise StrategyValidationError(f"unknown indicator: {indicator}")
+        if indicator not in ALLOWED_ATR_STOP_INDICATORS:
+            raise StrategyValidationError(f"unsupported ATR indicator: {indicator}")
         return InitialStopSpec(type=stop_type, multiple=multiple, indicator=indicator)
     raise StrategyValidationError(f"unsupported initial stop type: {stop_type}")
 

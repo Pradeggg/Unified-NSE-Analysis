@@ -31,10 +31,11 @@ class CompiledStrategy:
     def initial_stop(self, entry_price: float, row: pd.Series) -> float | None:
         stop = self.spec.risk.initial_stop
         if stop.type == "atr":
+            price = _float(entry_price)
             atr = _float(row.get(stop.indicator))
-            if atr is None or stop.multiple is None:
+            if price is None or atr is None or stop.multiple is None:
                 return None
-            return float(entry_price) - (atr * stop.multiple)
+            return price - (atr * stop.multiple)
         return None
 
 
