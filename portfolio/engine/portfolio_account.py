@@ -16,16 +16,21 @@ class Position:
     symbol: str
     quantity: int
     avg_price: float
+    avg_cost: float
     strategy_ids: tuple[str, ...]
 
 
 class PortfolioAccount:
     def __init__(self, *, initial_capital: float):
-        self.initial_capital = _money(initial_capital)
-        self.cash = _money(initial_capital)
+        capital = _positive_money(initial_capital)
+        if capital is None:
+            raise PortfolioAccountError("initial capital must be positive")
+        self.initial_capital = capital
+        self.cash = capital
         self.positions: dict[str, Position] = {}
         self.orders: dict[str, Order] = {}
         self.fills: list[Fill] = []
+        self._fill_ids: set[str] = set()
         self.realized_pnl = 0.0
         self.nav_history: list[dict[str, Any]] = []
 
@@ -42,6 +47,8 @@ class PortfolioAccount:
     def apply_fill(self, fill: Fill | dict[str, Any]) -> None:
         normalized = self._normalize_fill(fill)
         self._validate_fill(normalized)
+        if normalized.fill_id in self._fill_ids:
+            raise PortfolioAccountError("duplicate fill")
 
         try:
             if normalized.side == OrderSide.BUY:
@@ -55,6 +62,7 @@ class PortfolioAccount:
             raise
 
         self.fills.append(normalized)
+        self._fill_ids.add(normalized.fill_id)
         self._set_order_status(normalized.order_id, OrderStatus.FILLED)
 
     def mark_to_market(self, prices: dict[str, float], as_of: str) -> dict[str, Any]:
@@ -98,17 +106,20 @@ class PortfolioAccount:
                 symbol=fill.symbol,
                 quantity=fill.quantity,
                 avg_price=_money(fill.price),
+                avg_cost=_money(cost / fill.quantity),
                 strategy_ids=(fill.strategy_id,),
             )
             return
 
         quantity = current.quantity + fill.quantity
         avg_price = ((current.quantity * current.avg_price) + (fill.quantity * fill.price)) / quantity
+        avg_cost = ((current.quantity * current.avg_cost) + cost) / quantity
         strategy_ids = tuple(sorted(set(current.strategy_ids + (fill.strategy_id,))))
         self.positions[fill.symbol] = Position(
             symbol=fill.symbol,
             quantity=quantity,
             avg_price=_money(avg_price),
+            avg_cost=_money(avg_cost),
             strategy_ids=strategy_ids,
         )
 
@@ -122,7 +133,7 @@ class PortfolioAccount:
 
         proceeds = _money(fill.quantity * fill.price - fill.fees)
         self.cash = _money(self.cash + proceeds)
-        self.realized_pnl = _money(self.realized_pnl + ((fill.price - current.avg_price) * fill.quantity) - fill.fees)
+        self.realized_pnl = _money(self.realized_pnl + proceeds - (current.avg_cost * fill.quantity))
         remaining = current.quantity - fill.quantity
         if remaining == 0:
             self.positions.pop(fill.symbol, None)
@@ -131,6 +142,7 @@ class PortfolioAccount:
             symbol=current.symbol,
             quantity=remaining,
             avg_price=current.avg_price,
+            avg_cost=current.avg_cost,
             strategy_ids=current.strategy_ids,
         )
 
@@ -138,14 +150,20 @@ class PortfolioAccount:
         if isinstance(fill, Fill):
             return fill
         side = fill.get("side")
+        order_id = str(fill.get("order_id") or "")
+        try:
+            normalized_side = side if isinstance(side, OrderSide) else OrderSide(str(side).upper())
+        except ValueError as exc:
+            self._set_order_status(order_id, OrderStatus.REJECTED)
+            raise PortfolioAccountError("invalid fill side") from exc
         return Fill(
-            fill_id=str(fill.get("fill_id") or f"{fill['order_id']}-fill-1"),
-            order_id=str(fill["order_id"]),
+            fill_id=str(fill.get("fill_id") or f"{order_id}-fill-1"),
+            order_id=order_id,
             symbol=str(fill["symbol"]).upper(),
-            side=side if isinstance(side, OrderSide) else OrderSide(str(side).upper()),
+            side=normalized_side,
             quantity=_int_or_zero(fill.get("quantity")),
             price=_float_or_nan(fill.get("price", fill.get("fill_price"))),
-            fees=_float_or_zero(fill.get("fees")),
+            fees=_float_or_nan(fill.get("fees")),
             slippage=_float_or_zero(fill.get("slippage")),
             timestamp=str(fill.get("timestamp", fill.get("fill_date", ""))),
             strategy_id=str(fill["strategy_id"]),
@@ -193,6 +211,16 @@ def _positive_price(value: Any) -> float | None:
     if not math.isfinite(price) or price <= 0:
         return None
     return price
+
+
+def _positive_money(value: Any) -> float | None:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(parsed) or parsed <= 0:
+        return None
+    return _money(parsed)
 
 
 def _float_or_nan(value: Any) -> float:

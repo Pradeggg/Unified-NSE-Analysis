@@ -39,6 +39,29 @@ def _bar(open_price: float = 100.0) -> pd.Series:
     )
 
 
+def _fill_dict(
+    *,
+    fill_id: str = "manual-fill-1",
+    order_id: str = "o1",
+    side: str = "BUY",
+    quantity: int = 10,
+    price: float = 100.0,
+    fees=0.0,
+) -> dict:
+    return {
+        "fill_id": fill_id,
+        "order_id": order_id,
+        "strategy_id": "s1",
+        "symbol": "AAA",
+        "side": side,
+        "quantity": quantity,
+        "price": price,
+        "fees": fees,
+        "slippage": 0.0,
+        "timestamp": "2025-01-02",
+    }
+
+
 def test_buy_fill_updates_cash_position_and_order_status():
     account = PortfolioAccount(initial_capital=10_000.0)
     order = _order(quantity=10)
@@ -69,6 +92,41 @@ def test_sell_fill_updates_cash_position_and_realized_pnl():
     assert account.positions["AAA"].quantity == 6
     assert account.positions["AAA"].avg_price == 100.0
     assert account.realized_pnl == 40.0
+
+
+def test_full_close_realized_pnl_reconciles_to_cash_delta_with_buy_and_sell_fees():
+    account = PortfolioAccount(initial_capital=10_000.0)
+    buy = _order(order_id="buy", quantity=10)
+    sell = _order(order_id="sell", side=OrderSide.SELL, quantity=10)
+
+    account.submit_order(buy)
+    account.apply_fill(_fill_dict(fill_id="buy-fill", order_id="buy", price=100.0, fees=10.0))
+    account.submit_order(sell)
+    account.apply_fill(_fill_dict(fill_id="sell-fill", order_id="sell", side="SELL", price=110.0, fees=11.0))
+
+    assert account.cash - account.initial_capital == 79.0
+    assert account.realized_pnl == 79.0
+    assert account.positions == {}
+
+
+def test_duplicate_fill_replay_does_not_mutate_ledger_twice():
+    account = PortfolioAccount(initial_capital=10_000.0)
+    order = _order()
+    fill = _fill_dict(fill_id="dup-fill", order_id="o1", price=100.0)
+
+    account.submit_order(order)
+    account.apply_fill(fill)
+    cash_after_first = account.cash
+    position_after_first = account.positions["AAA"]
+    fills_after_first = list(account.fills)
+
+    with pytest.raises(PortfolioAccountError, match="duplicate fill"):
+        account.apply_fill(fill)
+
+    assert account.cash == cash_after_first
+    assert account.positions["AAA"] == position_after_first
+    assert account.fills == fills_after_first
+    assert account.orders["o1"].status == OrderStatus.FILLED
 
 
 def test_insufficient_cash_rejects_buy_order_cleanly():
@@ -145,6 +203,35 @@ def test_missing_fill_price_is_rejected_cleanly():
     assert account.orders["o1"].status == OrderStatus.REJECTED
 
 
+def test_invalid_fill_side_rejects_order_without_raw_exception_or_mutation():
+    account = PortfolioAccount(initial_capital=10_000.0)
+    order = _order()
+
+    account.submit_order(order)
+    with pytest.raises(PortfolioAccountError, match="invalid fill side"):
+        account.apply_fill(_fill_dict(side="SHORT"))
+
+    assert account.cash == 10_000.0
+    assert account.positions == {}
+    assert account.fills == []
+    assert account.orders["o1"].status == OrderStatus.REJECTED
+
+
+@pytest.mark.parametrize("fees", [None, "bad", float("nan"), float("inf"), -1.0])
+def test_invalid_fill_fee_rejects_order_without_raw_exception_or_mutation(fees):
+    account = PortfolioAccount(initial_capital=10_000.0)
+    order = _order()
+
+    account.submit_order(order)
+    with pytest.raises(PortfolioAccountError, match="fees must be non-negative"):
+        account.apply_fill(_fill_dict(fees=fees))
+
+    assert account.cash == 10_000.0
+    assert account.positions == {}
+    assert account.fills == []
+    assert account.orders["o1"].status == OrderStatus.REJECTED
+
+
 def test_slippage_and_fees_are_deterministic_by_side():
     model = NextOpenExecutionModel(slippage_bps=10.0, brokerage_bps=5.0)
 
@@ -178,3 +265,9 @@ def test_nav_marks_positions_against_provided_prices():
         "open_positions": 1,
     }
     assert account.equity({"AAA": 105.0}) == 10_050.0
+
+
+@pytest.mark.parametrize("initial_capital", [-1.0, float("nan"), float("inf")])
+def test_invalid_initial_capital_is_rejected(initial_capital: float):
+    with pytest.raises(PortfolioAccountError, match="initial capital must be positive"):
+        PortfolioAccount(initial_capital=initial_capital)
