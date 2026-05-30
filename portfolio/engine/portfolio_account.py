@@ -46,11 +46,11 @@ class PortfolioAccount:
 
     def apply_fill(self, fill: Fill | dict[str, Any]) -> None:
         normalized = self._normalize_fill(fill)
-        self._validate_fill(normalized)
-        if normalized.fill_id in self._fill_ids:
-            raise PortfolioAccountError("duplicate fill")
 
         try:
+            self._validate_fill(normalized)
+            if normalized.fill_id in self._fill_ids:
+                raise PortfolioAccountError("duplicate fill")
             if normalized.side == OrderSide.BUY:
                 self._apply_buy(normalized)
             elif normalized.side == OrderSide.SELL:
@@ -58,7 +58,8 @@ class PortfolioAccount:
             else:
                 raise PortfolioAccountError(f"unsupported fill side: {normalized.side}")
         except PortfolioAccountError:
-            self._set_order_status(normalized.order_id, OrderStatus.REJECTED)
+            if normalized.fill_id not in self._fill_ids:
+                self._set_order_status(normalized.order_id, OrderStatus.REJECTED)
             raise
 
         self.fills.append(normalized)
@@ -176,7 +177,8 @@ class PortfolioAccount:
         if _positive_price(fill.price) is None:
             self._set_order_status(fill.order_id, OrderStatus.REJECTED)
             raise PortfolioAccountError("fill price must be positive")
-        if not math.isfinite(float(fill.fees)) or fill.fees < 0:
+        fees = _non_negative_float(fill.fees)
+        if fees is None:
             self._set_order_status(fill.order_id, OrderStatus.REJECTED)
             raise PortfolioAccountError("fees must be non-negative")
 
@@ -235,6 +237,16 @@ def _float_or_zero(value: Any) -> float:
         return float(value)
     except (TypeError, ValueError):
         return 0.0
+
+
+def _non_negative_float(value: Any) -> float | None:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(parsed) or parsed < 0:
+        return None
+    return parsed
 
 
 def _money(value: float) -> float:

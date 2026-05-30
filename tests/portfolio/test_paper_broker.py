@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 
 from portfolio.engine.execution_models import NextOpenExecutionModel
-from portfolio.engine.order_types import Order, OrderSide, OrderStatus, OrderType
+from portfolio.engine.order_types import Fill, Order, OrderSide, OrderStatus, OrderType
 from portfolio.engine.portfolio_account import PortfolioAccount, PortfolioAccountError
 
 
@@ -225,6 +225,33 @@ def test_invalid_fill_fee_rejects_order_without_raw_exception_or_mutation(fees):
     account.submit_order(order)
     with pytest.raises(PortfolioAccountError, match="fees must be non-negative"):
         account.apply_fill(_fill_dict(fees=fees))
+
+    assert account.cash == 10_000.0
+    assert account.positions == {}
+    assert account.fills == []
+    assert account.orders["o1"].status == OrderStatus.REJECTED
+
+
+@pytest.mark.parametrize("fees", [None, "bad"])
+def test_direct_fill_with_invalid_fee_rejects_order_without_raw_exception_or_mutation(fees):
+    account = PortfolioAccount(initial_capital=10_000.0)
+    order = _order()
+    fill = Fill(
+        fill_id="direct-bad-fee",
+        order_id="o1",
+        symbol="AAA",
+        side=OrderSide.BUY,
+        quantity=10,
+        price=100.0,
+        fees=fees,
+        slippage=0.0,
+        timestamp="2025-01-02",
+        strategy_id="s1",
+    )
+
+    account.submit_order(order)
+    with pytest.raises(PortfolioAccountError, match="fees must be non-negative"):
+        account.apply_fill(fill)
 
     assert account.cash == 10_000.0
     assert account.positions == {}
