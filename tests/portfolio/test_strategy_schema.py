@@ -105,3 +105,136 @@ def test_mutating_raw_after_validation_does_not_mutate_validated_spec():
     assert spec.entry_all[2].value == (45, 70)
     assert spec.universe["stage"] == "STAGE_2"
     assert spec.raw["risk"]["initial_stop"]["multiple"] == 2.0
+
+
+def test_unknown_top_level_block_is_rejected():
+    raw = valid_strategy_spec()
+    raw["moonshot_filters"] = {"all": []}
+
+    with pytest.raises(StrategyValidationError, match="unknown top-level block"):
+        validate_strategy_spec(raw)
+
+
+def test_unknown_timeframe_is_rejected():
+    raw = _representative_block_spec()
+    raw["trend_filters"]["timeframe"] = "hourly"
+
+    with pytest.raises(StrategyValidationError, match="timeframe"):
+        validate_strategy_spec(raw)
+
+
+def test_unsupported_atr_stop_is_rejected():
+    raw = valid_strategy_spec()
+    raw["risk"]["initial_stop"]["type"] = "fixed_rupees"
+
+    with pytest.raises(StrategyValidationError, match="stop type"):
+        validate_strategy_spec(raw)
+
+
+def test_malformed_atr_stop_value_is_rejected():
+    raw = valid_strategy_spec()
+    raw["risk"]["initial_stop"]["multiple"] = "wide"
+
+    with pytest.raises(StrategyValidationError, match="initial_stop.multiple"):
+        validate_strategy_spec(raw)
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("kind", "martingale_add", "add rule kind"),
+        ("operator", "crosses", "add rule operator"),
+        ("timeframe", "hourly", "timeframe"),
+    ],
+)
+def test_unknown_add_rule_kind_operator_or_timeframe_is_rejected(field: str, value: str, message: str):
+    raw = _representative_block_spec()
+    raw["add_rules"][0][field] = value
+
+    with pytest.raises(StrategyValidationError, match=message):
+        validate_strategy_spec(raw)
+
+
+def test_representative_building_block_spec_validates_and_evaluates_deterministically():
+    compiled = compile_strategy(_representative_block_spec())
+
+    matching_row = pd.Series(
+        {
+            "stage": "STAGE_2",
+            "close": 125.0,
+            "sma_20": 120.0,
+            "sma_50": 110.0,
+            "sma_200": 90.0,
+            "rsi_14": 55.0,
+            "volume_ratio_20d": 1.6,
+            "relative_strength": 82.0,
+            "weekly_stage": "STAGE_2",
+            "eps_growth_pct": 22.0,
+            "atr_14": 5.0,
+        }
+    )
+    failing_row = matching_row.copy()
+    failing_row["weekly_stage"] = "STAGE_3"
+
+    assert compiled.should_enter(matching_row) is True
+    assert compiled.should_enter(failing_row) is False
+    assert compiled.should_exit(matching_row) is False
+
+
+def test_should_add_and_initial_stop_are_deterministic():
+    compiled = compile_strategy(_representative_block_spec())
+    row = pd.Series({"close": 125.0, "sma_20": 120.0, "atr_14": 5.0})
+
+    assert compiled.should_add(row, position_state={"adds": 0}) is True
+    assert compiled.initial_stop(entry_price=125.0, row=row) == 115.0
+
+
+def _representative_block_spec() -> dict:
+    raw = valid_strategy_spec()
+    raw["entry"]["all"] = [{"indicator": "stage", "operator": "eq", "value": "STAGE_2"}]
+    raw["stage_2"] = {
+        "timeframe": "daily",
+        "all": [{"indicator": "stage", "operator": "eq", "value": "STAGE_2"}],
+    }
+    raw["trend_filters"] = {
+        "timeframe": "daily",
+        "all": [
+            {"indicator": "close", "operator": "above", "value": "sma_50"},
+            {"indicator": "sma_50", "operator": "above", "value": "sma_200"},
+        ],
+    }
+    raw["pullbacks"] = {
+        "timeframe": "daily",
+        "all": [{"indicator": "rsi_14", "operator": "between", "value": [45, 65]}],
+    }
+    raw["breakouts"] = {
+        "timeframe": "daily",
+        "all": [{"indicator": "close", "operator": "above", "value": 100}],
+    }
+    raw["moving_averages"] = {
+        "timeframe": "daily",
+        "all": [{"indicator": "close", "operator": "above", "value": "sma_20"}],
+    }
+    raw["volume"] = {
+        "timeframe": "daily",
+        "all": [{"indicator": "volume_ratio_20d", "operator": "gte", "value": 1.5}],
+    }
+    raw["fundamentals"] = {
+        "all": [{"indicator": "eps_growth_pct", "operator": "gte", "value": 15}],
+    }
+    raw["multi_timeframe_confirmation"] = {
+        "timeframe": "weekly",
+        "all": [{"indicator": "weekly_stage", "operator": "eq", "value": "STAGE_2"}],
+    }
+    raw["add_rules"] = [
+        {
+            "kind": "pullback_add",
+            "indicator": "close",
+            "operator": "above",
+            "value": "sma_20",
+            "size_pct": 5.0,
+            "risk_per_trade_pct": 0.5,
+            "timeframe": "daily",
+        }
+    ]
+    return raw

@@ -6,7 +6,7 @@ from typing import Any
 
 import pandas as pd
 
-from portfolio.engine.strategy_schema import Rule, StrategySpec, validate_strategy_spec
+from portfolio.engine.strategy_schema import AddRuleSpec, Rule, RuleGroup, StrategySpec, validate_strategy_spec
 
 
 MAX_RISK_PER_TRADE_PCT = 2.0
@@ -18,10 +18,24 @@ class CompiledStrategy:
         self.spec = spec
 
     def should_enter(self, row: pd.Series) -> bool:
-        return all(_eval_rule(rule, row) for rule in self.spec.entry_all)
+        return all(_eval_rule(rule, row) for rule in self.spec.entry_all) and all(
+            _eval_group(group, row) for group in self.spec.block_groups
+        )
 
     def should_exit(self, row: pd.Series) -> bool:
         return any(_eval_rule(rule, row) for rule in self.spec.exit_any)
+
+    def should_add(self, row: pd.Series, position_state: dict[str, Any] | None = None) -> bool:
+        return any(_eval_add_rule(rule, row, position_state) for rule in self.spec.add_rules)
+
+    def initial_stop(self, entry_price: float, row: pd.Series) -> float | None:
+        stop = self.spec.risk.initial_stop
+        if stop.type == "atr":
+            atr = _float(row.get(stop.indicator))
+            if atr is None or stop.multiple is None:
+                return None
+            return float(entry_price) - (atr * stop.multiple)
+        return None
 
 
 def compile_strategy(raw: dict[str, Any]) -> CompiledStrategy:
@@ -76,6 +90,17 @@ def _eval_rule(rule: Rule, row: pd.Series) -> bool:
             and low_value <= value <= high_value
         )
     return False
+
+
+def _eval_group(group: RuleGroup, row: pd.Series) -> bool:
+    all_pass = all(_eval_rule(rule, row) for rule in group.all_rules)
+    any_pass = True if not group.any_rules else any(_eval_rule(rule, row) for rule in group.any_rules)
+    return all_pass and any_pass
+
+
+def _eval_add_rule(rule: AddRuleSpec, row: pd.Series, position_state: dict[str, Any] | None) -> bool:
+    _ = position_state
+    return _eval_rule(rule.rule, row)
 
 
 def _float(value: Any) -> float | None:
