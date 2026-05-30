@@ -14,7 +14,7 @@ from portfolio.engine.events import (
     SignalEvent,
 )
 from portfolio.engine.execution_models import NextOpenExecutionModel
-from portfolio.engine.order_types import Fill, Order, OrderSide, OrderType
+from portfolio.engine.order_types import Fill, Order, OrderSide, OrderStatus, OrderType
 from portfolio.engine.portfolio_account import PortfolioAccount
 from portfolio.engine.strategy_compiler import CompiledStrategy, compile_strategy
 
@@ -69,6 +69,9 @@ def run_replay(df: pd.DataFrame, strategy_specs: list[dict[str, Any]], config: R
     )
     result = ReplayResult(account=account)
     pending_orders: list[Order] = []
+    pending_reservations: dict[str, float] = {}
+    strategy_positions: dict[tuple[str, str], int] = {}
+    last_marks: dict[str, float] = {}
     order_seq = 0
     event_seq = 0
 
@@ -83,7 +86,8 @@ def run_replay(df: pd.DataFrame, strategy_specs: list[dict[str, Any]], config: R
 
         for _, row in day.sort_values("symbol", kind="mergesort").iterrows():
             symbol = str(row["symbol"]).upper()
-            prices[symbol] = float(row["close"])
+            last_marks[symbol] = float(row["close"])
+            prices = dict(last_marks)
             emit(
                 MarketDataEvent,
                 date_str,
@@ -98,6 +102,8 @@ def run_replay(df: pd.DataFrame, strategy_specs: list[dict[str, Any]], config: R
                 row=row,
                 execution=execution,
                 account=account,
+                pending_reservations=pending_reservations,
+                strategy_positions=strategy_positions,
             )
             for fill in fills:
                 result.fills.append(fill)
@@ -117,6 +123,8 @@ def run_replay(df: pd.DataFrame, strategy_specs: list[dict[str, Any]], config: R
                     date_str=date_str,
                     account=account,
                     pending_orders=pending_orders,
+                    pending_reservations=pending_reservations,
+                    strategy_positions=strategy_positions,
                     result=result,
                     emit=emit,
                     order_seq=order_seq,
@@ -138,6 +146,8 @@ def _evaluate_strategy_row(
     date_str: str,
     account: PortfolioAccount,
     pending_orders: list[Order],
+    pending_reservations: dict[str, float],
+    strategy_positions: dict[tuple[str, str], int],
     result: ReplayResult,
     emit: Any,
     order_seq: int,
@@ -145,13 +155,13 @@ def _evaluate_strategy_row(
 ) -> int:
     symbol = str(row["symbol"]).upper()
     strategy_id = strategy.spec.strategy_id
-    position = account.positions.get(symbol)
+    owned_quantity = strategy_positions.get((strategy_id, symbol), 0)
     has_pending = any(order.symbol == symbol and order.strategy_id == strategy_id for order in pending_orders)
 
-    if position is None and not has_pending and strategy.should_enter(row):
+    if owned_quantity <= 0 and not has_pending and strategy.should_enter(row):
         reason = "entry rule matched"
         emit(SignalEvent, date_str, strategy_id=strategy_id, symbol=symbol, reason=reason)
-        quantity = _entry_quantity(account, strategy, row, config)
+        quantity = _entry_quantity(account, strategy, row, config, pending_reservations)
         if quantity <= 0:
             return order_seq
         order_seq += 1
@@ -166,11 +176,12 @@ def _evaluate_strategy_row(
         )
         account.submit_order(order)
         pending_orders.append(order)
+        pending_reservations[order.order_id] = _estimated_buy_cost(order, row, config)
         result.orders.append(order)
         emit(OrderEvent, date_str, strategy_id=strategy_id, symbol=symbol, reason=reason, payload=order.as_dict())
         return order_seq
 
-    if position is not None and not has_pending and strategy.should_exit(row):
+    if owned_quantity > 0 and not has_pending and strategy.should_exit(row):
         reason = "exit rule matched"
         emit(SignalEvent, date_str, strategy_id=strategy_id, symbol=symbol, reason=reason)
         order_seq += 1
@@ -179,20 +190,21 @@ def _evaluate_strategy_row(
             strategy_id=strategy_id,
             symbol=symbol,
             side=OrderSide.SELL,
-            quantity=position.quantity,
+            quantity=owned_quantity,
             date_str=date_str,
             reason=reason,
         )
         account.submit_order(order)
         pending_orders.append(order)
+        pending_reservations[order.order_id] = 0.0
         result.orders.append(order)
         emit(OrderEvent, date_str, strategy_id=strategy_id, symbol=symbol, reason=reason, payload=order.as_dict())
         return order_seq
 
-    if position is not None and not has_pending and strategy.should_add(row, {"quantity": position.quantity}):
+    if owned_quantity > 0 and not has_pending and strategy.should_add(row, {"quantity": owned_quantity}):
         reason = "add rule matched"
         emit(SignalEvent, date_str, strategy_id=strategy_id, symbol=symbol, reason=reason)
-        quantity = _entry_quantity(account, strategy, row, config)
+        quantity = _entry_quantity(account, strategy, row, config, pending_reservations)
         if quantity <= 0:
             return order_seq
         order_seq += 1
@@ -207,6 +219,7 @@ def _evaluate_strategy_row(
         )
         account.submit_order(order)
         pending_orders.append(order)
+        pending_reservations[order.order_id] = _estimated_buy_cost(order, row, config)
         result.orders.append(order)
         emit(OrderEvent, date_str, strategy_id=strategy_id, symbol=symbol, reason=reason, payload=order.as_dict())
         return order_seq
@@ -222,6 +235,8 @@ def _fill_eligible_orders(
     row: pd.Series,
     execution: NextOpenExecutionModel,
     account: PortfolioAccount,
+    pending_reservations: dict[str, float],
+    strategy_positions: dict[tuple[str, str], int],
 ) -> list[Fill]:
     fills: list[Fill] = []
     for order in list(pending_orders):
@@ -230,8 +245,23 @@ def _fill_eligible_orders(
         fill = execution.try_fill(order, row)
         if fill is None:
             continue
+        if fill.side == OrderSide.BUY and _fill_cost(fill) > account.cash:
+            account.orders[order.order_id] = order.with_status(OrderStatus.REJECTED)
+            pending_orders.remove(order)
+            pending_reservations.pop(order.order_id, None)
+            continue
         account.apply_fill(fill)
         pending_orders.remove(order)
+        pending_reservations.pop(order.order_id, None)
+        key = (fill.strategy_id, fill.symbol)
+        if fill.side == OrderSide.BUY:
+            strategy_positions[key] = strategy_positions.get(key, 0) + fill.quantity
+        else:
+            remaining = strategy_positions.get(key, 0) - fill.quantity
+            if remaining > 0:
+                strategy_positions[key] = remaining
+            else:
+                strategy_positions.pop(key, None)
         fills.append(fill)
     return fills
 
@@ -241,6 +271,7 @@ def _entry_quantity(
     strategy: CompiledStrategy,
     row: pd.Series,
     config: ReplayConfig,
+    pending_reservations: dict[str, float],
 ) -> int:
     price = _positive_float(row.get("close"))
     if price is None:
@@ -248,8 +279,27 @@ def _entry_quantity(
     position_pct = strategy.spec.risk.max_position_pct
     if config.max_position_pct is not None:
         position_pct = min(position_pct, config.max_position_pct)
-    budget = min(account.cash, account.equity({}) * (position_pct / 100.0))
+    available_cash = max(0.0, account.cash - sum(pending_reservations.values()))
+    budget = min(available_cash, account.equity({}) * (position_pct / 100.0))
     return int(budget // price)
+
+
+def _estimated_buy_cost(order: Order, row: pd.Series, config: ReplayConfig) -> float:
+    if order.side != OrderSide.BUY:
+        return 0.0
+    close = _positive_float(row.get("close"))
+    if close is None:
+        return 0.0
+    slipped = close * (1.0 + config.slippage_bps / 10_000.0)
+    notional = slipped * order.quantity
+    fees = notional * config.brokerage_bps / 10_000.0
+    return round(notional + fees, 6)
+
+
+def _fill_cost(fill: Fill) -> float:
+    if fill.side != OrderSide.BUY:
+        return 0.0
+    return round(fill.quantity * fill.price + fill.fees, 6)
 
 
 def _order(
@@ -277,7 +327,10 @@ def _order(
 def _normalize(df: pd.DataFrame) -> pd.DataFrame:
     out = df.rename(columns={col: col.strip().lower() for col in df.columns}).copy()
     out["date"] = pd.to_datetime(out["date"], errors="coerce")
-    out["symbol"] = out["symbol"].astype(str).str.upper()
+    out = out.dropna(subset=["date", "symbol", "open", "high", "low", "close"])
+    out["symbol"] = out["symbol"].astype(str).str.strip()
+    out = out[out["symbol"] != ""]
+    out["symbol"] = out["symbol"].str.upper()
     for col in ("open", "high", "low", "close"):
         out[col] = pd.to_numeric(out[col], errors="coerce")
     return out.dropna(subset=["date", "symbol", "open", "high", "low", "close"]).sort_values(
