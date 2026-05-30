@@ -17,6 +17,7 @@ class PortfolioMetrics:
     losing_trades: int
     flat_trades: int
     open_positions_count: int
+    invalid_fill_sequences: int = 0
     strategy_ids: list[str] = field(default_factory=list)
 
     def as_dict(self) -> dict[str, Any]:
@@ -43,7 +44,7 @@ def calculate_metrics(
     fill_rows = list(fills if fills is not None else _attr(replay_result, "fills", []))
     position_rows = list(positions if positions is not None else _attr(replay_result, "positions", []))
     account = _attr(replay_result, "account", None)
-    trade_pnls = _closed_trade_pnls(fill_rows)
+    trade_stats = _closed_trade_stats(fill_rows)
 
     if starting_equity is None:
         starting_equity = _number(_attr(account, "initial_capital", None))
@@ -62,7 +63,7 @@ def calculate_metrics(
     if realized_pnl is None and snapshots:
         realized_pnl = _number(_field(snapshots[-1], "realized_pnl"))
     if realized_pnl is None:
-        realized_pnl = sum(trade_pnls) if trade_pnls else 0.0
+        realized_pnl = sum(trade_stats.trade_pnls) if trade_stats.trade_pnls else 0.0
 
     nav_values = [_number(_field(row, "nav")) for row in snapshots]
     nav_values = [value for value in nav_values if value is not None]
@@ -82,20 +83,28 @@ def calculate_metrics(
         ending_equity=_money(ending_equity),
         total_return_pct=_pct_return(starting_equity, ending_equity),
         max_drawdown_pct=_max_drawdown_pct(nav_values),
-        number_of_trades=len(trade_pnls),
+        number_of_trades=len(trade_stats.trade_pnls),
         number_of_fills=len(fill_rows),
         realized_pnl=_money(realized_pnl),
-        winning_trades=sum(1 for pnl in trade_pnls if pnl > 0),
-        losing_trades=sum(1 for pnl in trade_pnls if pnl < 0),
-        flat_trades=sum(1 for pnl in trade_pnls if pnl == 0),
+        winning_trades=sum(1 for pnl in trade_stats.trade_pnls if pnl > 0),
+        losing_trades=sum(1 for pnl in trade_stats.trade_pnls if pnl < 0),
+        flat_trades=sum(1 for pnl in trade_stats.trade_pnls if pnl == 0),
         open_positions_count=_open_positions_count(position_rows, snapshots),
+        invalid_fill_sequences=trade_stats.invalid_sequences,
         strategy_ids=strategy_ids,
     )
 
 
-def _closed_trade_pnls(fills: list[Any]) -> list[float]:
-    lots: dict[tuple[str, str], list[dict[str, float]]] = {}
+@dataclass(frozen=True)
+class _TradeStats:
+    trade_pnls: list[float]
+    invalid_sequences: int
+
+
+def _closed_trade_stats(fills: list[Any]) -> _TradeStats:
+    positions: dict[str, dict[str, float]] = {}
     trade_pnls: list[float] = []
+    invalid_sequences = 0
 
     for fill in fills:
         side = str(_field(fill, "side") or "").upper()
@@ -107,32 +116,37 @@ def _closed_trade_pnls(fills: list[Any]) -> list[float]:
         if not symbol or not strategy_id or quantity <= 0 or price <= 0:
             continue
 
-        key = (strategy_id, symbol)
         if side == "BUY":
-            lots.setdefault(key, []).append(
-                {
-                    "quantity": quantity,
-                    "cost_per_share": (quantity * price + fees) / quantity,
-                }
-            )
+            current = positions.get(symbol)
+            cost = quantity * price + fees
+            if current is None:
+                positions[symbol] = {"quantity": quantity, "avg_cost": cost / quantity}
+                continue
+            total_quantity = current["quantity"] + quantity
+            total_cost = current["quantity"] * current["avg_cost"] + cost
+            positions[symbol] = {"quantity": total_quantity, "avg_cost": total_cost / total_quantity}
             continue
 
         if side != "SELL":
             continue
 
-        remaining = quantity
-        realized = -(fees)
-        while remaining > 0 and lots.get(key):
-            lot = lots[key][0]
-            matched = min(remaining, lot["quantity"])
-            realized += matched * (price - lot["cost_per_share"])
-            lot["quantity"] -= matched
-            remaining -= matched
-            if lot["quantity"] <= 0:
-                lots[key].pop(0)
+        current = positions.get(symbol)
+        held_quantity = 0.0 if current is None else current["quantity"]
+        if current is None or quantity > held_quantity:
+            invalid_sequences += 1
+            continue
+
+        proceeds = quantity * price - fees
+        realized = proceeds - current["avg_cost"] * quantity
         trade_pnls.append(_money(realized))
 
-    return trade_pnls
+        remaining_quantity = current["quantity"] - quantity
+        if remaining_quantity > 0:
+            positions[symbol] = {"quantity": remaining_quantity, "avg_cost": current["avg_cost"]}
+        else:
+            positions.pop(symbol, None)
+
+    return _TradeStats(trade_pnls=trade_pnls, invalid_sequences=invalid_sequences)
 
 
 def _open_positions_count(positions: list[Any], snapshots: list[Any]) -> int:

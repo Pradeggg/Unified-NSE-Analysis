@@ -6,6 +6,10 @@ from pathlib import Path
 from typing import Any
 
 
+class AuditLogError(ValueError):
+    """Raised when an audit log cannot be read deterministically."""
+
+
 @dataclass(frozen=True)
 class AuditRecord:
     timestamp: str
@@ -58,10 +62,11 @@ def write_audit_record(path: str | Path, record: AuditRecord | dict[str, Any]) -
     destination.parent.mkdir(parents=True, exist_ok=True)
     row = record.as_dict() if isinstance(record, AuditRecord) else dict(record)
     row.setdefault("payload", {})
+    normalized = _json_normalized(row)
     with destination.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(row, sort_keys=True, separators=(",", ":"), default=str))
+        handle.write(json.dumps(normalized, sort_keys=True, separators=(",", ":")))
         handle.write("\n")
-    return row
+    return normalized
 
 
 def read_audit_log(path: str | Path) -> list[dict[str, Any]]:
@@ -70,8 +75,18 @@ def read_audit_log(path: str | Path) -> list[dict[str, Any]]:
         return []
     rows: list[dict[str, Any]] = []
     with source.open("r", encoding="utf-8") as handle:
-        for line in handle:
+        for line_number, line in enumerate(handle, start=1):
             stripped = line.strip()
             if stripped:
-                rows.append(json.loads(stripped))
+                try:
+                    rows.append(json.loads(stripped))
+                except json.JSONDecodeError as exc:
+                    raise AuditLogError(
+                        f"malformed audit log JSON at {source}:{line_number}"
+                    ) from exc
     return rows
+
+
+def _json_normalized(row: dict[str, Any]) -> dict[str, Any]:
+    encoded = json.dumps(row, sort_keys=True, separators=(",", ":"), default=str)
+    return json.loads(encoded)

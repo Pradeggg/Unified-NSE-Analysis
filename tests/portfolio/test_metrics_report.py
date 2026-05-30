@@ -3,7 +3,11 @@ from __future__ import annotations
 import json
 
 from portfolio.agents.report_agent import ReportAgent
-from portfolio.engine.audit_log import AuditLog, AuditRecord, read_audit_log, write_audit_record
+from datetime import date, datetime
+
+import pytest
+
+from portfolio.engine.audit_log import AuditLog, AuditLogError, AuditRecord, read_audit_log, write_audit_record
 from portfolio.engine.event_loop import ReplayConfig, run_replay
 from portfolio.engine.metrics import calculate_metrics
 from tests.portfolio.fixtures import sample_ohlcv, valid_strategy_spec
@@ -81,6 +85,87 @@ def test_plain_closed_fill_pair_derives_realized_pnl_when_no_account_or_snapshot
     assert metrics.winning_trades == 1
     assert metrics.losing_trades == 0
     assert metrics.realized_pnl == 92.0
+    assert metrics.invalid_fill_sequences == 0
+
+
+def test_multi_strategy_same_symbol_plain_fills_use_portfolio_blended_cost():
+    fills = [
+        {
+            "strategy_id": "s1",
+            "symbol": "AAA",
+            "side": "BUY",
+            "quantity": 10,
+            "price": 100.0,
+            "fees": 0.0,
+        },
+        {
+            "strategy_id": "s2",
+            "symbol": "AAA",
+            "side": "BUY",
+            "quantity": 10,
+            "price": 200.0,
+            "fees": 0.0,
+        },
+        {
+            "strategy_id": "s1",
+            "symbol": "AAA",
+            "side": "SELL",
+            "quantity": 10,
+            "price": 150.0,
+            "fees": 0.0,
+        },
+    ]
+
+    metrics = calculate_metrics(starting_equity=10_000.0, fills=fills)
+
+    assert metrics.number_of_trades == 1
+    assert metrics.flat_trades == 1
+    assert metrics.realized_pnl == 0.0
+    assert metrics.invalid_fill_sequences == 0
+
+
+def test_unmatched_or_oversold_plain_sell_does_not_count_as_closed_trade():
+    standalone_sell = calculate_metrics(
+        starting_equity=10_000.0,
+        fills=[
+            {
+                "strategy_id": "s1",
+                "symbol": "AAA",
+                "side": "SELL",
+                "quantity": 10,
+                "price": 150.0,
+                "fees": 0.0,
+            }
+        ],
+    )
+    oversell = calculate_metrics(
+        starting_equity=10_000.0,
+        fills=[
+            {
+                "strategy_id": "s1",
+                "symbol": "AAA",
+                "side": "BUY",
+                "quantity": 5,
+                "price": 100.0,
+                "fees": 0.0,
+            },
+            {
+                "strategy_id": "s1",
+                "symbol": "AAA",
+                "side": "SELL",
+                "quantity": 10,
+                "price": 150.0,
+                "fees": 0.0,
+            },
+        ],
+    )
+
+    assert standalone_sell.number_of_trades == 0
+    assert standalone_sell.realized_pnl == 0.0
+    assert standalone_sell.invalid_fill_sequences == 1
+    assert oversell.number_of_trades == 0
+    assert oversell.realized_pnl == 0.0
+    assert oversell.invalid_fill_sequences == 1
 
 
 def test_jsonl_audit_writing_and_readback_is_deterministic(tmp_path):
@@ -125,6 +210,35 @@ def test_jsonl_audit_writing_and_readback_is_deterministic(tmp_path):
             "payload": {"report": "paper_report.md"},
         },
     ]
+
+
+def test_audit_write_returns_normalized_record_matching_jsonl_readback(tmp_path):
+    path = tmp_path / "audit.jsonl"
+    record = {
+        "timestamp": datetime(2025, 1, 3, 15, 30),
+        "date": date(2025, 1, 3),
+        "agent": "paper_broker",
+        "action": "fill_order",
+        "strategy_id": "stage2_fixture_v1",
+        "symbol": "AAA",
+        "reason": "buy filled at next open",
+        "payload": {"when": datetime(2025, 1, 3, 15, 30), "quantity": 95},
+    }
+
+    written = write_audit_record(path, record)
+
+    assert written == read_audit_log(path)[0]
+    assert written["timestamp"] == "2025-01-03 15:30:00"
+    assert written["date"] == "2025-01-03"
+    assert written["payload"]["when"] == "2025-01-03 15:30:00"
+
+
+def test_read_audit_log_raises_domain_error_for_malformed_jsonl(tmp_path):
+    path = tmp_path / "bad.jsonl"
+    path.write_text('{"agent":"ok"}\n{bad json}\n', encoding="utf-8")
+
+    with pytest.raises(AuditLogError, match="malformed audit log JSON"):
+        read_audit_log(path)
 
 
 def test_markdown_report_contains_key_pnl_trade_and_audit_sections(tmp_path):
