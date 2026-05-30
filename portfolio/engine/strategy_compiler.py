@@ -33,7 +33,7 @@ class CompiledStrategy:
         if stop.type == "atr":
             price = _float(entry_price)
             atr = _float(row.get(stop.indicator))
-            if price is None or atr is None or stop.multiple is None:
+            if price is None or atr is None or atr <= 0 or stop.multiple is None:
                 return None
             return price - (atr * stop.multiple)
         return None

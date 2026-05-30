@@ -163,6 +163,22 @@ def test_initial_stop_fails_closed_for_malformed_runtime_values():
     assert compiled.initial_stop(125.0, pd.Series({})) is None
 
 
+@pytest.mark.parametrize("atr_value", [0.0, -5.0])
+def test_initial_stop_fails_closed_for_non_positive_atr(atr_value: float):
+    compiled = compile_strategy(valid_strategy_spec())
+
+    assert compiled.initial_stop(125.0, pd.Series({"atr_14": atr_value})) is None
+
+
+@pytest.mark.parametrize("indicator", [None, "", 0])
+def test_atr_stop_rejects_explicit_malformed_indicator(indicator):
+    raw = valid_strategy_spec()
+    raw["risk"]["initial_stop"]["indicator"] = indicator
+
+    with pytest.raises(StrategyValidationError, match="ATR indicator"):
+        validate_strategy_spec(raw)
+
+
 @pytest.mark.parametrize(
     ("field", "value", "message"),
     [

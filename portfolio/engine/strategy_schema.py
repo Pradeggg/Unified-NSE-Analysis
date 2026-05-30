@@ -218,7 +218,7 @@ def _parse_initial_stop(raw: dict[str, Any]) -> InitialStopSpec:
         if "multiple" not in raw:
             raise StrategyValidationError("risk.initial_stop.multiple is required for atr stops")
         multiple = _positive_float(raw["multiple"], "risk.initial_stop.multiple")
-        indicator = str(raw.get("indicator") or "atr_14").strip()
+        indicator = _optional_atr_indicator(raw)
         if indicator not in ALLOWED_ATR_STOP_INDICATORS:
             raise StrategyValidationError(f"unsupported ATR indicator: {indicator}")
         return InitialStopSpec(type=stop_type, multiple=multiple, indicator=indicator)
@@ -281,6 +281,15 @@ def _optional_timeframe(value: Any, field_name: str) -> str | None:
     if timeframe not in ALLOWED_TIMEFRAMES:
         raise StrategyValidationError(f"unknown timeframe for {field_name}: {timeframe}")
     return timeframe
+
+
+def _optional_atr_indicator(raw: dict[str, Any]) -> str:
+    if "indicator" not in raw:
+        return "atr_14"
+    value = raw["indicator"]
+    if not isinstance(value, str) or not value.strip():
+        raise StrategyValidationError("unsupported ATR indicator")
+    return value.strip()
 
 
 def _validate_rule_value(operator: str, value: Any) -> Any:
