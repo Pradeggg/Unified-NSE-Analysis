@@ -163,6 +163,10 @@ class PortfolioAccount:
             )
         side = fill.get("side")
         order_id = str(fill.get("order_id") or "")
+        missing_field = _missing_required_fill_field(fill)
+        if missing_field is not None:
+            self._set_order_status(order_id, OrderStatus.REJECTED)
+            raise PortfolioAccountError(f"missing fill field: {missing_field}")
         try:
             normalized_side = side if isinstance(side, OrderSide) else OrderSide(str(side).upper())
         except ValueError as exc:
@@ -204,6 +208,13 @@ def _positive_int_quantity(value: Any) -> int | None:
     if quantity <= 0:
         return None
     return quantity
+
+
+def _missing_required_fill_field(fill: dict[str, Any]) -> str | None:
+    for field in ("order_id", "symbol", "side", "quantity", "strategy_id"):
+        if field not in fill:
+            return field
+    return None
 
 
 def _strict_int_or_zero(value: Any) -> int:

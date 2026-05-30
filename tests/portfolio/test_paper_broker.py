@@ -327,6 +327,23 @@ def test_dict_fill_fractional_quantity_rejects_order_without_mutation():
     assert account.orders["o1"].status == OrderStatus.REJECTED
 
 
+@pytest.mark.parametrize("missing_field", ["symbol", "strategy_id"])
+def test_dict_fill_missing_required_field_rejects_order_without_raw_exception_or_mutation(missing_field: str):
+    account = PortfolioAccount(initial_capital=10_000.0)
+    order = _order()
+    fill = _fill_dict()
+    fill.pop(missing_field)
+
+    account.submit_order(order)
+    with pytest.raises(PortfolioAccountError, match=f"missing fill field: {missing_field}"):
+        account.apply_fill(fill)
+
+    assert account.cash == 10_000.0
+    assert account.positions == {}
+    assert account.fills == []
+    assert account.orders["o1"].status == OrderStatus.REJECTED
+
+
 def test_fractional_order_quantity_is_rejected_and_not_filled():
     account = PortfolioAccount(initial_capital=10_000.0)
     order = _order(quantity=1.5)
