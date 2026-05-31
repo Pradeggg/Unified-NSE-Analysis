@@ -24,6 +24,8 @@ def test_compare_to_benchmark_calculates_relative_return_and_drawdown():
     assert round(result.portfolio_return_pct, 4) == 5.0
     assert round(result.benchmark_return_pct, 4) == 10.0
     assert round(result.excess_return_pct, 4) == -5.0
+    assert round(result.portfolio_max_drawdown_pct, 4) == 4.5455
+    assert round(result.benchmark_max_drawdown_pct, 4) == 0.0
     assert result.observation_count == 3
 
 
