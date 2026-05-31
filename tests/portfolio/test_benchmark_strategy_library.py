@@ -5,6 +5,9 @@ import json
 import pandas as pd
 
 from portfolio.engine.benchmark import compare_to_benchmark
+from portfolio.engine.strategy_compiler import MAX_POSITION_PCT, MAX_RISK_PER_TRADE_PCT
+from portfolio.engine.strategy_library import built_in_strategy_specs, get_strategy_spec
+from portfolio.engine.strategy_schema import validate_strategy_spec
 
 
 def test_compare_to_benchmark_calculates_relative_return_and_drawdown():
@@ -100,3 +103,40 @@ def test_compare_to_benchmark_keeps_extreme_computed_metrics_json_safe():
     result = compare_to_benchmark(nav, benchmark, benchmark_id="NIFTY_TEST")
 
     json.dumps(result.as_dict(), allow_nan=False)
+
+
+def test_built_in_strategy_specs_cover_popular_families_and_validate():
+    specs = built_in_strategy_specs()
+    ids = {spec["strategy_id"] for spec in specs}
+
+    assert {
+        "stage2_continuation_v1",
+        "donchian_turtle_breakout_v1",
+        "moving_average_trend_v1",
+        "momentum_rotation_v1",
+        "vcp_breakout_v1",
+        "darvas_box_breakout_v1",
+        "mean_reversion_uptrend_v1",
+        "minervini_trend_template_v1",
+    }.issubset(ids)
+
+    for spec in specs:
+        validated = validate_strategy_spec(spec)
+
+        assert validated.entry_all
+        assert validated.exit_any
+        assert validated.risk.initial_stop.type == "atr"
+        assert validated.risk.initial_stop.indicator == "atr_14"
+        assert validated.risk.initial_stop.multiple is not None
+        assert validated.risk.risk_per_trade_pct <= MAX_RISK_PER_TRADE_PCT
+        assert validated.risk.max_position_pct <= MAX_POSITION_PCT
+
+
+def test_get_strategy_spec_returns_deep_copy():
+    first = get_strategy_spec("stage2_continuation_v1")
+    first["name"] = "mutated"
+    first["entry"]["all"][0]["value"] = "MUTATED"
+    second = get_strategy_spec("stage2_continuation_v1")
+
+    assert second["name"] != "mutated"
+    assert second["entry"]["all"][0]["value"] != "MUTATED"
