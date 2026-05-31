@@ -14,6 +14,10 @@ class OrderType(StrEnum):
     MARKET_ON_CLOSE = "MARKET_ON_CLOSE"
     STOP = "STOP"
     LIMIT = "LIMIT"
+    STOP_LIMIT = "STOP_LIMIT"
+    TRAILING_STOP = "TRAILING_STOP"
+    BRACKET = "BRACKET"
+    CANCEL_REPLACE = "CANCEL_REPLACE"
 
 
 class OrderStatus(StrEnum):
