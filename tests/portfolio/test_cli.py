@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 import subprocess
 import sys
 from pathlib import Path
 
 import portfolio
+from portfolio.cli import _write_json
 
 
 def _run_cli(*args: str) -> subprocess.CompletedProcess[str]:
@@ -127,6 +129,68 @@ def test_cli_replay_writes_pt1_artifacts_and_references(tmp_path: Path):
     assert replay_payload["validation_path"] == str(validation_path)
     assert replay_payload["benchmark_path"] == str(benchmark_path)
     assert replay_payload["manifest_path"] == str(manifest_path)
+
+
+def test_cli_replay_validation_errors_stop_before_normal_artifacts(tmp_path: Path):
+    output_dir = tmp_path / "paper"
+    data_path = tmp_path / "invalid.csv"
+    data_path.write_text(
+        "\n".join(
+            [
+                "date,symbol,open,high,low,close,volume",
+                "2025-01-01,AAA,100,99,98,101,1000",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    proc = _run_cli("replay", "--output-dir", str(output_dir), "--data", str(data_path))
+
+    assert proc.returncode == 1
+    assert proc.stdout == ""
+    assert "data validation failed:" in proc.stderr
+    assert "data_quality.json" in proc.stderr
+
+    validation_path = output_dir / "validation" / "data_quality.json"
+    assert validation_path.exists()
+    validation = json.loads(validation_path.read_text(encoding="utf-8"))
+    assert validation["error_count"] == 1
+    assert validation["issues"][0]["code"] == "invalid_ohlc_range"
+
+    assert not (output_dir / "state" / "replay_state.json").exists()
+    assert not (output_dir / "metrics" / "metrics.json").exists()
+    assert not (output_dir / "logs" / "audit.jsonl").exists()
+    assert not (output_dir / "reports" / "paper_trading_report.md").exists()
+    assert not (output_dir / "benchmarks" / "benchmark.json").exists()
+    assert not (output_dir / "manifest" / "run_manifest.json").exists()
+
+
+def test_cli_replay_manifest_is_repeatable_for_same_inputs(tmp_path: Path):
+    output_dir = tmp_path / "paper"
+
+    first = _run_cli("replay", "--output-dir", str(output_dir), "--run-id", "PT-1")
+    assert first.returncode == 0, first.stderr
+    manifest_path = output_dir / "manifest" / "run_manifest.json"
+    first_manifest = manifest_path.read_text(encoding="utf-8")
+
+    second = _run_cli("replay", "--output-dir", str(output_dir), "--run-id", "PT-1")
+
+    assert second.returncode == 0, second.stderr
+    assert manifest_path.read_text(encoding="utf-8") == first_manifest
+
+
+def test_write_json_normalizes_non_finite_runtime_values(tmp_path: Path):
+    path = tmp_path / "payload.json"
+
+    _write_json(path, {"nan": math.nan, "pos": math.inf, "neg": -math.inf})
+
+    raw = path.read_text(encoding="utf-8")
+    payload = json.loads(raw)
+    json.dumps(payload, allow_nan=False)
+    assert payload == {"nan": "nan", "neg": "-inf", "pos": "inf"}
+    assert "NaN" not in raw
+    assert "Infinity" not in raw
 
 
 def test_cli_replay_replaces_audit_log_for_repeatable_outputs(tmp_path: Path):

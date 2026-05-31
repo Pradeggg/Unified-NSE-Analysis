@@ -122,3 +122,19 @@ def test_build_run_manifest_is_json_safe_and_checksum_stable(tmp_path):
     assert payload["data"]["row_count"] == 6
     assert payload["checksums"]["strategies"] == checksum_payload([valid_strategy_spec()])
     assert payload["artifacts"]["state"].endswith("state.json")
+
+
+def test_build_run_manifest_accepts_deterministic_generated_at(tmp_path):
+    state_path = tmp_path / "state.json"
+    state_path.write_text('{"ok": true}', encoding="utf-8")
+
+    manifest = build_run_manifest(
+        run_id="PT-1",
+        config={"initial_capital": 1000000.0},
+        strategy_specs=[valid_strategy_spec()],
+        data=sample_ohlcv(),
+        artifacts={"state": state_path},
+        generated_at="2025-01-08T00:00:00Z",
+    )
+
+    assert manifest.as_dict()["generated_at"] == "2025-01-08T00:00:00Z"

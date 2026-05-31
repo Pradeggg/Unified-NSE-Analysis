@@ -58,6 +58,8 @@ def build_run_manifest(
     strategy_specs: list[dict[str, Any]],
     data: pd.DataFrame,
     artifacts: dict[str, Path | str],
+    *,
+    generated_at: str | None = None,
 ) -> RunManifest:
     artifact_paths = {key: str(Path(value)) for key, value in sorted(artifacts.items())}
     row_count = int(len(data))
@@ -65,7 +67,7 @@ def build_run_manifest(
 
     return RunManifest(
         run_id=str(run_id),
-        generated_at=datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+        generated_at=generated_at or datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
         git_commit=_git_commit(),
         checksums={
             "config": checksum_payload(config),

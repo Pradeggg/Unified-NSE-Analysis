@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -82,6 +84,19 @@ def _cmd_replay(args: argparse.Namespace) -> int:
     strategy_specs = _load_strategy_specs(args.strategy)
     validation = validate_ohlcv(data)
     _write_json(validation_path, validation.as_dict())
+    if not validation.is_usable:
+        _remove_artifacts(
+            state_path,
+            metrics_path,
+            audit_path,
+            report_path,
+            benchmark_path,
+            manifest_path,
+        )
+        raise CliArtifactError(
+            f"data validation failed: {validation.error_count} error(s), "
+            f"{validation.warning_count} warning(s); see {validation_path}"
+        )
 
     result = run_replay(
         data,
@@ -110,6 +125,7 @@ def _cmd_replay(args: argparse.Namespace) -> int:
         strategy_specs=strategy_specs,
         data=data,
         artifacts=artifact_paths,
+        generated_at=_manifest_generated_at(state),
     )
 
     _write_json(state_path, state)
@@ -231,6 +247,15 @@ def _fixture_buy_hold_benchmark(data: pd.DataFrame) -> pd.DataFrame:
     return data.loc[:, ["date", "close"]].copy()
 
 
+def _manifest_generated_at(state: dict[str, Any]) -> str:
+    timestamp = str(state.get("summary", {}).get("last_timestamp") or "no_data")
+    if timestamp == "no_data":
+        return "no_data"
+    if "T" in timestamp:
+        return timestamp
+    return f"{timestamp}T00:00:00Z"
+
+
 def _state_payload(run_id: str, result: Any, metrics: dict[str, Any]) -> dict[str, Any]:
     nav_history = _json_safe(result.nav_history)
     fills = _json_safe(result.trade_ledger)
@@ -280,7 +305,7 @@ def _replay_result_from_state(state: dict[str, Any]) -> SimpleNamespace:
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
-        json.dumps(_json_safe(payload), indent=2, sort_keys=True) + "\n",
+        json.dumps(_json_safe(payload), allow_nan=False, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
 
@@ -374,7 +399,35 @@ def _required_metric(path: Path, payload: dict[str, Any], field: str) -> Any:
 
 
 def _json_safe(value: Any) -> Any:
-    return json.loads(json.dumps(value, default=str))
+    if isinstance(value, Mapping):
+        return {str(key): _json_safe(item) for key, item in value.items()}
+    if isinstance(value, Path):
+        return str(value)
+    if isinstance(value, str) or value is None or isinstance(value, bool):
+        return value
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        if math.isnan(value):
+            return "nan"
+        if math.isinf(value):
+            return "inf" if value > 0 else "-inf"
+        return value
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    if isinstance(value, Sequence):
+        return [_json_safe(item) for item in value]
+    if pd.isna(value):
+        return None
+    return str(value)
+
+
+def _remove_artifacts(*paths: Path) -> None:
+    for path in paths:
+        try:
+            path.unlink()
+        except FileNotFoundError:
+            pass
 
 
 def _first_or_none(values: list[str]) -> str | None:
