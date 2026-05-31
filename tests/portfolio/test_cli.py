@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
+
+import portfolio
 
 
 def _run_cli(*args: str) -> subprocess.CompletedProcess[str]:
@@ -13,6 +16,36 @@ def _run_cli(*args: str) -> subprocess.CompletedProcess[str]:
         text=True,
         check=False,
     )
+
+
+def test_cli_module_import_does_not_depend_on_tests_package(tmp_path: Path):
+    repo_root = Path(portfolio.__file__).resolve().parent.parent
+    code = """
+import importlib.abc
+import sys
+
+class BlockTests(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname == "tests" or fullname.startswith("tests."):
+            raise ImportError("tests package import blocked")
+        return None
+
+sys.meta_path.insert(0, BlockTests())
+import portfolio.cli
+print("ok")
+"""
+
+    proc = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=tmp_path,
+        env={**os.environ, "PYTHONPATH": str(repo_root)},
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    assert proc.stdout.strip() == "ok"
 
 
 def test_cli_replay_writes_json_audit_and_markdown_outputs(tmp_path: Path):
@@ -87,6 +120,32 @@ def test_cli_status_reads_saved_state_and_metrics(tmp_path: Path):
     assert "Ending equity:" in proc.stdout
 
 
+def test_cli_status_reports_missing_artifacts_without_traceback(tmp_path: Path):
+    proc = _run_cli("status", "--output-dir", str(tmp_path / "missing"))
+
+    assert proc.returncode == 1
+    assert "missing artifact:" in proc.stderr
+    assert "replay_state.json" in proc.stderr
+    assert "Traceback" not in proc.stderr
+
+
+def test_cli_status_reports_corrupt_artifacts_without_traceback(tmp_path: Path):
+    output_dir = tmp_path / "paper"
+    state_path = output_dir / "state" / "replay_state.json"
+    metrics_path = output_dir / "metrics" / "metrics.json"
+    state_path.parent.mkdir(parents=True)
+    metrics_path.parent.mkdir(parents=True)
+    state_path.write_text('{"run_id": "PT-0", "summary": {}}', encoding="utf-8")
+    metrics_path.write_text("{bad json}", encoding="utf-8")
+
+    proc = _run_cli("status", "--output-dir", str(output_dir))
+
+    assert proc.returncode == 1
+    assert "corrupt artifact:" in proc.stderr
+    assert "metrics.json" in proc.stderr
+    assert "Traceback" not in proc.stderr
+
+
 def test_cli_report_prints_saved_markdown_report(tmp_path: Path):
     output_dir = tmp_path / "paper"
     replay = _run_cli("replay", "--output-dir", str(output_dir))
@@ -113,3 +172,29 @@ def test_cli_report_regenerates_markdown_from_saved_state(tmp_path: Path):
     assert proc.returncode == 0, proc.stderr
     assert report_path.exists()
     assert str(report_path) in proc.stdout
+
+
+def test_cli_report_reports_missing_artifacts_without_traceback(tmp_path: Path):
+    proc = _run_cli("report", "--output-dir", str(tmp_path / "missing"))
+
+    assert proc.returncode == 1
+    assert "missing artifact:" in proc.stderr
+    assert "replay_state.json" in proc.stderr
+    assert "Traceback" not in proc.stderr
+
+
+def test_cli_report_reports_corrupt_artifacts_without_traceback(tmp_path: Path):
+    output_dir = tmp_path / "paper"
+    state_path = output_dir / "state" / "replay_state.json"
+    metrics_path = output_dir / "metrics" / "metrics.json"
+    state_path.parent.mkdir(parents=True)
+    metrics_path.parent.mkdir(parents=True)
+    state_path.write_text("{bad json}", encoding="utf-8")
+    metrics_path.write_text('{"ending_equity": 0.0}', encoding="utf-8")
+
+    proc = _run_cli("report", "--output-dir", str(output_dir))
+
+    assert proc.returncode == 1
+    assert "corrupt artifact:" in proc.stderr
+    assert "replay_state.json" in proc.stderr
+    assert "Traceback" not in proc.stderr

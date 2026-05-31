@@ -10,10 +10,10 @@ from typing import Any
 import pandas as pd
 
 from portfolio.agents.report_agent import ReportAgent
+from portfolio.defaults import sample_ohlcv, valid_strategy_spec
 from portfolio.engine.audit_log import AuditLog
 from portfolio.engine.event_loop import ReplayConfig, run_replay
 from portfolio.engine.metrics import calculate_metrics
-from tests.portfolio.fixtures import sample_ohlcv, valid_strategy_spec
 
 
 DEFAULT_RUN_ID = "PT-0"
@@ -22,6 +22,10 @@ STATE_RELATIVE_PATH = Path("state/replay_state.json")
 METRICS_RELATIVE_PATH = Path("metrics/metrics.json")
 AUDIT_RELATIVE_PATH = Path("logs/audit.jsonl")
 REPORT_RELATIVE_PATH = Path("reports/paper_trading_report.md")
+
+
+class CliArtifactError(RuntimeError):
+    pass
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -51,7 +55,11 @@ def main(argv: list[str] | None = None) -> int:
     report.set_defaults(func=_cmd_report)
 
     args = parser.parse_args(argv)
-    return int(args.func(args))
+    try:
+        return int(args.func(args))
+    except CliArtifactError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
 
 
 def _cmd_replay(args: argparse.Namespace) -> int:
@@ -229,7 +237,18 @@ def _write_json(path: Path, payload: dict[str, Any]) -> None:
 
 
 def _read_json(path: Path) -> dict[str, Any]:
-    return json.loads(path.read_text(encoding="utf-8"))
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except FileNotFoundError as exc:
+        raise CliArtifactError(f"missing artifact: {path}") from exc
+
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise CliArtifactError(f"corrupt artifact: {path}") from exc
+    if not isinstance(payload, dict):
+        raise CliArtifactError(f"corrupt artifact: {path}")
+    return payload
 
 
 def _json_safe(value: Any) -> Any:
