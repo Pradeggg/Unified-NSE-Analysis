@@ -297,10 +297,16 @@ def _int_metric(path: Path, payload: dict[str, Any], field: str, *, default: int
     if isinstance(value, bool):
         raise CliArtifactError(f"corrupt artifact: {path}: invalid metric {field}")
     try:
-        parsed = int(value)
-    except (TypeError, ValueError) as exc:
+        numeric = float(value)
+    except (TypeError, ValueError, OverflowError) as exc:
         raise CliArtifactError(f"corrupt artifact: {path}: invalid metric {field}") from exc
-    if parsed != float(value):
+    if numeric != numeric or numeric in {float("inf"), float("-inf")}:
+        raise CliArtifactError(f"corrupt artifact: {path}: invalid metric {field}")
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise CliArtifactError(f"corrupt artifact: {path}: invalid metric {field}") from exc
+    if parsed != numeric:
         raise CliArtifactError(f"corrupt artifact: {path}: invalid metric {field}")
     return parsed
 
