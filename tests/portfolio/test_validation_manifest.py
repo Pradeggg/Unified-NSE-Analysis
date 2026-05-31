@@ -80,6 +80,18 @@ def test_validate_ohlcv_reports_nan_ohlc_value():
     assert "invalid_numeric_value" in [issue.code for issue in report.issues]
 
 
+def test_validate_ohlcv_handles_duplicate_index_labels_for_issue_metadata():
+    frame = sample_ohlcv()
+    frame.index = [0, 0, 1, 1, 2, 2]
+    frame.iloc[1, frame.columns.get_loc("volume")] = 0
+
+    report = validate_ohlcv(frame)
+
+    assert report.warning_count == 1
+    assert report.issues[0].code == "zero_volume"
+    assert report.issues[0].symbol == "AAA"
+
+
 def test_checksum_payload_normalizes_numpy_scalars_like_python_scalars():
     assert checksum_payload({"x": np.int64(7)}) == checksum_payload({"x": 7})
     assert checksum_payload({"x": np.bool_(True)}) == checksum_payload({"x": True})

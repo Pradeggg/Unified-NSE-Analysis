@@ -181,8 +181,9 @@ def _first_issue(
 ) -> DataQualityIssue | None:
     if not bool(mask.any()):
         return None
-    row_index = mask[mask].index[0]
-    row = data.loc[row_index]
+    row_position = int(mask.to_numpy().nonzero()[0][0])
+    row_index = data.index[row_position]
+    row = data.iloc[row_position]
     return DataQualityIssue(
         code=code,
         severity=severity,
