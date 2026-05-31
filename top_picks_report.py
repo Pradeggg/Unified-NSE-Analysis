@@ -55,6 +55,1358 @@ MAX_PICKS = 10
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# TradingView-style crosshair / OHLC hover tooltip (one shared script for all
+# `.tp-tv-chart` SVGs in the report). Reads bar + indicator data from a JSON
+# <script> emitted by `_svg_candlestick` with matching `{chart_id}-data` id.
+# ─────────────────────────────────────────────────────────────────────────────
+TV_CROSSHAIR_JS = """
+<script>
+(function(){
+  function wire(svg){
+    const id = svg.id;
+    const dataEl = document.getElementById(id + "-data");
+    if (!dataEl) return;
+    let payload; try { payload = JSON.parse(dataEl.textContent); } catch(e){ return; }
+    const bars = payload.bars || [];
+    if (!bars.length) return;
+    const padL = +svg.dataset.padL, padT = +svg.dataset.padT;
+    const cw = +svg.dataset.chartW, ph = +svg.dataset.priceH;
+    const pmin = +svg.dataset.pMin, pmax = +svg.dataset.pMax;
+    const N = +svg.dataset.n;
+    const area = svg.querySelector(".cx-area");
+    const grp = svg.querySelector(".cx-hover");
+    if (!area || !grp) return;
+    const vline = grp.querySelector(".cx-v");
+    const hline = grp.querySelector(".cx-h");
+    const ptag  = grp.querySelector(".cx-pricetag");
+    const ptxt  = grp.querySelector(".cx-pricetxt");
+    const dtag  = grp.querySelector(".cx-datetag");
+    const dtxt  = grp.querySelector(".cx-datetxt");
+    const tip   = grp.querySelector(".cx-tooltip");
+    const tipBg = grp.querySelector(".cx-tipbg");
+    const tipTxt= grp.querySelector(".cx-tiptxt");
+
+    const xFor = i => padL + (i + 0.5) * (cw / N);
+    const iForX = x => Math.max(0, Math.min(N-1, Math.round((x - padL)/(cw/N) - 0.5)));
+    const yPrice = v => padT + (pmax - v)/(pmax - pmin) * ph;
+    const priceForY = y => pmax - (y - padT)/ph * (pmax - pmin);
+    const fmt = (v, d=2) => v==null ? '—' : Number(v).toLocaleString('en-IN',{minimumFractionDigits:d, maximumFractionDigits:d});
+    const fmtV = v => v==null ? '—' : Number(v).toLocaleString('en-IN');
+
+    function svgCoord(evt){
+      const pt = svg.createSVGPoint();
+      pt.x = evt.clientX; pt.y = evt.clientY;
+      const ctm = svg.getScreenCTM().inverse();
+      return pt.matrixTransform(ctm);
+    }
+    function onMove(evt){
+      const p = svgCoord(evt);
+      if (p.x < padL || p.x > padL + cw) { grp.setAttribute("visibility","hidden"); return; }
+      const i = iForX(p.x);
+      const b = bars[i]; if (!b) return;
+      const cx = xFor(i);
+      grp.setAttribute("visibility","visible");
+      vline.setAttribute("x1", cx); vline.setAttribute("x2", cx);
+      const yClamp = Math.max(padT, Math.min(padT+ph, p.y));
+      hline.setAttribute("y1", yClamp); hline.setAttribute("y2", yClamp);
+      ptag.setAttribute("y", yClamp - 7);
+      ptxt.setAttribute("y", yClamp + 3.5);
+      ptxt.textContent = fmt(priceForY(yClamp));
+      // date tag
+      dtag.setAttribute("x", cx - 30);
+      dtxt.setAttribute("x", cx);
+      dtxt.textContent = b.d;
+      // tooltip box
+      const chg = b.c - b.o, chgPct = b.o ? chg/b.o*100 : 0;
+      const e20 = (payload.ema20  || [])[i];
+      const e50 = (payload.ema50  || [])[i];
+      const e200= (payload.ema200 || [])[i];
+      const rsi = (payload.rsi    || [])[i];
+      const upC = "#26a69a", dnC = "#ef5350";
+      const cCol = chg >= 0 ? upC : dnC;
+      // multi-line text using tspans
+      tipTxt.innerHTML =
+        `<tspan x="8" dy="0" font-weight="800" fill="#f0f3fa">${b.d}</tspan>` +
+        `<tspan x="8" dy="14"><tspan fill="#787b86">O</tspan> ${fmt(b.o)}  ` +
+          `<tspan fill="#787b86">H</tspan> ${fmt(b.h)}</tspan>` +
+        `<tspan x="8" dy="14"><tspan fill="#787b86">L</tspan> ${fmt(b.l)}  ` +
+          `<tspan fill="#787b86">C</tspan> <tspan fill="${cCol}" font-weight="700">${fmt(b.c)}</tspan></tspan>` +
+        `<tspan x="8" dy="14" fill="${cCol}" font-weight="700">${chg>=0?'+':''}${fmt(chg)} (${chg>=0?'+':''}${fmt(chgPct)}%)</tspan>` +
+        `<tspan x="8" dy="14"><tspan fill="#787b86">Vol</tspan> ${fmtV(b.v)}</tspan>` +
+        `<tspan x="8" dy="14"><tspan fill="#ffb74d">EMA20</tspan> ${fmt(e20)}  ` +
+          `<tspan fill="#42a5f5">EMA50</tspan> ${fmt(e50)}</tspan>` +
+        `<tspan x="8" dy="14"><tspan fill="#ab47bc">EMA200</tspan> ${fmt(e200)}  ` +
+          `<tspan fill="#e879f9">RSI</tspan> ${fmt(rsi,1)}</tspan>`;
+      // position tooltip — flip to left of cursor if too close to right edge
+      const tipW = 180, tipH = 122;
+      let tx = cx + 10, ty = Math.max(padT+4, Math.min(p.y - 60, padT+ph - tipH - 4));
+      if (tx + tipW > padL + cw + 60) tx = cx - tipW - 10;
+      tipBg.setAttribute("width", tipW);
+      tipBg.setAttribute("height", tipH);
+      tip.setAttribute("transform", `translate(${tx},${ty})`);
+    }
+    function onLeave(){ grp.setAttribute("visibility","hidden"); }
+    area.addEventListener("mousemove", onMove);
+    area.addEventListener("mouseleave", onLeave);
+    // Also capture moves over candles/EMAs (which sit above the area otherwise)
+    svg.addEventListener("mousemove", function(e){
+      // only handle if pointer is inside chart panel
+      const p = svgCoord(e);
+      if (p.x >= padL && p.x <= padL+cw && p.y >= padT && p.y <= padT+ph) onMove(e);
+    });
+    svg.addEventListener("mouseleave", onLeave);
+  }
+  function init(){ document.querySelectorAll("svg.tp-tv-chart").forEach(wire); }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+  else init();
+})();
+</script>
+"""
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Visual layer — extra CSS + inline SVG charting helpers
+# ─────────────────────────────────────────────────────────────────────────────
+_EXTRA_CSS = """
+/* ===== Top Picks enhancements (overrides + additions on top of _CSS) ===== */
+:root{
+  --tp-ink:#0f172a; --tp-ink-soft:#334155; --tp-mute:#64748b; --tp-line:#e2e8f0;
+  --tp-bg:#f8fafc; --tp-card:#ffffff; --tp-blue:#1e3a5f; --tp-blue2:#2563eb;
+  --tp-teal:#0f766e; --tp-violet:#7c3aed; --tp-amber:#d97706; --tp-green:#16a34a;
+  --tp-red:#b91c1c;
+  --tp-radius:14px;
+}
+body{
+  font-family:'Inter','Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,sans-serif;
+  font-feature-settings:"tnum","ss01"; color:var(--tp-ink);
+}
+.tp-hero{
+  margin:0; padding:32px 28px 26px;
+  background: radial-gradient(1200px 320px at 10% -20%, rgba(37,99,235,.32), transparent 60%),
+              radial-gradient(900px 260px at 90% 0%, rgba(124,58,237,.28), transparent 65%),
+              linear-gradient(135deg,#0b1d3a 0%,#1e3a5f 55%,#0f766e 100%);
+  color:#f8fafc; border-radius:0 0 var(--tp-radius) var(--tp-radius);
+  box-shadow:0 18px 40px -22px rgba(15,23,42,.55);
+  position:relative; overflow:hidden;
+}
+.tp-hero::after{
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background-image: linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px);
+  background-size: 24px 24px; opacity:.5;
+}
+.tp-hero-row{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;flex-wrap:wrap;position:relative;z-index:1}
+.tp-hero-kicker{font-size:.78rem;letter-spacing:.18em;text-transform:uppercase;color:#cbd5e1;font-weight:600}
+.tp-hero-title{font-size:2.05rem;line-height:1.1;font-weight:800;margin:6px 0 4px;letter-spacing:-.01em}
+.tp-hero-sub{font-size:.95rem;color:#dbeafe;max-width:640px}
+.tp-hero-meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.tp-pill{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(255,255,255,.12);backdrop-filter:blur(6px);
+  border:1px solid rgba(255,255,255,.2); color:#f1f5f9;
+  font-size:.72rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  padding:5px 11px;border-radius:999px;
+}
+.tp-pill.green{background:rgba(22,163,74,.25);border-color:rgba(22,163,74,.45)}
+.tp-pill.blue{background:rgba(37,99,235,.25);border-color:rgba(37,99,235,.45)}
+.tp-pill.violet{background:rgba(124,58,237,.28);border-color:rgba(124,58,237,.5)}
+.tp-pill.amber{background:rgba(217,119,6,.28);border-color:rgba(217,119,6,.5)}
+.tp-pill.red{background:rgba(185,28,28,.3);border-color:rgba(185,28,28,.5)}
+
+.tp-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:22px 0 0;position:relative;z-index:1}
+.tp-kpi{
+  background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18);
+  padding:12px 14px; border-radius:12px;
+}
+.tp-kpi-lbl{font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:#cbd5e1;font-weight:600}
+.tp-kpi-val{font-size:1.55rem;font-weight:800;line-height:1.1;margin-top:4px;color:#fff}
+.tp-kpi-sub{font-size:.72rem;color:#dbeafe;margin-top:2px}
+
+/* TOC strip */
+.tp-toc{
+  display:flex;flex-wrap:wrap;gap:6px;
+  padding:10px 14px;margin:18px 0 0;
+  background:#fff;border:1px solid var(--tp-line);border-radius:12px;
+  box-shadow:0 4px 14px -10px rgba(15,23,42,.25);
+  position:sticky;top:8px;z-index:30;
+}
+.tp-toc-title{font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--tp-mute);font-weight:700;align-self:center;margin-right:6px}
+.tp-toc a{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:5px 10px;border-radius:8px;background:#f1f5f9;
+  font-size:.78rem;font-weight:600;color:var(--tp-blue);text-decoration:none;
+  border:1px solid transparent;transition:all .15s ease;
+}
+.tp-toc a:hover{background:var(--tp-blue);color:#fff;border-color:var(--tp-blue)}
+.tp-toc a .num{font-size:.65rem;background:rgba(30,58,95,.12);padding:1px 6px;border-radius:6px;color:var(--tp-blue);font-weight:700}
+.tp-toc a:hover .num{background:rgba(255,255,255,.25);color:#fff}
+
+/* Stock cards */
+.tp-card{
+  background:#fff;border:1px solid var(--tp-line);border-radius:var(--tp-radius);
+  padding:0;margin:14px 0 18px;overflow:hidden;
+  box-shadow:0 6px 22px -16px rgba(15,23,42,.25);
+}
+.tp-card-hd{
+  padding:16px 20px;
+  background:linear-gradient(135deg,#f8fafc 0%,#eef2f7 100%);
+  border-bottom:1px solid var(--tp-line);
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+}
+.tp-card-num{
+  width:38px;height:38px;border-radius:10px;
+  background:linear-gradient(135deg,var(--tp-blue),var(--tp-blue2));
+  color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:1.05rem;
+  box-shadow:0 6px 14px -8px rgba(37,99,235,.55);
+}
+.tp-card-name{font-size:1.3rem;font-weight:800;color:var(--tp-blue);margin:0;letter-spacing:-.01em}
+.tp-card-name small{color:var(--tp-mute);font-weight:500;font-size:.85rem;margin-left:6px}
+.tp-card-bd{padding:18px 20px 20px}
+.tp-card .stripe{height:4px;background:linear-gradient(90deg,var(--tp-blue2),var(--tp-violet),var(--tp-amber),var(--tp-green))}
+
+/* Hero KPI row inside each card */
+.tp-kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:0 0 14px}
+.tp-kpi-tile{
+  border:1px solid var(--tp-line);border-radius:10px;padding:10px 12px;
+  background:#fff;position:relative;overflow:hidden;
+}
+.tp-kpi-tile::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--tp-blue2)}
+.tp-kpi-tile.green::before{background:var(--tp-green)}
+.tp-kpi-tile.red::before{background:var(--tp-red)}
+.tp-kpi-tile.amber::before{background:var(--tp-amber)}
+.tp-kpi-tile.violet::before{background:var(--tp-violet)}
+.tp-kpi-tile .lbl{font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;color:var(--tp-mute);font-weight:700}
+.tp-kpi-tile .val{font-size:1.15rem;font-weight:800;color:var(--tp-ink);margin-top:3px}
+.tp-kpi-tile .sub{font-size:.7rem;color:var(--tp-mute);margin-top:2px}
+
+/* Sectioned sub-cards */
+.tp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-top:12px}
+.tp-sub{background:#fafbfd;border:1px solid var(--tp-line);border-radius:10px;padding:12px 14px}
+.tp-sub h4{margin:0 0 8px;font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;color:var(--tp-blue);font-weight:700;display:flex;align-items:center;gap:6px}
+.tp-sub .ico{display:inline-block;width:18px;height:18px;border-radius:5px;background:var(--tp-blue);color:#fff;font-size:11px;line-height:18px;text-align:center;font-weight:800}
+.tp-sub.ok{background:#ecfdf5;border-color:#a7f3d0}
+.tp-sub.ok h4{color:#047857} .tp-sub.ok .ico{background:#047857}
+.tp-sub.warn{background:#fff7ed;border-color:#fed7aa}
+.tp-sub.warn h4{color:#b45309} .tp-sub.warn .ico{background:#b45309}
+.tp-sub.bad{background:#fef2f2;border-color:#fecaca}
+.tp-sub.bad h4{color:#991b1b} .tp-sub.bad .ico{background:#991b1b}
+.tp-sub.violet{background:#f5f3ff;border-color:#ddd6fe}
+.tp-sub.violet h4{color:#5b21b6} .tp-sub.violet .ico{background:#5b21b6}
+.tp-sub.teal{background:#f0fdfa;border-color:#99f6e4}
+.tp-sub.teal h4{color:#0f766e} .tp-sub.teal .ico{background:#0f766e}
+
+/* Tables */
+.tp-tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:.83rem}
+.tp-tbl th{
+  text-align:left;font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--tp-mute);font-weight:700;padding:8px 10px;background:#f8fafc;
+  border-bottom:1px solid var(--tp-line);
+}
+.tp-tbl td{padding:8px 10px;border-bottom:1px solid #f1f5f9;color:var(--tp-ink)}
+.tp-tbl tr:last-child td{border-bottom:none}
+.tp-tbl tr:hover td{background:#f8fafc}
+.tp-tbl td.num{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.tp-kv td{padding:6px 8px;font-size:.82rem}
+.tp-kv td:first-child{color:var(--tp-mute);font-weight:500}
+.tp-kv td:last-child{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+
+/* Score / sub-score horizontal bars */
+.tp-bar{display:flex;align-items:center;gap:8px;margin:4px 0}
+.tp-bar .lab{flex:0 0 130px;font-size:.78rem;color:var(--tp-ink-soft)}
+.tp-bar .trk{flex:1;height:8px;background:#e2e8f0;border-radius:999px;overflow:hidden;position:relative}
+.tp-bar .fill{height:100%;background:linear-gradient(90deg,var(--tp-blue2),var(--tp-teal));border-radius:999px;transition:width .3s ease}
+.tp-bar .fill.green{background:linear-gradient(90deg,#10b981,#16a34a)}
+.tp-bar .fill.amber{background:linear-gradient(90deg,#f59e0b,#d97706)}
+.tp-bar .fill.red{background:linear-gradient(90deg,#ef4444,#b91c1c)}
+.tp-bar .val{flex:0 0 48px;text-align:right;font-size:.78rem;font-weight:700;font-variant-numeric:tabular-nums;color:var(--tp-ink)}
+
+/* Gauge */
+.tp-gauge{display:flex;align-items:center;gap:14px}
+.tp-gauge-num{font-size:2.6rem;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.tp-gauge-num small{font-size:.95rem;color:var(--tp-mute);font-weight:600}
+.tp-gauge-tier{margin-top:4px;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;font-weight:800}
+
+/* Summary master table */
+.tp-master{
+  width:100%;border-collapse:separate;border-spacing:0;font-size:.85rem;
+  background:#fff;border:1px solid var(--tp-line);border-radius:12px;overflow:hidden;
+  box-shadow:0 4px 16px -10px rgba(15,23,42,.2);
+}
+.tp-master thead th{
+  background:linear-gradient(180deg,#0b1d3a,#1e3a5f);color:#f1f5f9;
+  padding:11px 10px;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;
+}
+.tp-master tbody td{padding:10px 10px;border-bottom:1px solid #f1f5f9;font-variant-numeric:tabular-nums}
+.tp-master tbody tr:nth-child(even) td{background:#fbfdff}
+.tp-master tbody tr:hover td{background:#eff6ff}
+.tp-master tbody tr:last-child td{border-bottom:none}
+.tp-master a{color:var(--tp-blue);text-decoration:none;font-weight:700}
+.tp-master a:hover{text-decoration:underline}
+
+/* Chip badges */
+.tp-chip{
+  display:inline-block;padding:2px 8px;border-radius:999px;
+  font-size:.7rem;font-weight:700;letter-spacing:.04em;
+}
+.tp-chip.green{background:#dcfce7;color:#166534}
+.tp-chip.amber{background:#fef3c7;color:#92400e}
+.tp-chip.red  {background:#fee2e2;color:#991b1b}
+.tp-chip.blue {background:#dbeafe;color:#1e40af}
+.tp-chip.violet{background:#ede9fe;color:#5b21b6}
+.tp-chip.slate{background:#e2e8f0;color:#334155}
+
+/* Narrative blocks */
+.tp-narr{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-top:6px}
+.tp-narr .blk{background:#fff;border:1px solid var(--tp-line);border-radius:10px;padding:11px 13px;border-left:3px solid var(--tp-blue2)}
+.tp-narr .blk.tech{border-left-color:#1d4ed8}
+.tp-narr .blk.fund{border-left-color:#0f766e}
+.tp-narr .blk.sector{border-left-color:#7c3aed}
+.tp-narr .blk.val{border-left-color:#d97706}
+.tp-narr .blk.cat{border-left-color:#16a34a;background:#f0fdf4}
+.tp-narr .blk.risk{border-left-color:#b91c1c;background:#fef2f2}
+.tp-narr .blk.act{border-left-color:#047857;background:#ecfdf5}
+.tp-narr .blk h5{margin:0 0 5px;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--tp-mute);font-weight:700;display:flex;align-items:center;gap:5px}
+.tp-narr .blk p,.tp-narr .blk li{font-size:.83rem;color:var(--tp-ink-soft);line-height:1.55;margin:0}
+.tp-narr .blk ul{margin:4px 0 0;padding-left:18px}
+
+/* Back to top */
+.tp-totop{
+  position:fixed;right:18px;bottom:18px;z-index:50;
+  background:var(--tp-blue);color:#fff;border:none;border-radius:50%;
+  width:42px;height:42px;font-size:18px;cursor:pointer;
+  box-shadow:0 10px 24px -10px rgba(30,58,95,.55);
+}
+.tp-totop:hover{background:var(--tp-blue2)}
+
+/* Print */
+@media print{
+  .tp-toc,.tp-totop{display:none !important}
+  .tp-card{break-inside:avoid;box-shadow:none}
+  .tp-hero{background:#1e3a5f !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+"""
+
+
+def _safe_floats(values: list) -> list[float]:
+    out = []
+    for v in values:
+        try: out.append(float(v))
+        except (TypeError, ValueError): pass
+    return out
+
+
+def _svg_bar_chart(labels: list[str], series: list[tuple[str, list]],
+                   width: int = 360, height: int = 150,
+                   colors: list[str] | None = None) -> str:
+    """Grouped bar chart (1-2 series). Inline SVG, no JS."""
+    if not labels or not series:
+        return ""
+    colors = colors or ["#2563eb", "#0f766e", "#d97706"]
+    all_vals = []
+    cleaned_series = []
+    for name, vals in series:
+        cv = []
+        for v in vals:
+            try: cv.append(float(v))
+            except (TypeError, ValueError): cv.append(None)
+        cleaned_series.append((name, cv))
+        all_vals.extend([v for v in cv if v is not None])
+    if not all_vals:
+        return ""
+    vmin, vmax = min(all_vals + [0]), max(all_vals + [0])
+    if vmax == vmin: vmax = vmin + 1
+    pad_l, pad_r, pad_t, pad_b = 8, 8, 12, 26
+    chart_w = width - pad_l - pad_r
+    chart_h = height - pad_t - pad_b
+    n = len(labels); ng = len(cleaned_series)
+    group_w = chart_w / max(n, 1)
+    bar_w = max(4, (group_w - 6) / ng)
+    def y_for(v): return pad_t + chart_h - (v - vmin) / (vmax - vmin) * chart_h
+    zero_y = y_for(0)
+    parts = [f'<svg viewBox="0 0 {width} {height}" width="100%" height="{height}" '
+             f'xmlns="http://www.w3.org/2000/svg" style="display:block">']
+    # axis baseline
+    parts.append(f'<line x1="{pad_l}" y1="{zero_y}" x2="{pad_l+chart_w}" y2="{zero_y}" stroke="#cbd5e1" stroke-width="1"/>')
+    for gi, (name, vals) in enumerate(cleaned_series):
+        c = colors[gi % len(colors)]
+        for i, v in enumerate(vals):
+            if v is None: continue
+            x = pad_l + i * group_w + 3 + gi * bar_w
+            y = y_for(v)
+            h_ = abs(zero_y - y)
+            y0 = min(y, zero_y)
+            parts.append(f'<rect x="{x:.1f}" y="{y0:.1f}" width="{bar_w:.1f}" height="{h_:.1f}" '
+                         f'rx="2" fill="{c}" opacity="0.9"/>')
+    for i, lab in enumerate(labels):
+        cx = pad_l + i * group_w + group_w / 2
+        parts.append(f'<text x="{cx:.1f}" y="{height-8}" font-size="10" text-anchor="middle" '
+                     f'fill="#64748b" font-family="Inter,sans-serif">{html_mod.escape(str(lab))}</text>')
+    # legend
+    lx = pad_l
+    for gi, (name, _) in enumerate(cleaned_series):
+        c = colors[gi % len(colors)]
+        parts.append(f'<rect x="{lx}" y="2" width="9" height="9" rx="2" fill="{c}"/>'
+                     f'<text x="{lx+13}" y="10" font-size="10" fill="#475569" '
+                     f'font-family="Inter,sans-serif">{html_mod.escape(name)}</text>')
+        lx += 70
+    parts.append('</svg>')
+    return "".join(parts)
+
+
+def _svg_sparkline(values: list, width: int = 220, height: int = 46,
+                   color: str = "#2563eb", fill: str = "rgba(37,99,235,.12)") -> str:
+    vs = _safe_floats(values)
+    if len(vs) < 2: return ""
+    vmin, vmax = min(vs), max(vs)
+    if vmax == vmin: vmax = vmin + 1
+    pad = 3
+    cw, ch = width - 2*pad, height - 2*pad
+    pts = []
+    for i, v in enumerate(vs):
+        x = pad + i * cw / (len(vs)-1)
+        y = pad + ch - (v - vmin)/(vmax - vmin)*ch
+        pts.append(f"{x:.1f},{y:.1f}")
+    pl = " ".join(pts)
+    area = f"M{pts[0]} L" + " L".join(pts[1:]) + f" L{pad+cw:.1f},{pad+ch:.1f} L{pad:.1f},{pad+ch:.1f} Z"
+    last_y = pts[-1].split(",")[1]
+    last_x = pts[-1].split(",")[0]
+    return (f'<svg viewBox="0 0 {width} {height}" width="100%" height="{height}" '
+            f'xmlns="http://www.w3.org/2000/svg" style="display:block">'
+            f'<path d="{area}" fill="{fill}" stroke="none"/>'
+            f'<polyline points="{pl}" fill="none" stroke="{color}" stroke-width="1.6" '
+            f'stroke-linejoin="round" stroke-linecap="round"/>'
+            f'<circle cx="{last_x}" cy="{last_y}" r="2.5" fill="{color}"/>'
+            f'</svg>')
+
+
+def _svg_gauge(score: float | None, max_val: float = 10.0,
+               width: int = 170, height: int = 100) -> str:
+    """Semi-circular gauge for risk score (0=green, 10=red)."""
+    if score is None: return ""
+    s = max(0.0, min(float(score), max_val))
+    cx, cy, r = width/2, height-10, width/2 - 10
+    import math
+    def pt(theta):
+        return (cx + r*math.cos(theta), cy + r*math.sin(theta))
+    # arc from 180° to 0°  → in SVG y-down: theta from π to 2π is upper half
+    def arc(t1, t2, color, w=12):
+        x1, y1 = pt(t1); x2, y2 = pt(t2)
+        large = 1 if (t2 - t1) > math.pi else 0
+        return f'<path d="M{x1:.1f},{y1:.1f} A{r},{r} 0 {large} 1 {x2:.1f},{y2:.1f}" stroke="{color}" stroke-width="{w}" fill="none" stroke-linecap="round"/>'
+    # 3 colored arc segments (low/med/high)
+    bg = arc(math.pi, 2*math.pi, "#e5e7eb", 12)
+    seg_low = arc(math.pi, math.pi + math.pi*0.3, "#16a34a", 12)
+    seg_med = arc(math.pi + math.pi*0.3, math.pi + math.pi*0.6, "#d97706", 12)
+    seg_high = arc(math.pi + math.pi*0.6, 2*math.pi, "#b91c1c", 12)
+    # needle
+    theta = math.pi + math.pi * (s / max_val)
+    nx, ny = pt(theta)
+    needle = (f'<line x1="{cx:.1f}" y1="{cy:.1f}" x2="{nx:.1f}" y2="{ny:.1f}" '
+              f'stroke="#0f172a" stroke-width="2.5" stroke-linecap="round"/>'
+              f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="4" fill="#0f172a"/>')
+    return (f'<svg viewBox="0 0 {width} {height}" width="100%" height="{height}" '
+            f'xmlns="http://www.w3.org/2000/svg">{bg}{seg_low}{seg_med}{seg_high}{needle}</svg>')
+
+
+def _svg_targets(last: float | None, entry_low: float | None, entry_high: float | None,
+                 stop: float | None, t1: float | None, t2: float | None, t3: float | None,
+                 width: int = 480, height: int = 80) -> str:
+    """Horizontal price ladder: stop ─ entry zone ─ current ─ T1 ─ T2 ─ T3."""
+    pts = [v for v in (last, entry_low, entry_high, stop, t1, t2, t3) if v is not None]
+    if len(pts) < 3 or last is None: return ""
+    try: pts = [float(p) for p in pts]
+    except (TypeError, ValueError): return ""
+    vmin, vmax = min(pts)*0.97, max(pts)*1.03
+    if vmax == vmin: return ""
+    pad_l, pad_r = 10, 10
+    cw = width - pad_l - pad_r
+    yline = height/2
+    def x(v): return pad_l + (float(v)-vmin)/(vmax-vmin)*cw
+    parts = [f'<svg viewBox="0 0 {width} {height}" width="100%" height="{height}" '
+             f'xmlns="http://www.w3.org/2000/svg" style="display:block">']
+    # base line
+    parts.append(f'<line x1="{pad_l}" y1="{yline}" x2="{pad_l+cw}" y2="{yline}" stroke="#cbd5e1" stroke-width="2"/>')
+    # entry zone band
+    if entry_low is not None and entry_high is not None:
+        xl, xh = x(entry_low), x(entry_high)
+        parts.append(f'<rect x="{xl:.1f}" y="{yline-9}" width="{max(2,xh-xl):.1f}" height="18" '
+                     f'fill="rgba(37,99,235,.18)" stroke="#2563eb" stroke-width="1"/>')
+    # markers
+    def marker(v, color, label, above=True):
+        if v is None: return ""
+        xx = x(v)
+        ty = yline - 14 if above else yline + 24
+        return (f'<line x1="{xx:.1f}" y1="{yline-10}" x2="{xx:.1f}" y2="{yline+10}" stroke="{color}" stroke-width="2"/>'
+                f'<text x="{xx:.1f}" y="{ty}" font-size="10" font-weight="700" text-anchor="middle" fill="{color}" '
+                f'font-family="Inter,sans-serif">{html_mod.escape(label)}</text>'
+                f'<text x="{xx:.1f}" y="{ty + (-10 if above else 12)}" font-size="9" text-anchor="middle" fill="#64748b" '
+                f'font-family="Inter,sans-serif">₹{float(v):,.0f}</text>')
+    parts.append(marker(stop, "#b91c1c", "STOP", above=False))
+    parts.append(marker(last, "#0f172a", "NOW", above=True))
+    parts.append(marker(t1, "#0f766e", "T1", above=False))
+    parts.append(marker(t2, "#16a34a", "T2", above=True))
+    parts.append(marker(t3, "#7c3aed", "T3", above=False))
+    parts.append('</svg>')
+    return "".join(parts)
+
+
+def _svg_donut(slices: list[tuple[str, float]], width: int = 170, height: int = 170,
+               palette: list[str] | None = None) -> str:
+    palette = palette or ["#2563eb","#0f766e","#d97706","#7c3aed","#0891b2","#16a34a","#b91c1c","#475569","#db2777","#65a30d"]
+    total = sum(v for _, v in slices if v)
+    if total <= 0: return ""
+    import math
+    cx, cy, r, rin = width/2, height/2, min(width, height)/2 - 6, min(width, height)/4
+    parts = [f'<svg viewBox="0 0 {width} {height}" width="100%" height="{height}" '
+             f'xmlns="http://www.w3.org/2000/svg">']
+    start = -math.pi/2
+    for i, (label, val) in enumerate(slices):
+        if not val: continue
+        frac = val/total
+        end = start + frac*2*math.pi
+        x1, y1 = cx + r*math.cos(start), cy + r*math.sin(start)
+        x2, y2 = cx + r*math.cos(end),   cy + r*math.sin(end)
+        x3, y3 = cx + rin*math.cos(end), cy + rin*math.sin(end)
+        x4, y4 = cx + rin*math.cos(start), cy + rin*math.sin(start)
+        large = 1 if frac > 0.5 else 0
+        color = palette[i % len(palette)]
+        d = (f"M{x1:.1f},{y1:.1f} A{r},{r} 0 {large} 1 {x2:.1f},{y2:.1f} "
+             f"L{x3:.1f},{y3:.1f} A{rin},{rin} 0 {large} 0 {x4:.1f},{y4:.1f} Z")
+        parts.append(f'<path d="{d}" fill="{color}" stroke="#fff" stroke-width="1"/>')
+        start = end
+    parts.append(f'<text x="{cx}" y="{cy-2}" text-anchor="middle" font-size="14" font-weight="800" fill="#0f172a" '
+                 f'font-family="Inter,sans-serif">{int(total)}</text>'
+                 f'<text x="{cx}" y="{cy+12}" text-anchor="middle" font-size="9" fill="#64748b" '
+                 f'font-family="Inter,sans-serif">PICKS</text>')
+    parts.append('</svg>')
+    return "".join(parts)
+
+
+def _detect_patterns(chart: dict, swing_window: int = 5) -> list[dict]:
+    """Detect classic chart, candle, and trend patterns. Returns list of:
+       {kind, label, color, anchors: [(i, price), ...], note}
+    Covers: double bottom/top, head-and-shoulders (regular + inverse),
+    ascending/descending/symmetrical triangles, bull/bear flags, rising/falling
+    wedges, golden/death cross, EMA pullback test, 52W-high touch, volume
+    surge, three white soldiers / black crows, morning/evening star, bullish/
+    bearish engulfing, hammer, shooting star, doji, piercing line, dark cloud
+    cover, inside bar, gap up/down, higher-highs / lower-lows channels.
+    """
+    bars = chart.get("bars") or []
+    n = len(bars)
+    if n < 12: return []
+    highs  = [b["high"] for b in bars]
+    lows   = [b["low"]  for b in bars]
+    opens  = [b["open"] for b in bars]
+    closes = [b["close"] for b in bars]
+    vols   = [b["volume"] for b in bars]
+    ema20_s  = chart.get("ema20_series")  or [None]*n
+    ema50_s  = chart.get("ema50_series")  or [None]*n
+    ema200_s = chart.get("ema200_series") or [None]*n
+    out: list[dict] = []
+
+    # ── Swing pivots
+    swing_h: list[tuple[int, float]] = []
+    swing_l: list[tuple[int, float]] = []
+    for i in range(swing_window, n - swing_window):
+        if highs[i] == max(highs[i-swing_window:i+swing_window+1]):
+            swing_h.append((i, highs[i]))
+        if lows[i] == min(lows[i-swing_window:i+swing_window+1]):
+            swing_l.append((i, lows[i]))
+
+    # ── Double bottom (W)
+    if len(swing_l) >= 2:
+        a, b = swing_l[-2], swing_l[-1]
+        gap_pct = abs(a[1] - b[1]) / max(a[1], b[1]) * 100
+        if gap_pct <= 3.5 and (b[0] - a[0]) >= 8:
+            peak = max(((i, highs[i]) for i in range(a[0], b[0]+1)),
+                       key=lambda x: x[1])
+            if peak[1] > max(a[1], b[1]) * 1.03:
+                out.append({"kind":"double_bottom","label":"Double Bottom (W)","color":"#22c55e",
+                            "anchors":[a, peak, b],
+                            "note":f"Two lows ~₹{(a[1]+b[1])/2:,.0f}; neckline ₹{peak[1]:,.0f}"})
+
+    # ── Double top (M)
+    if len(swing_h) >= 2:
+        a, b = swing_h[-2], swing_h[-1]
+        gap_pct = abs(a[1] - b[1]) / max(a[1], b[1]) * 100
+        if gap_pct <= 3.5 and (b[0] - a[0]) >= 8:
+            trough = min(((i, lows[i]) for i in range(a[0], b[0]+1)),
+                         key=lambda x: x[1])
+            if trough[1] < min(a[1], b[1]) * 0.97:
+                out.append({"kind":"double_top","label":"Double Top (M)","color":"#ef4444",
+                            "anchors":[a, trough, b],
+                            "note":f"Two highs ~₹{(a[1]+b[1])/2:,.0f}; neckline ₹{trough[1]:,.0f}"})
+
+    # ── Head & Shoulders (3 highs: middle highest, shoulders within 4%)
+    if len(swing_h) >= 3:
+        ls, hd, rs = swing_h[-3], swing_h[-2], swing_h[-1]
+        if (hd[1] > ls[1] * 1.02 and hd[1] > rs[1] * 1.02
+            and abs(ls[1] - rs[1]) / max(ls[1], rs[1]) <= 0.04
+            and (rs[0] - ls[0]) >= 15):
+            out.append({"kind":"hns","label":"Head & Shoulders","color":"#ef4444",
+                        "anchors":[ls, hd, rs],
+                        "note":f"Top ₹{hd[1]:,.0f}; shoulders ~₹{(ls[1]+rs[1])/2:,.0f} — bearish"})
+    # ── Inverse Head & Shoulders
+    if len(swing_l) >= 3:
+        ls, hd, rs = swing_l[-3], swing_l[-2], swing_l[-1]
+        if (hd[1] < ls[1] * 0.98 and hd[1] < rs[1] * 0.98
+            and abs(ls[1] - rs[1]) / max(ls[1], rs[1]) <= 0.04
+            and (rs[0] - ls[0]) >= 15):
+            out.append({"kind":"ihns","label":"Inverse H&S","color":"#22c55e",
+                        "anchors":[ls, hd, rs],
+                        "note":f"Bottom ₹{hd[1]:,.0f}; shoulders ~₹{(ls[1]+rs[1])/2:,.0f} — bullish"})
+
+    # ── Triangles (using last 3 swings each side)
+    if len(swing_h) >= 2 and len(swing_l) >= 2:
+        h1, h2 = swing_h[-2], swing_h[-1]
+        l1, l2 = swing_l[-2], swing_l[-1]
+        h_diff = (h2[1] - h1[1]) / h1[1]
+        l_diff = (l2[1] - l1[1]) / l1[1]
+        # Ascending triangle: flat top, rising bottoms
+        if abs(h_diff) <= 0.015 and l_diff > 0.02:
+            out.append({"kind":"asc_tri","label":"Ascending Triangle","color":"#34d399",
+                        "anchors":[h1, h2, l1, l2],
+                        "note":f"Flat resistance ~₹{(h1[1]+h2[1])/2:,.0f}; rising lows — bullish"})
+        # Descending triangle: falling tops, flat bottom
+        elif abs(l_diff) <= 0.015 and h_diff < -0.02:
+            out.append({"kind":"desc_tri","label":"Descending Triangle","color":"#f87171",
+                        "anchors":[h1, h2, l1, l2],
+                        "note":f"Flat support ~₹{(l1[1]+l2[1])/2:,.0f}; falling highs — bearish"})
+        # Symmetrical triangle: converging
+        elif h_diff < -0.015 and l_diff > 0.015:
+            out.append({"kind":"sym_tri","label":"Symmetrical Triangle","color":"#fbbf24",
+                        "anchors":[h1, h2, l1, l2],
+                        "note":"Converging range — await directional break"})
+        # Rising wedge (bearish): both rising, tops rising slower
+        elif h_diff > 0 and l_diff > 0 and l_diff > h_diff + 0.02:
+            out.append({"kind":"rising_wedge","label":"Rising Wedge","color":"#fb7185",
+                        "anchors":[h1, h2, l1, l2],
+                        "note":"Both sides rising, lows faster — bearish exhaustion"})
+        # Falling wedge (bullish): both falling, bottoms falling slower
+        elif h_diff < 0 and l_diff < 0 and h_diff < l_diff - 0.02:
+            out.append({"kind":"falling_wedge","label":"Falling Wedge","color":"#34d399",
+                        "anchors":[h1, h2, l1, l2],
+                        "note":"Both sides falling, highs faster — bullish reversal"})
+
+    # ── Flag / Pennant: strong move then tight consolidation
+    if n >= 22:
+        pre_lo = min(closes[-22:-10]); pre_hi = max(closes[-22:-10])
+        pole = (closes[-10] - closes[-22]) / closes[-22]
+        cons_rng = (max(highs[-9:]) - min(lows[-9:])) / closes[-1]
+        if pole > 0.10 and cons_rng < 0.05:
+            out.append({"kind":"bull_flag","label":"Bull Flag","color":"#26a69a",
+                        "anchors":[(n-22, closes[-22]), (n-10, closes[-10]), (n-1, closes[-1])],
+                        "note":f"Pole +{pole*100:.0f}%; tight {cons_rng*100:.1f}% flag — continuation"})
+        elif pole < -0.10 and cons_rng < 0.05:
+            out.append({"kind":"bear_flag","label":"Bear Flag","color":"#ef5350",
+                        "anchors":[(n-22, closes[-22]), (n-10, closes[-10]), (n-1, closes[-1])],
+                        "note":f"Pole {pole*100:.0f}%; tight {cons_rng*100:.1f}% flag — continuation down"})
+
+    # ── Golden cross / Death cross (EMA50 over/under EMA200, fresh in last 15 bars)
+    cross_idx = None; cross_dir = None
+    for i in range(max(1, n-15), n):
+        if ema50_s[i] is None or ema200_s[i] is None or ema50_s[i-1] is None or ema200_s[i-1] is None:
+            continue
+        if ema50_s[i-1] < ema200_s[i-1] and ema50_s[i] >= ema200_s[i]:
+            cross_idx = i; cross_dir = "golden"; break
+        if ema50_s[i-1] > ema200_s[i-1] and ema50_s[i] <= ema200_s[i]:
+            cross_idx = i; cross_dir = "death"; break
+    if cross_idx is not None:
+        if cross_dir == "golden":
+            out.append({"kind":"golden_x","label":"Golden Cross","color":"#facc15",
+                        "anchors":[(cross_idx, ema50_s[cross_idx])],
+                        "note":f"EMA50 ({ema50_s[cross_idx]:,.0f}) crossed above EMA200 — major bullish"})
+        else:
+            out.append({"kind":"death_x","label":"Death Cross","color":"#ef4444",
+                        "anchors":[(cross_idx, ema50_s[cross_idx])],
+                        "note":f"EMA50 ({ema50_s[cross_idx]:,.0f}) crossed below EMA200 — major bearish"})
+
+    # ── EMA pullback (price tagging EMA50 or EMA200 in uptrend)
+    if ema50_s[-1] is not None and ema200_s[-1] is not None and closes[-1] > ema200_s[-1]:
+        dist50 = (closes[-1] - ema50_s[-1]) / ema50_s[-1]
+        if -0.02 <= dist50 <= 0.015 and lows[-1] <= ema50_s[-1] * 1.005:
+            out.append({"kind":"ema50_test","label":"EMA50 Pullback","color":"#42a5f5",
+                        "anchors":[(n-1, ema50_s[-1])],
+                        "note":f"Price testing EMA50 ₹{ema50_s[-1]:,.0f} in uptrend — buy-the-dip zone"})
+
+    # ── 52W high touch
+    wk52_high = chart.get("wk52_high")
+    if wk52_high and highs[-1] >= float(wk52_high) * 0.998:
+        out.append({"kind":"new_high","label":"52W High Touch","color":"#a78bfa",
+                    "anchors":[(n-1, highs[-1])],
+                    "note":f"Tagging 52W high ₹{float(wk52_high):,.0f} — breakout watch"})
+
+    # ── Volume surge (today >2× 20d avg, separate from breakout)
+    if n >= 22:
+        avg_v = sum(vols[-22:-2]) / 20
+        if avg_v > 0 and vols[-1] > avg_v * 2.0:
+            out.append({"kind":"vol_spike","label":"Volume Surge","color":"#06b6d4",
+                        "anchors":[(n-1, closes[-1])],
+                        "note":f"Today {vols[-1]/avg_v:.1f}× 20d avg volume — institutional interest"})
+
+    # ── Higher highs / higher lows (or lower)
+    if len(swing_h) >= 2 and len(swing_l) >= 2:
+        if swing_h[-1][1] > swing_h[-2][1] and swing_l[-1][1] > swing_l[-2][1]:
+            out.append({"kind":"hh_hl","label":"Higher Highs · Higher Lows","color":"#26a69a",
+                        "anchors":[swing_l[-2], swing_h[-2], swing_l[-1], swing_h[-1]],
+                        "note":"Confirmed uptrend channel"})
+        elif swing_h[-1][1] < swing_h[-2][1] and swing_l[-1][1] < swing_l[-2][1]:
+            out.append({"kind":"lh_ll","label":"Lower Highs · Lower Lows","color":"#ef5350",
+                        "anchors":[swing_h[-2], swing_l[-2], swing_h[-1], swing_l[-1]],
+                        "note":"Confirmed downtrend channel"})
+
+    # ── Breakout / breakdown (close above/below 20d hi/lo with volume)
+    if n >= 25:
+        prior_hi = max(highs[-22:-2])
+        avg_vol = sum(vols[-22:-2]) / 20
+        if closes[-1] > prior_hi and vols[-1] > avg_vol * 1.4:
+            anchor_i = max(range(n-22, n-2), key=lambda k: highs[k])
+            out.append({"kind":"breakout","label":"Breakout ↑","color":"#a78bfa",
+                        "anchors":[(anchor_i, prior_hi), (n-1, closes[-1])],
+                        "note":f"Close ₹{closes[-1]:,.0f} > 20d hi ₹{prior_hi:,.0f}, vol {vols[-1]/avg_vol:.1f}×"})
+        prior_lo = min(lows[-22:-2])
+        if closes[-1] < prior_lo and vols[-1] > avg_vol * 1.4:
+            anchor_i = min(range(n-22, n-2), key=lambda k: lows[k])
+            out.append({"kind":"breakdown","label":"Breakdown ↓","color":"#fb7185",
+                        "anchors":[(anchor_i, prior_lo), (n-1, closes[-1])],
+                        "note":f"Close ₹{closes[-1]:,.0f} < 20d lo ₹{prior_lo:,.0f}, vol {vols[-1]/avg_vol:.1f}×"})
+
+    # ── Three White Soldiers / Three Black Crows
+    if n >= 3:
+        c0,c1,c2 = closes[-3], closes[-2], closes[-1]
+        o0,o1,o2 = opens[-3],  opens[-2],  opens[-1]
+        if (c0>o0 and c1>o1 and c2>o2 and c0<c1<c2 and o1>o0 and o2>o1):
+            out.append({"kind":"3soldiers","label":"Three White Soldiers","color":"#22c55e",
+                        "anchors":[(n-3,c0),(n-2,c1),(n-1,c2)],
+                        "note":"Three rising green closes — strong bullish continuation"})
+        if (c0<o0 and c1<o1 and c2<o2 and c0>c1>c2 and o1<o0 and o2<o1):
+            out.append({"kind":"3crows","label":"Three Black Crows","color":"#ef4444",
+                        "anchors":[(n-3,c0),(n-2,c1),(n-1,c2)],
+                        "note":"Three falling red closes — strong bearish continuation"})
+
+    # ── Morning / Evening Star (3-candle reversal)
+    if n >= 3:
+        c0,c1,c2 = closes[-3], closes[-2], closes[-1]
+        o0,o1,o2 = opens[-3],  opens[-2],  opens[-1]
+        b0,b1,b2 = abs(c0-o0), abs(c1-o1), abs(c2-o2)
+        if c0<o0 and b1 < b0*0.4 and c2>o2 and c2 > (o0+c0)/2:
+            out.append({"kind":"morning_star","label":"Morning Star","color":"#22c55e",
+                        "anchors":[(n-3,(o0+c0)/2),(n-2,(o1+c1)/2),(n-1,(o2+c2)/2)],
+                        "note":"3-bar bottom reversal — bullish"})
+        if c0>o0 and b1 < b0*0.4 and c2<o2 and c2 < (o0+c0)/2:
+            out.append({"kind":"evening_star","label":"Evening Star","color":"#ef4444",
+                        "anchors":[(n-3,(o0+c0)/2),(n-2,(o1+c1)/2),(n-1,(o2+c2)/2)],
+                        "note":"3-bar top reversal — bearish"})
+
+    # ── Last-candle patterns
+    o, h, l, c = opens[-1], highs[-1], lows[-1], closes[-1]
+    po, ph, pl, pc = opens[-2], highs[-2], lows[-2], closes[-2]
+    body = abs(c - o); rng = max(h - l, 1e-9)
+    upper_wick = h - max(o, c); lower_wick = min(o, c) - l
+
+    # Bullish/bearish engulfing
+    if pc < po and c > o and c >= po and o <= pc and body > abs(pc - po) * 0.9:
+        out.append({"kind":"engulf_up","label":"Bullish Engulfing","color":"#26a69a",
+                    "anchors":[(n-2, pc),(n-1, c)],"note":"Prior red body engulfed — reversal"})
+    elif pc > po and c < o and c <= po and o >= pc and body > abs(pc - po) * 0.9:
+        out.append({"kind":"engulf_dn","label":"Bearish Engulfing","color":"#ef5350",
+                    "anchors":[(n-2, pc),(n-1, c)],"note":"Prior green body engulfed — reversal"})
+    # Piercing line (bullish): prior red, today green, closes above prior midpoint
+    elif pc < po and c > o and o < pl and c > (po+pc)/2 and c < po:
+        out.append({"kind":"piercing","label":"Piercing Line","color":"#22c55e",
+                    "anchors":[(n-2,pc),(n-1,c)],"note":"Gap-down recovery > prior midpoint — bullish"})
+    # Dark cloud cover (bearish): prior green, today red, closes below prior midpoint
+    elif pc > po and c < o and o > ph and c < (po+pc)/2 and c > po:
+        out.append({"kind":"dark_cloud","label":"Dark Cloud Cover","color":"#ef4444",
+                    "anchors":[(n-2,pc),(n-1,c)],"note":"Gap-up failure < prior midpoint — bearish"})
+    # Hammer
+    elif lower_wick > body * 2 and upper_wick < body * 0.6 and body < rng * 0.4:
+        out.append({"kind":"hammer","label":"Hammer","color":"#22c55e",
+                    "anchors":[(n-1, l)],"note":f"Long lower wick {lower_wick/rng*100:.0f}% of range"})
+    # Shooting star
+    elif upper_wick > body * 2 and lower_wick < body * 0.6 and body < rng * 0.4:
+        out.append({"kind":"shoot","label":"Shooting Star","color":"#ef4444",
+                    "anchors":[(n-1, h)],"note":f"Long upper wick {upper_wick/rng*100:.0f}% of range"})
+    # Doji
+    elif body < rng * 0.1 and rng > 0:
+        out.append({"kind":"doji","label":"Doji","color":"#94a3b8",
+                    "anchors":[(n-1, (h+l)/2)],"note":"Open ≈ close — indecision / potential reversal"})
+    # Inside bar
+    elif h <= ph and l >= pl:
+        out.append({"kind":"inside","label":"Inside Bar","color":"#94a3b8",
+                    "anchors":[(n-1, (h+l)/2)],"note":"Range compression — pending expansion"})
+
+    # Gap up / down
+    if l > ph and (l - ph) / pc > 0.01:
+        out.append({"kind":"gap_up","label":"Gap Up","color":"#34d399",
+                    "anchors":[(n-1, (l+ph)/2)],"note":f"Opened {(l-ph)/pc*100:.1f}% above prior high"})
+    elif h < pl and (pl - h) / pc > 0.01:
+        out.append({"kind":"gap_dn","label":"Gap Down","color":"#f87171",
+                    "anchors":[(n-1, (h+pl)/2)],"note":f"Opened {(pl-h)/pc*100:.1f}% below prior low"})
+
+    # Limit & prioritise (most significant patterns first)
+    priority = {
+        "golden_x":0,"death_x":0,
+        "hns":1,"ihns":1,"double_bottom":1,"double_top":1,
+        "breakout":2,"breakdown":2,
+        "asc_tri":3,"desc_tri":3,"sym_tri":3,"rising_wedge":3,"falling_wedge":3,
+        "bull_flag":4,"bear_flag":4,
+        "morning_star":5,"evening_star":5,"3soldiers":5,"3crows":5,
+        "engulf_up":6,"engulf_dn":6,"piercing":6,"dark_cloud":6,
+        "hammer":7,"shoot":7,
+        "ema50_test":8,"new_high":8,"vol_spike":8,
+        "hh_hl":9,"lh_ll":9,
+        "gap_up":10,"gap_dn":10,"doji":11,"inside":12,
+    }
+    out.sort(key=lambda d: priority.get(d["kind"], 99))
+    return out[:6]
+
+
+def _svg_candlestick(chart: dict, *, symbol: str = "", entry_low=None, entry_high=None, stop=None,
+                     t1=None, t2=None, t3=None,
+                     width: int = 1000, price_h: int = 380, vol_h: int = 80,
+                     rsi_h: int = 70, profile_w: int = 80) -> str:
+    """TradingView-style chart: dark theme, right-side price axis with last-price flag,
+    OHLC + EMA legend overlay, symbol watermark, separate volume + RSI sub-panels,
+    S/R + pivots + entry/stop/targets + volume profile."""
+    bars = chart.get("bars") or []
+    if not bars:
+        return ""
+    n = len(bars)
+
+    # ── TradingView dark palette
+    BG          = "#131722"
+    PANEL_LINE  = "#1e222d"
+    GRID        = "#1e222d"
+    AXIS_TEXT   = "#787b86"
+    TEXT        = "#d1d4dc"
+    TEXT_BRIGHT = "#f0f3fa"
+    UP          = "#26a69a"
+    DOWN        = "#ef5350"
+    EMA20_C     = "#ffb74d"
+    EMA50_C     = "#42a5f5"
+    EMA200_C    = "#ab47bc"
+
+    # ── Layout: price axis on RIGHT (TV convention)
+    pad_l       = 12
+    pad_r       = 64   # space for right-side price axis
+    pad_t       = 44   # room for legend overlay
+    pad_b       = 24
+    panel_gap   = 6
+    chart_w     = width - pad_l - pad_r - profile_w - 6
+    if chart_w <= 50:
+        chart_w = width - pad_l - pad_r; profile_w = 0
+    rsi_series  = chart.get("rsi_series") or []
+    has_rsi     = any(v is not None for v in rsi_series)
+    rsi_panel_h = rsi_h if has_rsi else 0
+    height = pad_t + price_h + panel_gap + vol_h + (panel_gap + rsi_panel_h if has_rsi else 0) + pad_b
+
+    highs  = [b["high"] for b in bars]
+    lows   = [b["low"]  for b in bars]
+    opens  = [b["open"] for b in bars]
+    closes = [b["close"] for b in bars]
+    vols   = [b["volume"] for b in bars]
+
+    def _num(v):
+        if v is None: return None
+        if isinstance(v, (int, float)): return float(v)
+        try:
+            import re as _re
+            m = _re.search(r"-?\d[\d,]*\.?\d*", str(v))
+            return float(m.group(0).replace(",", "")) if m else None
+        except Exception:
+            return None
+    entry_low = _num(entry_low); entry_high = _num(entry_high)
+    stop = _num(stop); t1 = _num(t1); t2 = _num(t2); t3 = _num(t3)
+    extra = [v for v in (entry_low, entry_high, stop, t1, t2, t3) if v is not None]
+    extra += [chart.get("wk52_high"), chart.get("wk52_low")]
+    extra += chart.get("support_levels") or []
+    extra += chart.get("resistance_levels") or []
+    pv = chart.get("pivots") or {}
+    extra += [pv.get(k) for k in ("PP","R1","S1") if pv.get(k) is not None]
+    extra = [_num(v) for v in extra]
+    extra = [v for v in extra if v is not None]
+
+    p_min = min(min(lows), min(extra) if extra else min(lows)) * 0.985
+    p_max = max(max(highs), max(extra) if extra else max(highs)) * 1.015
+    if p_max <= p_min: return ""
+    v_max = max(vols) if vols else 1
+    if v_max == 0: v_max = 1
+
+    def x_for(i): return pad_l + (i + 0.5) * (chart_w / n)
+    def y_price(v): return pad_t + (p_max - float(v)) / (p_max - p_min) * price_h
+
+    vol_top = pad_t + price_h + panel_gap
+    def y_vol(v): return vol_top + vol_h - (float(v) / v_max) * vol_h
+
+    rsi_top = vol_top + vol_h + panel_gap
+    def y_rsi(v): return rsi_top + rsi_panel_h - (float(v) / 100.0) * rsi_panel_h
+
+    bar_w = max(1.5, chart_w / n * 0.72)
+    axis_x = pad_l + chart_w + 4   # right axis baseline
+
+    # Unique chart id for JS-driven crosshair tooltip
+    global _CANDLE_CHART_SEQ
+    try: _CANDLE_CHART_SEQ += 1
+    except NameError: _CANDLE_CHART_SEQ = 1
+    chart_id = f"tpc-{_CANDLE_CHART_SEQ}"
+
+    parts = [
+        f'<svg id="{chart_id}" class="tp-tv-chart" '
+        f'viewBox="0 0 {width} {height}" width="100%" height="{height}" '
+        f'xmlns="http://www.w3.org/2000/svg" style="display:block;background:{BG};'
+        f'border-radius:8px;font-family:-apple-system,BlinkMacSystemFont,Inter,sans-serif" '
+        f'data-pad-l="{pad_l}" data-pad-t="{pad_t}" data-chart-w="{chart_w}" '
+        f'data-price-h="{price_h}" data-vol-top="{vol_top}" data-vol-h="{vol_h}" '
+        f'data-rsi-top="{rsi_top}" data-rsi-h="{rsi_panel_h}" data-has-rsi="{int(has_rsi)}" '
+        f'data-p-min="{p_min}" data-p-max="{p_max}" data-v-max="{v_max}" '
+        f'data-n="{n}" data-symbol="{html_mod.escape(symbol)}">',
+        # full background
+        f'<rect x="0" y="0" width="{width}" height="{height}" fill="{BG}"/>',
+        # panel separators
+        f'<line x1="{pad_l}" y1="{pad_t+price_h+1}" x2="{pad_l+chart_w}" y2="{pad_t+price_h+1}" '
+        f'stroke="{PANEL_LINE}" stroke-width="1"/>',
+        f'<line x1="{pad_l}" y1="{vol_top+vol_h+1}" x2="{pad_l+chart_w}" y2="{vol_top+vol_h+1}" '
+        f'stroke="{PANEL_LINE}" stroke-width="1"/>' if has_rsi else "",
+    ]
+
+    # ── Symbol watermark (TV signature look)
+    if symbol:
+        parts.append(
+            f'<text x="{pad_l+chart_w/2:.0f}" y="{pad_t+price_h/2+10:.0f}" '
+            f'font-size="64" font-weight="800" text-anchor="middle" '
+            f'fill="{TEXT_BRIGHT}" opacity="0.045" letter-spacing="6">{html_mod.escape(symbol)}</text>'
+            f'<text x="{pad_l+chart_w/2:.0f}" y="{pad_t+price_h/2+38:.0f}" '
+            f'font-size="14" text-anchor="middle" font-weight="600" '
+            f'fill="{TEXT_BRIGHT}" opacity="0.05" letter-spacing="4">NSE · 1D · 6M</text>'
+        )
+
+    # ── Price grid lines + right-side y-axis labels
+    def _nice_step(rng, target_ticks=7):
+        import math as _m
+        raw = rng / max(target_ticks, 1)
+        mag = 10 ** _m.floor(_m.log10(raw))
+        for m in (1, 2, 2.5, 5, 10):
+            if m * mag >= raw: return m * mag
+        return mag * 10
+    step = _nice_step(p_max - p_min)
+    import math as _m
+    t = _m.floor(p_min / step) * step
+    while t <= p_max:
+        if p_min <= t <= p_max:
+            gy = y_price(t)
+            parts.append(f'<line x1="{pad_l}" y1="{gy:.1f}" x2="{pad_l+chart_w}" y2="{gy:.1f}" '
+                         f'stroke="{GRID}" stroke-width="1" stroke-dasharray="2,3" opacity="0.55"/>')
+            parts.append(f'<text x="{axis_x}" y="{gy+3:.1f}" font-size="10" text-anchor="start" '
+                         f'fill="{AXIS_TEXT}" font-variant-numeric="tabular-nums">{t:,.0f}</text>')
+        t += step
+
+    # ── Vertical grid (5 month-ish gridlines through chart panels)
+    grid_bottom = (rsi_top + rsi_panel_h) if has_rsi else (vol_top + vol_h)
+    seen_months: set[str] = set()
+    for i, b in enumerate(bars):
+        ym = str(b.get("date",""))[:7]
+        if ym and ym not in seen_months:
+            seen_months.add(ym)
+            xv = x_for(i)
+            parts.append(f'<line x1="{xv:.1f}" y1="{pad_t}" x2="{xv:.1f}" y2="{grid_bottom:.1f}" '
+                         f'stroke="{GRID}" stroke-width="1" stroke-dasharray="2,4" opacity="0.45"/>')
+
+    # ── Vol panel label + RSI panel header (TV-style left-side small caps)
+    parts.append(f'<text x="{pad_l+4}" y="{vol_top+11:.0f}" font-size="9.5" font-weight="700" '
+                 f'fill="{AXIS_TEXT}" letter-spacing="0.6">Vol</text>')
+    if has_rsi:
+        parts.append(f'<text x="{pad_l+4}" y="{rsi_top+11:.0f}" font-size="9.5" font-weight="700" '
+                     f'fill="{AXIS_TEXT}" letter-spacing="0.6">RSI 14</text>')
+
+    # ── Entry zone band
+    if entry_low is not None and entry_high is not None:
+        try:
+            y_lo = y_price(float(entry_high))
+            y_hi = y_price(float(entry_low))
+            parts.append(f'<rect x="{pad_l}" y="{y_lo:.1f}" width="{chart_w}" '
+                         f'height="{max(2,y_hi-y_lo):.1f}" fill="rgba(66,165,245,.10)" '
+                         f'stroke="#42a5f5" stroke-width="1" stroke-dasharray="4,3"/>')
+        except (TypeError, ValueError): pass
+
+    # ── Marker lines (with collision-avoid labels on right-axis side)
+    def _hline_only(v, color, dash="4,3", opacity=0.78):
+        if v is None: return ""
+        try: v = float(v)
+        except (TypeError, ValueError): return ""
+        y = y_price(v)
+        if y < pad_t-2 or y > pad_t + price_h+2: return ""
+        return (f'<line x1="{pad_l}" y1="{y:.1f}" x2="{pad_l+chart_w}" y2="{y:.1f}" '
+                f'stroke="{color}" stroke-width="1" stroke-dasharray="{dash}" opacity="{opacity}"/>')
+
+    # Stacks labels by row — we draw filled pill tags on the right axis
+    right_lbls: list[tuple[float, str, str]] = []
+    left_lbls:  list[tuple[float, str, str]] = []
+    def _add_lbl(v, color, text, side):
+        if v is None: return
+        try: v = float(v)
+        except (TypeError, ValueError): return
+        y = y_price(v)
+        if y < pad_t or y > pad_t + price_h: return
+        (right_lbls if side=="right" else left_lbls).append((y, text, color))
+
+    # 52w
+    parts.append(_hline_only(chart.get("wk52_high"), "#5d636f", dash="1,4", opacity=0.5))
+    parts.append(_hline_only(chart.get("wk52_low"),  "#5d636f", dash="1,4", opacity=0.5))
+    if chart.get("wk52_high") is not None:
+        _add_lbl(chart["wk52_high"], "#6b7280", f"52wH {float(chart['wk52_high']):,.0f}", "left")
+    if chart.get("wk52_low") is not None:
+        _add_lbl(chart["wk52_low"],  "#6b7280", f"52wL {float(chart['wk52_low']):,.0f}", "left")
+    # pivots
+    for lab, color in [("PP","#a78bfa"),("R1","#fb923c"),("S1","#34d399")]:
+        v = pv.get(lab)
+        if v is None: continue
+        parts.append(_hline_only(v, color, dash="1,3", opacity=0.6))
+        _add_lbl(v, color, f"{lab} {float(v):,.0f}", "left")
+    # S/R
+    for v in (chart.get("resistance_levels") or []):
+        parts.append(_hline_only(v, "#ef5350", dash="3,3", opacity=0.65))
+        _add_lbl(v, "#ef5350", f"R {float(v):,.0f}", "right")
+    for v in (chart.get("support_levels") or []):
+        parts.append(_hline_only(v, "#26a69a", dash="3,3", opacity=0.65))
+        _add_lbl(v, "#26a69a", f"S {float(v):,.0f}", "right")
+    # Stop/Targets
+    for v, color, prefix in [
+        (stop, "#ef4444", "STOP"),
+        (t1,   "#2dd4bf", "T1"),
+        (t2,   "#22c55e", "T2"),
+        (t3,   "#a78bfa", "T3"),
+    ]:
+        if v is None: continue
+        parts.append(_hline_only(v, color, dash="5,3", opacity=0.85))
+        try: _add_lbl(v, color, f"{prefix} {float(v):,.0f}", "right")
+        except (TypeError, ValueError): pass
+    if entry_low is not None and entry_high is not None:
+        try:
+            mid = (float(entry_low) + float(entry_high)) / 2
+            _add_lbl(mid, "#42a5f5", "ENTRY", "right")
+        except (TypeError, ValueError): pass
+
+    # ── Resolve overlapping labels (vertical push)
+    def _resolve(labels, min_gap=13.0, y_min=pad_t+5, y_max=pad_t+price_h-3):
+        if not labels: return []
+        labels = sorted(labels, key=lambda x: x[0])
+        ys = [y for y,_,_ in labels]
+        for i in range(1, len(ys)):
+            if ys[i] < ys[i-1] + min_gap:
+                ys[i] = ys[i-1] + min_gap
+        if ys[-1] > y_max:
+            ys[-1] = y_max
+            for i in range(len(ys)-2, -1, -1):
+                if ys[i] > ys[i+1] - min_gap:
+                    ys[i] = ys[i+1] - min_gap
+        if ys[0] < y_min: ys[0] = y_min
+        for i in range(1, len(ys)):
+            if ys[i] < ys[i-1] + min_gap:
+                ys[i] = ys[i-1] + min_gap
+        return [(ys[i], labels[i][1], labels[i][2]) for i in range(len(labels))]
+
+    def _draw_lbl(y, text, color, side):
+        if side == "right":
+            x_rect = pad_l + chart_w + 2
+            tx = x_rect + 3
+            anchor = "start"
+            w = pad_r - 4
+        else:
+            x_rect = pad_l + 2
+            tx = x_rect + 3
+            anchor = "start"
+            w = 70
+        return (f'<g class="tp-lvl"><title>{html_mod.escape(text)}</title>'
+                f'<rect x="{x_rect:.1f}" y="{y-7.5:.1f}" width="{w}" height="13" rx="2.5" '
+                f'fill="{color}" opacity="0.92"/>'
+                f'<text x="{tx:.1f}" y="{y+3:.1f}" font-size="9" text-anchor="{anchor}" '
+                f'fill="#fff" font-weight="700" font-variant-numeric="tabular-nums">'
+                f'{html_mod.escape(text)}</text></g>')
+    for y, text, color in _resolve(left_lbls):
+        parts.append(_draw_lbl(y, text, color, "left"))
+    for y, text, color in _resolve(right_lbls):
+        parts.append(_draw_lbl(y, text, color, "right"))
+
+    # ── Candles
+    for i, b in enumerate(bars):
+        x = x_for(i)
+        o, hh, ll, c = b["open"], b["high"], b["low"], b["close"]
+        up = c >= o
+        color = UP if up else DOWN
+        chg = c - o
+        chg_pct = (chg / o * 100) if o else 0
+        tip = (f"{b.get('date','')}  O {o:,.2f}  H {hh:,.2f}  L {ll:,.2f}  "
+               f"C {c:,.2f}  ({chg:+.2f} / {chg_pct:+.2f}%)  Vol {b.get('volume',0):,.0f}")
+        parts.append(
+            f'<g class="tp-candle">'
+            f'<title>{html_mod.escape(tip)}</title>'
+            f'<line x1="{x:.1f}" y1="{y_price(hh):.1f}" x2="{x:.1f}" y2="{y_price(ll):.1f}" '
+            f'stroke="{color}" stroke-width="1"/>'
+            f'<rect x="{x-bar_w/2:.1f}" y="{y_price(max(o,c)):.1f}" width="{bar_w:.1f}" '
+            f'height="{max(1.0, abs(y_price(o)-y_price(c))):.1f}" fill="{color}" '
+            f'stroke="{color}" stroke-width="0.5"/>'
+            # transparent wider hit area for easier hover
+            f'<rect x="{x-bar_w/2-1.5:.1f}" y="{y_price(hh)-1:.1f}" width="{bar_w+3:.1f}" '
+            f'height="{max(2,y_price(ll)-y_price(hh)+2):.1f}" fill="transparent"/>'
+            f'</g>'
+        )
+        # volume bar with its own tooltip
+        vtip = f"{b.get('date','')}  Vol {b.get('volume',0):,.0f}"
+        parts.append(
+            f'<g class="tp-vol"><title>{html_mod.escape(vtip)}</title>'
+            f'<rect x="{x-bar_w/2:.1f}" y="{y_vol(b["volume"]):.1f}" width="{bar_w:.1f}" '
+            f'height="{(vol_top+vol_h)-y_vol(b["volume"]):.1f}" fill="{color}" opacity="0.55"/>'
+            f'</g>'
+        )
+
+    # ── EMA polylines
+    def _poly(series, color, w=1.6, dash=None):
+        pts = [f"{x_for(i):.1f},{y_price(v):.1f}" for i, v in enumerate(series) if v is not None]
+        if len(pts) < 2: return ""
+        dash_attr = f' stroke-dasharray="{dash}"' if dash else ""
+        return (f'<polyline points="{" ".join(pts)}" fill="none" stroke="{color}" '
+                f'stroke-width="{w}" stroke-linejoin="round" opacity="0.95"{dash_attr}/>')
+    ema20_s = chart.get("ema20_series") or []
+    ema50_s = chart.get("ema50_series") or []
+    ema200_s= chart.get("ema200_series") or []
+    parts.append(_poly(ema20_s,  EMA20_C))
+    parts.append(_poly(ema50_s,  EMA50_C))
+    parts.append(_poly(ema200_s, EMA200_C, w=1.8))
+
+    # ── Pattern annotations (drawn over candles, under legend)
+    patterns = _detect_patterns(chart)
+    PATTERN_BG = "#1f2937"
+    for idx, pat in enumerate(patterns):
+        col = pat["color"]
+        anchors = pat.get("anchors") or []
+        if not anchors: continue
+        pts = [(x_for(i), y_price(p)) for (i, p) in anchors]
+        # connecting polyline for multi-anchor patterns
+        if len(pts) >= 2:
+            poly = " ".join(f"{x:.1f},{y:.1f}" for x, y in pts)
+            parts.append(f'<polyline points="{poly}" fill="none" stroke="{col}" '
+                         f'stroke-width="1.6" stroke-dasharray="4,3" opacity="0.85"/>')
+        # circle markers at each anchor
+        for x, y in pts:
+            parts.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="4.5" fill="{BG}" '
+                         f'stroke="{col}" stroke-width="2"/>')
+        # label tag near last anchor, with offset
+        lx, ly = pts[-1]
+        # offset to keep tags from overlapping each other
+        offy = -18 - (idx * 22)
+        # if too high, push down on same side
+        if ly + offy < pad_t + 6:
+            offy = 26 + (idx * 22)
+        tx = lx + 10
+        ty = ly + offy
+        # clamp horizontally
+        if tx + 160 > pad_l + chart_w:
+            tx = lx - 170
+        label = pat["label"]
+        note = pat.get("note", "")
+        # connector line from anchor to label
+        parts.append(f'<line x1="{lx:.1f}" y1="{ly:.1f}" x2="{tx+4:.1f}" y2="{ty+4:.1f}" '
+                     f'stroke="{col}" stroke-width="1" opacity="0.7"/>')
+        # rounded label box
+        text_len = max(len(label), len(note)) * 5.6 + 16
+        box_w = min(220, max(110, int(text_len)))
+        parts.append(
+            f'<g class="tp-pat"><title>{html_mod.escape(label + " — " + note)}</title>'
+            f'<rect x="{tx:.1f}" y="{ty-3:.1f}" width="{box_w}" height="30" rx="4" '
+            f'fill="{PATTERN_BG}" stroke="{col}" stroke-width="1.2" opacity="0.96"/>'
+            f'<text x="{tx+7:.1f}" y="{ty+9:.1f}" font-size="10" font-weight="800" '
+            f'fill="{col}">{html_mod.escape(label)}</text>'
+            f'<text x="{tx+7:.1f}" y="{ty+22:.1f}" font-size="8.5" '
+            f'fill="#cbd5e1">{html_mod.escape(note[:38])}</text>'
+            f'</g>'
+        )
+
+    # ── Last-price flag on right axis (TV signature)
+    last_close = closes[-1]
+    last_open  = opens[-1]
+    last_color = UP if last_close >= last_open else DOWN
+    ly = y_price(last_close)
+    parts.append(
+        f'<line x1="{pad_l}" y1="{ly:.1f}" x2="{pad_l+chart_w}" y2="{ly:.1f}" '
+        f'stroke="{last_color}" stroke-width="1" stroke-dasharray="2,2" opacity="0.6"/>'
+        f'<polygon points="{pad_l+chart_w},{ly:.1f} {pad_l+chart_w+5},{ly-7:.1f} '
+        f'{pad_l+chart_w+pad_r-2},{ly-7:.1f} {pad_l+chart_w+pad_r-2},{ly+7:.1f} '
+        f'{pad_l+chart_w+5},{ly+7:.1f}" fill="{last_color}"/>'
+        f'<text x="{pad_l+chart_w+9}" y="{ly+3.5:.1f}" font-size="10.5" font-weight="800" '
+        f'fill="#fff" font-variant-numeric="tabular-nums">{last_close:,.2f}</text>'
+    )
+
+    # ── Volume profile (right gutter, inside chart but offset left of axis)
+    if profile_w > 0:
+        vp = chart.get("volume_profile") or []
+        if vp:
+            vp_max = max(v for _, v in vp) or 1
+            pf_x = pad_l + chart_w - profile_w - 4
+            bin_h = price_h / len(vp)
+            poc_idx = max(range(len(vp)), key=lambda k: vp[k][1])
+            for i, (price, v) in enumerate(vp):
+                y = y_price(price) - bin_h / 2
+                w = (v / vp_max) * profile_w
+                color = "#a78bfa" if i == poc_idx else "#3a3f4b"
+                parts.append(f'<rect x="{pf_x+profile_w-w:.1f}" y="{y:.1f}" width="{w:.1f}" '
+                             f'height="{max(1, bin_h-1):.1f}" fill="{color}" opacity="0.55"/>')
+            poc_price = vp[poc_idx][0]
+            parts.append(f'<text x="{pf_x+profile_w-4}" y="{y_price(poc_price)-3:.1f}" font-size="8.5" '
+                         f'fill="#c4b5fd" font-weight="800" text-anchor="end">POC {poc_price:,.0f}</text>')
+
+    # ── RSI panel
+    if has_rsi:
+        # 30/70 zones
+        y70 = y_rsi(70); y30 = y_rsi(30); y50 = y_rsi(50)
+        parts.append(f'<rect x="{pad_l}" y="{y70:.1f}" width="{chart_w}" height="{y30-y70:.1f}" '
+                     f'fill="#1a1f2c" opacity="0.45"/>')
+        for lvl, lbl, col in [(70,"70","#ef5350"),(50,"50","#5d636f"),(30,"30","#26a69a")]:
+            yv = y_rsi(lvl)
+            parts.append(f'<line x1="{pad_l}" y1="{yv:.1f}" x2="{pad_l+chart_w}" y2="{yv:.1f}" '
+                         f'stroke="{col}" stroke-width="1" stroke-dasharray="2,3" opacity="0.55"/>')
+            parts.append(f'<text x="{axis_x}" y="{yv+3:.1f}" font-size="9" fill="{AXIS_TEXT}" '
+                         f'font-variant-numeric="tabular-nums">{lbl}</text>')
+        # RSI line
+        pts = [f"{x_for(i):.1f},{y_rsi(v):.1f}" for i,v in enumerate(rsi_series) if v is not None]
+        if len(pts) >= 2:
+            parts.append(f'<polyline points="{" ".join(pts)}" fill="none" stroke="#e879f9" '
+                         f'stroke-width="1.5" stroke-linejoin="round"/>')
+        # last RSI flag
+        last_rsi = next((v for v in reversed(rsi_series) if v is not None), None)
+        if last_rsi is not None:
+            ry = y_rsi(last_rsi)
+            rsi_col = "#ef5350" if last_rsi >= 70 else "#26a69a" if last_rsi <= 30 else "#e879f9"
+            parts.append(
+                f'<rect x="{pad_l+chart_w+2}" y="{ry-7:.1f}" width="{pad_r-4}" height="13" rx="2.5" '
+                f'fill="{rsi_col}"/>'
+                f'<text x="{pad_l+chart_w+5}" y="{ry+3.5:.1f}" font-size="10" font-weight="800" '
+                f'fill="#fff" font-variant-numeric="tabular-nums">{last_rsi:.1f}</text>'
+            )
+
+    # ── Date axis (month labels, TV-style "Jan 'YY" formatting)
+    if n > 1:
+        import datetime as _dt
+        axis_y = height - 8
+        seen: set[str] = set()
+        for i, b in enumerate(bars):
+            ym = str(b.get("date",""))[:7]
+            if not ym or ym in seen: continue
+            seen.add(ym)
+            try:
+                d = _dt.datetime.strptime(ym + "-01", "%Y-%m-%d")
+                lbl = d.strftime("%b '%y") if d.month in (1,) else d.strftime("%b")
+            except Exception:
+                lbl = ym
+            xt = x_for(i)
+            if xt < pad_l + 18 or xt > pad_l + chart_w - 30: continue
+            parts.append(f'<text x="{xt:.1f}" y="{axis_y}" font-size="9.5" text-anchor="middle" '
+                         f'fill="{AXIS_TEXT}">{html_mod.escape(lbl)}</text>')
+
+    # ── Legend overlay (top-left): symbol · OHLC of last bar · EMAs with last values
+    o0, h0, l0, c0, v0 = opens[-1], highs[-1], lows[-1], closes[-1], vols[-1]
+    chg = c0 - o0
+    chg_pct = (chg / o0 * 100) if o0 else 0
+    chg_color = UP if chg >= 0 else DOWN
+    last_e20 = next((v for v in reversed(ema20_s) if v is not None), None)
+    last_e50 = next((v for v in reversed(ema50_s) if v is not None), None)
+    last_e200= next((v for v in reversed(ema200_s) if v is not None), None)
+    def _val(v): return f"{v:,.2f}" if v is not None else "—"
+    legend_x = pad_l + 6
+    legend_y = pad_t - 22
+    legend = (
+        f'<text x="{legend_x}" y="{legend_y}" font-size="12" font-weight="800" '
+        f'fill="{TEXT_BRIGHT}">{html_mod.escape(symbol or "")} '
+        f'<tspan font-size="10" fill="{AXIS_TEXT}" font-weight="600">· 1D · NSE</tspan></text>'
+        f'<text x="{legend_x}" y="{legend_y+15}" font-size="10" '
+        f'fill="{TEXT}" font-variant-numeric="tabular-nums">'
+        f'<tspan fill="{AXIS_TEXT}">O</tspan> {_val(o0)} '
+        f'<tspan fill="{AXIS_TEXT}">H</tspan> {_val(h0)} '
+        f'<tspan fill="{AXIS_TEXT}">L</tspan> {_val(l0)} '
+        f'<tspan fill="{AXIS_TEXT}">C</tspan> <tspan fill="{chg_color}" font-weight="700">{_val(c0)}</tspan> '
+        f'<tspan fill="{chg_color}" font-weight="700">{chg:+,.2f} ({chg_pct:+.2f}%)</tspan>'
+        f'</text>'
+        f'<text x="{legend_x + 480}" y="{legend_y+15}" font-size="10" '
+        f'fill="{TEXT}" font-variant-numeric="tabular-nums">'
+        f'<tspan fill="{EMA20_C}" font-weight="700">EMA 20</tspan> {_val(last_e20)}   '
+        f'<tspan fill="{EMA50_C}" font-weight="700">EMA 50</tspan> {_val(last_e50)}   '
+        f'<tspan fill="{EMA200_C}" font-weight="700">EMA 200</tspan> {_val(last_e200)}'
+        f'</text>'
+    )
+    parts.append(legend)
+
+    # ── Crosshair group (hidden until mousemove) + capture overlay + JSON payload
+    chart_bottom = (rsi_top + rsi_panel_h) if has_rsi else (vol_top + vol_h)
+    import json as _json
+    bar_payload = [
+        {"d": b.get("date",""), "o": b["open"], "h": b["high"], "l": b["low"],
+         "c": b["close"], "v": b["volume"]}
+        for b in bars
+    ]
+    payload = {
+        "bars": bar_payload,
+        "ema20":  [None if v is None else round(v,3) for v in (chart.get("ema20_series")  or [])],
+        "ema50":  [None if v is None else round(v,3) for v in (chart.get("ema50_series")  or [])],
+        "ema200": [None if v is None else round(v,3) for v in (chart.get("ema200_series") or [])],
+        "rsi":    [None if v is None else round(v,2) for v in (chart.get("rsi_series")    or [])],
+    }
+    parts.append(
+        f'<g class="cx-hover" pointer-events="none" visibility="hidden">'
+        f'<line class="cx-v" x1="0" y1="{pad_t}" x2="0" y2="{chart_bottom}" '
+        f'stroke="#787b86" stroke-width="1" stroke-dasharray="3,3" opacity="0.85"/>'
+        f'<line class="cx-h" x1="{pad_l}" y1="0" x2="{pad_l+chart_w}" y2="0" '
+        f'stroke="#787b86" stroke-width="1" stroke-dasharray="3,3" opacity="0.85"/>'
+        f'<rect class="cx-pricetag" x="{pad_l+chart_w}" y="-7" width="{pad_r-2}" height="14" rx="2" '
+        f'fill="#2a2e39"/>'
+        f'<text class="cx-pricetxt" x="{pad_l+chart_w+5}" y="3.5" font-size="10.5" font-weight="800" '
+        f'fill="#fff" font-variant-numeric="tabular-nums">—</text>'
+        f'<rect class="cx-datetag" x="-30" y="{chart_bottom+2}" width="60" height="14" rx="2" '
+        f'fill="#2a2e39"/>'
+        f'<text class="cx-datetxt" x="0" y="{chart_bottom+12}" font-size="9.5" '
+        f'text-anchor="middle" fill="#fff" font-weight="700">—</text>'
+        f'<g class="cx-tooltip" transform="translate(0,0)">'
+        f'<rect class="cx-tipbg" x="0" y="0" width="170" height="118" rx="4" '
+        f'fill="#1e222d" stroke="#363a45" stroke-width="1" opacity="0.97"/>'
+        f'<text class="cx-tiptxt" x="8" y="14" font-size="10.5" '
+        f'fill="#d1d4dc" font-family="-apple-system,Inter,sans-serif" '
+        f'font-variant-numeric="tabular-nums"></text>'
+        f'</g></g>'
+    )
+    # capture overlay (above everything in event-order)
+    parts.append(
+        f'<rect class="cx-area" x="{pad_l}" y="{pad_t}" '
+        f'width="{chart_w}" height="{chart_bottom-pad_t}" '
+        f'fill="transparent" pointer-events="all" style="cursor:crosshair"/>'
+    )
+    # JSON data block adjacent to SVG (in DOM order — script reads via id-suffix)
+    parts.append('</svg>')
+    parts.append(
+        f'<script type="application/json" id="{chart_id}-data">'
+        f'{_json.dumps(payload, separators=(",", ":"))}'
+        f'</script>'
+    )
+    return "".join(parts)
+
+
+def _hbar(label: str, value: float | None, max_val: float, color_hint: str = "blue") -> str:
+    if value is None:
+        return f'<div class="tp-bar"><span class="lab">{html_mod.escape(label)}</span><span class="trk"></span><span class="val">—</span></div>'
+    try: v = float(value)
+    except (TypeError, ValueError): v = 0.0
+    pct = max(0.0, min(100.0, (v / max_val) * 100)) if max_val else 0
+    color_cls = ""
+    if color_hint == "auto":
+        ratio = v / max_val if max_val else 0
+        color_cls = "green" if ratio >= 0.7 else "amber" if ratio >= 0.4 else "red"
+    elif color_hint in ("green","amber","red"):
+        color_cls = color_hint
+    return (f'<div class="tp-bar"><span class="lab">{html_mod.escape(label)}</span>'
+            f'<span class="trk"><span class="fill {color_cls}" style="width:{pct:.1f}%"></span></span>'
+            f'<span class="val">{v:.1f}</span></div>')
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Data access
 # ─────────────────────────────────────────────────────────────────────────────
 def _connect():
@@ -190,6 +1542,107 @@ def _ema(values: list[float], span: int) -> float | None:
     return e
 
 
+def _ema_series(values: list[float], span: int) -> list[float | None]:
+    """Full EMA series aligned to `values` (None until enough warmup)."""
+    out: list[float | None] = [None] * len(values)
+    if len(values) < span:
+        return out
+    k = 2 / (span + 1)
+    e = sum(values[:span]) / span
+    out[span - 1] = e
+    for i in range(span, len(values)):
+        e = values[i] * k + e * (1 - k)
+        out[i] = e
+    return out
+
+
+def _rsi_series(closes: list[float], period: int = 14) -> list[float | None]:
+    """Wilder-smoothed RSI(14) series aligned to closes (None until warmup)."""
+    n = len(closes)
+    out: list[float | None] = [None] * n
+    if n <= period:
+        return out
+    gains, losses = [], []
+    for i in range(1, period + 1):
+        d = closes[i] - closes[i - 1]
+        gains.append(max(d, 0)); losses.append(max(-d, 0))
+    avg_g = sum(gains) / period
+    avg_l = sum(losses) / period
+    rs = avg_g / avg_l if avg_l > 0 else 999
+    out[period] = 100 - 100 / (1 + rs)
+    for i in range(period + 1, n):
+        d = closes[i] - closes[i - 1]
+        g = max(d, 0); l_ = max(-d, 0)
+        avg_g = (avg_g * (period - 1) + g) / period
+        avg_l = (avg_l * (period - 1) + l_) / period
+        rs = avg_g / avg_l if avg_l > 0 else 999
+        out[i] = 100 - 100 / (1 + rs)
+    return out
+
+
+def _swing_levels(highs: list[float], lows: list[float], window: int = 5,
+                  top_n: int = 3, tolerance: float = 0.015) -> tuple[list[float], list[float]]:
+    """Detect swing highs/lows (local extrema), cluster nearby ones, return top-N levels."""
+    n = len(highs)
+    swing_h, swing_l = [], []
+    for i in range(window, n - window):
+        if highs[i] == max(highs[i - window:i + window + 1]):
+            swing_h.append(highs[i])
+        if lows[i] == min(lows[i - window:i + window + 1]):
+            swing_l.append(lows[i])
+
+    def _cluster(vals: list[float], reverse: bool) -> list[float]:
+        if not vals: return []
+        vals_sorted = sorted(vals, reverse=reverse)
+        merged: list[float] = []
+        for v in vals_sorted:
+            if not merged or abs(v - merged[-1]) / merged[-1] > tolerance:
+                merged.append(v)
+            else:
+                merged[-1] = (merged[-1] + v) / 2
+            if len(merged) >= top_n:
+                break
+        return merged
+
+    return _cluster(swing_h, reverse=True), _cluster(swing_l, reverse=False)
+
+
+def _pivots_classic(h: float, l: float, c: float) -> dict:
+    pp = (h + l + c) / 3
+    return {
+        "PP": pp,
+        "R1": 2 * pp - l, "S1": 2 * pp - h,
+        "R2": pp + (h - l), "S2": pp - (h - l),
+        "R3": h + 2 * (pp - l), "S3": l - 2 * (h - pp),
+    }
+
+
+def _weekly_pivots(highs: list[float], lows: list[float], closes: list[float]) -> dict:
+    """Pivots based on last 5 trading days (≈ last week) — more useful on a 6-month chart."""
+    if len(highs) < 5:
+        return _pivots_classic(highs[-1], lows[-1], closes[-1])
+    h = max(highs[-5:]); l = min(lows[-5:]); c = closes[-1]
+    return _pivots_classic(h, l, c)
+
+
+def _volume_profile(highs: list[float], lows: list[float], vols: list[float],
+                    bins: int = 24) -> list[tuple[float, float]]:
+    if not highs: return []
+    pmin, pmax = min(lows), max(highs)
+    if pmax <= pmin: return []
+    step = (pmax - pmin) / bins
+    buckets = [0.0] * bins
+    for h_, l_, v in zip(highs, lows, vols):
+        # distribute bar volume evenly across bins it spans
+        b_lo = max(0, min(bins - 1, int((l_ - pmin) / step)))
+        b_hi = max(0, min(bins - 1, int((h_ - pmin) / step)))
+        span = max(1, b_hi - b_lo + 1)
+        share = v / span
+        for b in range(b_lo, b_hi + 1):
+            buckets[b] += share
+    return [(pmin + (i + 0.5) * step, buckets[i]) for i in range(bins)]
+
+
 def compute_technicals(conn, sym: str, snap_date: str) -> dict:
     rows = _fetchall(conn, """
         SELECT trade_date, open, high, low, close, volume
@@ -253,6 +1706,34 @@ def compute_technicals(conn, sym: str, snap_date: str) -> dict:
     vol20 = sum(vols[-20:]) / 20 if n >= 20 else None
     last_vol_ratio = vols[-1] / vol20 if vol20 else None
 
+    # ── Chart data: last ~130 bars (≈6 months) with EMA series, S/R, pivots, vol profile
+    CHART_BARS = 130
+    bars_slice = rows[-CHART_BARS:] if n >= CHART_BARS else rows
+    closes_c = [float(r["close"]) for r in bars_slice]
+    highs_c = [float(r["high"]) for r in bars_slice]
+    lows_c = [float(r["low"]) for r in bars_slice]
+    opens_c = [float(r["open"]) for r in bars_slice]
+    vols_c = [float(r["volume"] or 0) for r in bars_slice]
+    dates_c = [str(r["trade_date"]) for r in bars_slice]
+    ema20_s_full = _ema_series(closes, 20)
+    ema50_s_full = _ema_series(closes, 50)
+    ema200_s_full = _ema_series(closes, 200)
+    rsi_s_full = _rsi_series(closes, 14)
+    chart_offset = n - len(bars_slice)
+    ema20_s = ema20_s_full[chart_offset:]
+    ema50_s = ema50_s_full[chart_offset:]
+    ema200_s = ema200_s_full[chart_offset:]
+    rsi_s = rsi_s_full[chart_offset:]
+    res_levels, sup_levels = _swing_levels(highs_c, lows_c, window=5, top_n=3)
+    pivots = _weekly_pivots(highs_c, lows_c, closes_c)
+    vol_profile = _volume_profile(highs_c, lows_c, vols_c, bins=24)
+
+    chart_bars = [
+        {"date": dates_c[i], "open": opens_c[i], "high": highs_c[i],
+         "low": lows_c[i], "close": closes_c[i], "volume": vols_c[i]}
+        for i in range(len(bars_slice))
+    ]
+
     return {
         "trade_date": rows[-1]["trade_date"],
         "last": last,
@@ -265,6 +1746,19 @@ def compute_technicals(conn, sym: str, snap_date: str) -> dict:
         "ret_1m": _ret(21), "ret_3m": _ret(63),
         "ret_6m": _ret(126), "ret_1y": _ret(252),
         "last_vol_ratio": last_vol_ratio,
+        # chart payload
+        "chart": {
+            "bars": chart_bars,
+            "ema20_series": ema20_s,
+            "ema50_series": ema50_s,
+            "ema200_series": ema200_s,
+            "rsi_series": rsi_s,
+            "support_levels": sup_levels,
+            "resistance_levels": res_levels,
+            "pivots": pivots,
+            "volume_profile": vol_profile,
+            "wk52_high": wh, "wk52_low": wl,
+        },
     }
 
 
@@ -290,7 +1784,7 @@ def get_quarterly(conn, sym: str, n: int = 8) -> list[dict]:
 def get_annual(conn, sym: str, n: int = 5) -> list[dict]:
     return _fetchall(conn, """
         SELECT period_label, period_end, revenue, operating_profit, opm_pct,
-               pat, eps, dividend_payout_pct
+               pat, eps, dividend_payout_pct, pbt, interest, depreciation, expenses
         FROM scores.annual_results
         WHERE symbol=%s ORDER BY period_end DESC LIMIT %s
     """, (sym, n))
@@ -354,6 +1848,29 @@ def get_insider_activity(conn, sym: str, days: int = 90) -> list[dict]:
         WHERE symbol=%s AND alert_date >= (CURRENT_DATE - INTERVAL '%s days')
         ORDER BY alert_date DESC LIMIT 10
     """, (sym, days))
+
+
+def get_bulk_block_deals(conn, sym: str, days: int = 90) -> list[dict]:
+    """Fallback news flow: bulk & block deals from `signals.bulk_block_deals`."""
+    return _fetchall(conn, """
+        SELECT deal_date, deal_type, side, entity, qty, price, remarks
+        FROM signals.bulk_block_deals
+        WHERE symbol=%s AND deal_date >= (CURRENT_DATE - INTERVAL '%s days')
+        ORDER BY deal_date DESC LIMIT 10
+    """, (sym, days))
+
+
+def get_upcoming_events(conn, sym: str) -> list[dict]:
+    """Forward-looking corporate calendar from `signals.v_upcoming_events`."""
+    try:
+        return _fetchall(conn, """
+            SELECT event_date, event_type, detail
+            FROM signals.v_upcoming_events
+            WHERE symbol=%s
+            ORDER BY event_date ASC LIMIT 5
+        """, (sym,))
+    except Exception:
+        return []
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -470,7 +1987,294 @@ def compute_financial_analytics(qtr: list[dict], ann: list[dict],
         if ocf is not None:
             a["fcf_proxy_cr"] = ocf + inv_cf  # investing usually negative
 
+    # ---- ROE (latest PAT / latest book equity) ----
+    if ann and bs:
+        latest_pat = _safe_float(ann[0].get("pat"))
+        latest_eq = (_safe_float(bs[0].get("equity_capital")) or 0) + (_safe_float(bs[0].get("reserves")) or 0)
+        if latest_pat is not None and latest_eq > 0:
+            a["roe_computed_pct"] = latest_pat / latest_eq * 100
+
+    # ---- ROCE (EBIT / Capital Employed) ≈ (PBT + Interest) / (Equity + Borrowings) ----
+    if ann and bs:
+        latest = ann[0]
+        pbt = _safe_float(latest.get("pbt"))
+        interest = _safe_float(latest.get("interest")) or 0
+        eq = (_safe_float(bs[0].get("equity_capital")) or 0) + (_safe_float(bs[0].get("reserves")) or 0)
+        borrow = _safe_float(bs[0].get("borrowings")) or 0
+        cap_emp = eq + borrow
+        if pbt is not None and cap_emp > 0:
+            a["roce_computed_pct"] = (pbt + interest) / cap_emp * 100
+
+    # ---- Altman Z' (private-firm variant — uses book equity, no market cap) ----
+    # Z' = 0.717*A + 0.847*B + 3.107*C + 0.420*D + 0.998*E
+    #   A = Working Capital / Total Assets (proxy: reserves+equity-borrowings vs assets — rough)
+    #   B = Retained Earnings / TA   (reserves / TA)
+    #   C = EBIT / TA                (PBT + interest) / TA
+    #   D = Book Equity / Total Liab (equity+reserves) / (TA - equity)
+    #   E = Sales / TA
+    if ann and bs:
+        latest_ann = ann[0]
+        latest_bs = bs[0]
+        ta = _safe_float(latest_bs.get("total_assets"))
+        reserves = _safe_float(latest_bs.get("reserves")) or 0
+        eq_cap = _safe_float(latest_bs.get("equity_capital")) or 0
+        borrow = _safe_float(latest_bs.get("borrowings")) or 0
+        sales = _safe_float(latest_ann.get("revenue"))
+        pbt = _safe_float(latest_ann.get("pbt"))
+        interest = _safe_float(latest_ann.get("interest")) or 0
+        if ta and ta > 0 and sales is not None and pbt is not None:
+            book_eq = eq_cap + reserves
+            total_liab = max(ta - book_eq, 1)
+            B = reserves / ta
+            C = (pbt + interest) / ta
+            D = book_eq / total_liab
+            E = sales / ta
+            # WC proxy: book_eq minus borrowings (very rough; absent current asset detail)
+            A = max(book_eq - borrow, 0) / ta
+            a["altman_z_prime"] = 0.717*A + 0.847*B + 3.107*C + 0.420*D + 0.998*E
+
+    # ---- Piotroski F-score approximation (4-5 of 9 checks given our data) ----
+    # We can score: ROA>0, ΔROA>0, OCF>0, OCF>NI, Δleverage<0, Δasset turnover>0 (6/9)
+    if ann and bs and cf and len(ann) >= 2 and len(bs) >= 2 and len(cf) >= 1:
+        score = 0
+        breakdown = []
+        a_now, a_prev = ann[0], ann[1]
+        b_now, b_prev = bs[0], bs[1]
+        c_now = cf[0]
+        ta_now = _safe_float(b_now.get("total_assets")) or 0
+        ta_prev = _safe_float(b_prev.get("total_assets")) or 0
+        pat_now = _safe_float(a_now.get("pat")) or 0
+        pat_prev = _safe_float(a_prev.get("pat")) or 0
+        rev_now = _safe_float(a_now.get("revenue")) or 0
+        rev_prev = _safe_float(a_prev.get("revenue")) or 0
+        bor_now = _safe_float(b_now.get("borrowings")) or 0
+        bor_prev = _safe_float(b_prev.get("borrowings")) or 0
+        ocf_now = _safe_float(c_now.get("operating_cf")) or 0
+        if pat_now > 0: score += 1; breakdown.append("ROA>0")
+        roa_now = pat_now / ta_now if ta_now else 0
+        roa_prev = pat_prev / ta_prev if ta_prev else 0
+        if roa_now > roa_prev: score += 1; breakdown.append("ΔROA>0")
+        if ocf_now > 0: score += 1; breakdown.append("OCF>0")
+        if ocf_now > pat_now: score += 1; breakdown.append("OCF>NI")
+        lev_now = bor_now / ta_now if ta_now else 0
+        lev_prev = bor_prev / ta_prev if ta_prev else 0
+        if lev_now < lev_prev: score += 1; breakdown.append("Δleverage↓")
+        at_now = rev_now / ta_now if ta_now else 0
+        at_prev = rev_prev / ta_prev if ta_prev else 0
+        if at_now > at_prev: score += 1; breakdown.append("Δasset turnover>0")
+        a["piotroski_approx"] = score  # out of 6 testable criteria
+        a["piotroski_max"] = 6
+        a["piotroski_breakdown"] = breakdown
+
+    # ---- Beneish M-score (simplified — 5 of 8 factors computable from our data) ----
+    # Full M = -4.84 + 0.92·DSRI + 0.528·GMI + 0.404·AQI + 0.892·SGI + 0.115·DEPI
+    #          - 0.172·SGAI + 4.679·TATA - 0.327·LVGI
+    # We can compute SGI, DEPI (proxy 1), TATA, LVGI, GMI (proxy via OPM as gross-margin substitute).
+    # AQI/SGAI/DSRI need balance items we don't store (receivables, current assets, SG&A).
+    # Defaults of 1.0 are used for the unknown factors (consistent with steady-state
+    # firms in the original paper) so the score remains comparable.
+    if ann and bs and len(ann) >= 2 and len(bs) >= 2:
+        try:
+            a_now, a_prev = ann[0], ann[1]
+            b_now, b_prev = bs[0], bs[1]
+            rev_now  = _safe_float(a_now.get("revenue")) or 0
+            rev_prev = _safe_float(a_prev.get("revenue")) or 0
+            opm_now  = _safe_float(a_now.get("opm_pct"))
+            opm_prev = _safe_float(a_prev.get("opm_pct"))
+            pat_now  = _safe_float(a_now.get("pat")) or 0
+            dep_now  = _safe_float(a_now.get("depreciation"))
+            dep_prev = _safe_float(a_prev.get("depreciation"))
+            ta_now   = _safe_float(b_now.get("total_assets")) or 0
+            ta_prev  = _safe_float(b_prev.get("total_assets")) or 0
+            eq_now   = (_safe_float(b_now.get("equity_capital")) or 0) + (_safe_float(b_now.get("reserves")) or 0)
+            eq_prev  = (_safe_float(b_prev.get("equity_capital")) or 0) + (_safe_float(b_prev.get("reserves")) or 0)
+            bor_now  = _safe_float(b_now.get("borrowings")) or 0
+            bor_prev = _safe_float(b_prev.get("borrowings")) or 0
+            ocf_now  = _safe_float(cf[0].get("operating_cf")) if cf else None
+
+            SGI  = (rev_now / rev_prev) if rev_prev else 1.0
+            GMI  = ((opm_prev / opm_now) if (opm_now and opm_prev) else 1.0)
+            DEPI = ((dep_prev / dep_now) if (dep_now and dep_prev) else 1.0)
+            LVGI_now  = ((bor_now  + (ta_now  - eq_now  - bor_now )) / ta_now ) if ta_now  else 0
+            LVGI_prev = ((bor_prev + (ta_prev - eq_prev - bor_prev)) / ta_prev) if ta_prev else 0
+            LVGI = (LVGI_now / LVGI_prev) if LVGI_prev else 1.0
+            TATA = ((pat_now - (ocf_now or 0)) / ta_now) if ta_now else 0
+            DSRI = AQI = SGAI = 1.0  # neutral (data unavailable)
+            m = (-4.84 + 0.92*DSRI + 0.528*GMI + 0.404*AQI + 0.892*SGI
+                 + 0.115*DEPI - 0.172*SGAI + 4.679*TATA - 0.327*LVGI)
+            a["beneish_m_simplified"] = m
+            # < -2.22 → low manipulation risk; > -1.78 → high; in between → grey zone
+            a["beneish_m_flag"] = (
+                "low" if m < -2.22 else ("watch" if m < -1.78 else "high")
+            )
+        except (TypeError, ZeroDivisionError):
+            pass
+
+    # ---- Forensic risk synthesis (low / moderate / high) ----
+    # Heuristic: combine Beneish flag, Piotroski strength, earnings-quality (OCF/PAT),
+    # leverage and growth-quality signals into a single tier label.
+    flags_high = 0
+    flags_low  = 0
+    if a.get("beneish_m_flag") == "high": flags_high += 2
+    if a.get("beneish_m_flag") == "low":  flags_low  += 1
+    if a.get("earnings_quality_flag") == "weak":  flags_high += 1
+    if a.get("earnings_quality_flag") == "high":  flags_low  += 1
+    if a.get("piotroski_approx") is not None:
+        if a["piotroski_approx"] <= 2: flags_high += 1
+        if a["piotroski_approx"] >= 5: flags_low  += 1
+    if (a.get("de_ratio") or 0) > 2:          flags_high += 1
+    if a.get("debt_trend") == "rising":        flags_high += 1
+    # Aggressive revenue growth WITH weak earnings quality is a red flag
+    if (a.get("rev_yoy_pct") or 0) > 50 and a.get("earnings_quality_flag") == "weak":
+        flags_high += 1
+    a["forensic_flags_high"] = flags_high
+    a["forensic_flags_low"]  = flags_low
+    if flags_high >= 3:
+        a["forensic_risk_tier"] = "high"
+    elif flags_high >= 1 and flags_low == 0:
+        a["forensic_risk_tier"] = "moderate"
+    elif flags_low >= 2 and flags_high == 0:
+        a["forensic_risk_tier"] = "low"
+    else:
+        a["forensic_risk_tier"] = "moderate"
+
+    # ---- NPM / EPS fallback from latest annual ----
+    if ann:
+        latest_ann = ann[0]
+        rev  = _safe_float(latest_ann.get("revenue"))
+        pat  = _safe_float(latest_ann.get("pat"))
+        eps_v = _safe_float(latest_ann.get("eps"))
+        if rev and rev > 0 and pat is not None:
+            a["npm_computed_pct"] = pat / rev * 100
+        if eps_v is not None:
+            a["eps_latest"] = eps_v
+
     return a
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Risk / Reward / Target computation
+# ─────────────────────────────────────────────────────────────────────────────
+def compute_risk_reward(tech: dict, snap: dict | None, fund: dict | None,
+                        analytics: dict) -> dict:
+    """Derive entry zone, targets, stop-loss, RR ratio, and a 0-10 risk score.
+
+    The targets use ATR-multiple swings tempered by distance from 52w high
+    (so we don't pin a 12m target past the breakout zone if stretched).
+    Risk score blends ATR%, distance from 52w high, debt trend, OCF/PAT
+    quality, Altman Z, Beneish M, and stage.
+    """
+    out: dict = {}
+    if "error" in (tech or {}):
+        return {"error": tech.get("error", "no technicals")}
+    snap = snap or {}
+    fund = fund or {}
+    last = tech.get("last")
+    atr = tech.get("atr")
+    atr_pct = tech.get("atr_pct")
+    wk52_high = tech.get("wk52_high")
+    wk52_low = tech.get("wk52_low")
+    dist_high = tech.get("dist_from_high_pct")  # negative when below high
+    if not last or not atr:
+        return {"error": "missing price/ATR"}
+
+    # ----- Entry zone: anchor on EMA20 or 0.5 ATR pullback -----
+    ema20 = tech.get("ema20") or last
+    entry_low = min(ema20, last - 0.5 * atr)
+    entry_high = last  # don't chase
+    out["entry_low"] = entry_low
+    out["entry_high"] = entry_high
+
+    # ----- Stop loss: 2 ATR below entry, but never below EMA50 fail level -----
+    ema50 = tech.get("ema50")
+    stop = entry_low - 2 * atr
+    if ema50:
+        stop = min(stop, ema50 * 0.97)  # 3% below EMA50 invalidation
+    out["stop_loss"] = stop
+    out["risk_per_share"] = last - stop
+    out["risk_pct"] = (last - stop) / last * 100 if last else None
+
+    # ----- Targets: ATR-projection + breakout-extension (2M / 4M / 6M horizons) -----
+    # T1 (2M): 3 ATR up
+    t1 = last + 3 * atr
+    # T2 (4M): 5 ATR up, but if within 5% of 52w high, project 1.10x breakout
+    if dist_high is not None and dist_high > -5 and wk52_high:
+        t2 = max(last + 5 * atr, wk52_high * 1.10)
+    else:
+        t2 = last + 5 * atr
+    # T3 (6M): EPS-CAGR aware — apply growth premium if quality cohort
+    cagr = analytics.get("pat_cagr_pct") or analytics.get("rev_cagr_pct") or 0
+    growth_mult = 1.15 if cagr >= 20 else (1.08 if cagr >= 10 else 1.04)
+    t3 = max(last + 7 * atr, t2 * growth_mult)
+
+    out["target_2m"] = t1
+    out["target_4m"] = t2
+    out["target_6m"] = t3
+    # Back-compat aliases (some downstream code still reads these)
+    out["target_1m"] = t1
+    out["target_3m"] = t2
+    out["target_12m"] = t3
+
+    # ----- Reward / Risk -----
+    reward = t2 - last  # use medium-term as the headline RR
+    risk = last - stop
+    out["reward_per_share"] = reward
+    out["rr_ratio_4m"] = (reward / risk) if risk > 0 else None
+    out["rr_ratio_6m"] = ((t3 - last) / risk) if risk > 0 else None
+    # Back-compat aliases
+    out["rr_ratio_3m"] = out["rr_ratio_4m"]
+    out["rr_ratio_12m"] = out["rr_ratio_6m"]
+
+    # ----- Risk score (0=safe, 10=high risk) -----
+    score = 0.0
+    breakdown: list[str] = []
+    # Volatility
+    if atr_pct is not None:
+        if atr_pct > 5: score += 2.5; breakdown.append(f"ATR {atr_pct:.1f}% (+2.5)")
+        elif atr_pct > 3: score += 1.5; breakdown.append(f"ATR {atr_pct:.1f}% (+1.5)")
+        elif atr_pct > 2: score += 0.5; breakdown.append(f"ATR {atr_pct:.1f}% (+0.5)")
+    # Extension (penalise chasing far above high)
+    if dist_high is not None:
+        if dist_high > 0: score += 2.0; breakdown.append(f"At new high {dist_high:+.1f}% (+2.0)")
+        elif dist_high > -3: score += 1.0; breakdown.append(f"Near high {dist_high:+.1f}% (+1.0)")
+    # Overbought RSI
+    rsi = tech.get("rsi")
+    if rsi and rsi > 75: score += 1.5; breakdown.append(f"RSI {rsi:.0f} (+1.5)")
+    elif rsi and rsi > 70: score += 1.0; breakdown.append(f"RSI {rsi:.0f} (+1.0)")
+    # Stage
+    stage = (snap.get("stage") or "")
+    if stage == "STAGE_4": score += 3.0; breakdown.append("Stage 4 (+3.0)")
+    elif stage == "STAGE_3": score += 1.5; breakdown.append("Stage 3 (+1.5)")
+    elif stage == "STAGE_1": score += 1.0; breakdown.append("Stage 1 (+1.0)")
+    # Fundamental quality red flags
+    az = _safe_float(fund.get("altman_z_score"))
+    if az is not None and az < 1.8: score += 1.5; breakdown.append(f"Altman Z {az:.1f} distress (+1.5)")
+    bm = _safe_float(fund.get("beneish_m_score"))
+    if bm is not None and bm > -1.78: score += 1.5; breakdown.append(f"Beneish M {bm:.2f} flag (+1.5)")
+    # Debt
+    if analytics.get("debt_trend") == "rising": score += 1.0; breakdown.append("Debt rising (+1.0)")
+    if analytics.get("computed_de_ratio") is not None and analytics["computed_de_ratio"] > 1.5:
+        score += 1.0; breakdown.append(f"D/E {analytics['computed_de_ratio']:.1f} (+1.0)")
+    # Earnings quality
+    if analytics.get("earnings_quality_flag") == "weak":
+        score += 1.5; breakdown.append("OCF/PAT weak (+1.5)")
+    elif analytics.get("earnings_quality_flag") == "watch":
+        score += 0.5; breakdown.append("OCF/PAT watch (+0.5)")
+
+    score = max(0.0, min(10.0, score))
+    out["risk_score"] = round(score, 1)
+    out["risk_tier"] = "LOW" if score <= 3 else ("MEDIUM" if score <= 6 else "HIGH")
+    out["risk_factors"] = breakdown
+
+    # Suggested position size — inverse risk + RR
+    rr = out.get("rr_ratio_4m") or 0
+    if score >= 7 or rr < 1: out["position_size_pct"] = 4
+    elif score >= 5: out["position_size_pct"] = 6
+    elif score >= 3 and rr >= 2: out["position_size_pct"] = 10
+    elif rr >= 3: out["position_size_pct"] = 12
+    else: out["position_size_pct"] = 8
+
+    return out
 
 
 _NUM_RE = re.compile(r"-?\d+(?:\.\d+)?")
@@ -512,6 +2316,18 @@ def _parse_summaries(fund: dict) -> dict:
     parsed["roe_pct"] = _grab(r"ROE[: ]+([\d.]+)\s*%", ratios)
     parsed["npm_pct"] = _grab(r"NPM[: ]+([\d.]+)\s*%", ratios)
     parsed["debt_cr"] = _grab(r"Debt[: ]+([\d.]+)\s*Cr", bs)
+    parsed["pe_ratio"] = _grab(r"P/E[: ]+([\d.]+)", ratios)
+    parsed["mkt_cap_cr"] = _grab(r"Mkt Cap[: ]+([\d.,]+)", ratios.replace(",", ""))
+    parsed["book_value"] = _grab(r"Book Value[: ]+([\d.]+)", ratios)
+    parsed["div_yield_pct"] = _grab(r"Div Yield[: ]+([\d.]+)", ratios)
+
+    # ── Shareholding pattern (investor_summary)
+    inv = fund.get("investor_summary") or ""
+    parsed["promoter_pct"] = _grab(r"Promoter[s]?[: ]+([\d.]+)\s*%", inv)
+    parsed["fii_pct"]      = _grab(r"FII[: ]+([\d.]+)\s*%", inv)
+    parsed["dii_pct"]      = _grab(r"DII[: ]+([\d.]+)\s*%", inv)
+    parsed["public_pct"]   = _grab(r"Public[: ]+([\d.]+)\s*%", inv)
+    parsed["govt_pct"]     = _grab(r"Govt[: ]+([\d.]+)\s*%", inv)
 
     # Quarterly trajectory
     msales = re.search(r"Sales last 4Q[: ]+([\d.,\s]+)Cr", qtr)
@@ -553,12 +2369,82 @@ def get_fundamentals(conn, sym: str) -> dict | None:
         fund["pat_growth_3y_proxy"] = parsed["pat_yoy_pct"]
     if fund.get("revenue_growth_3y") is None and parsed.get("sales_yoy_pct") is not None:
         fund["revenue_growth_3y_proxy"] = parsed["sales_yoy_pct"]
+    if fund.get("promoter_holding") is None and parsed.get("promoter_pct") is not None:
+        fund["promoter_holding"] = parsed["promoter_pct"]
     return fund
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # LLM narrative generation
 # ─────────────────────────────────────────────────────────────────────────────
+def _rule_chart_narrative(tech: dict, rr: dict | None = None) -> str:
+    """Build a fallback chart narrative when LLM is unavailable. Uses the
+    detected chart patterns, EMA stack, RSI regime and key levels."""
+    if not isinstance(tech, dict) or not tech.get("chart"):
+        return "Chart data unavailable."
+    chart = tech["chart"]
+    patterns = _detect_patterns(chart)
+    bars = chart.get("bars") or []
+    if not bars: return "Insufficient price history to narrate."
+    last = bars[-1]
+    c = float(last.get("close") or 0)
+    ema20  = tech.get("ema20"); ema50 = tech.get("ema50"); ema200 = tech.get("ema200")
+    rsi    = tech.get("rsi")
+    atr_p  = tech.get("atr_pct")
+    dh     = tech.get("dist_from_high_pct")
+    # Stack
+    if ema20 and ema50 and ema200:
+        if ema20 > ema50 > ema200:
+            stack = (f"price ₹{c:,.0f} sits above EMA20 ₹{ema20:,.0f} > EMA50 ₹{ema50:,.0f} "
+                     f"> EMA200 ₹{ema200:,.0f} — textbook bullish stack")
+        elif ema20 < ema50 < ema200:
+            stack = (f"price ₹{c:,.0f} trades below EMA20 ₹{ema20:,.0f} < EMA50 ₹{ema50:,.0f} "
+                     f"< EMA200 ₹{ema200:,.0f} — bearish stack, trend down")
+        else:
+            stack = (f"EMAs are crossing (20:{ema20:,.0f} / 50:{ema50:,.0f} / 200:{ema200:,.0f}) "
+                     "— trend transition in progress")
+    else:
+        stack = f"price ₹{c:,.0f}"
+    # RSI regime
+    if rsi is None: rsi_txt = "RSI unavailable"
+    elif rsi >= 70: rsi_txt = f"RSI {rsi:.0f} is overbought — pullback risk elevated"
+    elif rsi <= 30: rsi_txt = f"RSI {rsi:.0f} is oversold — mean-reversion bounce possible"
+    elif rsi >= 60: rsi_txt = f"RSI {rsi:.0f} shows strong momentum but not stretched"
+    elif rsi <= 40: rsi_txt = f"RSI {rsi:.0f} is weak, momentum has rolled over"
+    else:           rsi_txt = f"RSI {rsi:.0f} is neutral"
+    # Patterns
+    if patterns:
+        pat_names = ", ".join(p["label"] for p in patterns[:3])
+        pat_txt = f"Detected patterns: {pat_names}."
+    else:
+        pat_txt = "No high-confidence pattern triggered on the latest bars."
+    # Levels
+    sup = (chart.get("support_levels") or [])
+    res = (chart.get("resistance_levels") or [])
+    lvl_bits = []
+    if res:  lvl_bits.append(f"nearest resistance ₹{float(res[0]):,.0f}")
+    if sup:  lvl_bits.append(f"nearest support ₹{float(sup[0]):,.0f}")
+    lvl_txt = "; ".join(lvl_bits) if lvl_bits else ""
+    # Distance from 52w high
+    dh_txt = f"{abs(dh):.1f}% below 52W high" if (dh is not None and dh < 0) else (
+        f"at fresh 52W highs" if (dh is not None and dh >= 0) else "")
+    # Action hint
+    if rr:
+        ez_lo = rr.get("entry_low"); ez_hi = rr.get("entry_high"); stop = rr.get("stop_loss")
+        try:
+            act = f"Trader's plan: accumulate ₹{float(ez_lo):,.0f}–₹{float(ez_hi):,.0f} with stop below ₹{float(stop):,.0f}."
+        except (TypeError, ValueError): act = ""
+    else: act = ""
+    parts = [
+        f"Over the last 6 months {stack}.",
+        f"{rsi_txt}; ATR(14) {atr_p:.1f}% indicates {'high' if (atr_p or 0)>3 else 'moderate' if (atr_p or 0)>1.5 else 'low'} day-to-day volatility." if atr_p is not None else f"{rsi_txt}.",
+        pat_txt,
+    ]
+    if lvl_txt: parts.append(f"Watch {lvl_txt}; price is {dh_txt}.".strip())
+    if act: parts.append(act)
+    return " ".join(parts)
+
+
 def _decimal_to_float(obj):
     """Recursively convert Decimal/date for JSON serialisation."""
     from decimal import Decimal
@@ -703,6 +2589,11 @@ def _serialize_stocks_for_llm(stocks: list[dict]) -> str:
                  "value_cr": i["value_cr"], "category": i["category"]}
                 for i in (s.get("insider") or [])
             ],
+            "risk_reward_computed": s.get("risk_reward") or {},
+            "chart_patterns_detected": [
+                {"pattern": p["label"], "note": p.get("note","")}
+                for p in (_detect_patterns(s["tech"]["chart"]) if isinstance(s.get("tech"), dict) and s["tech"].get("chart") else [])
+            ],
         })
     return json.dumps(_decimal_to_float(rows), indent=1, default=str)
 
@@ -737,7 +2628,11 @@ def _build_deep_llm_prompt(stocks: list[dict], macro_context: str, snap_date: st
         "rotation context, (4) Piotroski/Altman/Beneish scores, (5) P&L momentum "
         "(QoQ + YoY + CAGR), (6) balance-sheet health (debt trend, net debt, D/E), "
         "(7) ROCE / ROE, (8) cash-flow quality (OCF/PAT, FCF), (9) corporate events, "
-        "(10) latest quarterly result deltas vs trend.",
+        "(10) latest quarterly result deltas vs trend. Also derive realistic price "
+        "targets, stop-loss, reward/risk ratio, and a 0-10 risk score. Use "
+        "`risk_reward_computed` in the dossier as a quantitative starting point "
+        "(ATR-based entries/stops/targets) and adjust it qualitatively using the "
+        "fundamental and sector view.",
         "",
         "Return STRICT JSON (no markdown fences, no commentary):",
         "{",
@@ -747,10 +2642,19 @@ def _build_deep_llm_prompt(stocks: list[dict], macro_context: str, snap_date: st
         '      "key_catalysts": ["catalyst 1 with metric", "catalyst 2", "catalyst 3"],',
         '      "fundamental_view": "2-3 sentences synthesising P&L + BS + CF: cite latest quarter revenue/PAT growth, OPM trend in bps, debt direction, OCF/PAT ratio, ROCE, EPS CAGR",',
         '      "technical_view": "2 sentences: trend stack, RS, momentum (RSI), distance from 52w high, volume",',
+        '      "chart_narrative": "3-5 sentences narrating what the 6-month candlestick chart is actually showing — explicitly reference the detected chart_patterns_detected (e.g. \\"a Bullish Engulfing print on top of an Ascending Triangle\\"), where price sits vs EMA 20/50/200 stack, RSI regime (overbought / neutral / oversold / divergence), key support/resistance levels being tested, volume behaviour on the latest bars, and what a trader should watch next (breakout level, pullback zone, invalidation). Be specific and cite numbers.",',
         '      "sector_view": "1-2 sentences linking the stock to its sector strength and peer ranking",',
         '      "valuation_note": "1 sentence flagging valuation comfort or stretch — use EPS, growth, sector context (qualitative is fine if no PE)",',
+        '      "street_view": "2-3 sentences synthesising the likely sell-side / broker consensus on this name: typical analyst rating bias, key bull/bear arguments brokerages would flag, peer-relative valuation read, recent estimate revisions narrative. State this is a synthesised consensus read (no live broker feed wired). Cite metrics from the dossier where possible.",',
         '      "key_risks": ["risk 1 with metric", "risk 2", "risk 3"],',
         '      "action": "1 sentence: entry zone or wait-for-pullback level, invalidation, stop guidance",',
+        '      "potential_target_short_term": "numeric ₹ target for ~2 months (cite ATR/level used)",',
+        '      "target_4m": "numeric ₹ target for ~4 months (cite ATR/breakout level used)",',
+        '      "potential_target_long_term": "numeric ₹ target for ~6 months (cite growth/valuation logic)",',
+        '      "stop_loss": "numeric ₹ stop-loss with reasoning (e.g. EMA50, prior swing)",',
+        '      "risk_reward_ratio": "numeric ratio (target_upside ÷ stop_downside) for the 4-month view",',
+        '      "risk_score_0_10": "integer 0-10 risk score with brief rationale (0=low, 10=high) considering volatility, valuation, leverage, stage, fundamentals",',
+        '      "position_size_pct": "suggested % of portfolio capital for this name (1-15) given risk score and conviction",',
         '      "conviction": "HIGH | MEDIUM | LOW",',
         '      "conviction_rationale": "1 sentence justifying the conviction tier"',
         '    }',
@@ -889,6 +2793,7 @@ def _rule_based_narratives(stocks: list[dict]) -> dict:
         def _f(v, fmt="{:.1f}"):
             try: return fmt.format(float(v))
             except (TypeError, ValueError): return "—"
+        rr = s.get("risk_reward") or {}
         per_stock[s["symbol"]] = {
             "thesis": thesis,
             "key_catalysts": cat or ["Watch next quarterly print"],
@@ -903,10 +2808,32 @@ def _rule_based_narratives(stocks: list[dict]) -> dict:
                 f"RSI {_f(tech.get('rsi'))}, 1Y return {_f(tech.get('ret_1y'))}%, "
                 f"dist from 52w high {_f(tech.get('dist_from_high_pct'))}%."
             ),
+            "chart_narrative": _rule_chart_narrative(tech, rr),
             "sector_view": sec_text,
             "valuation_note": "Quantitative valuation not in dossier — defer to qualitative read.",
+            "street_view": (
+                "Synthesised consensus view (no live broker feed): the name screens as "
+                f"{'a high-quality compounder' if (roce or 0) >= 18 else 'a turnaround / cyclical'}; "
+                f"buy-side would likely weight {'momentum + sector rotation' if rs > 50 else 'mean-reversion'}; "
+                f"watch for re-rating triggers around the next quarterly print. "
+                "Confirm against live broker reports before sizing."
+            ),
             "key_risks": risk or ["No quantitative red flag in dossier"],
-            "action": action,
+            "action": (
+                f"Enter ₹{_f(rr.get('entry_low'),'{:.0f}')}-₹{_f(rr.get('entry_high'),'{:.0f}')}; "
+                f"stop ₹{_f(rr.get('stop_loss'),'{:.0f}')}; "
+                f"signal {snap.get('trading_signal','HOLD')}."
+            ) if rr and "error" not in rr else
+            f"{snap.get('trading_signal','HOLD')} bias; stage {snap.get('stage','—')}; size per regime",
+            "potential_target_short_term": rr.get("target_2m"),
+            "potential_target_long_term": rr.get("target_6m"),
+            "target_4m": rr.get("target_4m"),
+            "stop_loss": rr.get("stop_loss"),
+            "risk_reward_ratio": rr.get("rr_ratio_4m"),
+            "risk_score_0_10": rr.get("risk_score"),
+            "risk_tier": rr.get("risk_tier"),
+            "risk_factors": rr.get("risk_factors") or [],
+            "position_size_pct": rr.get("position_size_pct"),
             "conviction": "HIGH" if len(bull) >= 5 else ("MEDIUM" if len(bull) >= 3 else "LOW"),
             "conviction_rationale": f"{len(bull)} positive · {len(risk)} negative factors flagged",
         }
@@ -967,10 +2894,27 @@ def generate_narratives(stocks: list[dict], macro_context: str, snap_date: str,
         if "per_stock" not in deep_result or not isinstance(deep_result["per_stock"], dict):
             raise ValueError("Deep-analysis response missing per_stock dict")
         per_stock = deep_result["per_stock"]
-        # Fill any missing symbol from rule-based
-        for sym in [s["symbol"] for s in stocks]:
+        # Fill any missing symbol from rule-based AND merge computed risk_reward
+        # baseline as defaults (LLM-supplied targets/stops take precedence).
+        for s in stocks:
+            sym = s["symbol"]
             if sym not in per_stock:
                 per_stock[sym] = rule_fallback["per_stock"][sym]
+            rr = s.get("risk_reward") or {}
+            if rr and "error" not in rr:
+                ps = per_stock[sym]
+                ps.setdefault("potential_target_short_term", rr.get("target_2m"))
+                ps.setdefault("target_4m", rr.get("target_4m"))
+                ps.setdefault("potential_target_long_term", rr.get("target_6m"))
+                ps.setdefault("stop_loss", rr.get("stop_loss"))
+                ps.setdefault("risk_reward_ratio", rr.get("rr_ratio_4m"))
+                ps.setdefault("risk_score_0_10", rr.get("risk_score"))
+                ps.setdefault("risk_tier", rr.get("risk_tier"))
+                ps.setdefault("risk_factors", rr.get("risk_factors") or [])
+                ps.setdefault("position_size_pct", rr.get("position_size_pct"))
+            # Chart narrative fallback if LLM didn't emit one
+            if not per_stock[sym].get("chart_narrative"):
+                per_stock[sym]["chart_narrative"] = _rule_chart_narrative(s.get("tech") or {}, rr)
     except Exception as exc:
         print(f"   ⚠️  Deep-analysis LLM failed: {exc} — using rule-based for all stocks")
         return rule_fallback
@@ -1070,15 +3014,26 @@ def render_markdown(snap_date: str, picks: list[PickRationale], enriched: list[d
     out.append("Dual-confirmed names (both screens) are prioritised. Per-stock deep dive uses 260 trading days of EOD: EMA20/50/200 stack, EMA50 slope, RSI(14), ATR(14), 52w hi/lo, 1M/3M/6M/1Y returns, volume ratio. Fundamentals: Piotroski F-score, Altman Z, Beneish M, ROE/ROCE, 3Y growth, D/E, promoter holding.\n\n")
 
     out.append("## Pick Summary\n\n")
-    out.append("| # | Symbol | Sector | Price | Stage | Inv.Score | RS% | Fund | Stance | Source |\n")
-    out.append("|---|---|---|---:|---|---:|---:|---:|---|---|\n")
+    out.append("| # | Symbol | Sector | Price | Stage | Inv.Score | RS% | 6M Tgt | RR(4M) | Risk | Source |\n")
+    out.append("|---|---|---|---:|---|---:|---:|---:|---:|:---:|---|\n")
+    per_stock_narr_pre = narratives.get("per_stock", {}) or {}
     for i, (p, e) in enumerate(zip(picks, enriched), 1):
         snap = e["snapshot"] or {}
+        narr_i = per_stock_narr_pre.get(p.symbol, {})
+        rr_i = e.get("risk_reward") or {}
+        tgt = narr_i.get("potential_target_long_term") or rr_i.get("target_6m")
+        try: tgt_d = f"₹{float(tgt):,.0f}" if tgt is not None else "—"
+        except (TypeError, ValueError): tgt_d = "—"
+        rrv = narr_i.get("risk_reward_ratio") or rr_i.get("rr_ratio_4m")
+        try: rr_d = f"{float(rrv):.2f}x" if rrv is not None else "—"
+        except (TypeError, ValueError): rr_d = "—"
+        rsv = narr_i.get("risk_score_0_10") if narr_i.get("risk_score_0_10") is not None else rr_i.get("risk_score")
+        try: rs_d = f"{float(rsv):.1f}" if rsv is not None else "—"
+        except (TypeError, ValueError): rs_d = "—"
         out.append(
             f"| {i} | **{p.symbol}** | {p.sector} | {_nz(snap.get('price'))} | "
             f"{snap.get('stage','—')} | {_nz(snap.get('investment_score'))} | "
-            f"{_pct(snap.get('relative_strength'))} | {_nz(snap.get('enhanced_fund_score'))} | "
-            f"{snap.get('stance','—')} | {p.source} |\n"
+            f"{_pct(snap.get('relative_strength'))} | {tgt_d} | {rr_d} | {rs_d} | {p.source} |\n"
         )
 
     out.append("\n## Per-Stock Deep Dive\n\n")
@@ -1122,6 +3077,28 @@ def render_markdown(snap_date: str, picks: list[PickRationale], enriched: list[d
                 out.append(f"**Key risks:** {risks}\n\n")
         if narr.get("action"):
             out.append(f"**Action:** {narr['action']}\n\n")
+        rr_md = e.get("risk_reward") or {}
+        if rr_md and "error" not in rr_md:
+            def _m(v): 
+                try: return f"₹{float(v):,.0f}"
+                except (TypeError, ValueError): return "—"
+            t1 = narr.get('potential_target_short_term') or rr_md.get('target_2m')
+            t3 = narr.get('target_4m') or rr_md.get('target_4m')
+            t12 = narr.get('potential_target_long_term') or rr_md.get('target_6m')
+            sl = narr.get('stop_loss') or rr_md.get('stop_loss')
+            rr_v = narr.get('risk_reward_ratio') or rr_md.get('rr_ratio_4m')
+            rs_v = narr.get('risk_score_0_10') if narr.get('risk_score_0_10') is not None else rr_md.get('risk_score')
+            tier = narr.get('risk_tier') or rr_md.get('risk_tier','')
+            try: rr_disp = f"{float(rr_v):.2f}x" if rr_v is not None else "—"
+            except (TypeError, ValueError): rr_disp = "—"
+            try: rs_disp = f"{float(rs_v):.1f}" if rs_v is not None else "—"
+            except (TypeError, ValueError): rs_disp = "—"
+            out.append(
+                f"**Targets:** 2M {_m(t1)} · 4M {_m(t3)} · 6M {_m(t12)}  \n"
+                f"**Stop:** {_m(sl)} · **Risk/Reward (4M):** {rr_disp}  \n"
+                f"**Risk score:** {rs_disp} / 10 ({tier}) · **Suggested size:** "
+                f"{narr.get('position_size_pct') or rr_md.get('position_size_pct','—')}%\n\n"
+            )
         if narr.get("conviction"):
             out.append(f"**Conviction:** **{narr['conviction']}** — {narr.get('conviction_rationale','')}\n\n")
 
@@ -1193,6 +3170,31 @@ def _stock_card_html(idx: int, p: PickRationale, e: dict, narr: dict) -> str:
     sec = e.get("sector_ctx") or {}
     events = e.get("corp_events") or []
     insider = e.get("insider") or []
+    bulk_deals = e.get("bulk_deals") or []
+    upcoming = e.get("upcoming_events") or []
+    rr = dict(e.get("risk_reward") or {})
+    narr = dict(narr or {})
+    # Coerce LLM string outputs (e.g. "₹9,704 based on PAT CAGR…") to numeric
+    def _coerce_num(v):
+        if v is None or isinstance(v, (int, float)): return v
+        try:
+            import re as _re
+            m = _re.search(r"-?\d[\d,]*\.?\d*", str(v))
+            return float(m.group(0).replace(",", "")) if m else None
+        except Exception:
+            return None
+    for _k in ("stop_loss", "potential_target_short_term", "target_4m", "target_3m",
+               "potential_target_long_term", "risk_reward_ratio",
+               "risk_score_0_10", "position_size_pct"):
+        if _k in narr:
+            narr[_k] = _coerce_num(narr[_k])
+    for _k in ("entry_low", "entry_high", "stop_loss",
+               "target_2m", "target_4m", "target_6m",
+               "target_1m", "target_3m", "target_12m",
+               "rr_ratio_4m", "rr_ratio_6m", "rr_ratio_3m", "rr_ratio_12m",
+               "risk_per_share", "position_size_pct"):
+        if _k in rr:
+            rr[_k] = _coerce_num(rr[_k])
     h = html_mod.escape
     src_badge = {
         "dual": '<span class="mbadge mbadge-date" style="background:#16a34a">DUAL-CONFIRMED</span>',
@@ -1223,25 +3225,121 @@ def _stock_card_html(idx: int, p: PickRationale, e: dict, narr: dict) -> str:
             rows_tech.append(("Vol vs 20d avg", f"{_nz(tech['last_vol_ratio'])}x"))
 
     rows_fund = []
-    if fund:
-        p_ = fund.get("_parsed") or {}
+    if fund or analytics:
+        p_ = (fund or {}).get("_parsed") or {}
         def _add(label, v):
-            if v not in (None, ""):
-                rows_fund.append((label, v))
-        _add("Piotroski F-score", f"{fund['piotroski_score']:.0f} / 9" if fund.get('piotroski_score') is not None else None)
-        _add("Altman Z", _nz(fund.get('altman_z_score')) if fund.get('altman_z_score') is not None else None)
-        _add("Beneish M", _nz(fund.get('beneish_m_score')) if fund.get('beneish_m_score') is not None else None)
-        _add("Forensic risk", fund.get('forensic_risk'))
-        roe, roce = fund.get('roe'), fund.get('roce')
+            rows_fund.append((label, v if v not in (None, "") else "—"))
+        # Piotroski — DB column or 6/9 approximation from BS/PNL/CF
+        ps_v = (fund or {}).get('piotroski_score')
+        if ps_v is not None:
+            _add("Piotroski F-score", f"{ps_v:.0f} / 9")
+        elif analytics.get("piotroski_approx") is not None:
+            _add("Piotroski F-score",
+                 f"{analytics['piotroski_approx']:.0f} / {analytics['piotroski_max']} (approx)")
+        else:
+            _add("Piotroski F-score", None)
+        # Altman — DB column or Z' from BS/PNL
+        az_v = (fund or {}).get('altman_z_score')
+        if az_v is not None:
+            _add("Altman Z-score", _nz(az_v))
+        elif analytics.get("altman_z_prime") is not None:
+            _add("Altman Z-score", f"{analytics['altman_z_prime']:.2f} (Z′ approx)")
+        else:
+            _add("Altman Z-score", None)
+        bm_v = (fund or {}).get('beneish_m_score')
+        if bm_v is not None:
+            _add("Beneish M-score", _nz(bm_v))
+        elif analytics.get("beneish_m_simplified") is not None:
+            flag = analytics.get("beneish_m_flag") or ""
+            _add("Beneish M-score",
+                 f"{analytics['beneish_m_simplified']:.2f} ({flag}, simplified)")
+        else:
+            _add("Beneish M-score", None)
+        fr_v = (fund or {}).get('forensic_risk')
+        if fr_v is not None:
+            _add("Forensic risk", fr_v)
+        elif analytics.get("forensic_risk_tier"):
+            _add("Forensic risk", f"{analytics['forensic_risk_tier']} (derived)")
+        else:
+            _add("Forensic risk", None)
+        # ROE / ROCE — DB column or computed from BS+PNL
+        roe = (fund or {}).get('roe') if fund else None
+        roe_src = ""
+        if roe is None and analytics.get("roe_computed_pct") is not None:
+            roe = analytics["roe_computed_pct"]; roe_src = " (computed)"
+        roce = (fund or {}).get('roce') if fund else None
+        roce_src = ""
+        if roce is None and analytics.get("roce_computed_pct") is not None:
+            roce = analytics["roce_computed_pct"]; roce_src = " (computed)"
         if roe is not None or roce is not None:
-            _add("ROE / ROCE", f"{_pct(roe) if roe is not None else '—'} / {_pct(roce) if roce is not None else '—'}")
-        _add("NPM", _pct(p_.get('npm_pct')) if p_.get('npm_pct') is not None else None)
-        _add("EPS", _nz(p_.get('eps')) if p_.get('eps') is not None else None)
-        if fund.get('debt_to_equity') is not None:
-            _add("Debt / Equity", _nz(fund.get('debt_to_equity')))
-        _add("Promoter holding", _pct(fund.get('promoter_holding')) if fund.get('promoter_holding') is not None else None)
+            _add("ROE / ROCE",
+                 f"{(_pct(roe)+roe_src) if roe is not None else '—'} / "
+                 f"{(_pct(roce)+roce_src) if roce is not None else '—'}")
+        else:
+            _add("ROE / ROCE", None)
+        rg = (fund or {}).get('revenue_growth_3y')
+        if rg is None and analytics.get("rev_cagr_pct") is not None:
+            _add("Revenue growth (3Y)",
+                 f"{_pct(analytics['rev_cagr_pct'])} ({analytics.get('cagr_years','—')}Y CAGR)")
+        else:
+            _add("Revenue growth (3Y)", _pct(rg) if rg is not None else None)
+        pg = (fund or {}).get('pat_growth_3y')
+        if pg is None and analytics.get("pat_cagr_pct") is not None:
+            _add("PAT growth (3Y)",
+                 f"{_pct(analytics['pat_cagr_pct'])} ({analytics.get('cagr_years','—')}Y CAGR)")
+        else:
+            _add("PAT growth (3Y)", _pct(pg) if pg is not None else None)
+        de = (fund or {}).get('debt_to_equity')
+        if de is None and analytics.get("de_ratio") is not None:
+            _add("Debt / Equity", f"{analytics['de_ratio']:.2f} (computed)")
+        else:
+            _add("Debt / Equity", _nz(de) if de is not None else None)
+        ph = (fund or {}).get('promoter_holding')
+        _add("Promoter holding",
+             _pct(ph) if ph is not None else None)
+        # FII / DII institutional ownership (parsed from investor_summary)
+        fii = p_.get("fii_pct"); dii = p_.get("dii_pct")
+        if fii is not None or dii is not None:
+            _add("FII / DII holding",
+                 f"{(_pct(fii) if fii is not None else '—')} / "
+                 f"{(_pct(dii) if dii is not None else '—')}")
+        npm_v = p_.get('npm_pct')
+        if npm_v is None and analytics.get("npm_computed_pct") is not None:
+            _add("NPM", f"{_pct(analytics['npm_computed_pct'])} (computed)")
+        else:
+            _add("NPM", _pct(npm_v) if npm_v is not None else None)
+        eps_v = p_.get('eps')
+        if eps_v is None and analytics.get("eps_latest") is not None:
+            _add("EPS", f"{_nz(analytics['eps_latest'])} (latest FY)")
+        else:
+            _add("EPS", _nz(eps_v) if eps_v is not None else None)
 
-    # Enhanced fundamental sub-scores
+    # ---- Valuation rows (P/E derived, market-cap bucket, etc.) ----
+    rows_val = []
+    if fund or snap:
+        p_ = (fund or {}).get("_parsed") or {}
+        try:
+            price = float(snap.get("price")) if snap and snap.get("price") is not None else None
+        except (TypeError, ValueError):
+            price = None
+        eps_v = p_.get("eps")
+        pe = (price / eps_v) if (price and eps_v) else None
+        def _addv(label, v):
+            rows_val.append((label, v if v not in (None, "") else "—"))
+        _addv("Price", f"₹{price:,.1f}" if price is not None else None)
+        _addv("EPS (TTM proxy)", f"{eps_v:.2f}" if eps_v is not None else None)
+        _addv("P/E (price ÷ EPS)", f"{pe:.1f}x" if pe is not None else None)
+        _addv("Market-cap bucket", snap.get("market_cap_cat") if snap else None)
+        _addv("Sales (latest)",
+              f"₹{p_['sales_latest_cr']:,.0f} Cr ({_pct(p_.get('sales_yoy_pct'))} YoY)"
+              if p_.get('sales_latest_cr') is not None else None)
+        _addv("PAT (latest)",
+              f"₹{p_['pat_latest_cr']:,.0f} Cr ({_pct(p_.get('pat_yoy_pct'))} YoY)"
+              if p_.get('pat_latest_cr') is not None else None)
+        _addv("Net debt (3Y)",
+              f"₹{analytics['net_debt_cr']:,.0f} Cr" if analytics.get('net_debt_cr') is not None else None)
+
+    # Enhanced fundamental sub-scores (incl. CANSLIM + Minervini from stage_snapshots)
     rows_subscore = []
     if fscore:
         for label, key in [
@@ -1254,6 +3352,25 @@ def _stock_card_html(idx: int, p: PickRationale, e: dict, narr: dict) -> str:
             v = fscore.get(key)
             if v is not None:
                 rows_subscore.append((label, f"{float(v):.1f}"))
+    if snap:
+        cs = snap.get("can_slim_score")
+        if cs is not None:
+            try:
+                csf = float(cs)
+                tag = (
+                    "elite" if csf >= 20 else
+                    "strong" if csf >= 15 else
+                    "watch" if csf >= 10 else "weak"
+                )
+                rows_subscore.append(("CANSLIM (O'Neil, /25)", f"{csf:.1f} ({tag})"))
+            except (TypeError, ValueError):
+                pass
+        mv = snap.get("minervini_score")
+        if mv is not None:
+            try:
+                rows_subscore.append(("Minervini Trend (/8)", f"{float(mv):.1f}"))
+            except (TypeError, ValueError):
+                pass
 
     def _table(rows):
         if not rows:
@@ -1368,7 +3485,7 @@ def _stock_card_html(idx: int, p: PickRationale, e: dict, narr: dict) -> str:
             f"</ul>"
         )
 
-    # Corporate events + insider activity
+    # Corporate events + insider activity + bulk/block deals + upcoming calendar
     news_bits = []
     for ev in events[:6]:
         news_bits.append(
@@ -1382,10 +3499,33 @@ def _stock_card_html(idx: int, p: PickRationale, e: dict, narr: dict) -> str:
             f"{h(str(ins['category'] or ''))}: {h(str(ins['entity'] or ''))} "
             f"(₹{_nz(ins['value_cr'])} Cr)</li>"
         )
+    for bd in bulk_deals[:6]:
+        try:
+            val_cr = (float(bd.get('qty') or 0) * float(bd.get('price') or 0)) / 1e7
+        except (TypeError, ValueError):
+            val_cr = 0
+        news_bits.append(
+            f"<li><span style='color:#0891b2;font-weight:600'>{h(str(bd['deal_date']))}</span> "
+            f"— {h(str(bd.get('deal_type') or 'DEAL'))} ({h(str(bd.get('side') or '')).upper()}): "
+            f"{h(str(bd.get('entity') or ''))} · "
+            f"{_nz(bd.get('qty'),'{:,.0f}')} @ ₹{_nz(bd.get('price'),'{:.2f}')} "
+            f"(≈ ₹{val_cr:,.1f} Cr)</li>"
+        )
+    if upcoming:
+        for ue in upcoming[:5]:
+            news_bits.append(
+                f"<li><span style='color:#16a34a;font-weight:600'>🗓 {h(str(ue['event_date']))}</span> "
+                f"— UPCOMING {h(str(ue.get('event_type') or ''))}: {h(str(ue.get('detail') or ''))[:140]}</li>"
+            )
     news_html = (
         f"<ul class='rotation-context-list' style='font-size:12px'>{''.join(news_bits)}</ul>"
         if news_bits else
-        "<p style='color:#64748b;font-size:12px;margin:0'>No corporate events or insider transactions in last 90 days.</p>"
+        "<p style='color:#64748b;font-size:12px;margin:0'>"
+        "No corporate events, insider transactions, bulk/block deals, or upcoming-calendar items "
+        "found in the last 90 days across <code>signals.corporate_events</code>, "
+        "<code>signals.insider_alerts</code>, <code>signals.bulk_block_deals</code>, "
+        "<code>signals.v_upcoming_events</code>."
+        "</p>"
     )
 
     headline_metrics = []
@@ -1429,104 +3569,402 @@ def _stock_card_html(idx: int, p: PickRationale, e: dict, narr: dict) -> str:
             return "<ul style='margin:4px 0;padding-left:18px'>" + "".join(f"<li>{h(str(x))}</li>" for x in v) + "</ul>"
         return f"<p>{h(str(v or '—'))}</p>"
 
-    return f"""
-<div class="card" id="pick-{idx}" style="border-left:4px solid #1e3a5f">
-  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
-    <h2 style="margin:0;font-size:1.2rem;color:#1e3a5f">{idx}. {h(p.symbol)}</h2>
-    <span class="mbadge mbadge-data">{h(p.sector)}</span>
-    {src_badge}
-    {conv_badge}
-  </div>
-  <div class="metrics-row" style="margin-bottom:14px">{headline_html}</div>
+    # ---- Targets / Risk / Reward block ----
+    def _fmt_money(v):
+        try: return f"₹{float(v):,.0f}"
+        except (TypeError, ValueError): return "—"
+    def _fmt_rr(v):
+        try: return f"{float(v):.2f}×"
+        except (TypeError, ValueError): return "—"
+    risk_score = narr.get("risk_score_0_10")
+    try: risk_score_n = float(risk_score) if risk_score is not None else None
+    except (TypeError, ValueError): risk_score_n = None
+    risk_tier = narr.get("risk_tier") or (
+        "LOW" if risk_score_n is not None and risk_score_n <= 3 else
+        "MEDIUM" if risk_score_n is not None and risk_score_n <= 6 else
+        "HIGH" if risk_score_n is not None else ""
+    )
+    risk_color = {"LOW": "#16a34a", "MEDIUM": "#d97706", "HIGH": "#b91c1c"}.get(risk_tier, "#64748b")
 
-  <div class="overview-grid">
-    <div class="summary-card" style="background:#fafbfd">
-      <h3>Investment Thesis</h3>
-      <p style="margin-bottom:8px">{h(narr.get('thesis', '—'))}</p>
+    rr_rows = [
+        ("Entry zone (low–high)",
+         f"{_fmt_money(rr.get('entry_low'))} – {_fmt_money(rr.get('entry_high'))}" if rr else "—"),
+        ("Stop loss", _fmt_money(narr.get('stop_loss') if narr.get('stop_loss') is not None else (rr or {}).get('stop_loss'))),
+        ("Target 2M", _fmt_money(narr.get('potential_target_short_term') if narr.get('potential_target_short_term') is not None else (rr or {}).get('target_2m'))),
+        ("Target 4M", _fmt_money(narr.get('target_4m') if narr.get('target_4m') is not None else (rr or {}).get('target_4m'))),
+        ("Target 6M", _fmt_money(narr.get('potential_target_long_term') if narr.get('potential_target_long_term') is not None else (rr or {}).get('target_6m'))),
+        ("Reward / Risk (4M)", _fmt_rr(narr.get('risk_reward_ratio') if narr.get('risk_reward_ratio') is not None else (rr or {}).get('rr_ratio_4m'))),
+        ("Reward / Risk (6M)", _fmt_rr((rr or {}).get('rr_ratio_6m'))),
+        ("Risk per share", _fmt_money((rr or {}).get('risk_per_share'))),
+        ("Suggested position size", f"{narr.get('position_size_pct') or (rr or {}).get('position_size_pct') or '—'}% of portfolio"),
+    ]
+    risk_factors = narr.get("risk_factors") or (rr or {}).get("risk_factors") or []
+    risk_factors_html = (
+        f"<p style='margin:6px 0 0 0;font-size:11px;color:#64748b'>"
+        f"Risk score breakdown: {h(' · '.join(map(str, risk_factors)))}</p>"
+        if risk_factors else ""
+    )
+    rr_card_html = (
+        "<div class='overview-grid' style='margin-top:12px'>"
+        "<div class='summary-card' style='background:#fff7ed'>"
+        "<h3>🎯 Targets &amp; Risk/Reward</h3>"
+        f"{_table(rr_rows)}{risk_factors_html}"
+        "</div>"
+        "<div class='summary-card' style='background:#fef2f2'>"
+        "<h3>🛡️ Risk Score</h3>"
+        f"<div style='font-size:36px;font-weight:800;color:{risk_color};line-height:1.1'>"
+        f"{(f'{risk_score_n:.1f}' if risk_score_n is not None else '—')} <span style='font-size:18px'>/ 10</span></div>"
+        f"<div style='margin-top:4px;font-size:13px;color:{risk_color};font-weight:700'>{h(risk_tier)}</div>"
+        "<p style='margin-top:8px;font-size:12px;color:#475569'>"
+        "0–3 LOW · 4–6 MEDIUM · 7–10 HIGH. Blends ATR-volatility, distance-from-high, RSI, "
+        "Weinstein stage, Altman Z / Beneish M, debt trend &amp; OCF/PAT quality.</p>"
+        "</div></div>"
+    )
 
-      <h3 style="color:#1d4ed8;margin-top:10px">Technical View</h3>
-      <p style="margin-bottom:8px;font-size:13px">{h(narr.get('technical_view', '—'))}</p>
-
-      <h3 style="color:#0f766e;margin-top:10px">Fundamental View</h3>
-      <p style="margin-bottom:8px;font-size:13px">{h(narr.get('fundamental_view', '—'))}</p>
-
-      <h3 style="color:#7c3aed;margin-top:10px">Sector View</h3>
-      <p style="margin-bottom:8px;font-size:13px">{h(narr.get('sector_view', '—'))}</p>
-
-      <h3 style="color:#d97706;margin-top:10px">Valuation</h3>
-      <p style="margin-bottom:8px;font-size:13px">{h(narr.get('valuation_note', '—'))}</p>
-
-      <h3 style="color:#16a34a;margin-top:10px">Key Catalysts</h3>
-      {_list_or_text(narr.get('key_catalysts'))}
-
-      <h3 style="color:#b91c1c;margin-top:10px">Key Risks</h3>
-      {_list_or_text(narr.get('key_risks'))}
-
-      <h3 style="color:#047857;margin-top:10px">Action</h3>
-      <p>{h(narr.get('action', '—'))}</p>
-
-      {f'<p style="margin-top:8px;font-size:11px;color:#64748b"><em>Conviction:</em> <strong style="color:{conv_color}">{h(conv)}</strong> — {h(narr.get("conviction_rationale", ""))}</p>' if conv else ''}
-      <p style="margin-top:6px;font-size:11px;color:#64748b"><em>Why selected:</em> {h(p.rationale)}</p>
-    </div>
-    <div class="summary-card">
-      <h3>Snapshot</h3>
-      <ul class="rotation-context-list">
-        <li>Stage: <strong>{h(snap.get('stage') or '—')}</strong> (score {_nz(snap.get('stage_score'))})</li>
-        <li>Trading signal: <strong>{h(snap.get('trading_signal') or '—')}</strong></li>
-        <li>Supertrend: {h(snap.get('supertrend_state') or '—')} around ₹{_nz(snap.get('supertrend_value'))}</li>
-        <li>Tech score {_nz(snap.get('technical_score'))} / Fund score {_nz(snap.get('enhanced_fund_score'))}</li>
-        <li>1D {_pct(snap.get('change_1d_pct'))} · 1W {_pct(snap.get('change_1w_pct'))} · 1M {_pct(snap.get('change_1m_pct'))}</li>
-      </ul>
-      <h3 style="margin-top:12px">Sector Context</h3>
-      {sector_html or '<p style="color:#64748b;font-size:12px;margin:0">No sector aggregate available.</p>'}
-    </div>
-  </div>
-
-  <div class="overview-grid" style="margin-top:12px">
-    <div class="summary-card">
-      <h3>Technicals</h3>
-      {_table(rows_tech) if rows_tech else f'<p style="color:#b45309">{h(tech.get("error", "no data"))}</p>'}
-    </div>
-    <div class="summary-card">
-      <h3>Fundamental Scores</h3>
-      {_table(rows_fund) if rows_fund else '<p style="color:#64748b">No fundamentals row in scores.fundamentals.</p>'}
-      {('<h4 style="margin-top:10px;color:#475569">Sub-Scores</h4>' + _table(rows_subscore)) if rows_subscore else ''}
-    </div>
-  </div>
-
-  <div class="overview-grid" style="margin-top:12px">
-    <div class="summary-card">
-      <h3>Latest Quarterly Results</h3>
-      {qtr_html or '<p style="color:#64748b">No quarterly data.</p>'}
-    </div>
-    <div class="summary-card">
-      <h3>5-Year Annual Trajectory</h3>
-      {ann_html or '<p style="color:#64748b">No annual data.</p>'}
-    </div>
-  </div>
-
-  <div class="overview-grid" style="margin-top:12px">
-    <div class="summary-card">
-      <h3>Balance Sheet (3Y)</h3>
-      {bs_html or '<p style="color:#64748b">No BS data.</p>'}
-    </div>
-    <div class="summary-card">
-      <h3>Cash Flow (3Y) &amp; Quality</h3>
-      {cf_html or '<p style="color:#64748b">No CF data.</p>'}
-    </div>
-  </div>
-
-  <div class="overview-grid" style="margin-top:12px">
-    <div class="summary-card">
-      <h3>Recent Corporate Events &amp; Insider Activity (90d)</h3>
-      {news_html}
-    </div>
-    <div class="summary-card">
-      <h3>Latest Filings Snapshot</h3>
-      {filings_html or '<p style="color:#64748b;font-size:12px;margin:0">No filing summaries.</p>'}
-    </div>
-  </div>
+    # ── Candlestick + volume + S/R + targets chart (6-month)
+    candlestick_html = ""
+    if isinstance(tech, dict) and tech.get("chart"):
+        candle_svg = _svg_candlestick(
+            tech["chart"],
+            symbol=p.symbol,
+            entry_low=rr.get("entry_low"),
+            entry_high=rr.get("entry_high"),
+            stop=narr.get("stop_loss") or rr.get("stop_loss"),
+            t1=narr.get("potential_target_short_term") or rr.get("target_2m"),
+            t2=narr.get("target_4m") or rr.get("target_4m"),
+            t3=narr.get("potential_target_long_term") or rr.get("target_6m"),
+        )
+        pv = tech["chart"].get("pivots") or {}
+        sup = tech["chart"].get("support_levels") or []
+        res = tech["chart"].get("resistance_levels") or []
+        meta_bits = []
+        if sup: meta_bits.append("Support: " + " · ".join(f"₹{float(v):,.0f}" for v in sup))
+        if res: meta_bits.append("Resistance: " + " · ".join(f"₹{float(v):,.0f}" for v in res))
+        if pv:  meta_bits.append(
+            f"Pivots — PP ₹{pv['PP']:,.0f} · R1 ₹{pv['R1']:,.0f} · R2 ₹{pv['R2']:,.0f} · "
+            f"S1 ₹{pv['S1']:,.0f} · S2 ₹{pv['S2']:,.0f}"
+        )
+        meta_html = (f'<div style="margin-top:8px;font-size:.75rem;color:#475569;line-height:1.6">'
+                     f'{"<br>".join(meta_bits)}</div>') if meta_bits else ""
+        legend_chips = (
+            '<div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;font-size:.7rem;'
+            'font-weight:700;letter-spacing:.04em;color:#fff">'
+            '<span style="background:#ffb74d;padding:3px 8px;border-radius:3px">EMA 20</span>'
+            '<span style="background:#42a5f5;padding:3px 8px;border-radius:3px">EMA 50</span>'
+            '<span style="background:#ab47bc;padding:3px 8px;border-radius:3px">EMA 200</span>'
+            '<span style="background:#26a69a;padding:3px 8px;border-radius:3px">Support</span>'
+            '<span style="background:#ef5350;padding:3px 8px;border-radius:3px">Resistance</span>'
+            '<span style="background:#42a5f5;padding:3px 8px;border-radius:3px">Entry zone</span>'
+            '<span style="background:#ef4444;padding:3px 8px;border-radius:3px">Stop</span>'
+            '<span style="background:#2dd4bf;padding:3px 8px;border-radius:3px">T1 (2M)</span>'
+            '<span style="background:#22c55e;padding:3px 8px;border-radius:3px">T2 (4M)</span>'
+            '<span style="background:#a78bfa;padding:3px 8px;border-radius:3px">T3 (6M)</span>'
+            '<span style="background:#a78bfa;padding:3px 8px;border-radius:3px">POC (Vol Profile)</span>'
+            '<span style="background:#e879f9;padding:3px 8px;border-radius:3px">RSI 14</span>'
+            '</div>'
+        )
+        chart_narr = (narr.get("chart_narrative") or "").strip()
+        chart_narr_html = (
+            f'<div style="margin-top:12px;padding:12px 14px;background:#0b0e14;'
+            f'border:1px solid #1e222d;border-left:3px solid #42a5f5;border-radius:6px">'
+            f'<div style="font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;'
+            f'font-weight:800;color:#42a5f5;margin-bottom:6px">🤖 Chart Narrative · AI Read</div>'
+            f'<div style="font-size:.82rem;color:#d1d4dc;line-height:1.6">{h(chart_narr)}</div>'
+            f'</div>'
+        ) if chart_narr else ""
+        candlestick_html = f"""
+<div class="tp-sub" style="margin-top:12px;background:#0f1218;border-color:#1e222d">
+  <h4 style="color:#d1d4dc"><span class="ico">📈</span> 6-Month Price Action — TradingView-style: Candles · EMAs · Volume · RSI · S/R · Pivots · Volume Profile · Entry/Stop/Targets</h4>
+  {candle_svg}
+  {legend_chips}
+  {chart_narr_html}
+  <div style="margin-top:8px;font-size:.75rem;color:#9ca3af;line-height:1.6">{"<br>".join(meta_bits)}</div>
 </div>
+"""
+    # ── Mini chart bars: quarterly revenue/PAT and annual revenue
+    qtr_chart = ""
+    if qtr:
+        q4 = list(reversed(qtr[:4]))
+        qtr_chart = _svg_bar_chart(
+            labels=[q.get("period_label","")[-6:] for q in q4],
+            series=[
+                ("Revenue (₹ Cr)", [q.get("revenue") for q in q4]),
+                ("PAT (₹ Cr)",     [q.get("pat") for q in q4]),
+            ],
+            colors=["#2563eb", "#0f766e"],
+            height=130,
+        )
+    ann_chart = ""
+    if ann:
+        a5 = list(reversed(ann[:5]))
+        ann_chart = _svg_bar_chart(
+            labels=[a.get("period_label","")[-6:] for a in a5],
+            series=[("Revenue (₹ Cr)", [a.get("revenue") for a in a5])],
+            colors=["#7c3aed"],
+            height=130,
+        )
+    # Returns sparkline (use 1M/3M/6M/1Y as a 4-point line)
+    ret_spark = ""
+    if "error" not in tech:
+        ret_vals = [tech.get('ret_1m'), tech.get('ret_3m'), tech.get('ret_6m'), tech.get('ret_1y')]
+        ret_spark = _svg_sparkline(ret_vals, color="#16a34a", fill="rgba(22,163,74,.12)")
+
+    # Sub-score horizontal bars
+    subscore_bars = ""
+    sub_defs = [
+        ("Earnings Quality", "earnings_quality", 10),
+        ("Sales Growth",     "sales_growth", 10),
+        ("Financial Strength","financial_strength", 10),
+        ("Institutional",     "institutional_backing", 10),
+        ("Composite",         "enhanced_fund_score", 100),
+    ]
+    bars = []
+    if fscore:
+        for lbl, key, mx in sub_defs:
+            v = fscore.get(key)
+            try: vf = float(v) if v is not None else None
+            except (TypeError, ValueError): vf = None
+            bars.append(_hbar(lbl, vf, mx, color_hint="auto"))
+    # CANSLIM (O'Neil) + Minervini Trend from stage_snapshots
+    if snap:
+        cs = snap.get("can_slim_score")
+        try: cs_f = float(cs) if cs is not None else None
+        except (TypeError, ValueError): cs_f = None
+        if cs_f is not None:
+            bars.append(_hbar("CANSLIM (O'Neil)", cs_f, 25, color_hint="auto"))
+        mv = snap.get("minervini_score")
+        try: mv_f = float(mv) if mv is not None else None
+        except (TypeError, ValueError): mv_f = None
+        if mv_f is not None:
+            bars.append(_hbar("Minervini Trend", mv_f, 8, color_hint="auto"))
+    if bars:
+        subscore_bars = "".join(bars)
+
+    # Risk gauge SVG
+    risk_gauge_svg = _svg_gauge(risk_score_n) if risk_score_n is not None else ""
+
+    # Targets ladder
+    last_price = None
+    try: last_price = float((snap or {}).get("price") or tech.get("last"))
+    except (TypeError, ValueError): pass
+    targets_ladder = _svg_targets(
+        last=last_price,
+        entry_low=rr.get("entry_low"), entry_high=rr.get("entry_high"),
+        stop=narr.get("stop_loss") or rr.get("stop_loss"),
+        t1=narr.get("potential_target_short_term") or rr.get("target_2m"),
+        t2=narr.get("target_4m") or rr.get("target_4m"),
+        t3=narr.get("potential_target_long_term") or rr.get("target_6m"),
+    )
+
+    # KPI hero tiles
+    kpi_tiles_html = ""
+    if snap:
+        change_1m = snap.get('change_1m_pct')
+        try: ch_1m = float(change_1m) if change_1m is not None else None
+        except (TypeError, ValueError): ch_1m = None
+        ch_cls = "green" if (ch_1m or 0) > 0 else "red" if (ch_1m or 0) < 0 else ""
+        rs_val_k = snap.get('relative_strength')
+        try: rs_k = float(rs_val_k) if rs_val_k is not None else None
+        except (TypeError, ValueError): rs_k = None
+        rs_cls = "green" if (rs_k or 0) > 5 else "amber" if (rs_k or 0) > 0 else "red"
+        inv_v = snap.get('investment_score')
+        try: inv_n = float(inv_v) if inv_v is not None else None
+        except (TypeError, ValueError): inv_n = None
+        inv_cls = "green" if (inv_n or 0) >= 70 else "amber" if (inv_n or 0) >= 50 else "red"
+
+        tiles = [
+            ("green" if (ch_1m or 0) > 0 else "red" if (ch_1m or 0) < 0 else "",
+             "Price", f"₹{_nz(snap.get('price'))}",
+             f"1M {_pct(ch_1m)}" if ch_1m is not None else ""),
+            (inv_cls, "Investment Score", _nz(inv_n) if inv_n is not None else "—",
+             f"Tech {_nz(snap.get('technical_score'))} · Fund {_nz(snap.get('enhanced_fund_score'))}"),
+            (rs_cls, "Relative Strength", _pct(rs_k), "vs Nifty 500"),
+            ("violet", "Stage", h(snap.get('stage') or '—'),
+             f"Stance: {h(snap.get('stance') or '—')}"),
+            (("green" if risk_tier=="LOW" else "amber" if risk_tier=="MEDIUM" else "red" if risk_tier=="HIGH" else ""),
+             "Risk Score", (f"{risk_score_n:.1f}/10" if risk_score_n is not None else "—"),
+             risk_tier or ""),
+            ("green",
+             "6M Target",
+             (f"₹{float(narr.get('potential_target_long_term') or rr.get('target_6m') or 0):,.0f}"
+              if (narr.get('potential_target_long_term') or rr.get('target_6m')) else "—"),
+             f"RR {_fmt_rr(narr.get('risk_reward_ratio') or rr.get('rr_ratio_4m'))}"),
+        ]
+        kpi_tiles_html = "".join(
+            f'<div class="tp-kpi-tile {cls}"><div class="lbl">{h(lbl)}</div>'
+            f'<div class="val">{val}</div><div class="sub">{sub}</div></div>'
+            for cls, lbl, val, sub in tiles
+        )
+
+    # Narrative blocks
+    def _narr_blk(cls, label, icon, value):
+        if not value: return ""
+        if isinstance(value, list):
+            body = "<ul>" + "".join(f"<li>{h(str(x))}</li>" for x in value) + "</ul>"
+        else:
+            body = f"<p>{h(str(value))}</p>"
+        return f'<div class="blk {cls}"><h5>{icon} {h(label)}</h5>{body}</div>'
+
+    # Street View / Analyst consensus (collapsible per stock)
+    street_view = (narr.get("street_view") or "").strip()
+    street_html = ""
+    if street_view:
+        street_html = (
+            "<details class='tp-street' style='margin-top:10px;border:1px solid #e2e8f0;"
+            "border-radius:10px;padding:10px 14px;background:#f8fafc'>"
+            "<summary style='cursor:pointer;font-weight:700;color:#0f172a;font-size:.92rem;list-style:none'>"
+            "🏛️ Street View &amp; Analyst Consensus "
+            "<span style='font-weight:400;color:#64748b;font-size:.75rem'>(synthesised — no live broker feed)</span>"
+            "</summary>"
+            f"<p style='margin:8px 0 0;color:#334155;font-size:.85rem;line-height:1.55'>{h(street_view)}</p>"
+            "</details>"
+        )
+
+    narr_blocks_html = "".join([
+        _narr_blk("", "Thesis", "💡", narr.get("thesis")),
+        _narr_blk("tech", "Technical View", "📈", narr.get("technical_view")),
+        _narr_blk("fund", "Fundamental View", "🏦", narr.get("fundamental_view")),
+        _narr_blk("sector", "Sector View", "🧭", narr.get("sector_view")),
+        _narr_blk("val", "Valuation", "💰", narr.get("valuation_note")),
+        _narr_blk("cat", "Key Catalysts", "🚀", narr.get("key_catalysts")),
+        _narr_blk("risk", "Key Risks", "⚠️", narr.get("key_risks")),
+        _narr_blk("act", "Action", "🎯", narr.get("action")),
+    ])
+
+    # Conviction chip
+    conv_cls = {"HIGH":"green","MEDIUM":"amber","LOW":"slate"}.get(conv, "slate")
+    src_label = {"dual":"Dual-Confirmed","sector_rot":"Sector Leader","stage2":"Stage 2"}.get(p.source, p.source or "")
+    src_cls = {"dual":"green","sector_rot":"blue","stage2":"violet"}.get(p.source, "slate")
+    risk_chip_cls = {"LOW":"green","MEDIUM":"amber","HIGH":"red"}.get(risk_tier, "slate")
+
+    # Tech KV table
+    def _kv(rows):
+        if not rows: return ""
+        body = "".join(f"<tr><td>{h(str(k))}</td><td>{h(str(v))}</td></tr>" for k, v in rows)
+        return f"<table class='tp-tbl tp-kv'><tbody>{body}</tbody></table>"
+
+    return f"""
+<section class="tp-card" id="pick-{idx}">
+  <div class="stripe"></div>
+  <div class="tp-card-hd">
+    <div class="tp-card-num">{idx}</div>
+    <div style="flex:1 1 220px">
+      <h2 class="tp-card-name">{h(p.symbol)} <small>· {h(p.sector)}</small></h2>
+      <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px">
+        <span class="tp-chip {src_cls}">{h(src_label)}</span>
+        {f'<span class="tp-chip {conv_cls}">Conviction: {h(conv)}</span>' if conv else ''}
+        {f'<span class="tp-chip {risk_chip_cls}">Risk: {h(risk_tier)}</span>' if risk_tier else ''}
+        <span class="tp-chip blue">Signal: {h(snap.get('trading_signal') or '—')}</span>
+        <span class="tp-chip slate">Supertrend: {h(snap.get('supertrend_state') or '—')}</span>
+      </div>
+    </div>
+    <div style="width:170px;flex:0 0 auto">{ret_spark}</div>
+  </div>
+
+  <div class="tp-card-bd">
+    <div class="tp-kpi-row">{kpi_tiles_html}</div>
+
+    {candlestick_html}
+
+    <div class="tp-narr">{narr_blocks_html}</div>
+
+    {street_html}
+
+    <div class="tp-grid">
+      <div class="tp-sub">
+        <h4><span class="ico">T</span> Technicals</h4>
+        {_kv(rows_tech) if rows_tech else f'<p style="color:#b45309;margin:0">{h(tech.get("error","no data"))}</p>'}
+      </div>
+      <div class="tp-sub teal">
+        <h4><span class="ico">F</span> Fundamental Scores</h4>
+        {_kv(rows_fund) if rows_fund else '<p style="color:#64748b;margin:0">No fundamentals row.</p>'}
+      </div>
+      <div class="tp-sub" style="background:#f5f3ff;border-color:#ddd6fe">
+        <h4 style="color:#5b21b6"><span class="ico" style="background:#7c3aed">Q</span> Quality Score Breakdown</h4>
+        {subscore_bars if subscore_bars else '<p style="color:#64748b;margin:0">No sub-scores available.</p>'}
+        <p style="margin-top:8px;font-size:.7rem;color:#6b7280;line-height:1.5">
+          Component sub-scores feeding the composite. Earnings Quality, Sales Growth,
+          Financial Strength and Institutional Backing are each on a 0–10 scale;
+          Composite is the blended 0–100 enhanced fundamental score.
+        </p>
+      </div>
+      <div class="tp-sub" style="background:#fffbeb">
+        <h4><span class="ico">$</span> Valuation</h4>
+        {_kv(rows_val) if rows_val else '<p style="color:#64748b;margin:0">No valuation inputs.</p>'}
+        <p style="margin-top:8px;font-size:.7rem;color:#64748b;line-height:1.5">
+          P/E is derived as <code>price ÷ EPS (TTM proxy)</code> from <code>scores.fundamentals.ratios_summary</code>.
+          Forward multiples (P/B, EV/EBITDA, div yield) not currently in dataset.
+        </p>
+      </div>
+      <div class="tp-sub violet">
+        <h4><span class="ico">S</span> Sector Context</h4>
+        {sector_html or '<p style="color:#64748b;margin:0">No sector aggregate.</p>'}
+      </div>
+    </div>
+
+    <div class="tp-grid">
+      <div class="tp-sub warn" style="grid-column:span 2">
+        <h4><span class="ico">🎯</span> Targets &amp; Risk / Reward</h4>
+        {targets_ladder}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px">
+          {_kv(rr_rows[:5])}
+          {_kv(rr_rows[5:])}
+        </div>
+        {risk_factors_html}
+      </div>
+      <div class="tp-sub bad">
+        <h4><span class="ico">🛡</span> Risk Score</h4>
+        <div class="tp-gauge">
+          <div style="flex:1">{risk_gauge_svg}</div>
+          <div>
+            <div class="tp-gauge-num" style="color:{risk_color}">{(f'{risk_score_n:.1f}' if risk_score_n is not None else '—')}<small> / 10</small></div>
+            <div class="tp-gauge-tier" style="color:{risk_color}">{h(risk_tier)}</div>
+          </div>
+        </div>
+        <p style="margin-top:8px;font-size:.72rem;color:#64748b;line-height:1.5">
+          0–3 LOW · 4–6 MEDIUM · 7–10 HIGH. Blends ATR-volatility, distance-from-high, RSI, Weinstein stage, Altman Z / Beneish M, debt &amp; OCF quality.
+        </p>
+      </div>
+    </div>
+
+    <div class="tp-grid">
+      <div class="tp-sub">
+        <h4><span class="ico">Q</span> Latest Quarterly Results</h4>
+        {qtr_chart}
+        {qtr_html or '<p style="color:#64748b">No quarterly data.</p>'}
+      </div>
+      <div class="tp-sub">
+        <h4><span class="ico">A</span> 5-Year Annual Trajectory</h4>
+        {ann_chart}
+        {ann_html or '<p style="color:#64748b">No annual data.</p>'}
+      </div>
+    </div>
+
+    <div class="tp-grid">
+      <div class="tp-sub">
+        <h4><span class="ico">B</span> Balance Sheet (3Y)</h4>
+        {bs_html or '<p style="color:#64748b">No BS data.</p>'}
+      </div>
+      <div class="tp-sub">
+        <h4><span class="ico">C</span> Cash Flow (3Y) &amp; Quality</h4>
+        {cf_html or '<p style="color:#64748b">No CF data.</p>'}
+      </div>
+    </div>
+
+    <div class="tp-grid">
+      <div class="tp-sub">
+        <h4><span class="ico">N</span> Corporate Events &amp; Insider Activity (90d)</h4>
+        {news_html}
+      </div>
+      <div class="tp-sub">
+        <h4><span class="ico">📄</span> Latest Filings Snapshot</h4>
+        {filings_html or '<p style="color:#64748b;font-size:12px;margin:0">No filing summaries.</p>'}
+      </div>
+    </div>
+
+    {f'<p style="margin-top:14px;font-size:.72rem;color:#64748b;border-top:1px dashed #e2e8f0;padding-top:8px"><strong>Why selected:</strong> {h(p.rationale)} · <em>{h(narr.get("conviction_rationale",""))}</em></p>' if narr else ''}
+  </div>
+</section>
 """
 
 
@@ -1539,83 +3977,166 @@ def render_html(snap_date: str, picks: list[PickRationale], enriched: list[dict]
     # Executive summary brief card (same look as sector rotation Market Brief)
     exec_summary = narratives.get("executive_summary", "")
     portfolio_text = narratives.get("portfolio_construction", "")
-
-    brief_html = ""
-    if exec_summary or portfolio_text:
-        brief_blocks = []
-        if exec_summary:
-            brief_blocks.append(
-                f'<div class="brief-block"><div class="brief-label">Executive Summary</div>'
-                f'<div class="brief-text">{h(exec_summary)}</div></div>'
-            )
-        if macro_context:
-            brief_blocks.append(
-                f'<div class="brief-block"><div class="brief-label">Macro Context</div>'
-                f'<div class="brief-text">{h(macro_context)}</div></div>'
-            )
-        if portfolio_text:
-            brief_blocks.append(
-                f'<div class="brief-block"><div class="brief-label">Portfolio Construction</div>'
-                f'<div class="brief-text">{h(portfolio_text)}</div></div>'
-            )
-        top_conv = narratives.get("top_conviction_picks") or []
-        if top_conv:
-            brief_blocks.append(
-                f'<div class="brief-block"><div class="brief-label">Top Conviction</div>'
-                f'<div class="brief-text">{h(" · ".join(top_conv))}</div></div>'
-            )
-        sec_note = narratives.get("sector_concentration_note")
-        if sec_note:
-            brief_blocks.append(
-                f'<div class="brief-block"><div class="brief-label">Sector Concentration</div>'
-                f'<div class="brief-text">{h(sec_note)}</div></div>'
-            )
-        sector_counts: dict[str, int] = {}
-        for p in picks:
-            sector_counts[p.sector] = sector_counts.get(p.sector, 0) + 1
-        spread = " · ".join(f"{s}: {c}" for s, c in sorted(sector_counts.items(), key=lambda x: -x[1]))
-        if spread:
-            brief_blocks.append(
-                f'<div class="brief-block"><div class="brief-label">Sector Spread</div>'
-                f'<div class="brief-text">{h(spread)}</div></div>'
-            )
-        brief_html = (
-            '<div class="content" style="padding-top:0;padding-bottom:0">'
-            '<div class="brief-card"><div class="brief-title">Investment Brief</div>'
-            f'<div class="brief-grid">{"".join(brief_blocks)}</div></div></div>'
-        )
-
-    # Pick summary table
     per_stock_narr = narratives.get("per_stock", {})
+
+    # Aggregate KPIs across all picks
+    rs_vals = _safe_floats([(e.get("snapshot") or {}).get("relative_strength") for e in enriched])
+    inv_vals = _safe_floats([(e.get("snapshot") or {}).get("investment_score") for e in enriched])
+    risk_vals = _safe_floats([
+        ((per_stock_narr.get(p.symbol, {}).get("risk_score_0_10"))
+         or (e.get("risk_reward") or {}).get("risk_score"))
+        for p, e in zip(picks, enriched)
+    ])
+    upside_vals = []
+    for p, e in zip(picks, enriched):
+        n = per_stock_narr.get(p.symbol, {})
+        rr_i = e.get("risk_reward") or {}
+        tgt = n.get("potential_target_long_term") or rr_i.get("target_6m")
+        last = (e.get("snapshot") or {}).get("price") or (e.get("tech") or {}).get("last")
+        try:
+            if tgt is not None and last is not None and float(last) > 0:
+                upside_vals.append((float(tgt)-float(last))/float(last)*100)
+        except (TypeError, ValueError):
+            pass
+
+    def _avg(vs): return sum(vs)/len(vs) if vs else None
+    avg_rs = _avg(rs_vals)
+    avg_inv = _avg(inv_vals)
+    avg_risk = _avg(risk_vals)
+    avg_up = _avg(upside_vals)
+
+    dual_n = sum(1 for p in picks if p.source == "dual")
+    high_conv = sum(1 for p in picks
+                    if (per_stock_narr.get(p.symbol, {}).get("conviction") or "").upper() == "HIGH")
+
+    hero_kpis = "".join([
+        f'<div class="tp-kpi"><div class="tp-kpi-lbl">Picks</div>'
+        f'<div class="tp-kpi-val">{len(picks)}</div>'
+        f'<div class="tp-kpi-sub">{dual_n} dual-confirmed</div></div>',
+        f'<div class="tp-kpi"><div class="tp-kpi-lbl">Avg Inv. Score</div>'
+        f'<div class="tp-kpi-val">{avg_inv:.0f}</div>'
+        f'<div class="tp-kpi-sub">across portfolio</div></div>' if avg_inv is not None else '',
+        f'<div class="tp-kpi"><div class="tp-kpi-lbl">Avg RS %</div>'
+        f'<div class="tp-kpi-val">{avg_rs:+.1f}%</div>'
+        f'<div class="tp-kpi-sub">vs Nifty 500</div></div>' if avg_rs is not None else '',
+        f'<div class="tp-kpi"><div class="tp-kpi-lbl">Avg 12M Upside</div>'
+        f'<div class="tp-kpi-val">{avg_up:+.0f}%</div>'
+        f'<div class="tp-kpi-sub">computed targets</div></div>' if avg_up is not None else '',
+        f'<div class="tp-kpi"><div class="tp-kpi-lbl">Avg Risk Score</div>'
+        f'<div class="tp-kpi-val">{avg_risk:.1f}<span style="font-size:.9rem;color:#cbd5e1">/10</span></div>'
+        f'<div class="tp-kpi-sub">0=low · 10=high</div></div>' if avg_risk is not None else '',
+        f'<div class="tp-kpi"><div class="tp-kpi-lbl">High Conviction</div>'
+        f'<div class="tp-kpi-val">{high_conv}</div>'
+        f'<div class="tp-kpi-sub">of {len(picks)} picks</div></div>',
+    ])
+
+    hero_html = f"""
+<section class="tp-hero">
+  <div class="tp-hero-row">
+    <div>
+      <div class="tp-hero-kicker">{h(AGENT_BRAND)} · Equity Research</div>
+      <h1 class="tp-hero-title">Top Investment Picks Analysis</h1>
+      <p class="tp-hero-sub">Highest-conviction names merged from the Sector Rotation Report and Stage 2 Tracker, with deep technical · fundamental · risk-reward analysis and LLM-narrated investment thesis.</p>
+      <div class="tp-hero-meta">
+        <span class="tp-pill blue">Report Date · {h(snap_date)}</span>
+        <span class="tp-pill green">{len(picks)} picks</span>
+        <span class="tp-pill violet">{dual_n} dual-confirmed</span>
+        <span class="tp-pill amber">Generated {datetime.now().strftime('%d %b %Y %H:%M IST')}</span>
+      </div>
+    </div>
+    {logo_html if logo_html else ''}
+  </div>
+  <div class="tp-kpis">{hero_kpis}</div>
+</section>
+"""
+
+    # Sticky TOC
+    toc_links = "".join(
+        f'<a href="#pick-{i}"><span class="num">{i}</span> {h(p.symbol)}</a>'
+        for i, p in enumerate(picks, 1)
+    )
+    toc_html = f'<nav class="tp-toc"><span class="tp-toc-title">Jump to:</span>{toc_links}</nav>'
+
+    # Sector donut card
+    sector_counts: dict[str, int] = {}
+    for p in picks:
+        sector_counts[p.sector] = sector_counts.get(p.sector, 0) + 1
+    sector_slices = sorted(sector_counts.items(), key=lambda x: -x[1])
+    donut_svg = _svg_donut([(s, c) for s, c in sector_slices])
+    legend_palette = ["#2563eb","#0f766e","#d97706","#7c3aed","#0891b2","#16a34a","#b91c1c","#475569","#db2777","#65a30d"]
+    legend_html = "".join(
+        f'<div style="display:flex;align-items:center;gap:6px;font-size:.78rem;color:#334155;margin:3px 0">'
+        f'<span style="width:10px;height:10px;border-radius:3px;background:{legend_palette[i%len(legend_palette)]}"></span>'
+        f'<span style="flex:1">{h(s)}</span><strong>{c}</strong></div>'
+        for i, (s, c) in enumerate(sector_slices)
+    )
+    sector_card = f"""
+<div class="tp-sub violet" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:14px">
+  <div style="width:170px;flex:0 0 auto">{donut_svg}</div>
+  <div style="flex:1 1 200px">
+    <h4 style="margin-top:0"><span class="ico">📊</span> Sector Concentration</h4>
+    {legend_html}
+  </div>
+</div>
+"""
     summary_rows = []
     for i, (p, e) in enumerate(zip(picks, enriched), 1):
         snap = e["snapshot"] or {}
         narr_i = per_stock_narr.get(p.symbol, {})
+        rr_i = e.get("risk_reward") or {}
         conv_i = (narr_i.get("conviction") or "").upper()
         conv_c = {"HIGH": "#16a34a", "MEDIUM": "#d97706", "LOW": "#64748b"}.get(conv_i, "#64748b")
+        rs_val = narr_i.get("risk_score_0_10")
+        try: rs_val = float(rs_val) if rs_val is not None else None
+        except (TypeError, ValueError): rs_val = None
+        if rs_val is None:
+            rs_val = rr_i.get("risk_score")
+        rs_disp = f"{rs_val:.1f}" if rs_val is not None else "—"
+        rs_c = ("#16a34a" if (rs_val or 99) <= 3 else
+                "#d97706" if (rs_val or 99) <= 6 else "#b91c1c") if rs_val is not None else "#64748b"
+        rr_val = (narr_i.get("risk_reward_ratio")
+                   if narr_i.get("risk_reward_ratio") is not None
+                   else rr_i.get("rr_ratio_4m"))
+        try: rr_disp = f"{float(rr_val):.2f}×" if rr_val is not None else "—"
+        except (TypeError, ValueError): rr_disp = "—"
+        tgt = (narr_i.get("potential_target_long_term")
+               if narr_i.get("potential_target_long_term") is not None
+               else rr_i.get("target_6m"))
+        try: tgt_disp = f"₹{float(tgt):,.0f}" if tgt is not None else "—"
+        except (TypeError, ValueError): tgt_disp = "—"
+        conv_chip_cls = {"HIGH":"green","MEDIUM":"amber","LOW":"slate"}.get(conv_i, "slate")
+        risk_chip_cls = ("green" if (rs_val is not None and rs_val <= 3) else
+                         "amber" if (rs_val is not None and rs_val <= 6) else
+                         "red"   if rs_val is not None else "slate")
+        src_chip = {"dual":("green","Dual"),"sector_rot":("blue","Sector"),"stage2":("violet","Stage2")}.get(p.source,("slate", p.source or ""))
         summary_rows.append(
-            f"<tr><td>{i}</td>"
-            f"<td><a href='#pick-{i}' style='font-weight:700'>{h(p.symbol)}</a></td>"
-            f"<td>{h(p.sector)}</td>"
+            f"<tr><td style='font-weight:700;color:#64748b'>{i}</td>"
+            f"<td><a href='#pick-{i}'>{h(p.symbol)}</a></td>"
+            f"<td style='color:#475569;font-size:.78rem'>{h(p.sector)}</td>"
             f"<td style='text-align:right'>₹{_nz(snap.get('price'))}</td>"
-            f"<td>{h(snap.get('stage') or '—')}</td>"
-            f"<td style='text-align:right;font-weight:600'>{_nz(snap.get('investment_score'))}</td>"
-            f"<td style='text-align:right'>{_pct(snap.get('relative_strength'))}</td>"
-            f"<td style='text-align:right'>{_nz(snap.get('enhanced_fund_score'))}</td>"
-            f"<td>{h(snap.get('stance') or '—')}</td>"
-            f"<td><span style='color:{conv_c};font-weight:700'>{h(conv_i)}</span></td>"
-            f"<td>{h(p.source)}</td></tr>"
+            f"<td><span class='tp-chip slate'>{h(snap.get('stage') or '—')}</span></td>"
+            f"<td style='text-align:right;font-weight:700'>{_nz(snap.get('investment_score'))}</td>"
+            f"<td style='text-align:right;color:{'#16a34a' if (snap.get('relative_strength') or 0) > 0 else '#b91c1c'}'>{_pct(snap.get('relative_strength'))}</td>"
+            f"<td style='text-align:right;font-weight:700'>{tgt_disp}</td>"
+            f"<td style='text-align:right;font-weight:700'>{rr_disp}</td>"
+            f"<td style='text-align:center'><span class='tp-chip {risk_chip_cls}'>{rs_disp}</span></td>"
+            f"<td><span class='tp-chip {conv_chip_cls}'>{h(conv_i or '—')}</span></td>"
+            f"<td><span class='tp-chip {src_chip[0]}'>{h(src_chip[1])}</span></td></tr>"
         )
 
     summary_table_html = f"""
-<div class="card">
-  <div class="card-title">Top {len(picks)} Picks — {snap_date}</div>
-  <table style="width:100%;border-collapse:collapse">
+<div style="margin-top:18px">
+  <h2 style="font-size:1.05rem;color:var(--tp-blue);margin:0 0 10px;letter-spacing:-.01em">📊 Pick Summary — {snap_date}</h2>
+  <table class="tp-master">
     <thead><tr>
-      <th>#</th><th>Symbol</th><th>Sector</th><th style='text-align:right'>Price</th>
+      <th>#</th><th style="text-align:left">Symbol</th><th style="text-align:left">Sector</th>
+      <th style='text-align:right'>Price</th>
       <th>Stage</th><th style='text-align:right'>Inv.Score</th>
-      <th style='text-align:right'>RS%</th><th style='text-align:right'>Fund</th>
-      <th>Stance</th><th>Conviction</th><th>Source</th>
+      <th style='text-align:right'>RS%</th>
+      <th style='text-align:right'>6M Tgt</th>
+      <th style='text-align:right'>RR (4M)</th>
+      <th style='text-align:center'>Risk</th>
+      <th>Conviction</th><th>Source</th>
     </tr></thead>
     <tbody>{''.join(summary_rows)}</tbody>
   </table>
@@ -1627,23 +4148,69 @@ def render_html(snap_date: str, picks: list[PickRationale], enriched: list[dict]
         for i, (p, e) in enumerate(zip(picks, enriched), 1)
     )
 
+    # Build the rich investment brief panel
+    brief_blocks_html = ""
+    top_conv = narratives.get("top_conviction_picks") or []
+    sec_note = narratives.get("sector_concentration_note") or ""
+    blk_specs = [
+        ("Executive Summary", "📋", exec_summary, "blue"),
+        ("Macro Context",     "🌐", macro_context,  "violet"),
+        ("Portfolio Construction", "🧱", portfolio_text, "teal"),
+        ("Top Conviction",    "🏆", " · ".join(top_conv) if top_conv else "", "green"),
+        ("Sector Concentration", "🧭", sec_note, "amber"),
+    ]
+    blk_color = {"blue":"#2563eb","violet":"#7c3aed","teal":"#0f766e","green":"#16a34a","amber":"#d97706"}
+    def _to_bullets(text: str) -> str:
+        import re as _re
+        if not text:
+            return ""
+        # Split by bullet/newline markers first, else by sentence boundaries
+        parts: list[str] = []
+        if "\n" in text or "•" in text or " · " in text:
+            raw = _re.split(r"[\n•]|\s·\s", text)
+        else:
+            raw = _re.split(r"(?<=[\.\?\!])\s+(?=[A-Z0-9])", text)
+        for p in raw:
+            s = p.strip(" -•\t").rstrip(".")
+            if s and len(s) > 2:
+                parts.append(s)
+        if not parts:
+            return ""
+        lis = "".join(f"<li style=\"margin:0 0 6px 0\">{h(s)}.</li>" for s in parts)
+        return f'<ul style="margin:0;padding-left:20px;font-size:.85rem;color:#334155;line-height:1.55">{lis}</ul>'
+
+    cards = []
+    for label, icon, body, color in blk_specs:
+        if not body: continue
+        cards.append(
+            f'<div style="background:#fff;border:1px solid var(--tp-line);border-left:4px solid {blk_color[color]};'
+            f'border-radius:10px;padding:14px 16px">'
+            f'<div style="font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:{blk_color[color]};'
+            f'font-weight:800;margin-bottom:8px">{icon} {h(label)}</div>'
+            f'{_to_bullets(body)}</div>'
+        )
+    brief_html = (
+        '<div style="display:flex;flex-direction:column;gap:12px;margin-top:14px">'
+        + "".join(cards) + '</div>'
+    ) if cards else ""
+
     methodology_html = """
-<div class="card">
-  <div class="card-title">Methodology</div>
-  <p>Picks merge two independent screens:</p>
-  <ol style="margin-left:22px;line-height:1.7">
-    <li><strong>Sector Rotation Report</strong> — top investment-score names within the leading sectors (1M RS, momentum, technical+fundamental score).</li>
+<div class="tp-sub" style="margin-top:14px;background:#fff">
+  <h4><span class="ico">📐</span> Methodology</h4>
+  <p style="font-size:.83rem;color:#475569;margin:0 0 6px">Picks merge two independent screens:</p>
+  <ol style="margin:0 0 6px 22px;font-size:.83rem;color:#334155;line-height:1.6">
+    <li><strong>Sector Rotation Report</strong> — top investment-score names within leading sectors (RS, momentum, tech + fund score).</li>
     <li><strong>Stage 2 Tracker</strong> — Weinstein-stage-2 universe ranked by <code>scores.stage_snapshots.investment_score</code>.</li>
   </ol>
-  <p>Dual-confirmed names (appearing in BOTH screens) are prioritised. Per-stock deep dive uses 260 trading days of EOD: EMA 20/50/200 stack, EMA50 slope, RSI(14), ATR(14), 52w hi/lo, 1M/3M/6M/1Y returns, volume ratio. Fundamentals: Piotroski F-score, Altman Z, Beneish M, ROE/ROCE, 3Y growth, D/E, promoter holding.</p>
+  <p style="font-size:.78rem;color:#64748b;margin:4px 0 0">Dual-confirmed names are prioritised. Per-stock dive uses 260d EOD (EMA 20/50/200, RSI/ATR, returns), 6-month candles with S/R + pivots + volume profile, and fundamentals (Piotroski F, Altman Z, Beneish M, ROE/ROCE, 3Y growth, D/E, promoter).</p>
 </div>
 """
 
     disclaimer_html = f"""
-<div class="card" style="background:#fef3c7;border-left:4px solid #d97706">
-  <div class="card-title" style="color:#92400e">Full Disclaimer &amp; Use Restrictions</div>
-  <p style="font-size:12px;line-height:1.6">{h(PRINT_FOOTER_DISCLAIMER)}</p>
-  <p style="font-size:11px;line-height:1.55;color:#78350f">{h(FULL_LEGAL_DISCLAIMER)}</p>
+<div class="tp-sub warn" style="margin-top:14px">
+  <h4><span class="ico">⚖️</span> Full Disclaimer &amp; Use Restrictions</h4>
+  <p style="font-size:12px;line-height:1.6;color:#78350f">{h(PRINT_FOOTER_DISCLAIMER)}</p>
+  <p style="font-size:11px;line-height:1.55;color:#92400e">{h(FULL_LEGAL_DISCLAIMER)}</p>
 </div>
 """
 
@@ -1654,32 +4221,27 @@ def render_html(snap_date: str, picks: list[PickRationale], enriched: list[dict]
         '<meta charset="utf-8">',
         '<meta name="viewport" content="width=device-width, initial-scale=1">',
         f'<title>Top Investment Picks — {snap_date}</title>',
-        f'<style>{_CSS}</style>',
+        f'<style>{_CSS}\n{_EXTRA_CSS}</style>',
         '</head>',
-        '<body>',
+        '<body style="background:#f1f5f9;padding:0;margin:0">',
         f'<div class="print-page-header"><span>{h(AGENT_BRAND)}</span><span>Top Investment Picks</span></div>',
         f'<div class="print-page-footer">{h(PRINT_FOOTER_DISCLAIMER)}</div>',
-        '<header class="site-hdr">',
-        '<div class="hdr-inner">',
-        '<div class="hdr-brand">',
-        logo_html,
-        '<div class="hdr-copy">',
-        f'<div class="hdr-kicker">{h(AGENT_BRAND)}</div>',
-        '<div class="hdr-title">Top Investment Picks Analysis</div>',
-        '</div></div>',
-        '<div class="hdr-meta">',
-        f'<span class="mbadge mbadge-date">Report Date: {snap_date}</span>',
-        f'<span class="mbadge mbadge-data">Picks: {len(picks)}</span>',
-        '</div></div></header>',
-        f'<div class="disc"><strong>Disclaimer:</strong> {h(REPORT_DISCLAIMER)}</div>',
+        '<div style="max-width:1180px;margin:0 auto;padding:0 18px 30px">',
+        hero_html,
+        f'<div class="disc" style="margin-top:14px;padding:10px 14px;background:#fff7ed;border-left:4px solid #d97706;border-radius:8px;font-size:.78rem;color:#92400e"><strong>Disclaimer:</strong> {h(REPORT_DISCLAIMER)}</div>',
         brief_html,
-        '<div class="content">',
+        sector_card,
+        toc_html,
         summary_table_html,
         methodology_html,
-        '<h2 style="font-size:1.1rem;color:#1e3a5f;margin:24px 0 12px">Per-Stock Deep Dive</h2>',
+        '<h2 style="font-size:1.2rem;color:var(--tp-blue);margin:24px 0 6px;letter-spacing:-.01em">🔬 Per-Stock Deep Dive</h2>',
+        '<p style="font-size:.82rem;color:#64748b;margin:0 0 10px">Each card: candlestick chart with EMAs, S/R, pivots &amp; entry/stop/targets · KPI tiles · LLM-narrated thesis · technicals · fundamentals · quarterly / annual / BS / CF · events · risk gauge.</p>',
         cards_html,
         disclaimer_html,
-        '</div></body></html>',
+        '</div>',
+        '<button class="tp-totop" onclick="window.scrollTo({top:0,behavior:\'smooth\'})" title="Back to top">↑</button>',
+        TV_CROSSHAIR_JS,
+        '</body></html>',
     ]
     return "".join(parts)
 
@@ -1710,13 +4272,17 @@ def build_report(snap_date: str | None = None, use_llm: bool = True,
             ann = get_annual(conn, p.symbol)
             bs = get_balance_sheet(conn, p.symbol)
             cf = get_cash_flow(conn, p.symbol)
+            snap_row = get_snapshot(conn, p.symbol, snap_date)
+            tech_row = compute_technicals(conn, p.symbol, snap_date)
+            fund_row = get_fundamentals(conn, p.symbol)
+            analytics_row = compute_financial_analytics(qtr, ann, bs, cf)
             enriched.append({
                 "symbol": p.symbol,
                 "sector": p.sector,
                 "source": p.source,
-                "snapshot": get_snapshot(conn, p.symbol, snap_date),
-                "tech": compute_technicals(conn, p.symbol, snap_date),
-                "fund": get_fundamentals(conn, p.symbol),
+                "snapshot": snap_row,
+                "tech": tech_row,
+                "fund": fund_row,
                 "quarterly": qtr,
                 "annual": ann,
                 "balance_sheet": bs,
@@ -1725,7 +4291,10 @@ def build_report(snap_date: str | None = None, use_llm: bool = True,
                 "sector_ctx": get_sector_context(conn, p.sector, snap_date),
                 "corp_events": get_corporate_events(conn, p.symbol),
                 "insider": get_insider_activity(conn, p.symbol),
-                "analytics": compute_financial_analytics(qtr, ann, bs, cf),
+                "bulk_deals": get_bulk_block_deals(conn, p.symbol),
+                "upcoming_events": get_upcoming_events(conn, p.symbol),
+                "analytics": analytics_row,
+                "risk_reward": compute_risk_reward(tech_row, snap_row, fund_row, analytics_row),
             })
 
         narratives = generate_narratives(enriched, macro_context, snap_date, use_llm=use_llm)
@@ -1759,7 +4328,21 @@ def main() -> int:
     ap.add_argument("--date", default=None, help="Snapshot date YYYY-MM-DD (default: latest in PG)")
     ap.add_argument("--no-llm", action="store_true", help="Skip LLM narrative; use rule-based")
     ap.add_argument("--dry-run", action="store_true", help="Plan only, no writes")
+    ap.add_argument("--print-picks", action="store_true",
+                    help="Print today's top-pick symbols (comma-separated) and exit. "
+                         "Used by daily_refresh to pre-refresh fundamentals.")
     args = ap.parse_args()
+
+    if args.print_picks:
+        try:
+            conn = _connect()
+            snap = _resolve_snapshot_date(conn, args.date)
+            picks = build_pick_list(conn, snap)
+            print(",".join(p.symbol for p in picks))
+            return 0
+        except Exception as exc:
+            print(f"❌ print-picks failed: {exc}", file=sys.stderr)
+            return 2
 
     try:
         result = build_report(

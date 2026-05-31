@@ -65,6 +65,12 @@ DYNAMIC_REPORT_ALIASES: dict[str, tuple[Path, str]] = {
     "market_dashboard": (DASHBOARDS_DIR, "market_dashboard_*.html"),
     "pulse":            (DASHBOARDS_DIR, "market_dashboard_*.html"),
     "market-pulse":     (DASHBOARDS_DIR, "market_dashboard_*.html"),
+    # PG 2026-05-31: Top Investment Picks Analysis — newest dated file wins.
+    "top_picks":        (REPORTS_DIR / "top_picks", "Top_Investment_Picks_Analysis_*.html"),
+    "top-picks":        (REPORTS_DIR / "top_picks", "Top_Investment_Picks_Analysis_*.html"),
+    "picks":            (REPORTS_DIR / "top_picks", "Top_Investment_Picks_Analysis_*.html"),
+    "investment-picks": (REPORTS_DIR / "top_picks", "Top_Investment_Picks_Analysis_*.html"),
+    "top_picks_report": (REPORTS_DIR / "top_picks", "Top_Investment_Picks_Analysis_*.html"),
 }
 
 # Default sender signature appended to bodies
@@ -89,18 +95,68 @@ class EmailCommand:
     bcc: list[str] = field(default_factory=list)
     mode: str = "both"          # body | attachment | both
     send: bool = False          # if False → open as Outlook draft for review
+    subject: str = ""           # optional user-supplied subject override
     note: str = ""              # optional user-supplied context for LLM
     dry_run: bool = False
     extra_attachments: list[Path] = field(default_factory=list)
     error: str = ""
+    # PG 2026-05-27: when the report is a dashboard alias, generate a fresh
+    # /dashboard HTML before emailing instead of reusing the newest cached file.
+    # --cached opts back into the old behavior. --drilldown passes through to
+    # _write_market_dashboard_html() so the email matches `/dashboard --drilldown`.
+    use_cached: bool = False
+    drilldown: bool = False
 
     @property
     def ok(self) -> bool:
-        return not self.error and self.report_path is not None and bool(self.to)
+        # PG 2026-05-27: dashboard aliases may have report_path=None at parse
+        # time — run_email_command() will generate a fresh dashboard before sending.
+        if self.error or not self.to:
+            return False
+        if self.report_path is not None:
+            return True
+        return _is_dashboard_alias(self.report_arg)
 
 
 def _split_csv(value: str) -> list[str]:
     return [v.strip() for v in re.split(r"[,;\s]+", value or "") if v.strip()]
+
+
+# PG 2026-05-27: aliases that map to the live /dashboard generator. Kept in sync
+# with DYNAMIC_REPORT_ALIASES — single source of truth for "is this a dashboard".
+_DASHBOARD_ALIASES: set[str] = {
+    "dashboard",
+    "dash",
+    "market",
+    "market-dashboard",
+    "market_dashboard",
+    "pulse",
+    "market-pulse",
+}
+
+
+def _is_dashboard_alias(arg: str) -> bool:
+    """True if `arg` is a /dashboard alias eligible for fresh generation."""
+    return (arg or "").strip().lower() in _DASHBOARD_ALIASES
+
+
+def _generate_fresh_dashboard(agent: Any, *, drilldown: bool = False, focus: str = "") -> Path:
+    """Run the same code path as `/dashboard --once --html` and return the new HTML path.
+
+    PG 2026-05-27: `/email dashboard` now defaults to fresh generation so the
+    email always matches what `/dashboard` would show, not a stale cached file.
+    Lazy-imports nse_agent to avoid the circular dependency (nse_agent imports
+    this module for the /email handler).
+    """
+    # Lazy import — nse_agent imports email_dispatcher at module load.
+    import nse_agent as _na  # type: ignore
+
+    backend = getattr(agent, "backend", None) if agent is not None else None
+    if backend is None:
+        snapshot = _na._fetch_market_dashboard_snapshot(focus)
+    else:
+        snapshot = _na._fetch_market_dashboard_snapshot(focus, llm_backend=backend)
+    return _na._write_market_dashboard_html(snapshot, drilldown=drilldown, open_browser=False)
 
 
 def parse_email_command(text: str) -> EmailCommand:
@@ -148,9 +204,23 @@ def parse_email_command(text: str) -> EmailCommand:
             cmd.send = False
         elif low == "--dry-run":
             cmd.dry_run = True
+        elif low == "--cached":
+            # PG 2026-05-27: opt back into the old behavior (newest cached dashboard).
+            cmd.use_cached = True
+        elif low == "--fresh":
+            # PG 2026-05-27: explicit fresh-generation flag (now the default for
+            # dashboard aliases). Accepted for parity with /dashboard semantics.
+            cmd.use_cached = False
+        elif low == "--drilldown":
+            # PG 2026-05-27: pass through to the dashboard generator so the email
+            # matches what `/dashboard --drilldown` would render.
+            cmd.drilldown = True
         elif low in {"--note", "--context", "-n"}:
             i += 1
             cmd.note = tokens[i] if i < len(tokens) else ""
+        elif low in {"--subject", "--subj", "-s"}:
+            i += 1
+            cmd.subject = tokens[i] if i < len(tokens) else ""
         elif low in {"--attach", "--attachment-file", "-a"}:
             # PG 2026-05-20: repeatable extra attachment (in addition to the
             # resolved report). Lets /screenshot attach PNG + terminal context.
@@ -177,8 +247,11 @@ def parse_email_command(text: str) -> EmailCommand:
     cmd.report_arg = positional[0]
     cmd.report_path = resolve_report(cmd.report_arg)
     if cmd.report_path is None:
-        cmd.error = f"could not locate report '{cmd.report_arg}'"
-        return cmd
+        # PG 2026-05-27: dashboard aliases resolve later via fresh generation
+        # in run_email_command(); don't error here if there's no cached file yet.
+        if not _is_dashboard_alias(cmd.report_arg):
+            cmd.error = f"could not locate report '{cmd.report_arg}'"
+            return cmd
 
     if cmd.mode not in {"body", "attachment", "both"}:
         cmd.error = f"--as must be one of: body | attachment | both (got '{cmd.mode}')"
@@ -473,6 +546,38 @@ def run_email_command(text: str, agent: Any) -> dict:
     if not cmd.ok:
         return {"ok": False, "message": cmd.error or "command failed"}
 
+    # PG 2026-05-27: For dashboard aliases, generate a fresh /dashboard HTML by
+    # default so the email matches what `/dashboard` would render right now,
+    # not a stale cached file. --cached opts back into the old behavior.
+    fresh_generated = False
+    if _is_dashboard_alias(cmd.report_arg) and not cmd.use_cached:
+        try:
+            cmd.report_path = _generate_fresh_dashboard(
+                agent, drilldown=cmd.drilldown, focus=""
+            )
+            fresh_generated = True
+        except Exception as exc:
+            # Fall back to the newest cached dashboard if generation fails
+            # (e.g. NSE allIndices unreachable). Surface the reason in --note.
+            fallback = resolve_report(cmd.report_arg)
+            if fallback is None:
+                return {
+                    "ok": False,
+                    "message": (
+                        f"fresh dashboard generation failed and no cached file "
+                        f"found: {exc}"
+                    ),
+                }
+            cmd.report_path = fallback
+            cmd.note = (
+                (cmd.note + " | " if cmd.note else "")
+                + f"NOTE: fresh dashboard generation failed ({exc}); "
+                  f"emailing newest cached file."
+            )
+
+    if cmd.report_path is None:
+        return {"ok": False, "message": f"could not locate report '{cmd.report_arg}'"}
+
     report_text = extract_report_text(cmd.report_path)
     backend = getattr(agent, "backend", None)
     if backend is None:
@@ -485,6 +590,8 @@ def run_email_command(text: str, agent: Any) -> dict:
             mode=cmd.mode,
             note=cmd.note,
         )
+    if cmd.subject:
+        subject = cmd.subject[:160]
     full_body = _wrap_envelope(body_html, cmd.report_path, cmd.mode)
 
     if cmd.dry_run:
@@ -507,6 +614,11 @@ def run_email_command(text: str, agent: Any) -> dict:
     for extra in cmd.extra_attachments:
         if extra not in attachments:
             attachments.append(extra)
+    # PG 2026-05-27: Outlook AppleScript `POSIX file` needs ABSOLUTE paths or
+    # the attachment is silently skipped. Fresh-generated dashboards come back
+    # as relative paths (reports/dashboards/...), so resolve every attachment
+    # to an absolute path before handing off.
+    attachments = [p.resolve() for p in attachments]
     status = send_via_outlook(
         subject=subject,
         html_body=full_body,
@@ -525,6 +637,9 @@ def run_email_command(text: str, agent: Any) -> dict:
         "recipients": {"to": cmd.to, "bcc": cmd.bcc},
         "report": str(cmd.report_path),
         "attachments": [str(p) for p in attachments],
+        # PG 2026-05-27: tells the caller whether we ran /dashboard fresh or
+        # fell back to a cached file.
+        "fresh_generated": fresh_generated,
     }
 
 
@@ -536,7 +651,7 @@ def email_command_usage() -> str:
         Recipients: comma, semicolon or whitespace separated (e.g. "a@x.com;b@y.com").
         Reports:
           sector | stage2 | index | portfolio | seasonal | us
-          dashboard | market | pulse        (auto-picks newest reports/dashboards/market_dashboard_*.html)
+          dashboard | market | pulse        (runs /dashboard fresh by default; --cached uses newest reports/dashboards/market_dashboard_*.html)
           <path-to-file>                    (absolute or project-relative)
         Modes:
           --as body         Inline LLM-rendered HTML body (no attachment)
@@ -545,8 +660,12 @@ def email_command_usage() -> str:
         Flags:
           --send            Send immediately (default opens as draft for review)
           --dry-run         Render body to logs/, don't touch Outlook
+          --subject "..."   Override the generated email subject
           --note "..."      Extra context for the LLM composer
           --attach <path>   Extra file to attach (repeatable; adds to the report)
+          --cached          For dashboard aliases: skip fresh generation, use newest cached file
+          --fresh           Force fresh dashboard generation (default for dashboard aliases)
+          --drilldown       Pass through to /dashboard generator (more detail in HTML)
 
         Examples:
           /email sector --to pgorai@deloitte.com
@@ -554,3 +673,184 @@ def email_command_usage() -> str:
           /email stage2 --to a@x.com --bcc b@y.com,c@z.com --send
           /email reports/latest/index_intelligence.html --to a@x.com --as body --send
     """)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Programmatic helper for the daily refresh pipeline
+# PG 2026-05-31: invoked by daily_refresh.step_email_top_picks (and CLI below)
+# ─────────────────────────────────────────────────────────────────────────────
+
+RECIPIENTS_YML = ROOT / "config" / "report_recipients.yml"
+
+
+class _BackendShim:
+    """Wraps a backend object so it exposes a `.backend` attribute (what
+    `run_email_command`/`_llm_generate` expect from the agent parameter)."""
+
+    def __init__(self, backend: Any) -> None:
+        self.backend = backend
+
+
+def _load_recipients(report_key: str) -> dict[str, list[str]]:
+    """Return {'to': [...], 'bcc': [...]} for `report_key` from
+    config/report_recipients.yml. Empty lists if file/key missing."""
+    out = {"to": [], "bcc": []}
+    if not RECIPIENTS_YML.exists():
+        return out
+    try:
+        import yaml  # type: ignore
+    except Exception:
+        return out
+    try:
+        data = yaml.safe_load(RECIPIENTS_YML.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return out
+    section = (data.get(report_key) or {}) if isinstance(data, dict) else {}
+    if isinstance(section, dict):
+        out["to"]  = [str(x) for x in (section.get("to")  or []) if x]
+        out["bcc"] = [str(x) for x in (section.get("bcc") or []) if x]
+    return out
+
+
+def _build_default_backend() -> Any | None:
+    """Try to construct an OpenAI backend (falls back to None → fallback body)."""
+    try:
+        from terminal.agent import _OpenAIBackend  # type: ignore
+        return _OpenAIBackend()
+    except Exception as exc:
+        print(f"   ⚠️  email composer LLM unavailable ({exc}) — using fallback body")
+        return None
+
+
+def send_report_email(
+    report_key: str,
+    *,
+    mode: str = "both",
+    send: bool = False,
+    subject: str = "",
+    note: str = "",
+    extra_to: list[str] | None = None,
+    extra_bcc: list[str] | None = None,
+    backend: Any | None = None,
+) -> dict:
+    """Compose + dispatch an email for a friendly report key using the
+    recipients configured in config/report_recipients.yml.
+
+    Returns the same status dict as run_email_command(); `ok=False` if no
+    recipients are configured or the report can't be located.
+    """
+    report_path = resolve_report(report_key)
+    if report_path is None:
+        return {"ok": False, "message": f"could not locate report '{report_key}'"}
+
+    rec = _load_recipients(report_key)
+    to_addrs  = list(dict.fromkeys((rec["to"]  or []) + list(extra_to  or [])))
+    bcc_addrs = list(dict.fromkeys((rec["bcc"] or []) + list(extra_bcc or [])))
+    if not to_addrs and not bcc_addrs:
+        return {
+            "ok": False,
+            "message": (
+                f"no recipients configured for '{report_key}' in "
+                f"{RECIPIENTS_YML.relative_to(ROOT)} — add a 'to:' or 'bcc:' list"
+            ),
+        }
+
+    report_text = extract_report_text(report_path)
+    # PG 2026-05-31: top_picks-specific guidance so the LLM email body
+    # leads with the picks, sector tilt, risk, and 2M/4M/6M targets.
+    if report_key.lower() in {"top_picks", "top-picks", "picks",
+                              "investment-picks", "top_picks_report"} and not note:
+        note = (
+            "This is the daily Top Investment Picks Analysis. The email body must: "
+            "(a) open with a 1-line market read and the snapshot date, "
+            "(b) list each top pick (symbol · sector · entry · 2M/4M/6M targets · stop-loss · R:R · risk tier) "
+            "in a compact <table> with bold headers, "
+            "(c) include a 'Why these picks' bulleted rationale tying back to sector rotation + stage-2 + fundamentals, "
+            "(d) a 'Risks & what could go wrong' bullet block, "
+            "(e) a 'How to use this report' closing block instructing the reader to open the attached HTML "
+            "for full TradingView-style charts, pattern annotations, RSI, volume profile, support/resistance, "
+            "fundamental scores (Piotroski/Altman/Beneish/CANSLIM), valuation, and the LLM chart narrative. "
+            "Keep tone factual, no hype. Do NOT invent numbers — only use values present in the report text."
+        )
+    agent_shim = _BackendShim(backend if backend is not None else _build_default_backend())
+    if agent_shim.backend is None:
+        subj_gen, body_html = _fallback_subject_body(
+            report_path.name, report_text, reason="no LLM backend"
+        )
+    else:
+        subj_gen, body_html = _llm_generate(
+            agent_shim.backend, report_path.name, report_text, mode=mode, note=note
+        )
+    final_subject = (subject[:160] if subject else subj_gen)
+    full_body = _wrap_envelope(body_html, report_path, mode)
+
+    attachments: list[Path] = []
+    if mode in {"attachment", "both"}:
+        attachments.append(report_path.resolve())
+
+    try:
+        status = send_via_outlook(
+            subject=final_subject,
+            html_body=full_body,
+            to_addrs=to_addrs,
+            bcc_addrs=bcc_addrs,
+            attachments=attachments,
+            send_immediately=send,
+        )
+    except Exception as exc:
+        return {"ok": False, "message": f"Outlook dispatch failed: {exc}"}
+
+    return {
+        "ok": True,
+        "message": status,
+        "subject": final_subject,
+        "mode": mode,
+        "recipients": {"to": to_addrs, "bcc": bcc_addrs},
+        "report": str(report_path),
+        "attachments": [str(p) for p in attachments],
+    }
+
+
+def _cli_main(argv: list[str] | None = None) -> int:
+    """`python -m terminal.email_dispatcher <report_key> [--send] [--mode both]`."""
+    import argparse
+    ap = argparse.ArgumentParser(
+        description="Send a report email using config/report_recipients.yml."
+    )
+    ap.add_argument("report_key", help="alias such as top_picks, sector, dashboard, …")
+    ap.add_argument("--mode", default="both", choices=["body", "attachment", "both"])
+    ap.add_argument("--send", action="store_true",
+                    help="send immediately (default: open as Outlook draft)")
+    ap.add_argument("--subject", default="", help="override generated subject")
+    ap.add_argument("--note", default="", help="extra context for the LLM composer")
+    ap.add_argument("--to",  default="", help="extra To: addresses (comma/semicolon-separated)")
+    ap.add_argument("--bcc", default="", help="extra Bcc: addresses (comma/semicolon-separated)")
+    args = ap.parse_args(argv)
+
+    extra_to  = _split_csv(args.to)  if args.to  else []
+    extra_bcc = _split_csv(args.bcc) if args.bcc else []
+
+    result = send_report_email(
+        args.report_key,
+        mode=args.mode,
+        send=args.send,
+        subject=args.subject,
+        note=args.note,
+        extra_to=extra_to,
+        extra_bcc=extra_bcc,
+    )
+    if not result.get("ok"):
+        print(f"❌ {result.get('message')}")
+        return 1
+    rec = result.get("recipients", {})
+    print(f"✅ {result.get('message')}")
+    print(f"   Subject : {result.get('subject')}")
+    print(f"   To      : {', '.join(rec.get('to')  or []) or '—'}")
+    print(f"   Bcc     : {', '.join(rec.get('bcc') or []) or '—'}")
+    print(f"   Report  : {result.get('report')}")
+    return 0
+
+
+if __name__ == "__main__":
+    import sys
+    sys.exit(_cli_main(sys.argv[1:]))

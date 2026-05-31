@@ -246,6 +246,51 @@ def step_top_picks_report(dry_run: bool) -> bool:
     )
 
 
+def step_refresh_top_picks_fundamentals(dry_run: bool) -> bool:
+    """Pre-refresh screener fundamentals for today's top picks so the report
+    renders with up-to-date shareholding, ratios, and structured financials.
+    Non-fatal: a failure here must not block the report itself."""
+    _section("STEP 5A — Top Picks Fundamentals Pre-Refresh (screener)")
+    if dry_run:
+        print("  DRY-RUN: would print picks and run screener backfill for them")
+        return True
+    if not _ensure_postgres_running(dry_run=dry_run):
+        return False
+    try:
+        out = subprocess.run(
+            [PYTHON, "top_picks_report.py", "--print-picks"],
+            capture_output=True, text=True, timeout=120,
+        )
+        if out.returncode != 0:
+            print(f"  ⚠️  could not determine picks: {out.stderr.strip()}")
+            return False
+        syms = (out.stdout or "").strip().splitlines()[-1].strip()
+        if not syms:
+            print("  no picks to refresh — skipping")
+            return True
+        print(f"  Refreshing fundamentals for picks: {syms}")
+        return _run(
+            "Top Picks fundamentals backfill",
+            [PYTHON, "-m", "scripts.backfill_screener_fundamentals",
+             "--symbols", syms, "--skip-fresh-days", "0", "--delay", "2.0"],
+            dry_run=dry_run,
+        )
+    except Exception as exc:
+        print(f"  ⚠️  top-picks fundamentals pre-refresh failed: {exc}")
+        return False
+
+
+def step_email_top_picks(dry_run: bool, send: bool = False) -> bool:
+    """Compose + open (or send) the Top Picks email via Outlook using the
+    recipients in config/report_recipients.yml. Non-fatal: a failure here
+    must not break the rest of the refresh."""
+    _section("STEP 5C — Email Top Investment Picks (draft in Outlook)")
+    cmd = [PYTHON, "-m", "terminal.email_dispatcher", "top_picks", "--mode", "both"]
+    if send:
+        cmd.append("--send")
+    return _run("Email Top Picks", cmd, dry_run=dry_run)
+
+
 def step_voice_briefing(dry_run: bool) -> bool:
     """Generate today's voice briefing script from fresh signal_log.csv data."""
     _section("STEP 6 — Voice Briefing (script only, no audio)")
@@ -383,6 +428,10 @@ def main() -> int:
                         help="Skip fundamentals backfill even on its scheduled day")
     parser.add_argument("--skip-results-feed", action="store_true",
                         help="Skip daily results-feed cache refresh")
+    parser.add_argument("--skip-email", action="store_true",
+                        help="Skip the Top Picks email step (STEP 5C)")
+    parser.add_argument("--email-send", action="store_true",
+                        help="Send Top Picks email immediately instead of opening as Outlook draft")
     parser.add_argument("--fundamentals-index",
                         default="NIFTY 500,NIFTY MICROCAP 250",
                         help="Index label(s) for fundamentals backfill (comma-separated). "
@@ -473,9 +522,21 @@ def main() -> int:
     if not step_sector_rotation_report(args.dry_run):
         failed.append("Sector rotation report")
 
+    # 5A. Pre-refresh screener fundamentals for today's top picks (shareholding,
+    #     ratios, structured financials) so the report below renders complete.
+    if not step_refresh_top_picks_fundamentals(args.dry_run):
+        print("  ⚠️  Top picks fundamentals pre-refresh failed — report may have gaps")
+        # non-fatal; carry on to the report
+
     # 5B. Top Investment Picks Analysis (merges sector rotation + stage-2 tracker)
     if not step_top_picks_report(args.dry_run):
         failed.append("Top investment picks report")
+
+    # 5C. Email Top Picks report (opens as Outlook draft; --email-send to send)
+    if not args.skip_email:
+        if not step_email_top_picks(args.dry_run, send=args.email_send):
+            print("  ⚠️  Top Picks email step failed (non-fatal) — see logs above")
+            failed.append("Top Picks email")
 
     # 6. Voice briefing — generates script from fresh signal_log.csv (fast, no LLM)
     if not step_voice_briefing(args.dry_run):
