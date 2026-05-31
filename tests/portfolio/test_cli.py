@@ -86,6 +86,49 @@ def test_cli_replay_writes_json_audit_and_markdown_outputs(tmp_path: Path):
     assert "stage2_fixture_v1" in report
 
 
+def test_cli_replay_writes_pt1_artifacts_and_references(tmp_path: Path):
+    output_dir = tmp_path / "paper"
+
+    proc = _run_cli("replay", "--output-dir", str(output_dir), "--run-id", "PT-1")
+
+    assert proc.returncode == 0, proc.stderr
+
+    validation_path = output_dir / "validation" / "data_quality.json"
+    benchmark_path = output_dir / "benchmarks" / "benchmark.json"
+    manifest_path = output_dir / "manifest" / "run_manifest.json"
+    for path in (validation_path, benchmark_path, manifest_path):
+        assert path.exists()
+        assert str(path) in proc.stdout
+
+    validation = json.loads(validation_path.read_text(encoding="utf-8"))
+    benchmark = json.loads(benchmark_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    json.dumps(validation, allow_nan=False)
+    json.dumps(benchmark, allow_nan=False)
+    json.dumps(manifest, allow_nan=False)
+
+    assert validation["row_count"] == 6
+    assert manifest["run_id"] == "PT-1"
+    assert manifest["strategy_count"] == 1
+    assert benchmark["benchmark_id"] == "fixture_buy_hold"
+
+    artifact_paths = manifest["artifacts"]
+    assert artifact_paths["validation"].endswith("validation/data_quality.json")
+    assert artifact_paths["benchmark"].endswith("benchmarks/benchmark.json")
+    assert artifact_paths["manifest"].endswith("manifest/run_manifest.json")
+
+    audit_path = output_dir / "logs" / "audit.jsonl"
+    audit_rows = [
+        json.loads(line)
+        for line in audit_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    replay_payload = next(row["payload"] for row in audit_rows if row["action"] == "run_replay")
+    assert replay_payload["validation_path"] == str(validation_path)
+    assert replay_payload["benchmark_path"] == str(benchmark_path)
+    assert replay_payload["manifest_path"] == str(manifest_path)
+
+
 def test_cli_replay_replaces_audit_log_for_repeatable_outputs(tmp_path: Path):
     output_dir = tmp_path / "paper"
     first = _run_cli("replay", "--output-dir", str(output_dir))

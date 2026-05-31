@@ -12,8 +12,11 @@ import pandas as pd
 from portfolio.agents.report_agent import ReportAgent
 from portfolio.defaults import sample_ohlcv, valid_strategy_spec
 from portfolio.engine.audit_log import AuditLog
+from portfolio.engine.benchmark import compare_to_benchmark
 from portfolio.engine.event_loop import ReplayConfig, run_replay
 from portfolio.engine.metrics import PortfolioMetrics, calculate_metrics
+from portfolio.engine.run_manifest import build_run_manifest
+from portfolio.engine.validation import validate_ohlcv
 
 
 DEFAULT_RUN_ID = "PT-0"
@@ -22,6 +25,9 @@ STATE_RELATIVE_PATH = Path("state/replay_state.json")
 METRICS_RELATIVE_PATH = Path("metrics/metrics.json")
 AUDIT_RELATIVE_PATH = Path("logs/audit.jsonl")
 REPORT_RELATIVE_PATH = Path("reports/paper_trading_report.md")
+VALIDATION_RELATIVE_PATH = Path("validation/data_quality.json")
+BENCHMARK_RELATIVE_PATH = Path("benchmarks/benchmark.json")
+MANIFEST_RELATIVE_PATH = Path("manifest/run_manifest.json")
 
 
 class CliArtifactError(RuntimeError):
@@ -68,9 +74,15 @@ def _cmd_replay(args: argparse.Namespace) -> int:
     metrics_path = output_dir / METRICS_RELATIVE_PATH
     audit_path = output_dir / AUDIT_RELATIVE_PATH
     report_path = output_dir / REPORT_RELATIVE_PATH
+    validation_path = output_dir / VALIDATION_RELATIVE_PATH
+    benchmark_path = output_dir / BENCHMARK_RELATIVE_PATH
+    manifest_path = output_dir / MANIFEST_RELATIVE_PATH
 
     data = _load_ohlcv(args.data)
     strategy_specs = _load_strategy_specs(args.strategy)
+    validation = validate_ohlcv(data)
+    _write_json(validation_path, validation.as_dict())
+
     result = run_replay(
         data,
         strategy_specs,
@@ -78,9 +90,32 @@ def _cmd_replay(args: argparse.Namespace) -> int:
     )
     metrics = calculate_metrics(result)
     state = _state_payload(args.run_id, result, metrics.as_dict())
+    benchmark = compare_to_benchmark(
+        state["nav_history"],
+        _fixture_buy_hold_benchmark(data),
+        benchmark_id="fixture_buy_hold",
+    )
+    artifact_paths = {
+        "state": state_path,
+        "metrics": metrics_path,
+        "audit": audit_path,
+        "report": report_path,
+        "validation": validation_path,
+        "benchmark": benchmark_path,
+        "manifest": manifest_path,
+    }
+    manifest = build_run_manifest(
+        run_id=args.run_id,
+        config={"initial_capital": args.initial_capital},
+        strategy_specs=strategy_specs,
+        data=data,
+        artifacts=artifact_paths,
+    )
 
     _write_json(state_path, state)
     _write_json(metrics_path, metrics.as_dict())
+    _write_json(benchmark_path, benchmark.as_dict())
+    _write_json(manifest_path, manifest.as_dict())
 
     report_agent = ReportAgent()
     report_agent.write_markdown_report(
@@ -104,6 +139,11 @@ def _cmd_replay(args: argparse.Namespace) -> int:
             "run_id": args.run_id,
             "state_path": str(state_path),
             "metrics_path": str(metrics_path),
+            "audit_path": str(audit_path),
+            "report_path": str(report_path),
+            "validation_path": str(validation_path),
+            "benchmark_path": str(benchmark_path),
+            "manifest_path": str(manifest_path),
             "fills": state["summary"]["fills"],
         },
     )
@@ -122,6 +162,9 @@ def _cmd_replay(args: argparse.Namespace) -> int:
     print(f"Metrics: {metrics_path}")
     print(f"Audit: {audit_path}")
     print(f"Report: {report_path}")
+    print(f"Validation: {validation_path}")
+    print(f"Benchmark: {benchmark_path}")
+    print(f"Manifest: {manifest_path}")
     return 0
 
 
@@ -180,6 +223,12 @@ def _load_strategy_specs(path: Path | None) -> list[dict[str, Any]]:
     if isinstance(raw, list):
         return [dict(item) for item in raw]
     return [dict(raw)]
+
+
+def _fixture_buy_hold_benchmark(data: pd.DataFrame) -> pd.DataFrame:
+    if not {"date", "close"}.issubset(data.columns):
+        return pd.DataFrame(columns=["date", "close"])
+    return data.loc[:, ["date", "close"]].copy()
 
 
 def _state_payload(run_id: str, result: Any, metrics: dict[str, Any]) -> dict[str, Any]:
