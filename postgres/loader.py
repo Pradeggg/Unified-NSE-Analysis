@@ -972,6 +972,123 @@ def load_deals_today(cur):
 
 
 # ---------------------------------------------------------------------------
+# Load corporate events from fetch_corporate_events.py CSV cache
+# ---------------------------------------------------------------------------
+
+def load_corporate_events(cur, csv_path: Path | None = None) -> int:
+    """Upsert rows from data/corporate_events.csv into signals.corporate_events.
+
+    The CSV is produced by ``fetch_corporate_events.py`` (NSE corp-actions +
+    event-calendar endpoints). Columns: SYMBOL, EVENT_TYPE, EVENT_DATE,
+    PURPOSE_RAW, DETAIL, SOURCE. Conflict key: (symbol, event_type, event_date).
+    """
+    csv_path = csv_path or (DATA / "corporate_events.csv")
+    if not csv_path.exists():
+        print(f"  signals.corporate_events: {csv_path.name} missing — skipped")
+        return 0
+    try:
+        df = pd.read_csv(csv_path)
+    except Exception as exc:
+        print(f"  signals.corporate_events: failed to read CSV ({exc})")
+        return 0
+    if df.empty:
+        print("  signals.corporate_events: CSV empty — skipped")
+        return 0
+    rows = []
+    for _, r in df.iterrows():
+        sym = str(r.get("SYMBOL", "")).strip().upper()
+        et  = str(r.get("EVENT_TYPE", "")).strip().upper()
+        dt  = norm_date(r.get("EVENT_DATE"))
+        if not sym or not et or not dt:
+            continue
+        rows.append({
+            "symbol":      sym,
+            "event_type":  et,
+            "event_date":  dt,
+            "purpose_raw": (str(r.get("PURPOSE_RAW")).strip()
+                            if pd.notna(r.get("PURPOSE_RAW")) else None),
+            "detail":      (str(r.get("DETAIL")).strip()
+                            if pd.notna(r.get("DETAIL")) else None),
+            "source":      (str(r.get("SOURCE")).strip()
+                            if pd.notna(r.get("SOURCE")) else "NSE"),
+        })
+    seen = set()
+    deduped = []
+    for r in rows:
+        key = (r["symbol"], r["event_type"], r["event_date"])
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(r)
+    n = upsert(cur, "signals.corporate_events", deduped,
+               ["symbol", "event_type", "event_date"],
+               update_cols=["purpose_raw", "detail", "source"])
+    print(f"  signals.corporate_events: {n} rows from {csv_path.name}")
+    return n
+
+
+def load_insider_alerts(cur, csv_path: Path | None = None) -> int:
+    """Upsert rows from data/insider_alerts.csv into signals.insider_alerts.
+
+    The CSV is produced by ``fetch_insider_alerts.py`` (NSE bulk/block deals
+    + PIT insider disclosures, classified into PROMOTER_BUYING /
+    PROMOTER_SELLING / INSIDER_BUY / INSIDER_SELL / BULK_DEAL_BUY /
+    BULK_DEAL_SELL / PROMOTER_PLEDGE). Conflict key:
+    (alert_date, symbol, entity, alert_type).
+    """
+    csv_path = csv_path or (DATA / "insider_alerts.csv")
+    if not csv_path.exists():
+        print(f"  signals.insider_alerts: {csv_path.name} missing — skipped")
+        return 0
+    try:
+        df = pd.read_csv(csv_path)
+    except Exception as exc:
+        print(f"  signals.insider_alerts: failed to read CSV ({exc})")
+        return 0
+    if df.empty:
+        print("  signals.insider_alerts: CSV empty — skipped")
+        return 0
+    rows = []
+    for _, r in df.iterrows():
+        sym = str(r.get("SYMBOL", "")).strip().upper()
+        at  = str(r.get("ALERT_TYPE", "")).strip().upper()
+        dt  = norm_date(r.get("DATE"))
+        ent = (str(r.get("ENTITY")).strip()
+               if pd.notna(r.get("ENTITY")) else "")
+        if not sym or not at or not dt or not ent:
+            continue
+        rows.append({
+            "alert_date":   dt,
+            "symbol":       sym,
+            "alert_type":   at,
+            "entity":       ent,
+            "qty":          safe_int(r.get("QTY")),
+            "value_cr":     safe_float(r.get("VALUE_CR")),
+            "category":     (str(r.get("CATEGORY")).strip()
+                             if pd.notna(r.get("CATEGORY")) else None),
+            "detail":       (str(r.get("DETAIL")).strip()
+                             if pd.notna(r.get("DETAIL")) else None),
+            "source":       (str(r.get("SOURCE")).strip()
+                             if pd.notna(r.get("SOURCE")) else "NSE"),
+        })
+    # Dedupe within batch — same (date,symbol,entity,alert_type) can recur
+    # in CSV when bulk + insider feeds overlap; keep first occurrence.
+    seen = set()
+    deduped = []
+    for r in rows:
+        key = (r["alert_date"], r["symbol"], r["entity"], r["alert_type"])
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(r)
+    n = upsert(cur, "signals.insider_alerts", deduped,
+               ["alert_date", "symbol", "entity", "alert_type"],
+               update_cols=["qty", "value_cr", "category", "detail", "source"])
+    print(f"  signals.insider_alerts: {n} rows from {csv_path.name}")
+    return n
+
+
+# ---------------------------------------------------------------------------
 # Load MA breadth snapshot + compute aggregated pct
 # ---------------------------------------------------------------------------
 

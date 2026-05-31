@@ -2074,13 +2074,23 @@ def get_sector_context(conn, sector: str, snap_date: str) -> dict | None:
     return row
 
 
-def get_corporate_events(conn, sym: str, days: int = 90) -> list[dict]:
+def get_corporate_events(conn, sym: str, days_past: int = 90,
+                          days_future: int = 90) -> list[dict]:
+    """Corporate events for ``sym`` within a symmetric window.
+
+    Many actions (ex-dividend, results, board meetings) are *future-dated* —
+    the previous past-only window of 90d hid these. We now include both
+    recent history and the next 90 days so the report surfaces upcoming
+    catalysts as well as completed ones.
+    """
     return _fetchall(conn, """
         SELECT event_date, event_type, purpose_raw, detail
         FROM signals.corporate_events
-        WHERE symbol=%s AND event_date >= (CURRENT_DATE - INTERVAL '%s days')
-        ORDER BY event_date DESC LIMIT 10
-    """, (sym, days))
+        WHERE symbol=%s
+          AND event_date >= (CURRENT_DATE - INTERVAL '%s days')
+          AND event_date <= (CURRENT_DATE + INTERVAL '%s days')
+        ORDER BY event_date DESC LIMIT 15
+    """, (sym, days_past, days_future))
 
 
 def get_insider_activity(conn, sym: str, days: int = 90) -> list[dict]:

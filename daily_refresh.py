@@ -246,6 +246,37 @@ def step_top_picks_report(dry_run: bool) -> bool:
     )
 
 
+def step_refresh_corporate_events(dry_run: bool) -> bool:
+    """Refresh corporate events + insider alerts from NSE and load into
+    signals.corporate_events and signals.insider_alerts. Non-fatal."""
+    _section("STEP 4D — Corporate Events + Insider Alerts Refresh")
+    if dry_run:
+        print("  DRY-RUN: would force-refresh CSV caches + upsert into DB")
+        return True
+    if not _ensure_postgres_running(dry_run=dry_run):
+        return False
+    # 1) Force-refresh CSV caches via the existing fetchers (best-effort).
+    _run("Fetch corporate events (NSE)",
+         [PYTHON, "fetch_corporate_events.py", "--force"],
+         dry_run=dry_run)
+    _run("Fetch insider alerts (NSE)",
+         [PYTHON, "fetch_insider_alerts.py", "--force"],
+         dry_run=dry_run)
+    # 2) Upsert CSVs → signals tables via loaders.
+    try:
+        import psycopg2  # local import keeps daily_refresh import-light
+        from postgres.loader import load_corporate_events, load_insider_alerts  # type: ignore
+        with psycopg2.connect(dbname="nse_market") as conn:
+            with conn.cursor() as cur:
+                load_corporate_events(cur)
+                load_insider_alerts(cur)
+            conn.commit()
+        return True
+    except Exception as exc:
+        print(f"  ⚠️  signals DB load failed: {exc}")
+        return False
+
+
 def step_refresh_top_picks_fundamentals(dry_run: bool) -> bool:
     """Pre-refresh screener fundamentals for today's top picks so the report
     renders with up-to-date shareholding, ratios, and structured financials.
@@ -527,6 +558,11 @@ def main() -> int:
     if not step_refresh_top_picks_fundamentals(args.dry_run):
         print("  ⚠️  Top picks fundamentals pre-refresh failed — report may have gaps")
         # non-fatal; carry on to the report
+
+    # 5A.5  Refresh corporate events (NSE → signals.corporate_events) so the
+    #       per-stock 'Corporate Events' panel is fresh. Non-fatal.
+    if not step_refresh_corporate_events(args.dry_run):
+        print("  ⚠️  Corporate events refresh failed (non-fatal) — see logs above")
 
     # 5B. Top Investment Picks Analysis (merges sector rotation + stage-2 tracker)
     if not step_top_picks_report(args.dry_run):
