@@ -75,12 +75,12 @@ def _nav_frame(nav_history: Iterable[Any]) -> pd.DataFrame:
     for entry in nav_history:
         timestamp = _field(entry, "timestamp")
         equity = _number(_field(entry, "equity"))
-        date = _date_key(timestamp)
-        if date is not None and equity is not None:
-            rows.append({"date": date, "equity": equity})
+        parsed_timestamp = _timestamp_key(timestamp)
+        if parsed_timestamp is not None and equity is not None:
+            rows.append({"timestamp": parsed_timestamp, "date": parsed_timestamp.date(), "equity": equity})
     if not rows:
         return pd.DataFrame(columns=["date", "equity"])
-    return pd.DataFrame(rows).drop_duplicates(subset=["date"], keep="last")
+    return _collapse_same_day_values(pd.DataFrame(rows), value_column="equity")
 
 
 def _benchmark_frame(benchmark_data: pd.DataFrame) -> pd.DataFrame:
@@ -90,12 +90,31 @@ def _benchmark_frame(benchmark_data: pd.DataFrame) -> pd.DataFrame:
     rows = []
     for row in benchmark_data[["date", "close"]].itertuples(index=False):
         close = _number(row.close)
-        date = _date_key(row.date)
-        if date is not None and close is not None:
-            rows.append({"date": date, "close": close})
+        parsed_timestamp = _timestamp_key(row.date)
+        if parsed_timestamp is not None and close is not None:
+            rows.append({"timestamp": parsed_timestamp, "date": parsed_timestamp.date(), "close": close})
     if not rows:
         return pd.DataFrame(columns=["date", "close"])
-    return pd.DataFrame(rows).drop_duplicates(subset=["date"], keep="last")
+    return _collapse_same_day_values(pd.DataFrame(rows), value_column="close")
+
+
+def _collapse_same_day_values(frame: pd.DataFrame, value_column: str) -> pd.DataFrame:
+    """Collapse duplicate dates without depending on input row order.
+
+    Intraday rows use the last chronological timestamp for the day. Date-only
+    duplicates have no chronological tie-breaker, so they are averaged.
+    """
+
+    collapsed_rows = []
+    for date, group in frame.groupby("date", sort=True):
+        timestamps = group["timestamp"]
+        if timestamps.nunique() > 1:
+            latest_timestamp = timestamps.max()
+            value = float(group.loc[timestamps == latest_timestamp, value_column].mean())
+        else:
+            value = float(group[value_column].mean())
+        collapsed_rows.append({"date": date, value_column: value})
+    return pd.DataFrame(collapsed_rows, columns=["date", value_column])
 
 
 def _field(entry: Any, name: str) -> Any:
@@ -104,11 +123,11 @@ def _field(entry: Any, name: str) -> Any:
     return getattr(entry, name, None)
 
 
-def _date_key(value: Any) -> Any:
+def _timestamp_key(value: Any) -> pd.Timestamp | None:
     parsed = pd.to_datetime(value, errors="coerce")
     if pd.isna(parsed):
         return None
-    return parsed.date()
+    return parsed
 
 
 def _number(value: Any) -> float | None:

@@ -44,3 +44,40 @@ def test_compare_to_benchmark_returns_empty_metrics_when_dates_do_not_align():
         "benchmark_max_drawdown_pct": 0.0,
         "observation_count": 0,
     }
+
+
+def test_compare_to_benchmark_is_deterministic_for_reordered_same_day_duplicates():
+    nav = [
+        {"timestamp": "2025-01-01", "equity": 100.0},
+        {"timestamp": "2025-01-01", "equity": 200.0},
+        {"timestamp": "2025-01-02", "equity": 120.0},
+    ]
+    reordered_nav = [
+        {"timestamp": "2025-01-01", "equity": 200.0},
+        {"timestamp": "2025-01-02", "equity": 120.0},
+        {"timestamp": "2025-01-01", "equity": 100.0},
+    ]
+    benchmark = pd.DataFrame(
+        {
+            "date": pd.to_datetime(["2025-01-01", "2025-01-01", "2025-01-02"]),
+            "close": [200.0, 400.0, 240.0],
+        }
+    )
+    reordered_benchmark = pd.DataFrame(
+        {
+            "date": pd.to_datetime(["2025-01-01", "2025-01-02", "2025-01-01"]),
+            "close": [400.0, 240.0, 200.0],
+        }
+    )
+
+    result = compare_to_benchmark(nav, benchmark, benchmark_id="NIFTY_TEST")
+    reordered_result = compare_to_benchmark(
+        reordered_nav,
+        reordered_benchmark,
+        benchmark_id="NIFTY_TEST",
+    )
+
+    assert result.as_dict() == reordered_result.as_dict()
+    assert result.observation_count == 2
+    assert round(result.portfolio_return_pct, 4) == -20.0
+    assert round(result.benchmark_return_pct, 4) == -20.0
