@@ -167,6 +167,54 @@ TV_CROSSHAIR_JS = """
 # ─────────────────────────────────────────────────────────────────────────────
 # Visual layer — extra CSS + inline SVG charting helpers
 # ─────────────────────────────────────────────────────────────────────────────
+
+# Plain-language definitions surfaced as hover tooltips on KPI / metric labels.
+# Keys match the labels used in rows_tech / rows_fund / rows_val / rows_subscore.
+# Lookup also tries the label with trailing "(...)" qualifiers stripped, so
+# variants like "Piotroski F-score" and "Beneish M-score (simplified)" both hit.
+_METRIC_TOOLTIPS: dict[str, str] = {
+    # ── Technicals
+    "Close": "Last traded close price on the snapshot date.",
+    "EMA 20/50/200": "Exponential moving averages over 20, 50 and 200 trading days. Price stacked above all three (and EMAs in 20>50>200 order) signals a healthy uptrend.",
+    "EMA50 slope (20d)": "Percent change in the 50-day EMA over the last 20 trading days. Positive = trend strengthening, negative = trend rolling over.",
+    "RSI(14)": "Relative Strength Index, 14-day. >70 overbought, <30 oversold, 50 is neutral momentum.",
+    "ATR(14)": "Average True Range, 14-day — typical daily price swing in rupees. Higher ATR = higher volatility; used to size stop-losses.",
+    "52W High / Low": "Highest and lowest closing prices over the last 52 weeks.",
+    "From 52W high": "How far the current price is below its 52-week high. Names within 10–15% of high tend to have stronger momentum.",
+    "Returns 1M/3M/6M/1Y": "Price-only total returns over 1/3/6/12 months. Dividends not included.",
+    "Vol vs 20d avg": "Latest day's traded volume divided by 20-day average. >1.5x = unusually active.",
+    # ── Fundamentals
+    "Piotroski F-score": "Piotroski F-score (0–9): 9 binary checks on profitability, leverage and operating efficiency. ≥7 strong, ≤3 weak. We approximate from BS/PnL/CF when not stored.",
+    "Altman Z-score": "Altman Z (or Z' for non-listed) bankruptcy-risk score. >3 safe, 1.8–3 grey zone, <1.8 distress.",
+    "Beneish M-score": "Beneish M-score earnings-manipulation probability. <-2.22 low risk, -2.22 to -1.78 watch, >-1.78 elevated. Simplified version uses 5 of 8 inputs computable from our data.",
+    "Forensic risk": "Composite forensic-quality tier (low / moderate / high) blending Beneish flag, Piotroski strength, OCF/PAT earnings quality, leverage and aggressive-growth signals.",
+    "ROE / ROCE": "Return on Equity = PAT / shareholders' equity. ROCE = EBIT / capital employed. >15% healthy, >20% excellent.",
+    "Revenue growth (3Y)": "Compound annual growth rate of revenue over the last 3 fiscal years.",
+    "PAT growth (3Y)": "Compound annual growth rate of net profit (PAT) over the last 3 fiscal years.",
+    "Debt / Equity": "Total debt ÷ total equity. <0.5 conservative, 0.5–1 moderate, >1 leveraged, >2 high risk.",
+    "Promoter holding": "Share of equity held by promoters (founders/controlling shareholders). Rising = positive signal, falling = caution flag.",
+    "FII / DII holding": "Foreign Institutional Investor and Domestic Institutional Investor ownership percentages. Heavy institutional backing signals quality conviction.",
+    "NPM": "Net Profit Margin = PAT ÷ Revenue. Sector-relative; software/pharma 15–25%, manufacturing 5–12%.",
+    "EPS": "Earnings Per Share (latest fiscal year). Drives the P/E denominator.",
+    # ── Valuation
+    "Price": "Current market price (snapshot date close).",
+    "EPS (TTM proxy)": "Trailing earnings per share proxy from screener.in ratios. Used as P/E denominator.",
+    "P/E (price ÷ EPS)": "Price-to-Earnings ratio. Compare to sector median; lower can mean cheap or low-growth, higher can mean growth or over-extension.",
+    "Market-cap bucket": "Size bucket — Large (>₹20k Cr), Mid (₹5–20k Cr), Small (<₹5k Cr). Affects liquidity and risk.",
+    "Sales (latest)": "Revenue for the most recent reported quarter (or year), with YoY change.",
+    "PAT (latest)": "Net profit for the most recent reported quarter (or year), with YoY change.",
+    "Net debt (3Y)": "Total debt minus cash, latest balance sheet. Negative = net cash position.",
+    # ── Sub-scores / composite
+    "Earnings Quality": "Quality of reported earnings (0–10): OCF/PAT conversion, working-capital discipline, non-recurring items, Beneish flag.",
+    "Sales Growth": "Revenue growth strength & consistency (0–10): 3Y CAGR, recent quarter YoY/QoQ, growth durability.",
+    "Financial Strength": "Balance-sheet resilience (0–10): D/E, interest cover, current ratio, Piotroski, Altman Z, debt trend.",
+    "Institutional": "Institutional backing (0–10): FII + DII holdings, promoter holding stability, recent block/bulk-deal activity.",
+    "Composite": "Blended 0–100 enhanced fundamental score combining the four sub-scores plus growth & quality overlays.",
+    "CANSLIM (O'Neil)": "William O'Neil CANSLIM score (0–25): C=current earnings, A=annual earnings, N=new highs/products, S=supply/demand, L=leader vs laggard, I=institutional sponsorship, M=market direction.",
+    "Minervini Trend": "Mark Minervini stage-2 uptrend template score (0–8): 8 trend-template checks on price vs EMAs, 52w distance, RSI relative strength.",
+}
+
+
 _EXTRA_CSS = """
 /* ===== Top Picks enhancements (overrides + additions on top of _CSS) ===== */
 :root{
@@ -309,6 +357,15 @@ body{
 .tp-kv td{padding:6px 8px;font-size:.82rem}
 .tp-kv td:first-child{color:var(--tp-mute);font-weight:500}
 .tp-kv td:last-child{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+/* Info-tooltip icon for KPI/metric labels (TradingView-style) */
+.tp-info{
+  display:inline-block;width:13px;height:13px;line-height:13px;text-align:center;
+  font-size:9px;font-weight:700;font-family:Georgia,serif;font-style:italic;
+  color:#64748b;background:#e2e8f0;border-radius:50%;margin-left:5px;
+  cursor:help;user-select:none;vertical-align:1px;
+  transition:background .15s,color .15s;
+}
+.tp-info:hover{background:#0ea5e9;color:#fff}
 
 /* Score / sub-score horizontal bars */
 .tp-bar{display:flex;align-items:center;gap:8px;margin:4px 0}
@@ -1390,8 +1447,16 @@ def _svg_candlestick(chart: dict, *, symbol: str = "", entry_low=None, entry_hig
 
 
 def _hbar(label: str, value: float | None, max_val: float, color_hint: str = "blue") -> str:
+    # Append info icon if we have a definition for this metric
+    try:
+        tip = _METRIC_TOOLTIPS.get(label) or _METRIC_TOOLTIPS.get(label.split("(")[0].strip())
+    except Exception:
+        tip = None
+    info_html = (f'<span class="tp-info" title="{html_mod.escape(tip)}">i</span>'
+                 if tip else "")
+    label_html = f'{html_mod.escape(label)}{info_html}'
     if value is None:
-        return f'<div class="tp-bar"><span class="lab">{html_mod.escape(label)}</span><span class="trk"></span><span class="val">—</span></div>'
+        return f'<div class="tp-bar"><span class="lab">{label_html}</span><span class="trk"></span><span class="val">—</span></div>'
     try: v = float(value)
     except (TypeError, ValueError): v = 0.0
     pct = max(0.0, min(100.0, (v / max_val) * 100)) if max_val else 0
@@ -1401,7 +1466,7 @@ def _hbar(label: str, value: float | None, max_val: float, color_hint: str = "bl
         color_cls = "green" if ratio >= 0.7 else "amber" if ratio >= 0.4 else "red"
     elif color_hint in ("green","amber","red"):
         color_cls = color_hint
-    return (f'<div class="tp-bar"><span class="lab">{html_mod.escape(label)}</span>'
+    return (f'<div class="tp-bar"><span class="lab">{label_html}</span>'
             f'<span class="trk"><span class="fill {color_cls}" style="width:{pct:.1f}%"></span></span>'
             f'<span class="val">{v:.1f}</span></div>')
 
@@ -3863,7 +3928,16 @@ def _stock_card_html(idx: int, p: PickRationale, e: dict, narr: dict) -> str:
     # Tech KV table
     def _kv(rows):
         if not rows: return ""
-        body = "".join(f"<tr><td>{h(str(k))}</td><td>{h(str(v))}</td></tr>" for k, v in rows)
+        def _label_html(k: str) -> str:
+            tip = _METRIC_TOOLTIPS.get(k)
+            if not tip:
+                # Try a normalized key (strip trailing "(...)" or "/N" qualifiers)
+                k2 = k.split("(")[0].strip().rstrip("·,;").strip()
+                tip = _METRIC_TOOLTIPS.get(k2)
+            if not tip:
+                return h(k)
+            return f'{h(k)}<span class="tp-info" title="{h(tip)}">i</span>'
+        body = "".join(f"<tr><td>{_label_html(str(k))}</td><td>{h(str(v))}</td></tr>" for k, v in rows)
         return f"<table class='tp-tbl tp-kv'><tbody>{body}</tbody></table>"
 
     return f"""
