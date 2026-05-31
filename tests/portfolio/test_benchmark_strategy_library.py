@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 import pandas as pd
 
 from portfolio.engine.benchmark import compare_to_benchmark
@@ -81,3 +83,20 @@ def test_compare_to_benchmark_is_deterministic_for_reordered_same_day_duplicates
     assert result.observation_count == 2
     assert round(result.portfolio_return_pct, 4) == -20.0
     assert round(result.benchmark_return_pct, 4) == -20.0
+
+
+def test_compare_to_benchmark_keeps_extreme_computed_metrics_json_safe():
+    nav = [
+        {"timestamp": "2025-01-01", "equity": 1.0},
+        {"timestamp": "2025-01-02", "equity": 1e308},
+    ]
+    benchmark = pd.DataFrame(
+        {
+            "date": pd.to_datetime(["2025-01-01", "2025-01-02"]),
+            "close": [1.0, 1e308],
+        }
+    )
+
+    result = compare_to_benchmark(nav, benchmark, benchmark_id="NIFTY_TEST")
+
+    json.dumps(result.as_dict(), allow_nan=False)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import math
 from typing import Any, Iterable
 
 import pandas as pd
@@ -19,11 +20,11 @@ class BenchmarkComparison:
     def as_dict(self) -> dict[str, Any]:
         return {
             "benchmark_id": self.benchmark_id,
-            "portfolio_return_pct": float(self.portfolio_return_pct),
-            "benchmark_return_pct": float(self.benchmark_return_pct),
-            "excess_return_pct": float(self.excess_return_pct),
-            "portfolio_max_drawdown_pct": float(self.portfolio_max_drawdown_pct),
-            "benchmark_max_drawdown_pct": float(self.benchmark_max_drawdown_pct),
+            "portfolio_return_pct": _finite_metric(self.portfolio_return_pct),
+            "benchmark_return_pct": _finite_metric(self.benchmark_return_pct),
+            "excess_return_pct": _finite_metric(self.excess_return_pct),
+            "portfolio_max_drawdown_pct": _finite_metric(self.portfolio_max_drawdown_pct),
+            "benchmark_max_drawdown_pct": _finite_metric(self.benchmark_max_drawdown_pct),
             "observation_count": int(self.observation_count),
         }
 
@@ -49,11 +50,11 @@ def compare_to_benchmark(
 
     return BenchmarkComparison(
         benchmark_id=str(benchmark_id),
-        portfolio_return_pct=portfolio_return_pct,
-        benchmark_return_pct=benchmark_return_pct,
-        excess_return_pct=round(portfolio_return_pct - benchmark_return_pct, 4),
-        portfolio_max_drawdown_pct=_max_drawdown_pct(portfolio_values),
-        benchmark_max_drawdown_pct=_max_drawdown_pct(benchmark_values),
+        portfolio_return_pct=_finite_metric(portfolio_return_pct),
+        benchmark_return_pct=_finite_metric(benchmark_return_pct),
+        excess_return_pct=_finite_metric(round(portfolio_return_pct - benchmark_return_pct, 4)),
+        portfolio_max_drawdown_pct=_finite_metric(_max_drawdown_pct(portfolio_values)),
+        benchmark_max_drawdown_pct=_finite_metric(_max_drawdown_pct(benchmark_values)),
         observation_count=int(len(aligned)),
     )
 
@@ -143,7 +144,7 @@ def _number(value: Any) -> float | None:
 def _pct_return(starting: float, ending: float) -> float:
     if starting == 0:
         return 0.0
-    return round((ending - starting) / starting * 100.0, 4)
+    return _finite_metric(round((ending - starting) / starting * 100.0, 4))
 
 
 def _max_drawdown_pct(values: list[float]) -> float:
@@ -154,5 +155,15 @@ def _max_drawdown_pct(values: list[float]) -> float:
     for value in values:
         peak = max(peak, value)
         if peak > 0:
-            max_drawdown = max(max_drawdown, (peak - value) / peak * 100.0)
-    return round(max_drawdown, 4)
+            max_drawdown = max(max_drawdown, _finite_metric((peak - value) / peak * 100.0))
+    return _finite_metric(round(max_drawdown, 4))
+
+
+def _finite_metric(value: Any) -> float:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return 0.0
+    if not math.isfinite(parsed):
+        return 0.0
+    return parsed
