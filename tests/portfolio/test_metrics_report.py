@@ -241,6 +241,15 @@ def test_read_audit_log_raises_domain_error_for_malformed_jsonl(tmp_path):
         read_audit_log(path)
 
 
+@pytest.mark.parametrize("raw_record", ["null", '"not an object"', "[1, 2, 3]"])
+def test_read_audit_log_raises_domain_error_for_non_object_jsonl_records(tmp_path, raw_record):
+    path = tmp_path / "bad-shape.jsonl"
+    path.write_text(f'{{"agent":"ok"}}\n{raw_record}\n', encoding="utf-8")
+
+    with pytest.raises(AuditLogError, match="audit log record must be an object"):
+        read_audit_log(path)
+
+
 def test_markdown_report_contains_key_pnl_trade_and_audit_sections(tmp_path):
     result = _replay_result()
     metrics = calculate_metrics(result)

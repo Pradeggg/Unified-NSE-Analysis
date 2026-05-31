@@ -79,11 +79,16 @@ def read_audit_log(path: str | Path) -> list[dict[str, Any]]:
             stripped = line.strip()
             if stripped:
                 try:
-                    rows.append(json.loads(stripped))
+                    row = json.loads(stripped)
                 except json.JSONDecodeError as exc:
                     raise AuditLogError(
                         f"malformed audit log JSON at {source}:{line_number}"
                     ) from exc
+                if not isinstance(row, dict):
+                    raise AuditLogError(
+                        f"audit log record must be an object at {source}:{line_number}"
+                    )
+                rows.append(row)
     return rows
 
 
