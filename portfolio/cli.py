@@ -13,7 +13,7 @@ from portfolio.agents.report_agent import ReportAgent
 from portfolio.defaults import sample_ohlcv, valid_strategy_spec
 from portfolio.engine.audit_log import AuditLog
 from portfolio.engine.event_loop import ReplayConfig, run_replay
-from portfolio.engine.metrics import calculate_metrics
+from portfolio.engine.metrics import PortfolioMetrics, calculate_metrics
 
 
 DEFAULT_RUN_ID = "PT-0"
@@ -129,16 +129,16 @@ def _cmd_status(args: argparse.Namespace) -> int:
     state_path = args.state or args.output_dir / STATE_RELATIVE_PATH
     metrics_path = args.metrics or args.output_dir / METRICS_RELATIVE_PATH
     state = _read_json(state_path)
-    metrics = _read_json(metrics_path)
+    metrics = _read_metrics(metrics_path)
     summary = state.get("summary", {})
 
     print(f"Run: {state.get('run_id', 'unknown')}")
     print(f"Last date: {summary.get('last_timestamp', 'n/a')}")
-    print(f"Strategy: {', '.join(summary.get('strategy_ids') or metrics.get('strategy_ids') or ['n/a'])}")
-    print(f"Ending equity: {float(metrics.get('ending_equity', 0.0)):.2f}")
-    print(f"Total return: {float(metrics.get('total_return_pct', 0.0)):.3f}%")
-    print(f"Fills: {int(metrics.get('number_of_fills', summary.get('fills', 0)))}")
-    print(f"Open positions: {int(metrics.get('open_positions_count', summary.get('open_positions', 0)))}")
+    print(f"Strategy: {', '.join(summary.get('strategy_ids') or metrics.strategy_ids or ['n/a'])}")
+    print(f"Ending equity: {metrics.ending_equity:.2f}")
+    print(f"Total return: {metrics.total_return_pct:.3f}%")
+    print(f"Fills: {metrics.number_of_fills}")
+    print(f"Open positions: {metrics.open_positions_count}")
     return 0
 
 
@@ -151,7 +151,7 @@ def _cmd_report(args: argparse.Namespace) -> int:
 
     if not report_path.exists():
         state = _read_json(state_path)
-        metrics = _read_json(metrics_path)
+        metrics = _read_metrics(metrics_path)
         replay_result = _replay_result_from_state(state)
         ReportAgent().write_markdown_report(
             report_path,
@@ -249,6 +249,73 @@ def _read_json(path: Path) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise CliArtifactError(f"corrupt artifact: {path}")
     return payload
+
+
+def _read_metrics(path: Path) -> PortfolioMetrics:
+    payload = _read_json(path)
+    return _coerce_metrics(path, payload)
+
+
+def _coerce_metrics(path: Path, payload: dict[str, Any]) -> PortfolioMetrics:
+    try:
+        return PortfolioMetrics(
+            starting_equity=_float_metric(path, payload, "starting_equity"),
+            ending_equity=_float_metric(path, payload, "ending_equity"),
+            total_return_pct=_float_metric(path, payload, "total_return_pct"),
+            max_drawdown_pct=_float_metric(path, payload, "max_drawdown_pct"),
+            number_of_trades=_int_metric(path, payload, "number_of_trades"),
+            number_of_fills=_int_metric(path, payload, "number_of_fills"),
+            realized_pnl=_float_metric(path, payload, "realized_pnl"),
+            winning_trades=_int_metric(path, payload, "winning_trades"),
+            losing_trades=_int_metric(path, payload, "losing_trades"),
+            flat_trades=_int_metric(path, payload, "flat_trades"),
+            open_positions_count=_int_metric(path, payload, "open_positions_count"),
+            invalid_fill_sequences=_int_metric(path, payload, "invalid_fill_sequences", default=0),
+            strategy_ids=_strategy_ids_metric(path, payload),
+        )
+    except CliArtifactError:
+        raise
+    except (TypeError, ValueError) as exc:
+        raise CliArtifactError(f"corrupt artifact: {path}: invalid metrics") from exc
+
+
+def _float_metric(path: Path, payload: dict[str, Any], field: str) -> float:
+    value = _required_metric(path, payload, field)
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError) as exc:
+        raise CliArtifactError(f"corrupt artifact: {path}: invalid metric {field}") from exc
+    if parsed != parsed or parsed in {float("inf"), float("-inf")}:
+        raise CliArtifactError(f"corrupt artifact: {path}: invalid metric {field}")
+    return parsed
+
+
+def _int_metric(path: Path, payload: dict[str, Any], field: str, *, default: int | None = None) -> int:
+    if field not in payload and default is not None:
+        return default
+    value = _required_metric(path, payload, field)
+    if isinstance(value, bool):
+        raise CliArtifactError(f"corrupt artifact: {path}: invalid metric {field}")
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError) as exc:
+        raise CliArtifactError(f"corrupt artifact: {path}: invalid metric {field}") from exc
+    if parsed != float(value):
+        raise CliArtifactError(f"corrupt artifact: {path}: invalid metric {field}")
+    return parsed
+
+
+def _strategy_ids_metric(path: Path, payload: dict[str, Any]) -> list[str]:
+    value = payload.get("strategy_ids", [])
+    if not isinstance(value, list):
+        raise CliArtifactError(f"corrupt artifact: {path}: invalid metric strategy_ids")
+    return [str(item) for item in value]
+
+
+def _required_metric(path: Path, payload: dict[str, Any], field: str) -> Any:
+    if field not in payload:
+        raise CliArtifactError(f"corrupt artifact: {path}: missing metric {field}")
+    return payload[field]
 
 
 def _json_safe(value: Any) -> Any:

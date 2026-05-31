@@ -146,6 +146,55 @@ def test_cli_status_reports_corrupt_artifacts_without_traceback(tmp_path: Path):
     assert "Traceback" not in proc.stderr
 
 
+def test_cli_status_reports_semantically_corrupt_metrics_without_partial_output(tmp_path: Path):
+    output_dir = tmp_path / "paper"
+    state_path = output_dir / "state" / "replay_state.json"
+    metrics_path = output_dir / "metrics" / "metrics.json"
+    state_path.parent.mkdir(parents=True)
+    metrics_path.parent.mkdir(parents=True)
+    state_path.write_text(
+        json.dumps(
+            {
+                "run_id": "PT-0",
+                "summary": {
+                    "last_timestamp": "2025-01-08",
+                    "strategy_ids": ["stage2_fixture_v1"],
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    metrics_path.write_text(
+        json.dumps(
+            {
+                "starting_equity": 100000.0,
+                "ending_equity": "bad",
+                "total_return_pct": 0.0,
+                "max_drawdown_pct": 0.0,
+                "number_of_trades": 0,
+                "number_of_fills": 1,
+                "realized_pnl": 0.0,
+                "winning_trades": 0,
+                "losing_trades": 0,
+                "flat_trades": 0,
+                "open_positions_count": 1,
+                "invalid_fill_sequences": 0,
+                "strategy_ids": ["stage2_fixture_v1"],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    proc = _run_cli("status", "--output-dir", str(output_dir))
+
+    assert proc.returncode == 1
+    assert proc.stdout == ""
+    assert "corrupt artifact:" in proc.stderr
+    assert "metrics.json" in proc.stderr
+    assert "ending_equity" in proc.stderr
+    assert "Traceback" not in proc.stderr
+
+
 def test_cli_report_prints_saved_markdown_report(tmp_path: Path):
     output_dir = tmp_path / "paper"
     replay = _run_cli("replay", "--output-dir", str(output_dir))
@@ -197,4 +246,21 @@ def test_cli_report_reports_corrupt_artifacts_without_traceback(tmp_path: Path):
     assert proc.returncode == 1
     assert "corrupt artifact:" in proc.stderr
     assert "replay_state.json" in proc.stderr
+    assert "Traceback" not in proc.stderr
+
+
+def test_cli_report_reports_incomplete_metrics_without_traceback(tmp_path: Path):
+    output_dir = tmp_path / "paper"
+    replay = _run_cli("replay", "--output-dir", str(output_dir))
+    assert replay.returncode == 0, replay.stderr
+    (output_dir / "reports" / "paper_trading_report.md").unlink()
+    metrics_path = output_dir / "metrics" / "metrics.json"
+    metrics_path.write_text(json.dumps({"ending_equity": 99620.0}), encoding="utf-8")
+
+    proc = _run_cli("report", "--output-dir", str(output_dir))
+
+    assert proc.returncode == 1
+    assert "corrupt artifact:" in proc.stderr
+    assert "metrics.json" in proc.stderr
+    assert "starting_equity" in proc.stderr
     assert "Traceback" not in proc.stderr
