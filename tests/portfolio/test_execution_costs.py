@@ -72,6 +72,28 @@ def test_limit_order_requires_price_touch():
     assert fill.price == 96.0
 
 
+def test_limit_gap_through_uses_open_when_more_conservative():
+    buy_bar = _bar()
+    buy_bar["open"] = 90.0
+    buy_bar["high"] = 101.0
+    buy_bar["low"] = 89.0
+    buy_bar["close"] = 95.0
+    sell_bar = _bar()
+    sell_bar["open"] = 110.0
+    sell_bar["high"] = 112.0
+    sell_bar["low"] = 99.0
+    sell_bar["close"] = 105.0
+    model = NextOpenExecutionModel()
+
+    buy = model.try_fill(_order(OrderType.LIMIT, limit_price=100.0), buy_bar)
+    sell = model.try_fill(_order(OrderType.LIMIT, OrderSide.SELL, limit_price=100.0), sell_bar)
+
+    assert buy is not None
+    assert sell is not None
+    assert buy.price == 90.0
+    assert sell.price == 110.0
+
+
 def test_stop_limit_requires_stop_and_limit_touch():
     model = NextOpenExecutionModel()
 
@@ -82,6 +104,31 @@ def test_stop_limit_requires_stop_and_limit_touch():
 
     assert fill is not None
     assert fill.price == 107.0
+
+
+def test_stop_limit_gap_through_uses_open_when_stop_active_at_open():
+    buy_bar = _bar()
+    buy_bar["open"] = 110.0
+    buy_bar["high"] = 115.0
+    buy_bar["low"] = 105.0
+    buy_bar["close"] = 112.0
+    sell_bar = _bar()
+    sell_bar["open"] = 90.0
+    sell_bar["high"] = 95.0
+    sell_bar["low"] = 85.0
+    sell_bar["close"] = 88.0
+    model = NextOpenExecutionModel()
+
+    buy = model.try_fill(_order(OrderType.STOP_LIMIT, stop_price=100.0, limit_price=112.0), buy_bar)
+    sell = model.try_fill(
+        _order(OrderType.STOP_LIMIT, OrderSide.SELL, stop_price=100.0, limit_price=88.0),
+        sell_bar,
+    )
+
+    assert buy is not None
+    assert sell is not None
+    assert buy.price == 110.0
+    assert sell.price == 90.0
 
 
 def test_legacy_constructor_keeps_brokerage_and_slippage_behavior():
@@ -105,6 +152,33 @@ def test_stop_order_sell_requires_stop_touch():
     assert fill.price == 96.0
 
 
+def test_sell_stop_gap_down_fills_at_open_with_slippage_not_stop_price():
+    bar = _bar()
+    bar["open"] = 90.0
+    bar["high"] = 95.0
+    bar["low"] = 85.0
+    bar["close"] = 88.0
+    model = NextOpenExecutionModel(cost_model=CostModel(slippage_bps=10.0))
+
+    fill = model.try_fill(_order(OrderType.STOP, OrderSide.SELL, stop_price=100.0), bar)
+
+    assert fill is not None
+    assert fill.price == 89.91
+
+
+def test_buy_stop_gap_up_fills_at_open_not_stop_price():
+    bar = _bar()
+    bar["open"] = 110.0
+    bar["high"] = 115.0
+    bar["low"] = 108.0
+    bar["close"] = 112.0
+
+    fill = NextOpenExecutionModel().try_fill(_order(OrderType.STOP, stop_price=100.0), bar)
+
+    assert fill is not None
+    assert fill.price == 110.0
+
+
 @pytest.mark.parametrize(
     "order_type",
     [OrderType.TRAILING_STOP, OrderType.BRACKET, OrderType.CANCEL_REPLACE],
@@ -118,6 +192,28 @@ def test_max_participation_pct_rejects_oversized_order():
     model = NextOpenExecutionModel(cost_model=CostModel(max_participation_pct=10.0))
 
     assert model.try_fill(order, _bar()) is None
+
+
+def test_full_participation_cap_rejects_quantity_greater_than_volume():
+    order = _order(OrderType.MARKET_NEXT_OPEN, quantity=1001)
+    model = NextOpenExecutionModel(cost_model=CostModel(max_participation_pct=100.0))
+
+    assert model.try_fill(order, _bar()) is None
+
+
+def test_full_participation_cap_rejects_zero_volume():
+    bar = _bar()
+    bar["volume"] = 0
+    model = NextOpenExecutionModel(cost_model=CostModel(max_participation_pct=100.0))
+
+    assert model.try_fill(_order(OrderType.MARKET_NEXT_OPEN), bar) is None
+
+
+def test_invalid_ohlc_bar_does_not_fill_market_order():
+    bar = _bar()
+    bar["high"] = 99.0
+
+    assert NextOpenExecutionModel().try_fill(_order(OrderType.MARKET_NEXT_OPEN), bar) is None
 
 
 def test_fixed_slippage_applies_per_share_by_side():
