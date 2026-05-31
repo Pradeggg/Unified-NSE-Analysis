@@ -212,6 +212,14 @@ _METRIC_TOOLTIPS: dict[str, str] = {
     "Composite": "Blended 0–100 enhanced fundamental score combining the four sub-scores plus growth & quality overlays.",
     "CANSLIM (O'Neil)": "William O'Neil CANSLIM score (0–25): C=current earnings, A=annual earnings, N=new highs/products, S=supply/demand, L=leader vs laggard, I=institutional sponsorship, M=market direction.",
     "Minervini Trend": "Mark Minervini stage-2 uptrend template score (0–8): 8 trend-template checks on price vs EMAs, 52w distance, RSI relative strength.",
+    # CANSLIM component-level tooltips (used by the per-stock breakdown)
+    "CANSLIM-C": "C — Current quarterly earnings (0–5). Primary: latest quarter PAT YoY growth (>25% = 5, >10% = 3, >0 = 1). Fallback proxy: 20-day (≈1M) price momentum.",
+    "CANSLIM-A": "A — Annual earnings growth (0–5). Primary: PAT CAGR from annual results (>25% = 5, >15% = 3, >5% = 1). Fallback proxy: 50-day (≈3M) price momentum.",
+    "CANSLIM-N": "N — New highs / new products (0–5). Proxy using volume surge (>2x 20d avg = 5) or distance from 52-week high (within 5% = 5, within 15% = 3).",
+    "CANSLIM-S": "S — Supply & demand (0–5). EMA stack — Price > EMA50 > EMA200 (full stack) = 5; partial stack = 3; price > EMA200 only = 1; below = 0.",
+    "CANSLIM-L": "L — Leader vs Laggard (0–5). Relative strength vs Nifty 500: >10pp outperformance = 5, >5pp = 3, positive = 1.",
+    "CANSLIM-I": "I — Institutional sponsorship (0–5, informational, not in 25-pt total). Combined FII + DII ownership: >30% = 5, >15% = 3, >5% = 1.",
+    "CANSLIM-M": "M — Market direction (0–5, informational, not in 25-pt total). Broad-market regime context (bull / neutral / bear).",
 }
 
 
@@ -366,6 +374,19 @@ body{
   transition:background .15s,color .15s;
 }
 .tp-info:hover{background:#0ea5e9;color:#fff}
+/* CANSLIM component breakdown */
+.cs-box{display:flex;flex-direction:column;gap:6px}
+.cs-row{display:grid;grid-template-columns:30px 1fr 48px;gap:8px;align-items:center;padding:4px 0;border-bottom:1px dotted #e9d5ff}
+.cs-row:last-of-type{border-bottom:none}
+.cs-key{font-weight:800;color:#5b21b6;font-size:.95rem;text-align:center;background:#ede9fe;border-radius:4px;padding:3px 0}
+.cs-name{font-size:.74rem;font-weight:600;color:#334155}
+.cs-detail{font-size:.7rem;color:#64748b;margin-top:1px}
+.cs-track{margin-top:4px;height:5px;background:#ede9fe;border-radius:99px;overflow:hidden}
+.cs-fill{height:100%;background:#a78bfa;border-radius:99px;transition:width .3s ease}
+.cs-fill.green{background:linear-gradient(90deg,#10b981,#16a34a)}
+.cs-fill.amber{background:linear-gradient(90deg,#f59e0b,#d97706)}
+.cs-fill.red{background:linear-gradient(90deg,#ef4444,#b91c1c)}
+.cs-score{font-variant-numeric:tabular-nums;font-weight:700;color:#5b21b6;font-size:.82rem;text-align:right}
 
 /* Score / sub-score horizontal bars */
 .tp-bar{display:flex;align-items:center;gap:8px;margin:4px 0}
@@ -1469,6 +1490,162 @@ def _hbar(label: str, value: float | None, max_val: float, color_hint: str = "bl
     return (f'<div class="tp-bar"><span class="lab">{label_html}</span>'
             f'<span class="trk"><span class="fill {color_cls}" style="width:{pct:.1f}%"></span></span>'
             f'<span class="val">{v:.1f}</span></div>')
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CANSLIM (O'Neil) component breakdown — recomputes the 5 stored components
+# (C/A/N/S/L) using the same thresholds as fixed_nse_universe_analysis.py so
+# the sum reproduces snap.can_slim_score, and adds two informational signals
+# (I = institutional, M = market) sourced from fundamentals + market regime.
+# ─────────────────────────────────────────────────────────────────────────────
+def _canslim_breakdown(snap: dict, tech: dict, fund: dict | None,
+                       qtr: list[dict], ann: list[dict],
+                       parsed: dict | None, market_regime: str | None = None) -> dict:
+    fund = fund or {}
+    parsed = parsed or {}
+    comps: dict[str, dict] = {}
+
+    # ── C: Current quarterly earnings (5 pts)
+    #   Primary: latest qtr PAT YoY growth (vs same qtr 4 periods back).
+    #   Fallback: 20-day price momentum proxy (matches upstream pipeline).
+    c_score = None; c_label = "—"; c_method = ""
+    try:
+        if len(qtr) >= 5 and qtr[0].get("pat") and qtr[4].get("pat"):
+            p_now, p_yoy = float(qtr[0]["pat"]), float(qtr[4]["pat"])
+            if p_yoy != 0:
+                g = (p_now - p_yoy) / abs(p_yoy)
+                c_score = 5 if g > 0.25 else 3 if g > 0.10 else 1 if g > 0 else 0
+                c_label = f"PAT YoY {g*100:+.1f}%"; c_method = "real"
+    except Exception:
+        pass
+    if c_score is None:
+        m20 = (tech.get("ret_1m") or 0) / 100.0 if tech.get("ret_1m") is not None else None
+        if m20 is not None:
+            c_score = 5 if m20 > 0.10 else 3 if m20 > 0.05 else 1 if m20 > 0 else 0
+            c_label = f"1M return {m20*100:+.1f}%"; c_method = "proxy"
+    comps["C"] = {"name": "Current Earnings", "score": c_score, "max": 5,
+                  "detail": c_label, "method": c_method}
+
+    # ── A: Annual earnings growth (5 pts)
+    #   Primary: PAT CAGR from annual results (3Y if available, else 2Y).
+    #   Fallback: 50-day (~3M) price momentum.
+    a_score = None; a_label = "—"; a_method = ""
+    try:
+        if len(ann) >= 3:
+            p_now = float(ann[0].get("pat") or 0)
+            p_back = float(ann[2].get("pat") or 0)
+            years = 2
+        elif len(ann) >= 2:
+            p_now = float(ann[0].get("pat") or 0)
+            p_back = float(ann[1].get("pat") or 0)
+            years = 1
+        else:
+            p_now = p_back = 0; years = 0
+        if p_now > 0 and p_back > 0 and years > 0:
+            cagr = (p_now / p_back) ** (1 / years) - 1
+            a_score = 5 if cagr > 0.25 else 3 if cagr > 0.15 else 1 if cagr > 0.05 else 0
+            a_label = f"PAT CAGR {cagr*100:+.1f}% ({years}Y)"; a_method = "real"
+    except Exception:
+        pass
+    if a_score is None:
+        m3 = (tech.get("ret_3m") or 0) / 100.0 if tech.get("ret_3m") is not None else None
+        if m3 is not None:
+            a_score = 5 if m3 > 0.20 else 3 if m3 > 0.10 else 1 if m3 > 0.05 else 0
+            a_label = f"3M return {m3*100:+.1f}%"; a_method = "proxy"
+    comps["A"] = {"name": "Annual Earnings", "score": a_score, "max": 5,
+                  "detail": a_label, "method": a_method}
+
+    # ── N: New highs / new products (5 pts) — proxy: volume surge + distance from 52w high
+    n_score = None; n_label = "—"; n_method = "proxy"
+    vr = tech.get("last_vol_ratio")
+    dfh = tech.get("dist_from_high_pct")
+    if vr is not None:
+        try:
+            vr_f = float(vr)
+            n_score = 5 if vr_f > 2.0 else 3 if vr_f > 1.5 else 1 if vr_f > 1.0 else 0
+            n_label = f"Vol {vr_f:.1f}x 20d avg"
+        except Exception:
+            pass
+    if n_score is None and dfh is not None:
+        try:
+            d = float(dfh)
+            n_score = 5 if d > -5 else 3 if d > -15 else 1 if d > -25 else 0
+            n_label = f"{d:+.1f}% from 52w high"
+        except Exception:
+            pass
+    comps["N"] = {"name": "New Highs / Volume", "score": n_score, "max": 5,
+                  "detail": n_label, "method": n_method}
+
+    # ── S: Supply & Demand (5 pts) — EMA stack (price > 50 > 200)
+    s_score = None; s_label = "—"; s_method = "proxy"
+    try:
+        last = float(tech.get("last") or 0)
+        e50 = float(tech.get("ema50") or 0)
+        e200 = float(tech.get("ema200") or 0)
+        if last and e50 and e200:
+            if last > e50 > e200: s_score, s_label = 5, "Price > EMA50 > EMA200 (full stack)"
+            elif last > e50:       s_score, s_label = 3, "Price > EMA50 (partial stack)"
+            elif last > e200:      s_score, s_label = 1, "Price > EMA200 only"
+            else:                  s_score, s_label = 0, "Below key EMAs"
+    except Exception:
+        pass
+    comps["S"] = {"name": "Supply / Demand", "score": s_score, "max": 5,
+                  "detail": s_label, "method": s_method}
+
+    # ── L: Leader vs Laggard (5 pts) — relative strength vs Nifty 500
+    l_score = None; l_label = "—"; l_method = "real"
+    rs = snap.get("relative_strength") if snap else None
+    if rs is not None:
+        try:
+            rs_f = float(rs)
+            # Upstream uses raw decimals (0.10 = 10pp outperformance). Our DB
+            # stores percentage points already (e.g. 12 = 12pp), so scale /100.
+            rs_dec = rs_f / 100.0
+            l_score = 5 if rs_dec > 0.10 else 3 if rs_dec > 0.05 else 1 if rs_dec > 0 else 0
+            l_label = f"RS {rs_f:+.1f}pp vs Nifty 500"
+        except Exception:
+            pass
+    comps["L"] = {"name": "Leader (RS)", "score": l_score, "max": 5,
+                  "detail": l_label, "method": l_method}
+
+    # ── I: Institutional Sponsorship (informational, 0-5 — NOT in stored total)
+    i_score = None; i_label = "—"; i_method = "real"
+    fii = parsed.get("fii_pct"); dii = parsed.get("dii_pct")
+    if fii is not None or dii is not None:
+        try:
+            inst = (float(fii or 0) + float(dii or 0))
+            i_score = 5 if inst > 30 else 3 if inst > 15 else 1 if inst > 5 else 0
+            i_label = f"FII+DII {inst:.1f}%"
+        except Exception:
+            pass
+    comps["I"] = {"name": "Institutional", "score": i_score, "max": 5,
+                  "detail": i_label, "method": i_method,
+                  "informational": True}
+
+    # ── M: Market direction (informational, 0-5) — uses caller-supplied regime
+    m_score = None; m_label = "—"; m_method = "context"
+    if market_regime:
+        mr = str(market_regime).lower()
+        if any(k in mr for k in ("bull", "risk-on", "uptrend", "trending up", "strong")):
+            m_score, m_label = 5, f"Market: {market_regime}"
+        elif any(k in mr for k in ("bear", "risk-off", "downtrend", "weak")):
+            m_score, m_label = 0, f"Market: {market_regime}"
+        else:
+            m_score, m_label = 3, f"Market: {market_regime}"
+    comps["M"] = {"name": "Market Direction", "score": m_score, "max": 5,
+                  "detail": m_label, "method": m_method,
+                  "informational": True}
+
+    # CANSL composite (the 5 components in the stored 25-pt score)
+    core = [comps[k]["score"] for k in ("C", "A", "N", "S", "L")
+            if comps[k]["score"] is not None]
+    composite_25 = sum(core) if core else None
+
+    return {
+        "components": comps,
+        "composite_25": composite_25,
+        "stored_total": snap.get("can_slim_score") if snap else None,
+    }
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -3828,6 +4005,57 @@ def _stock_card_html(idx: int, p: PickRationale, e: dict, narr: dict) -> str:
     if bars:
         subscore_bars = "".join(bars)
 
+    # ── CANSLIM (O'Neil) — C/A/N/S/L/I/M component breakdown
+    canslim_block = ""
+    p_for_canslim = (fund or {}).get("_parsed") or {}
+    cs_breakdown = _canslim_breakdown(snap or {}, tech or {}, fund or {},
+                                       qtr or [], ann or [], p_for_canslim,
+                                       market_regime=None)
+    cs_comp25 = cs_breakdown["composite_25"]
+    cs_stored = cs_breakdown["stored_total"]
+    comps = cs_breakdown["components"]
+    method_badge = {
+        "real":    '<span style="font-size:.6rem;background:#dcfce7;color:#15803d;padding:1px 5px;border-radius:3px;margin-left:4px">real</span>',
+        "proxy":   '<span style="font-size:.6rem;background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:3px;margin-left:4px">proxy</span>',
+        "context": '<span style="font-size:.6rem;background:#e0e7ff;color:#3730a3;padding:1px 5px;border-radius:3px;margin-left:4px">context</span>',
+        "":        "",
+    }
+    rows = []
+    for key in ("C", "A", "N", "S", "L", "I", "M"):
+        c = comps[key]
+        sc = c["score"]
+        sc_disp = f"{sc}/{c['max']}" if sc is not None else "—"
+        ratio = (sc / c["max"]) if (sc is not None and c["max"]) else 0
+        bar_cls = "green" if ratio >= 0.7 else "amber" if ratio >= 0.4 else ("red" if sc is not None else "")
+        bar_pct = max(0, min(100, ratio * 100)) if sc is not None else 0
+        info_flag = " · info-only" if c.get("informational") else ""
+        tip = _METRIC_TOOLTIPS.get(f"CANSLIM-{key}") or c["name"]
+        rows.append(
+            f'<div class="cs-row">'
+            f'  <div class="cs-key">{key}<span class="tp-info" title="{html_mod.escape(tip)}">i</span></div>'
+            f'  <div class="cs-mid">'
+            f'    <div class="cs-name">{html_mod.escape(c["name"])}{method_badge.get(c.get("method",""),"")}{html_mod.escape(info_flag)}</div>'
+            f'    <div class="cs-detail">{html_mod.escape(c["detail"])}</div>'
+            f'    <div class="cs-track"><div class="cs-fill {bar_cls}" style="width:{bar_pct:.0f}%"></div></div>'
+            f'  </div>'
+            f'  <div class="cs-score">{sc_disp}</div>'
+            f'</div>'
+        )
+    header_bits = []
+    if cs_comp25 is not None:
+        header_bits.append(f"Composite (C+A+N+S+L): <b>{cs_comp25}/25</b>")
+    if cs_stored is not None and cs_comp25 is not None and abs(int(cs_stored) - cs_comp25) > 0:
+        header_bits.append(f"Stored: {int(cs_stored)}/25")
+    header_html = (f'<div style="font-size:.75rem;color:#475569;margin-bottom:6px">'
+                   f'{" · ".join(header_bits)}</div>') if header_bits else ""
+    canslim_block = (
+        f'<div class="cs-box">{header_html}{"".join(rows)}'
+        f'<p style="margin:8px 0 0;font-size:.68rem;color:#64748b;line-height:1.5">'
+        f'<b>real</b> = computed from financials · <b>proxy</b> = price/volume substitute when financials unavailable · '
+        f'I (institutional) &amp; M (market) are informational and not part of the 25-pt composite.'
+        f'</p></div>'
+    )
+
     # Risk gauge SVG
     risk_gauge_svg = _svg_gauge(risk_score_n) if risk_score_n is not None else ""
 
@@ -3984,6 +4212,10 @@ def _stock_card_html(idx: int, p: PickRationale, e: dict, narr: dict) -> str:
           Financial Strength and Institutional Backing are each on a 0–10 scale;
           Composite is the blended 0–100 enhanced fundamental score.
         </p>
+        <div style="margin-top:14px;padding-top:12px;border-top:1px dashed #c4b5fd">
+          <h5 style="color:#5b21b6;margin:0 0 8px;font-size:.78rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase">CANSLIM Breakdown (C·A·N·S·L·I·M)</h5>
+          {canslim_block}
+        </div>
       </div>
       <div class="tp-sub" style="background:#fffbeb">
         <h4><span class="ico">$</span> Valuation</h4>
