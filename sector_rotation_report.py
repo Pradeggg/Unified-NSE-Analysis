@@ -553,7 +553,7 @@ def _generate_technical_view_narrative(metrics: pd.DataFrame, missing_indices: l
     model = (
         os.environ.get("SHUNYAAI_ASSISTANT_MODEL")
         or _load_env_key("SHUNYAAI_ASSISTANT_MODEL")
-        or "gpt-5.5"
+        or "gpt-4o"  # PG 2026-05-27: gpt-5.5 is not a real OpenAI model id
     )
     try:
         sample_cols = [
@@ -2153,18 +2153,29 @@ def _load_env_key(key: str) -> str | None:
 
 
 def _llm_call(api_key: str, model: str, system_msg: str, user_msg: str,
-              max_tokens: int = 16384, timeout: int = 250) -> dict:
-    """Make a single OpenAI chat completion call via curl; return parsed JSON dict."""
+              max_tokens: int = 16384, timeout: int = 250,
+              response_format: dict | None = None) -> dict:
+    """Make a single OpenAI chat completion call via curl; return parsed JSON dict.
+
+    PG 2026-05-31: callers can pass `response_format={"type": "json_object"}` to
+    force strict JSON output (supported by gpt-4o / gpt-4o-mini / o-series).
+    Defaults to `{"type": "json_object"}` so all JSON-shaped prompts in this
+    suite benefit without callers opting in individually.
+    """
     import subprocess
     import tempfile
-    payload = json.dumps({
+    body: dict = {
         "model": model,
         "messages": [
             {"role": "system", "content": system_msg},
             {"role": "user", "content": user_msg},
         ],
         "max_completion_tokens": max_tokens,
-    })
+    }
+    rf = response_format if response_format is not None else {"type": "json_object"}
+    if rf:
+        body["response_format"] = rf
+    payload = json.dumps(body)
     with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False, encoding="utf-8") as tf:
         tf.write(payload)
         payload_path = tf.name
@@ -2200,12 +2211,23 @@ def _llm_call(api_key: str, model: str, system_msg: str, user_msg: str,
         if text.endswith("```"):
             text = text[:-3].strip()
     start = text.find("{")
-    end = text.rfind("}") + 1
-    if start < 0 or end <= start:
+    if start < 0:
         raise ValueError(f"No JSON object in LLM response. First 200: {text[:200]!r}")
+    # PG 2026-05-31: tolerate trailing junk (the "Extra data" failure mode).
+    # raw_decode parses the first complete JSON object and ignores anything
+    # after the matching closing brace.
     try:
-        return json.loads(text[start:end])
+        obj, _consumed = json.JSONDecoder().raw_decode(text[start:])
+        return obj
     except json.JSONDecodeError as exc:
+        # Fall back to legacy heuristic (last `}` slice) — covers weird cases
+        # where raw_decode bails on subtle issues but a slice still parses.
+        end = text.rfind("}") + 1
+        if end > start:
+            try:
+                return json.loads(text[start:end])
+            except json.JSONDecodeError:
+                pass
         raise ValueError(f"JSONDecodeError: {exc}. Head: {text[start:start+300]!r}") from exc
 
 
@@ -2267,7 +2289,7 @@ def _build_stock_followup_prompt(missing_syms: list[str], candidates: pd.DataFra
 
 def _generate_llm_narratives(sector_rank: pd.DataFrame, candidates: pd.DataFrame,
                               fund_details: dict | None = None) -> dict:
-    """Call OpenAI API (gpt-5.5) to generate structured narratives; follow up for any missed stocks."""
+    """Call OpenAI API (gpt-4o) to generate structured narratives; follow up for any missed stocks."""
     import os
 
     api_key = (
@@ -2281,7 +2303,7 @@ def _generate_llm_narratives(sector_rank: pd.DataFrame, candidates: pd.DataFrame
     model = (
         os.environ.get("SHUNYAAI_ASSISTANT_MODEL")
         or _load_env_key("SHUNYAAI_ASSISTANT_MODEL")
-        or "gpt-5.5"
+        or "gpt-4o"  # PG 2026-05-27: gpt-5.5 is not a real OpenAI model id
     )
 
     system_msg = (
@@ -2640,7 +2662,7 @@ def generate_market_brief(
     model = (
         os.environ.get("SHUNYAAI_ASSISTANT_MODEL")
         or _load_env_key("SHUNYAAI_ASSISTANT_MODEL")
-        or "gpt-5.5"
+        or "gpt-4o"  # PG 2026-05-27: gpt-5.5 is not a real OpenAI model id
     )
     try:
         prompt = _build_market_brief_prompt(

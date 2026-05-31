@@ -2879,45 +2879,68 @@ def generate_narratives(stocks: list[dict], macro_context: str, snap_date: str,
         print("   ⚠️  OPENAI_API_KEY not set — using rule-based narrative")
         return rule_fallback
 
-    # ---- Pass 1: per-stock deep analysis ----
-    try:
-        print("   🧠 LLM pass 1/2: per-stock deep analysis…")
-        deep_prompt = _build_deep_llm_prompt(stocks, macro_context, snap_date)
-        deep_result = _llm_call(
-            api_key=api_key,
-            model=DEFAULT_MODEL,
-            system_msg=_DEEP_SYSTEM_MSG,
-            user_msg=deep_prompt,
-            max_tokens=16384,
-            timeout=250,
-        )
-        if "per_stock" not in deep_result or not isinstance(deep_result["per_stock"], dict):
-            raise ValueError("Deep-analysis response missing per_stock dict")
-        per_stock = deep_result["per_stock"]
-        # Fill any missing symbol from rule-based AND merge computed risk_reward
-        # baseline as defaults (LLM-supplied targets/stops take precedence).
-        for s in stocks:
-            sym = s["symbol"]
-            if sym not in per_stock:
-                per_stock[sym] = rule_fallback["per_stock"][sym]
-            rr = s.get("risk_reward") or {}
-            if rr and "error" not in rr:
-                ps = per_stock[sym]
-                ps.setdefault("potential_target_short_term", rr.get("target_2m"))
-                ps.setdefault("target_4m", rr.get("target_4m"))
-                ps.setdefault("potential_target_long_term", rr.get("target_6m"))
-                ps.setdefault("stop_loss", rr.get("stop_loss"))
-                ps.setdefault("risk_reward_ratio", rr.get("rr_ratio_4m"))
-                ps.setdefault("risk_score_0_10", rr.get("risk_score"))
-                ps.setdefault("risk_tier", rr.get("risk_tier"))
-                ps.setdefault("risk_factors", rr.get("risk_factors") or [])
-                ps.setdefault("position_size_pct", rr.get("position_size_pct"))
-            # Chart narrative fallback if LLM didn't emit one
-            if not per_stock[sym].get("chart_narrative"):
-                per_stock[sym]["chart_narrative"] = _rule_chart_narrative(s.get("tech") or {}, rr)
-    except Exception as exc:
-        print(f"   ⚠️  Deep-analysis LLM failed: {exc} — using rule-based for all stocks")
+    # ---- Pass 1: per-stock deep analysis (chunked for reliable JSON) ----
+    # PG 2026-05-31: a single 10-stock prompt produced ~30KB JSON and tripped
+    # the model into emitting trailing junk → JSONDecodeError. Chunking into
+    # batches of CHUNK_SIZE stocks keeps each response under ~10KB and lets
+    # one bad batch fall back to rule-based without losing the rest.
+    print("   🧠 LLM pass 1/2: per-stock deep analysis (chunked)…")
+    CHUNK_SIZE = 3
+    per_stock: dict = {}
+    chunks = [stocks[i:i + CHUNK_SIZE] for i in range(0, len(stocks), CHUNK_SIZE)]
+    chunks_ok = 0
+    chunks_failed = 0
+    for ci, chunk in enumerate(chunks, 1):
+        syms = ",".join(s["symbol"] for s in chunk)
+        try:
+            deep_prompt = _build_deep_llm_prompt(chunk, macro_context, snap_date)
+            deep_result = _llm_call(
+                api_key=api_key,
+                model=DEFAULT_MODEL,
+                system_msg=_DEEP_SYSTEM_MSG,
+                user_msg=deep_prompt,
+                max_tokens=8192,
+                timeout=180,
+            )
+            if "per_stock" not in deep_result or not isinstance(deep_result["per_stock"], dict):
+                raise ValueError("missing per_stock dict")
+            for sym, data in deep_result["per_stock"].items():
+                per_stock[sym] = data
+            chunks_ok += 1
+            print(f"     chunk {ci}/{len(chunks)} ({syms}) ✓")
+        except Exception as exc:
+            chunks_failed += 1
+            print(f"     chunk {ci}/{len(chunks)} ({syms}) ✗ {exc} — using rule-based for these")
+            for s in chunk:
+                per_stock[s["symbol"]] = rule_fallback["per_stock"].get(s["symbol"], {})
+
+    # If every chunk failed, fall back wholesale so the report still ships.
+    if chunks_ok == 0:
+        print("   ⚠️  All deep-analysis chunks failed — using rule-based for all stocks")
         return rule_fallback
+
+    # Fill any missing symbol from rule-based AND merge computed risk_reward
+    # baseline as defaults (LLM-supplied targets/stops take precedence).
+    for s in stocks:
+        sym = s["symbol"]
+        if sym not in per_stock:
+            per_stock[sym] = rule_fallback["per_stock"][sym]
+        rr = s.get("risk_reward") or {}
+        if rr and "error" not in rr:
+            ps = per_stock[sym]
+            ps.setdefault("potential_target_short_term", rr.get("target_2m"))
+            ps.setdefault("target_4m", rr.get("target_4m"))
+            ps.setdefault("potential_target_long_term", rr.get("target_6m"))
+            ps.setdefault("stop_loss", rr.get("stop_loss"))
+            ps.setdefault("risk_reward_ratio", rr.get("rr_ratio_4m"))
+            ps.setdefault("risk_score_0_10", rr.get("risk_score"))
+            ps.setdefault("risk_tier", rr.get("risk_tier"))
+            ps.setdefault("risk_factors", rr.get("risk_factors") or [])
+            ps.setdefault("position_size_pct", rr.get("position_size_pct"))
+        # Chart narrative fallback if LLM didn't emit one
+        if not per_stock[sym].get("chart_narrative"):
+            per_stock[sym]["chart_narrative"] = _rule_chart_narrative(s.get("tech") or {}, rr)
+    print(f"   pass 1 done: {chunks_ok}/{len(chunks)} chunks ok, {chunks_failed} fell back to rule-based")
 
     # ---- Pass 2: portfolio-level refinement ----
     try:
