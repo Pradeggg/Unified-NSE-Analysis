@@ -163,7 +163,7 @@ class NextOpenExecutionModel:
             max_participation_pct = float(self.cost_model.max_participation_pct)
         except (TypeError, ValueError):
             return False
-        if math.isinf(max_participation_pct):
+        if max_participation_pct == math.inf:
             return True
         if not math.isfinite(max_participation_pct) or max_participation_pct <= 0:
             return False

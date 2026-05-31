@@ -209,6 +209,14 @@ def test_full_participation_cap_rejects_zero_volume():
     assert model.try_fill(_order(OrderType.MARKET_NEXT_OPEN), bar) is None
 
 
+def test_negative_infinity_participation_cap_is_invalid():
+    model = NextOpenExecutionModel(
+        cost_model=CostModel(max_participation_pct=float("-inf"))
+    )
+
+    assert model.try_fill(_order(OrderType.MARKET_NEXT_OPEN), _bar()) is None
+
+
 def test_invalid_ohlc_bar_does_not_fill_market_order():
     bar = _bar()
     bar["high"] = 99.0
