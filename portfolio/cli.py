@@ -106,7 +106,7 @@ def _cmd_replay(args: argparse.Namespace) -> int:
     metrics = calculate_metrics(result)
     state = _state_payload(args.run_id, result, metrics.as_dict())
     benchmark = compare_to_benchmark(
-        state["nav_history"],
+        _benchmark_nav_history(state["nav_history"]),
         _fixture_buy_hold_benchmark(data),
         benchmark_id="fixture_buy_hold",
     )
@@ -254,6 +254,16 @@ def _manifest_generated_at(state: dict[str, Any]) -> str:
     if "T" in timestamp:
         return timestamp
     return f"{timestamp}T00:00:00Z"
+
+
+def _benchmark_nav_history(nav_history: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        {
+            "timestamp": row.get("timestamp"),
+            "equity": row.get("equity", row.get("nav")),
+        }
+        for row in nav_history
+    ]
 
 
 def _state_payload(run_id: str, result: Any, metrics: dict[str, Any]) -> dict[str, Any]:

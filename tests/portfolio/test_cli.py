@@ -113,6 +113,7 @@ def test_cli_replay_writes_pt1_artifacts_and_references(tmp_path: Path):
     assert manifest["run_id"] == "PT-1"
     assert manifest["strategy_count"] == 1
     assert benchmark["benchmark_id"] == "fixture_buy_hold"
+    assert benchmark["observation_count"] > 0
 
     artifact_paths = manifest["artifacts"]
     assert artifact_paths["validation"].endswith("validation/data_quality.json")
