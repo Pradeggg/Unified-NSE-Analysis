@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 
+import numpy as np
 import pandas as pd
 
 from portfolio.engine.run_manifest import build_run_manifest, checksum_payload
@@ -44,6 +45,50 @@ def test_validate_ohlcv_rejects_missing_required_columns():
     assert report.error_count == 1
     assert report.issues[0].code == "missing_column"
     assert report.issues[0].severity == Severity.ERROR
+
+
+def test_validate_ohlcv_reports_non_numeric_high_without_crashing():
+    frame = sample_ohlcv()
+    frame["high"] = frame["high"].astype(object)
+    frame.loc[1, "high"] = "not-a-number"
+
+    report = validate_ohlcv(frame)
+
+    assert not report.is_usable
+    assert "invalid_numeric_value" in [issue.code for issue in report.issues]
+
+
+def test_validate_ohlcv_reports_missing_symbol_and_date_values():
+    frame = sample_ohlcv()
+    frame.loc[1, "symbol"] = None
+    frame.loc[2, "date"] = pd.NaT
+
+    report = validate_ohlcv(frame)
+
+    assert not report.is_usable
+    assert report.error_count == 2
+    assert [issue.code for issue in report.issues] == ["missing_value", "missing_value"]
+
+
+def test_validate_ohlcv_reports_nan_ohlc_value():
+    frame = sample_ohlcv()
+    frame.loc[1, "open"] = np.nan
+
+    report = validate_ohlcv(frame)
+
+    assert not report.is_usable
+    assert "invalid_numeric_value" in [issue.code for issue in report.issues]
+
+
+def test_checksum_payload_normalizes_numpy_scalars_like_python_scalars():
+    assert checksum_payload({"x": np.int64(7)}) == checksum_payload({"x": 7})
+    assert checksum_payload({"x": np.bool_(True)}) == checksum_payload({"x": True})
+
+
+def test_checksum_payload_normalizes_non_finite_floats_to_strings():
+    assert checksum_payload({"x": float("inf")}) == checksum_payload({"x": "inf"})
+    assert checksum_payload({"x": float("-inf")}) == checksum_payload({"x": "-inf"})
+    assert checksum_payload({"x": float("nan")}) == checksum_payload({"x": "nan"})
 
 
 def test_build_run_manifest_is_json_safe_and_checksum_stable(tmp_path):

@@ -2,12 +2,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
+import math
 from typing import Any
 
 import pandas as pd
 
 
 REQUIRED_OHLCV_COLUMNS = ("date", "symbol", "open", "high", "low", "close", "volume")
+NUMERIC_OHLCV_COLUMNS = ("open", "high", "low", "close", "volume")
 
 
 class Severity(StrEnum):
@@ -81,13 +83,45 @@ def validate_ohlcv(data: pd.DataFrame) -> DataQualityReport:
     if missing_columns:
         return DataQualityReport(row_count=row_count, symbol_count=symbol_count, issues=tuple(issues))
 
+    for column in ("date", "symbol"):
+        issue = _first_issue(
+            data,
+            data[column].isna(),
+            code="missing_value",
+            severity=Severity.ERROR,
+            message=f"required OHLCV value is missing: {column}",
+        )
+        if issue is not None:
+            issues.append(issue)
+
+    numeric_data = pd.DataFrame(index=data.index)
+    valid_numeric = pd.Series(True, index=data.index)
+    for column in NUMERIC_OHLCV_COLUMNS:
+        numeric_values = pd.to_numeric(data[column], errors="coerce")
+        finite_values = numeric_values.map(_is_finite_number)
+        invalid_numeric = data[column].isna() | numeric_values.isna() | ~finite_values
+        issue = _first_issue(
+            data,
+            invalid_numeric,
+            code="invalid_numeric_value",
+            severity=Severity.ERROR,
+            message=f"required OHLCV numeric value is invalid: {column}",
+        )
+        if issue is not None:
+            issues.append(issue)
+        numeric_data[column] = numeric_values
+        valid_numeric &= ~invalid_numeric
+
     invalid_range = (
-        (data["high"] < data["open"])
-        | (data["high"] < data["close"])
-        | (data["high"] < data["low"])
-        | (data["low"] > data["open"])
-        | (data["low"] > data["close"])
-        | (data["low"] > data["high"])
+        (
+            (numeric_data["high"] < numeric_data["open"])
+            | (numeric_data["high"] < numeric_data["close"])
+            | (numeric_data["high"] < numeric_data["low"])
+            | (numeric_data["low"] > numeric_data["open"])
+            | (numeric_data["low"] > numeric_data["close"])
+            | (numeric_data["low"] > numeric_data["high"])
+        )
+        & valid_numeric
     )
     issue = _first_issue(
         data,
@@ -101,7 +135,7 @@ def validate_ohlcv(data: pd.DataFrame) -> DataQualityReport:
 
     issue = _first_issue(
         data,
-        data["volume"] <= 0,
+        (numeric_data["volume"] <= 0) & valid_numeric,
         code="zero_volume",
         severity=Severity.WARNING,
         message="bar volume must be positive",
@@ -126,6 +160,15 @@ def _symbol_count(data: pd.DataFrame) -> int:
     if "symbol" not in data.columns:
         return 0
     return int(data["symbol"].dropna().nunique())
+
+
+def _is_finite_number(value: Any) -> bool:
+    if pd.isna(value):
+        return False
+    try:
+        return math.isfinite(float(value))
+    except (TypeError, ValueError):
+        return False
 
 
 def _first_issue(

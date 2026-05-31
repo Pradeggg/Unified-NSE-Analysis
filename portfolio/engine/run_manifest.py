@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import subprocess
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -10,6 +11,11 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
+
+try:
+    import numpy as np
+except ImportError:  # pragma: no cover - pandas normally provides numpy in this project
+    np = None
 
 
 @dataclass(frozen=True)
@@ -36,7 +42,13 @@ class RunManifest:
 
 def checksum_payload(payload: Any) -> str:
     normalized = _json_safe(payload)
-    encoded = json.dumps(normalized, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("utf-8")
+    encoded = json.dumps(
+        normalized,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=True,
+        allow_nan=False,
+    ).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
 
 
@@ -82,6 +94,8 @@ def _git_commit() -> str | None:
 
 
 def _json_safe(value: Any) -> Any:
+    if np is not None and isinstance(value, np.generic):
+        return _json_safe(value.item())
     if isinstance(value, pd.DataFrame):
         ordered = value.sort_index(axis=1)
         return [_json_safe(row) for row in ordered.to_dict(orient="records")]
@@ -96,8 +110,10 @@ def _json_safe(value: Any) -> Any:
     if isinstance(value, int):
         return value
     if isinstance(value, float):
-        if pd.isna(value):
-            return None
+        if math.isnan(value):
+            return "nan"
+        if math.isinf(value):
+            return "inf" if value > 0 else "-inf"
         return value
     if hasattr(value, "isoformat"):
         return value.isoformat()
