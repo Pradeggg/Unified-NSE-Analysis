@@ -325,6 +325,23 @@ class TerminalReportsTests(unittest.TestCase):
                         "data_path": "features.csv",
                         "benchmark_path": "benchmark.csv",
                         "output_dir": "portfolio/data/nse_pg_strategy_lab/latest",
+                        "paper_portfolio": {
+                            "selected_strategy_id": "vcp_breakout_v1",
+                            "selected_strategy_name": "VCP Breakout",
+                            "as_of": "2026-05-29",
+                            "open_positions": 2,
+                            "today_pnl": 1234.56,
+                            "today_return_pct": 0.12,
+                            "total_unrealized_pnl": 4321.0,
+                            "artifacts": {
+                                "state": "paper/portfolio_state.json",
+                                "positions": "paper/positions.csv",
+                                "daily_pnl": "paper/daily_pnl.csv",
+                                "trades": "paper/trades.csv",
+                                "agent_actions": "paper/agent_actions.jsonl",
+                                "report": "reports/paper_portfolio_report.md",
+                            },
+                        },
                         "leaderboard": [
                             {
                                 "rank": 1,
@@ -339,6 +356,44 @@ class TerminalReportsTests(unittest.TestCase):
                                 "fills": 474,
                                 "win_rate_pct": 23.9362,
                             }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            paper_dir = root / "portfolio" / "data" / "nse_pg_strategy_lab" / "latest" / "paper"
+            paper_dir.mkdir(parents=True)
+            (paper_dir / "daily_pnl.csv").write_text(
+                "date,cash,market_value,nav,daily_pnl,daily_return_pct,cumulative_return_pct,drawdown_pct,open_positions\n"
+                "2026-05-27,100000,900000,1000000,0,0,0,0,1\n"
+                "2026-05-28,90000,920000,1010000,10000,1,1,0,1\n"
+                "2026-05-29,80000,940000,1020000,10000,0.99,2,0,2\n",
+                encoding="utf-8",
+            )
+            (paper_dir / "positions.csv").write_text(
+                "symbol,quantity,current_price,market_value,unrealized_pnl,unrealized_pct,stage,rsi_14,relative_strength,stop_price,target_price,reward_risk\n"
+                "AAA,10,100,1000,50,5,STAGE_2,62,80,90,120,2\n"
+                "BBB,5,200,1000,-25,-2.5,STAGE_2,55,70,180,240,2\n",
+                encoding="utf-8",
+            )
+            (paper_dir / "trades.csv").write_text(
+                "date,strategy_id,symbol,side,quantity,price,notional,fees,slippage,cash_effect,order_id,fill_id\n"
+                "2026-05-29,vcp_breakout_v1,AAA,BUY,10,100,1000,1,0.5,-1001,ord1,fill1\n",
+                encoding="utf-8",
+            )
+            state_dir = root / "portfolio" / "data" / "nse_pg_strategy_lab" / "latest" / "runs" / "vcp_breakout_v1" / "state"
+            state_dir.mkdir(parents=True)
+            (state_dir / "replay_state.json").write_text(
+                json.dumps(
+                    {
+                        "nav_history": [
+                            {"timestamp": "2026-05-27", "nav": 1000000, "cash": 100000, "market_value": 900000, "open_positions": 1},
+                            {"timestamp": "2026-05-28", "nav": 1010000, "cash": 90000, "market_value": 920000, "open_positions": 1},
+                            {"timestamp": "2026-05-29", "nav": 1005000, "cash": 80000, "market_value": 925000, "open_positions": 2},
+                        ],
+                        "fills": [
+                            {"fill_date": "2026-05-28", "symbol": "AAA", "side": "BUY", "quantity": 10, "price": 100},
+                            {"fill_date": "2026-05-29", "symbol": "BBB", "side": "SELL", "quantity": 5, "price": 200},
                         ],
                     }
                 ),
@@ -363,6 +418,36 @@ class TerminalReportsTests(unittest.TestCase):
         self.assertIn("Portfolio Strategy Lab", html)
         self.assertIn("vcp_breakout_v1", html)
         self.assertIn("Cost and Turnover Diagnostics", html)
+        self.assertIn("Daily Paper Portfolio", html)
+        self.assertIn("LLM Narrative", html)
+        self.assertIn("Strategy Return Chart", html)
+        self.assertIn("Portfolio NAV Chart", html)
+        self.assertIn("Strategy Verdict", html)
+        self.assertIn("Turnover Decomposition", html)
+        self.assertIn("total filled notional divided by starting capital", html)
+        self.assertIn("Stage 2 Feature Rows", html)
+        self.assertIn("20.0% of feature rows", html)
+        self.assertIn("Executive Summary", html)
+        self.assertIn("Primary Strategy", html)
+        self.assertIn("Portfolio P&amp;L", html)
+        self.assertIn("Detailed Analysis", html)
+        self.assertIn("Strategy Playbook", html)
+        self.assertIn("What it is", html)
+        self.assertIn("VCP Breakout", html)
+        self.assertIn("Council Deliberations", html)
+        self.assertIn("Quant Agent", html)
+        self.assertIn("Risk Agent", html)
+        self.assertIn("Portfolio Manager", html)
+        self.assertIn("Data Steward", html)
+        self.assertIn("Council Chair Recommendation", html)
+        self.assertIn("Strategy Daily Calendar Heatmap", html)
+        self.assertIn("data-heatmap-day", html)
+        self.assertIn("data-tooltip", html)
+        self.assertIn("aa-heatmap-day:hover::after", html)
+        self.assertIn("BUY: AAA", html)
+        self.assertIn("SELL: BBB", html)
+        self.assertIn("Daily P&amp;L: ₹10,000.00", html)
+        self.assertIn("Daily P&amp;L: ₹-5,000.00", html)
 
 
 if __name__ == "__main__":

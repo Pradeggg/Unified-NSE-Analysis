@@ -393,7 +393,11 @@ def _requested_symbol_tokens(text: str) -> list[str]:
 _UNIVERSE_LOCK = threading.Lock()
 _UNIVERSE_CACHE: dict[str, Any] = {"symbols": None, "loaded_at": 0.0, "source": None}
 _UNIVERSE_TTL_SECONDS = 60 * 60 * 6  # 6 hours; PG-resident universe rarely changes
-_PG_DSN_DEFAULT = "dbname=nse_market user=nse_admin host=/tmp"
+_PG_DSN_DEFAULT = (
+    os.environ.get("AGENT_ADDA_PG_DSN")
+    or os.environ.get("PG_DSN")
+    or "dbname=nse_market user=nse_admin host=/tmp"
+)
 
 
 def _load_symbol_universe() -> frozenset[str]:

@@ -50,7 +50,11 @@ ROOT = Path(__file__).resolve().parent
 CACHE_DIR = ROOT / "data" / "_fno_cache"
 SIGNALS_CSV = ROOT / "data" / "fno_signals.csv"
 CACHE_TTL_HOURS = 24
-PG_DSN = "dbname=nse_market user=nse_admin host=/tmp"
+PG_DSN = (
+    os.environ.get("AGENT_ADDA_PG_DSN")
+    or os.environ.get("PG_DSN")
+    or "dbname=nse_market user=nse_admin host=/tmp"
+)
 
 # ── NSE access config ──
 _NSE_HEADERS = {

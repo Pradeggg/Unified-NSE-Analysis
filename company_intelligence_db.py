@@ -1,4 +1,20 @@
-"""SQLite storage helpers for Company + Sector X-Ray intelligence."""
+"""SQLite storage helpers for Company + Sector X-Ray intelligence.
+
+INTENTIONAL STANDALONE SQLite — NOT migrated to PostgreSQL.
+------------------------------------------------------------
+The company intelligence knowledge graph (website crawl, official documents,
+investor pages, evidence chains) is a document/graph store, not a time-series
+analytical store.  SQLite is appropriate here because:
+
+  1. The schema is complex and document-centric (JSON evidence blobs, nested
+     hierarchies) — no analytical queries that benefit from PG column indexes.
+  2. The DB is written only during on-demand crawl jobs (/company-index), not
+     during the nightly refresh pipeline.
+  3. It is a local cache; losing it is safe (re-crawl restores it).
+
+If a PostgreSQL migration is desired in the future, the target schema would
+be under a new ``company_intel.*`` schema in ``nse_market``.
+"""
 
 from __future__ import annotations
 

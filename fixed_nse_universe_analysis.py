@@ -51,7 +51,11 @@ NSE_DATA_DIR.mkdir(exist_ok=True, parents=True)
 
 # Database path
 DB_PATH = ROOT / "nse_analysis.db"
-PG_DSN = "dbname=nse_market user=nse_admin host=/tmp"
+PG_DSN = (
+    os.environ.get("AGENT_ADDA_PG_DSN")
+    or os.environ.get("PG_DSN")
+    or "dbname=nse_market user=nse_admin host=/tmp"
+)
 
 STOCK_RESULT_COLUMNS = [
     'SYMBOL', 'COMPANY_NAME', 'MARKET_CAP_CATEGORY', 'CURRENT_PRICE',

@@ -1062,6 +1062,7 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/report sector-rotation",           "⚡ Instant sector rotation dashboard from DB (no LLM)"),
     ("/report sector-rotation pdf",       "⚡ Sector rotation report as PDF"),
     ("/report stage2",                    "⚡ Stage 2 universe tracker — top 30 leaders + new entrants (instant)"),
+    ("/report portfolio-monitor",         "💼 ⚡ EOD portfolio analysis — signals, heat maps, fundamentals (instant from DB)"),
     ("/report strategy-lab",              "📈 Portfolio strategy lab — paper strategy leaderboard + risk diagnostics"),
     ("/report stage2 md",                 "⚡ Stage 2 tracker as Markdown"),
     ("/report recommendation",            "Grounded EOD recommendation report — indices, sectors, stocks, portfolio/watchlist"),
@@ -1076,6 +1077,7 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/report RELIANCE",                  "Quick research report (default type: research, format: html)"),
     ("/backtest list",    "List EOD Strategy Lab strategies"),
     ("/strategy-lab validate", "Validate EOD backtesting data readiness"),
+    ("/strategy-lab run", "Run portfolio strategy replay, DB persistence, and HTML report"),
     ("/strategy-council DMART", "Iterative strategist + critic EOD simulation with train/validation/test discipline"),
     ("/strategy-council DMART --iterations 3 --horizon 1w,2w,4w", "Run Strategy Council with explicit horizons"),
     ("/strategy-council DMART --llm", "Use configured LLM strategist and critics, with deterministic fallback if unavailable"),
@@ -1088,7 +1090,13 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/data-coverage NIFTY500", "📊 Audit EOD history coverage for an index (default 5-year threshold)"),
     ("/data-coverage NIFTY500 --backfill", "Audit and yfinance-backfill any symbols below the 5-year threshold"),
     ("/data-coverage NIFTY500 --details", "Audit and list the worst-covered symbols"),
-    ("/pnl",              "💼 Live portfolio P&L — unrealised gains/losses from holdings.csv"),
+    # ── Portfolio Monitor (my-portfolio) ───────────────────────────────────────
+    ("/my-portfolio",         "💼 Live intraday P&L + multi-strategy signals for all your holdings"),
+    ("/my-portfolio eod",     "📊 Full EOD analysis — CANSLIM · Minervini · Fundamental · Value · RSI (opens HTML)"),
+    ("/my-portfolio buy",     "🟢 Show only BUY / STRONG BUY holdings from your portfolio"),
+    ("/my-portfolio sell",    "🔴 Show only SELL candidates — sorted by loss depth"),
+    ("/my-portfolio hold",    "🟡 Show HOLD holdings — useful for intraday monitoring"),
+    ("/pnl",                  "💼 Live portfolio P&L — unrealised gains/losses from holdings.csv"),
     ("/live",             "Switch to LIVE mode (real-time NSE API)"),
     ("/eod",              "Switch to EOD mode (historical CSV/DB)"),
     ("/auto",             "Switch to AUTO mode (keyword detect)"),
@@ -1203,6 +1211,8 @@ _CMD_CATEGORIES: dict[str, tuple[str, str]] = {
     "/scenario": ("Analysis Tools",      "🎯"),
     "/narrative":("Analysis Tools",      "🎯"),
     "/concall":  ("Analysis Tools",      "🎯"),
+    "/my-portfolio": ("Portfolio",       "💼"),
+    "/my_portfolio": ("Portfolio",       "💼"),
     "/pnl":      ("Portfolio",           "💼"),
     "/export":   ("Session",             "💾"),
     "/live":     ("Session",             "💾"),
@@ -6997,7 +7007,9 @@ def _build_command_registry():
     def _h_backtest(query, agent, show_trace):
         from terminal.backtest import handle_backtest_command
         _print_user(query)
-        console.print(Markdown(_linkify_markdown(handle_backtest_command(query))))
+        output = handle_backtest_command(query)
+        _remember_generated_report(output)
+        console.print(Markdown(_linkify_markdown(output)))
         return True
     registry.register(CommandHandler(
         name="backtest",
@@ -7132,6 +7144,70 @@ def _build_command_registry():
         match_fn=lambda q: q.startswith("/email"),
         handler_fn=_h_email,
         description="First-class report mailer",
+    ))
+
+    # /my-portfolio — live intraday dashboard + EOD analysis
+    def _h_my_portfolio(query: str, agent, show_trace: bool) -> bool:
+        _print_user(query)
+        from terminal.portfolio_monitor import (
+            run_intraday_view,
+            run_eod_report,
+            INTRADAY_REPORT,
+            EOD_REPORT,
+        )
+        import subprocess as _sp, sys as _sys
+
+        parts = query.strip().split()
+        sub   = parts[1].lower() if len(parts) > 1 else ""
+
+        # /my-portfolio eod — force full EOD report
+        if sub == "eod":
+            console.print("[dim]  → Running EOD portfolio analysis…[/dim]")
+            result = run_eod_report()
+            if result.get("success"):
+                console.print(f"[green]  ✓ EOD report ready:[/green] {result['path']}")
+                _sp.Popen(["open", result["path"]])
+            else:
+                console.print(f"[red]  ✗ EOD report failed:[/red] {result.get('note','')}")
+            return True
+
+        # /my-portfolio sell | buy | hold | strong-buy — filtered view
+        filter_map = {
+            "sell": "SELL", "buy": "BUY", "hold": "HOLD",
+            "strong-buy": "STRONG BUY", "strongbuy": "STRONG BUY",
+        }
+        sig_filter = filter_map.get(sub)
+
+        # Default: intraday view (with optional signal filter)
+        in_market = True
+        try:
+            from terminal.portfolio_monitor import _is_market_hours
+            in_market = _is_market_hours()
+        except Exception:
+            pass
+
+        mode_label = "Live intraday" if in_market else "EOD snapshot"
+        console.print(f"[dim]  → {mode_label} portfolio view"
+                      f"{f' ({sig_filter} only)' if sig_filter else ''}…[/dim]")
+
+        md_output = run_intraday_view(filter_signal=sig_filter, live=in_market)
+        _remember_generated_report(md_output)
+        console.print(Markdown(_linkify_markdown(md_output)))
+
+        # Open HTML in browser (non-blocking)
+        report_path = str(INTRADAY_REPORT)
+        console.print(f"\n[dim]  📊 Full dashboard → [bold]{report_path}[/bold][/dim]")
+        try:
+            _sp.Popen(["open", report_path])
+        except Exception:
+            pass
+        return True
+
+    registry.register(CommandHandler(
+        name="my-portfolio",
+        match_fn=lambda q: q.startswith("/my-portfolio") or q.startswith("/my_portfolio"),
+        handler_fn=_h_my_portfolio,
+        description="Live intraday P&L + multi-strategy signals for your portfolio",
     ))
 
     return registry
@@ -7430,18 +7506,22 @@ def _chat_loop(agent, show_trace: bool) -> None:
                 pass
             console.print(f"[dim]  ⤳ piping output to /email after upstream completes…[/dim]")
             text = _upstream_text
+        # ── Situation assessment (natural language only) ───────────────
+        # Slash commands bypass entity assessment entirely — they are
+        # deterministic and must not be rewritten by the LLM entity resolver.
         _entity_assessment = None
-        try:
-            from terminal.situation_assessment import assess_entity_topic_request as _assess_entity_topic_request
-            _entity_assessment = _assess_entity_topic_request(text)
-            if (
-                _entity_assessment.applies
-                and _entity_assessment.decision == "route_with_entity_topic"
-                and _entity_assessment.rewritten_input
-            ):
-                text = _entity_assessment.rewritten_input
-        except Exception:
-            logger.debug("Entity assessment failed in REPL loop", exc_info=True)
+        if not text.lstrip().startswith("/"):
+            try:
+                from terminal.situation_assessment import assess_entity_topic_request as _assess_entity_topic_request
+                _entity_assessment = _assess_entity_topic_request(text)
+                if (
+                    _entity_assessment.applies
+                    and _entity_assessment.decision == "route_with_entity_topic"
+                    and _entity_assessment.rewritten_input
+                ):
+                    text = _entity_assessment.rewritten_input
+            except Exception:
+                logger.debug("Entity assessment failed in REPL loop", exc_info=True)
 
         # ── Exit ──────────────────────────────────────────────────────
         if text.lower() in ("exit", "quit", "q", ":q"):
@@ -7493,6 +7573,19 @@ def _chat_loop(agent, show_trace: bool) -> None:
                 from terminal.confidence import render_clarification as _render_clarif
                 _render_clarif(_mtf_conf, console)
             text = _mtf_rewrite
+
+        # ── Unified command registry — deterministic slash-command dispatch ──
+        # Try the shared registry first for any slash command.  All commands
+        # registered via _build_command_registry() work here automatically,
+        # so new commands need only be added to the registry — not duplicated
+        # as another inline elif block below.
+        # The inline chain that follows is the legacy fallback for the ~46
+        # commands not yet migrated to the registry.
+        if text.lstrip().startswith("/"):
+            _shared_reg = _get_shared_registry()
+            if _shared_reg.dispatch(text, agent, show_trace, mode="interactive"):
+                _separator()
+                continue
 
         if text.lower().startswith("/mtf"):
             _print_user(text)
@@ -7551,7 +7644,9 @@ def _chat_loop(agent, show_trace: bool) -> None:
         if text.lower().startswith(("/backtest", "/strategy-lab")):
             from terminal.backtest import handle_backtest_command
             _print_user(text)
-            console.print(Markdown(_linkify_markdown(handle_backtest_command(text))))
+            output = handle_backtest_command(text)
+            _remember_generated_report(output)
+            console.print(Markdown(_linkify_markdown(output)))
             _separator()
             continue
 
@@ -7964,6 +8059,63 @@ def _chat_loop(agent, show_trace: bool) -> None:
             _print_prompts_library(fkey)
             continue
 
+        # ── /my-portfolio — live intraday + EOD portfolio analysis ───────
+        if text.lower().startswith(("/my-portfolio", "/my_portfolio")):
+            from terminal.portfolio_monitor import (
+                run_intraday_view,
+                run_eod_report,
+                INTRADAY_REPORT,
+                EOD_REPORT,
+            )
+            import subprocess as _sp
+            parts = text.strip().split()
+            sub   = parts[1].lower() if len(parts) > 1 else ""
+
+            if sub == "eod":
+                _print_user(text)
+                console.print("[dim]  → Running EOD portfolio analysis…[/dim]")
+                result = run_eod_report()
+                if result.get("success"):
+                    console.print(f"[green]  ✓ EOD report ready:[/green] {result['path']}")
+                    try:
+                        _sp.Popen(["open", result["path"]])
+                    except Exception:
+                        pass
+                else:
+                    console.print(f"[red]  ✗ EOD report failed:[/red] {result.get('note', '')}")
+            else:
+                filter_map = {
+                    "sell": "SELL", "buy": "BUY", "hold": "HOLD",
+                    "strong-buy": "STRONG BUY", "strongbuy": "STRONG BUY",
+                }
+                sig_filter = filter_map.get(sub)
+                try:
+                    from terminal.portfolio_monitor import _is_market_hours
+                    in_mkt = _is_market_hours()
+                except Exception:
+                    in_mkt = False
+                mode_lbl = "Live intraday" if in_mkt else "EOD snapshot"
+                _print_user(text)
+                console.print(
+                    f"[dim]  → {mode_lbl} portfolio view"
+                    f"{f' ({sig_filter} only)' if sig_filter else ''}…[/dim]"
+                )
+                try:
+                    md_out = run_intraday_view(filter_signal=sig_filter, live=in_mkt)
+                    _remember_generated_report(md_out)
+                    console.print(Markdown(_linkify_markdown(md_out)))
+                    console.print(
+                        f"\n[dim]  📊 Full dashboard → [bold]{INTRADAY_REPORT}[/bold][/dim]"
+                    )
+                    try:
+                        _sp.Popen(["open", str(INTRADAY_REPORT)])
+                    except Exception:
+                        pass
+                except Exception as exc:
+                    console.print(f"[red]  ✗ /my-portfolio failed:[/red] {exc}")
+            _separator()
+            continue
+
         # ── /scan shortcut: run intraday screener ──────────────────────
         if text.lower().startswith("/scan"):
             status, tool_name, args = _scan_command_tool_call(text)
@@ -7988,7 +8140,9 @@ def _chat_loop(agent, show_trace: bool) -> None:
             continue
 
         # ── /screen shortcut: run EOD screener ────────────────────────
-        if text.lower().startswith("/screen"):
+        # Must NOT match /screenshot — check for word boundary after /screen
+        _tl = text.lower()
+        if _tl.startswith("/screen") and not _tl.startswith("/screenshot"):
             parts = text.split(maxsplit=1)
             arg   = parts[1].strip().lower() if len(parts) > 1 else "stage2"
             _screen_aliases = {

@@ -8,6 +8,7 @@ checksum verification.
 """
 
 from __future__ import annotations
+import os
 
 import argparse
 import gzip
@@ -23,7 +24,11 @@ import psycopg2
 
 BASE = Path(__file__).resolve().parent.parent
 ARCHIVE_ROOT = BASE / "postgres" / "archive" / "fno"
-PG_DSN = "dbname=nse_market user=nse_admin host=/tmp"
+PG_DSN = (
+    os.environ.get("AGENT_ADDA_PG_DSN")
+    or os.environ.get("PG_DSN")
+    or "dbname=nse_market user=nse_admin host=/tmp"
+)
 
 
 BOUND_RE = re.compile(r"FROM \('(?P<start>\d{4}-\d{2}-\d{2})'\) TO \('(?P<end>\d{4}-\d{2}-\d{2})'\)")

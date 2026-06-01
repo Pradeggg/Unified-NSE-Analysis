@@ -7,7 +7,11 @@ from typing import Any
 import pandas as pd
 
 
-DEFAULT_DSN = "dbname=nse_market user=nse_admin host=/tmp"
+DEFAULT_DSN = (
+    os.environ.get("AGENT_ADDA_PG_DSN")
+    or os.environ.get("PG_DSN")
+    or "dbname=nse_market user=nse_admin host=/tmp"
+)
 
 
 @dataclass(frozen=True)
@@ -39,12 +43,14 @@ def load_postgres_replay_data(
         top_symbols = _top_liquid_symbols(conn, latest_eod_date=latest_eod_date, top_n=top_n)
         eod = _load_eod(conn, lookback_date=lookback_date, end_date=end_date, symbols=top_symbols)
         stage = _load_stage_snapshots(conn, lookback_date=lookback_date, end_date=end_date, symbols=top_symbols)
+        vcp_picks = _load_vcp_picks(conn, lookback_date=lookback_date, end_date=end_date, symbols=top_symbols)
         fundamentals = _load_fundamentals(conn, symbols=top_symbols)
         benchmark = _load_benchmark(conn, start_date=start_date, end_date=end_date, benchmark_id=benchmark_id)
 
     features = prepare_replay_frame(
         eod,
         stage,
+        vcp_picks=vcp_picks,
         fundamentals=fundamentals,
         start_date=start_date,
     )
@@ -59,6 +65,7 @@ def prepare_replay_frame(
     eod: pd.DataFrame,
     stage_snapshots: pd.DataFrame,
     *,
+    vcp_picks: pd.DataFrame | None = None,
     fundamentals: pd.DataFrame | None = None,
     start_date: str,
 ) -> pd.DataFrame:
@@ -72,6 +79,7 @@ def prepare_replay_frame(
         raw = raw.merge(stages, on=["date", "symbol"], how="left")
     else:
         raw["stage"] = None
+    raw = _merge_vcp_picks(raw, vcp_picks)
     raw = _merge_fundamentals(raw, fundamentals)
     raw = raw.sort_values(["symbol", "date"]).reset_index(drop=True)
 
@@ -105,10 +113,30 @@ def prepare_replay_frame(
     raw["weekly_stage"] = raw["stage"]
     raw["trailing_stop"] = 0
 
-    for column in ("eps_growth_pct", "sales_growth_pct", "roe_pct", "debt_to_equity"):
+    for column in (
+        "sales_growth_pct",
+        "pat_growth_pct",
+        "eps_growth_pct",
+        "revenue_qoq_pct",
+        "pat_qoq_pct",
+        "eps_qoq_pct",
+        "opm_pct",
+        "opm_yoy_delta",
+        "roe_pct",
+        "roce_pct",
+        "debt_to_equity",
+        "annual_sales_growth_pct",
+        "annual_pat_growth_pct",
+    ):
         if column not in raw.columns:
             raw[column] = 0.0
         raw[column] = pd.to_numeric(raw[column], errors="coerce").fillna(0.0)
+    if "latest_result_age_days" not in raw.columns:
+        raw["latest_result_age_days"] = 9999.0
+    raw["latest_result_age_days"] = pd.to_numeric(raw["latest_result_age_days"], errors="coerce").fillna(9999.0)
+    if "latest_result_period" not in raw.columns:
+        raw["latest_result_period"] = ""
+    raw["latest_result_period"] = raw["latest_result_period"].fillna("").astype(str)
 
     features = raw.loc[pd.to_datetime(raw["date"]) >= pd.to_datetime(start_date), _FEATURE_COLUMNS].copy()
     features = features.dropna(subset=["stage", "sma_20", "sma_50", "sma_100", "sma_200", "atr_14"])
@@ -180,14 +208,52 @@ def _load_stage_snapshots(conn: Any, *, lookback_date: str, end_date: str | None
     )
 
 
-def _load_fundamentals(conn: Any, *, symbols: list[str]) -> pd.DataFrame:
+def _load_vcp_picks(conn: Any, *, lookback_date: str, end_date: str | None, symbols: list[str]) -> pd.DataFrame:
+    end_clause = "AND snapshot_date <= %(end_date)s" if end_date else ""
     return pd.read_sql_query(
+        f"""
+        SELECT
+            snapshot_date AS date,
+            symbol,
+            rank AS vcp_rank,
+            vcp_score,
+            vcp_breakout_pct,
+            vcp_contraction_pct
+        FROM scores.stage2_vcp_picks
+        WHERE snapshot_date >= %(lookback_date)s
+          AND symbol = ANY(%(symbols)s)
+          {end_clause}
+        """,
+        conn,
+        params={"lookback_date": lookback_date, "end_date": end_date, "symbols": symbols},
+    )
+
+
+def _load_fundamentals(conn: Any, *, symbols: list[str]) -> pd.DataFrame:
+    quarterly = pd.read_sql_query(
         """
         SELECT
             symbol,
-            pat_growth_3y AS eps_growth_pct,
-            revenue_growth_3y AS sales_growth_pct,
+            period_end,
+            revenue,
+            pat,
+            eps,
+            opm_pct
+        FROM scores.quarterly_results
+        WHERE symbol = ANY(%s)
+          AND period_end IS NOT NULL
+        """,
+        conn,
+        params=[symbols],
+    )
+    static = pd.read_sql_query(
+        """
+        SELECT
+            symbol,
+            revenue_growth_3y AS annual_sales_growth_pct,
+            pat_growth_3y AS annual_pat_growth_pct,
             roe AS roe_pct,
+            roce AS roce_pct,
             debt_to_equity
         FROM scores.fundamentals
         WHERE symbol = ANY(%s)
@@ -195,6 +261,13 @@ def _load_fundamentals(conn: Any, *, symbols: list[str]) -> pd.DataFrame:
         conn,
         params=[symbols],
     )
+    if quarterly.empty:
+        return static
+    if static.empty:
+        return quarterly
+    quarterly["symbol"] = quarterly["symbol"].astype(str).str.upper().str.strip()
+    static["symbol"] = static["symbol"].astype(str).str.upper().str.strip()
+    return quarterly.merge(static, on="symbol", how="left")
 
 
 def _load_benchmark(conn: Any, *, start_date: str, end_date: str | None, benchmark_id: str) -> pd.DataFrame:
@@ -253,7 +326,117 @@ def _merge_fundamentals(raw: pd.DataFrame, fundamentals: pd.DataFrame | None) ->
         return raw
     fund = fundamentals.rename(columns={column: column.strip().lower() for column in fundamentals.columns}).copy()
     fund["symbol"] = fund["symbol"].astype(str).str.upper().str.strip()
+    if "period_end" in fund.columns:
+        return _merge_quarterly_fundamentals(raw, fund)
     return raw.merge(fund, on="symbol", how="left")
+
+
+def _merge_vcp_picks(raw: pd.DataFrame, vcp_picks: pd.DataFrame | None) -> pd.DataFrame:
+    out = raw.copy()
+    metric_columns = ["vcp_rank", "vcp_score", "vcp_breakout_pct", "vcp_contraction_pct"]
+    if vcp_picks is None or vcp_picks.empty:
+        out["vcp_pick"] = 0
+        for column in metric_columns:
+            out[column] = 0.0
+        return out
+
+    picks = vcp_picks.rename(columns={column: column.strip().lower() for column in vcp_picks.columns}).copy()
+    picks = picks.rename(columns={"snapshot_date": "date", "rank": "vcp_rank"})
+    picks["date"] = pd.to_datetime(picks["date"], errors="coerce")
+    picks["symbol"] = picks["symbol"].astype(str).str.upper().str.strip()
+    for column in metric_columns:
+        if column not in picks.columns:
+            picks[column] = 0.0
+        picks[column] = pd.to_numeric(picks[column], errors="coerce").fillna(0.0)
+    picks = picks.dropna(subset=["date", "symbol"]).loc[:, ["date", "symbol", *metric_columns]]
+    picks = picks.drop_duplicates(subset=["date", "symbol"], keep="last")
+    picks["vcp_pick"] = 1
+
+    out = out.merge(picks, on=["date", "symbol"], how="left")
+    out["vcp_pick"] = pd.to_numeric(out["vcp_pick"], errors="coerce").fillna(0).astype(int)
+    for column in metric_columns:
+        out[column] = pd.to_numeric(out[column], errors="coerce").fillna(0.0)
+    return out
+
+
+def _merge_quarterly_fundamentals(raw: pd.DataFrame, fund: pd.DataFrame) -> pd.DataFrame:
+    fund["period_end"] = pd.to_datetime(fund["period_end"], errors="coerce").astype("datetime64[ns]")
+    fund = fund.dropna(subset=["symbol", "period_end"]).copy()
+    if fund.empty:
+        return raw
+    for column in (
+        "revenue",
+        "pat",
+        "eps",
+        "opm_pct",
+        "roe_pct",
+        "roce_pct",
+        "debt_to_equity",
+        "annual_sales_growth_pct",
+        "annual_pat_growth_pct",
+    ):
+        if column not in fund.columns:
+            fund[column] = pd.NA
+        fund[column] = pd.to_numeric(fund[column], errors="coerce")
+    if "availability_date" not in fund.columns:
+        fund["availability_date"] = fund["period_end"] + pd.Timedelta(days=45)
+    else:
+        fund["availability_date"] = pd.to_datetime(fund["availability_date"], errors="coerce")
+    fund["availability_date"] = fund["availability_date"].astype("datetime64[ns]")
+    fund = fund.dropna(subset=["availability_date"]).sort_values(["symbol", "period_end"])
+
+    grouped = fund.groupby("symbol", group_keys=False)
+    fund["sales_growth_pct"] = grouped["revenue"].transform(lambda series: _pct_change_series(series, 4))
+    fund["pat_growth_pct"] = grouped["pat"].transform(lambda series: _pct_change_series(series, 4))
+    fund["eps_growth_pct"] = grouped["eps"].transform(lambda series: _pct_change_series(series, 4))
+    fund["revenue_qoq_pct"] = grouped["revenue"].transform(lambda series: _pct_change_series(series, 1))
+    fund["pat_qoq_pct"] = grouped["pat"].transform(lambda series: _pct_change_series(series, 1))
+    fund["eps_qoq_pct"] = grouped["eps"].transform(lambda series: _pct_change_series(series, 1))
+    fund["opm_yoy_delta"] = grouped["opm_pct"].transform(lambda series: (series - series.shift(4)).round(4))
+    fund["latest_result_period"] = fund["period_end"].dt.strftime("%Y-%m-%d")
+
+    merge_columns = [
+        "availability_date",
+        "latest_result_period",
+        "sales_growth_pct",
+        "pat_growth_pct",
+        "eps_growth_pct",
+        "revenue_qoq_pct",
+        "pat_qoq_pct",
+        "eps_qoq_pct",
+        "opm_pct",
+        "opm_yoy_delta",
+        "roe_pct",
+        "roce_pct",
+        "debt_to_equity",
+        "annual_sales_growth_pct",
+        "annual_pat_growth_pct",
+    ]
+    merged = []
+    for symbol, symbol_raw in raw.sort_values(["symbol", "date"]).groupby("symbol", sort=False):
+        symbol_raw = symbol_raw.copy()
+        symbol_raw["date"] = pd.to_datetime(symbol_raw["date"], errors="coerce").astype("datetime64[ns]")
+        symbol_fund = fund.loc[fund["symbol"] == symbol, merge_columns].sort_values("availability_date")
+        if symbol_fund.empty:
+            merged.append(symbol_raw.copy())
+            continue
+        joined = pd.merge_asof(
+            symbol_raw.sort_values("date"),
+            symbol_fund,
+            left_on="date",
+            right_on="availability_date",
+            direction="backward",
+        )
+        merged.append(joined)
+    out = pd.concat(merged, ignore_index=True) if merged else raw
+    out["latest_result_age_days"] = (out["date"] - out["availability_date"]).dt.days
+    return out.drop(columns=["availability_date"], errors="ignore")
+
+
+def _pct_change_series(series: pd.Series, periods: int) -> pd.Series:
+    previous = series.shift(periods)
+    out = ((series - previous) / previous.abs() * 100.0).where(previous.notna() & (previous != 0))
+    return out.round(4)
 
 
 def _rsi(raw: pd.DataFrame) -> pd.Series:
@@ -291,9 +474,25 @@ _FEATURE_COLUMNS = [
     "volume_ratio_20d",
     "relative_strength",
     "trailing_stop",
-    "eps_growth_pct",
     "sales_growth_pct",
+    "pat_growth_pct",
+    "eps_growth_pct",
+    "revenue_qoq_pct",
+    "pat_qoq_pct",
+    "eps_qoq_pct",
+    "opm_pct",
+    "opm_yoy_delta",
     "roe_pct",
+    "roce_pct",
     "debt_to_equity",
+    "annual_sales_growth_pct",
+    "annual_pat_growth_pct",
+    "latest_result_age_days",
+    "latest_result_period",
     "turnover_cr",
+    "vcp_pick",
+    "vcp_rank",
+    "vcp_score",
+    "vcp_breakout_pct",
+    "vcp_contraction_pct",
 ]

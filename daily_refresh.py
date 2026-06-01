@@ -4,13 +4,13 @@ Daily NSE Data Refresh Orchestrator
 =====================================
 Runs the full pipeline after NSE market close (3:30 PM IST / 10:00 UTC).
 
-Pipeline stages:
-  1. Fetch auxiliary data: FII/DII flows, F&O signals, corporate events,
-     insider alerts, macro proxies
-  2. Load latest EOD bhavcopy into PostgreSQL market.equity_eod
-  3. Run comprehensive NSE universe analysis → writes PostgreSQL scores.daily_scores
-  4. Update sector rotation tracker from PostgreSQL scores + EOD history
-  5. Generate HTML/PDF reports
+Report chain:
+  Daily refresh
+    → portfolio strategy lab
+    → sector rotation report
+    → Stage 2 tracker
+    → Top Investment Picks detailed report
+    → personal portfolio EOD report
 
 Usage:
   python daily_refresh.py               # full pipeline
@@ -21,6 +21,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
 import time
@@ -28,7 +29,18 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
+MAIN_WORKTREE_BASE = ROOT.parent.parent if ROOT.parent.name == ".worktrees" else ROOT
 PYTHON = sys.executable
+PG_DSN = (
+    os.environ.get("AGENT_ADDA_PG_DSN")
+    or os.environ.get("PG_DSN")
+    or "dbname=nse_market user=nse_admin host=/tmp"
+)
+LEGACY_SQLITE_ARTIFACTS = [
+    ROOT / "data" / "sector_rotation_tracker.db",
+    ROOT / "data" / "sector_rotation_tracker.db-shm",
+    ROOT / "data" / "sector_rotation_tracker.db-wal",
+]
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers
@@ -69,6 +81,14 @@ def _run(label: str, cmd: list[str], dry_run: bool = False, cwd: Path | None = N
 
 def _ensure_postgres_running(dry_run: bool = False) -> bool:
     """Start the local project PostgreSQL cluster if it is not already running."""
+    if PG_DSN:
+        try:
+            import psycopg2
+            with psycopg2.connect(PG_DSN) as conn, conn.cursor() as cur:
+                cur.execute("SELECT 1")
+            return True
+        except Exception as exc:
+            print(f"   ⚠️  PostgreSQL DSN check failed: {exc}")
     script = ROOT / "postgres" / "start_pg.sh"
     if dry_run:
         print(f"   [DRY RUN — would ensure PostgreSQL via {script}]")
@@ -102,9 +122,15 @@ def step_fetch_eod_data(dry_run: bool) -> bool:
     """Fetch EOD bhavcopy from NSE archives into local ingress files."""
     _section("STEP 0 — Fetch EOD Bhavcopy (NSE Archives)")
 
-    # Pass PROJECT_ROOT so R script resolves paths relative to repo root
+    # In git worktrees, the mutable data cache may live in the main checkout.
+    data_root = (
+        MAIN_WORKTREE_BASE
+        if MAIN_WORKTREE_BASE != ROOT and (MAIN_WORKTREE_BASE / "data" / "nse_sec_full_data.csv").exists()
+        else ROOT
+    )
+    # Pass PROJECT_ROOT so R script resolves paths relative to the data root.
     import os
-    env = {**os.environ, "PROJECT_ROOT": str(ROOT)}
+    env = {**os.environ, "PROJECT_ROOT": str(data_root)}
     ok = _run(
         "Download latest NSE bhavcopy → data/nse-raw/ + data/",
         ["Rscript", str(ROOT / "load_latest_nse_data_comprehensive.R")],
@@ -112,7 +138,7 @@ def step_fetch_eod_data(dry_run: bool) -> bool:
         env=env,
     )
     if ok and not dry_run:
-        print(f"   ✅ NSE data written to {ROOT / 'data'}")
+        print(f"   ✅ NSE data written to {data_root / 'data'}")
     return ok
 
 
@@ -169,7 +195,7 @@ def step_comprehensive_analysis(dry_run: bool) -> bool:
     _section("STEP 2 — Comprehensive NSE Universe Analysis")
     return _run(
         "NSE Universe Analysis",
-        [PYTHON, "fixed_nse_universe_analysis.py"],
+        [PYTHON, "fixed_nse_universe_analysis.py", "--export-csv"],
         dry_run=dry_run,
     )
 
@@ -189,7 +215,7 @@ def step_tracker_snapshot(
     PG fund cache, persisting results so the universe gap closes
     incrementally across daily runs.
     """
-    _section("STEP 3 — Sector Rotation Tracker")
+    _section("STEP 4B — Stage 2 Tracker Snapshot")
 
     if live_only:
         # Fast path: only refresh live prices (no screener re-run)
@@ -218,7 +244,7 @@ def step_tracker_snapshot(
 
 def step_generate_report(dry_run: bool) -> bool:
     """Generate Stage 2 tracker HTML report."""
-    _section("STEP 4 — Generate HTML Report")
+    _section("STEP 4C — Stage 2 Tracker Report")
     return _run(
         "Stage 2 Tracker HTML Report",
         [PYTHON, "sector_rotation_tracker.py", "--report", "--html"],
@@ -228,7 +254,7 @@ def step_generate_report(dry_run: bool) -> bool:
 
 def step_sector_rotation_report(dry_run: bool) -> bool:
     """Regenerate full sector rotation report — populates signal_log.csv."""
-    _section("STEP 5 — Sector Rotation Report")
+    _section("STEP 4A — Sector Rotation Report")
     return _run(
         "Sector Rotation Report",
         [PYTHON, "sector_rotation_report.py"],
@@ -238,10 +264,23 @@ def step_sector_rotation_report(dry_run: bool) -> bool:
 
 def step_top_picks_report(dry_run: bool) -> bool:
     """Generate Top Investment Picks Analysis (merges sector rotation + stage-2 tracker)."""
-    _section("STEP 5B — Top Investment Picks Analysis")
+    _section("STEP 5C — Top Investment Picks Detailed Report")
     return _run(
         "Top Investment Picks Analysis",
         [PYTHON, "top_picks_report.py"],
+        dry_run=dry_run,
+    )
+
+
+def step_report_validation(checkpoint: str, dry_run: bool) -> bool:
+    """Run LLM-assisted report QA for a logical report checkpoint."""
+    _section(f"REPORT QA — {checkpoint}")
+    cmd = [PYTHON, "report_validation.py", "--checkpoint", checkpoint]
+    if dry_run:
+        cmd.extend(["--dry-run", "--skip-llm"])
+    return _run(
+        f"Report validation ({checkpoint})",
+        cmd,
         dry_run=dry_run,
     )
 
@@ -252,7 +291,7 @@ def step_historical_stage_backfill(dry_run: bool) -> bool:
     This keeps scores.stage_snapshots usable for portfolio backtests from
     Jan 2025 onward while preserving richer existing daily tracker snapshots.
     """
-    _section("STEP 7C — Historical Stage Snapshot Backfill")
+    _section("STEP 3A — Historical Stage Snapshot Backfill")
     if not _ensure_postgres_running(dry_run=dry_run):
         return False
     return _run(
@@ -279,7 +318,7 @@ def step_portfolio_strategy_lab(
     brokerage_bps: float,
 ) -> bool:
     """Run PostgreSQL-backed paper strategy comparison and Agent Adda report."""
-    _section("STEP 7D — Portfolio Strategy Lab")
+    _section("STEP 3B — Portfolio Strategy Lab")
     if not _ensure_postgres_running(dry_run=dry_run):
         return False
     ok = _run(
@@ -321,10 +360,55 @@ def step_portfolio_strategy_lab(
     )
 
 
+def step_portfolio_monitor(dry_run: bool, *, intraday: bool = False) -> bool:
+    """Generate the PostgreSQL-backed personal portfolio monitor view."""
+    label = "Intraday" if intraday else "EOD"
+    _section(f"STEP 6 — My Portfolio Monitor ({label})")
+    if dry_run:
+        print(f"  DRY-RUN: would generate {label.lower()} portfolio monitor")
+        return True
+    if not _ensure_postgres_running(dry_run=dry_run):
+        return False
+    try:
+        from terminal.portfolio_monitor import run_eod_report, run_intraday_view
+
+        if intraday:
+            result = run_intraday_view()
+        else:
+            result = run_eod_report()
+        if isinstance(result, dict):
+            return bool(result.get("success"))
+        return bool(result)
+    except Exception as exc:
+        print(f"  portfolio monitor failed: {exc}")
+        return False
+
+
+def step_cleanup_legacy_sqlite(dry_run: bool) -> bool:
+    """Remove transient legacy SQLite artifacts after PostgreSQL load completes."""
+    _section("STEP 8Z — Legacy SQLite Artifact Cleanup")
+    removed = 0
+    for path in LEGACY_SQLITE_ARTIFACTS:
+        if dry_run:
+            print(f"  DRY-RUN: would remove {path.relative_to(ROOT)} if present")
+            continue
+        try:
+            if path.exists():
+                path.unlink()
+                removed += 1
+                print(f"  removed {path.relative_to(ROOT)}")
+        except Exception as exc:
+            print(f"  ⚠️  could not remove {path.relative_to(ROOT)}: {exc}")
+            return False
+    if not dry_run:
+        print(f"  cleaned {removed} legacy SQLite artifact(s)")
+    return True
+
+
 def step_refresh_corporate_events(dry_run: bool) -> bool:
     """Refresh corporate events + insider alerts from NSE and load into
     signals.corporate_events and signals.insider_alerts. Non-fatal."""
-    _section("STEP 4D — Corporate Events + Insider Alerts Refresh")
+    _section("STEP 5B — Corporate Events + Insider Alerts Refresh")
     if dry_run:
         print("  DRY-RUN: would force-refresh CSV caches + upsert into DB")
         return True
@@ -341,7 +425,7 @@ def step_refresh_corporate_events(dry_run: bool) -> bool:
     try:
         import psycopg2  # local import keeps daily_refresh import-light
         from postgres.loader import load_corporate_events, load_insider_alerts  # type: ignore
-        with psycopg2.connect(dbname="nse_market") as conn:
+        with psycopg2.connect(PG_DSN) as conn:
             with conn.cursor() as cur:
                 load_corporate_events(cur)
                 load_insider_alerts(cur)
@@ -390,7 +474,7 @@ def step_email_top_picks(dry_run: bool, send: bool = False) -> bool:
     """Compose + open (or send) the Top Picks email via Outlook using the
     recipients in config/report_recipients.yml. Non-fatal: a failure here
     must not break the rest of the refresh."""
-    _section("STEP 5C — Email Top Investment Picks (draft in Outlook)")
+    _section("STEP 5D — Email Top Investment Picks (draft in Outlook)")
     cmd = [PYTHON, "-m", "terminal.email_dispatcher", "top_picks", "--mode", "both"]
     if send:
         cmd.append("--send")
@@ -399,7 +483,7 @@ def step_email_top_picks(dry_run: bool, send: bool = False) -> bool:
 
 def step_voice_briefing(dry_run: bool) -> bool:
     """Generate today's voice briefing script from fresh signal_log.csv data."""
-    _section("STEP 6 — Voice Briefing (script only, no audio)")
+    _section("STEP 7A — Voice Briefing (script only, no audio)")
     return _run(
         "Voice Briefing",
         [PYTHON, "generate_voice_briefing.py", "--no-tts"],
@@ -493,7 +577,7 @@ def step_comprehensive_r_reports(dry_run: bool) -> bool:
     R scripts use PROJECT_ROOT env var to resolve paths locally.
     Outputs are written to local reports/nse_analysis/2026/.
     """
-    _section("STEP 6 — Comprehensive R Reports (Indexes + Sectors)")
+    _section("STEP 8A — Comprehensive R Reports (Indexes + Sectors)")
 
     import os
     local_r_out = ROOT / "reports" / "nse_analysis" / "2026"
@@ -536,6 +620,8 @@ def main() -> int:
                         help="Skip daily results-feed cache refresh")
     parser.add_argument("--skip-portfolio-lab", action="store_true",
                         help="Skip historical stage backfill and portfolio strategy-lab report")
+    parser.add_argument("--skip-report-validation", action="store_true",
+                        help="Skip LLM-assisted report QA checkpoints")
     parser.add_argument("--portfolio-lab-output-dir",
                         default="portfolio/data/nse_pg_strategy_lab/latest",
                         help="Output directory for portfolio strategy-lab artifacts")
@@ -546,7 +632,7 @@ def main() -> int:
     parser.add_argument("--portfolio-brokerage-bps", type=float, default=3.0,
                         help="Brokerage bps for portfolio strategy-lab fills")
     parser.add_argument("--skip-email", action="store_true",
-                        help="Skip the Top Picks email step (STEP 5C)")
+                        help="Skip the Top Picks email step (STEP 5D)")
     parser.add_argument("--email-send", action="store_true",
                         help="Send Top Picks email immediately instead of opening as Outlook draft")
     parser.add_argument("--fundamentals-index",
@@ -618,7 +704,37 @@ def main() -> int:
         failed.append("Fundamentals pre-refresh")
         print("\n  ⚠️  Fundamentals pre-refresh failed — tracker snapshot may render NULL sub-scores")
 
-    # 3. Tracker snapshot (full: screener + live prices)
+    # 3. Portfolio strategy lab first. The Stage 2 tracker reads this artifact
+    # to render the Best Strategy and VCP Strategy tabs.
+    if not args.skip_portfolio_lab:
+        if not step_historical_stage_backfill(args.dry_run):
+            print("  ⚠️  Historical stage backfill failed — portfolio lab may use stale stages")
+            failed.append("Historical stage backfill")
+        if not step_portfolio_strategy_lab(
+            args.dry_run,
+            output_dir=args.portfolio_lab_output_dir,
+            top_n=args.portfolio_top_n,
+            slippage_bps=args.portfolio_slippage_bps,
+            brokerage_bps=args.portfolio_brokerage_bps,
+        ):
+            print("  ⚠️  Portfolio strategy lab failed — see logs above")
+            failed.append("Portfolio strategy lab")
+        elif not args.skip_report_validation:
+            if not step_report_validation("portfolio_strategy_lab", args.dry_run):
+                print("  ⚠️  Portfolio strategy-lab report QA failed (non-fatal)")
+                failed.append("Report QA: portfolio strategy lab")
+
+    # 4A. Sector rotation report before Stage 2 tracker. This refreshes sector
+    # context and signal_log.csv for downstream report links and briefing.
+    if not step_sector_rotation_report(args.dry_run):
+        failed.append("Sector rotation report")
+    elif not args.skip_report_validation:
+        if not step_report_validation("sector_rotation", args.dry_run):
+            print("  ⚠️  Sector rotation report QA failed (non-fatal)")
+            failed.append("Report QA: sector rotation")
+
+    # 4B. Stage 2 tracker snapshot + HTML report. The HTML report consumes the
+    # freshly generated portfolio strategy-lab artifact.
     if not step_tracker_snapshot(
         args.dry_run,
         live_only=False,
@@ -631,13 +747,12 @@ def main() -> int:
         if not step_tracker_snapshot(args.dry_run, live_only=True):
             failed.append("Tracker snapshot")
 
-    # 4. HTML report
     if not step_generate_report(args.dry_run):
-        failed.append("HTML report")
-
-    # 5. Sector rotation report (now always runs — populates signal_log.csv for voice briefing)
-    if not step_sector_rotation_report(args.dry_run):
-        failed.append("Sector rotation report")
+        failed.append("Stage 2 tracker report")
+    elif not args.skip_report_validation:
+        if not step_report_validation("stage2_tracker", args.dry_run):
+            print("  ⚠️  Stage 2 tracker report QA failed (non-fatal)")
+            failed.append("Report QA: stage2 tracker")
 
     # 5A. Pre-refresh screener fundamentals for today's top picks (shareholding,
     #     ratios, structured financials) so the report below renders complete.
@@ -650,9 +765,21 @@ def main() -> int:
     if not step_refresh_corporate_events(args.dry_run):
         print("  ⚠️  Corporate events refresh failed (non-fatal) — see logs above")
 
-    # 5B. Top Investment Picks Analysis (merges sector rotation + stage-2 tracker)
+    # 5. Independent Top Investment Picks detailed report with charts.
     if not step_top_picks_report(args.dry_run):
         failed.append("Top investment picks report")
+    elif not args.skip_report_validation:
+        if not step_report_validation("top_picks", args.dry_run):
+            print("  ⚠️  Top picks report QA failed (non-fatal)")
+            failed.append("Report QA: top picks")
+
+    # 6. My portfolio EOD report from latest PostgreSQL stage snapshot.
+    if not step_portfolio_monitor(args.dry_run, intraday=False):
+        failed.append("My portfolio EOD report")
+    elif not args.skip_report_validation:
+        if not step_report_validation("portfolio_eod", args.dry_run):
+            print("  ⚠️  Portfolio EOD report QA failed (non-fatal)")
+            failed.append("Report QA: portfolio EOD")
 
     # 5C. Email Top Picks report (opens as Outlook draft; --email-send to send)
     if not args.skip_email:
@@ -677,23 +804,6 @@ def main() -> int:
             print("  ⚠️  Results-feed refresh had failures — see scores.financials_refresh_log")
             failed.append("Results-feed refresh")
 
-    # 7c/7d. Historical stage snapshots + paper strategy lab. Non-destructive:
-    # the backfill preserves existing richer tracker snapshots unless explicitly
-    # run with --replace-existing outside this orchestrator.
-    if not args.skip_portfolio_lab:
-        if not step_historical_stage_backfill(args.dry_run):
-            print("  ⚠️  Historical stage backfill failed — portfolio lab may use stale stages")
-            failed.append("Historical stage backfill")
-        if not step_portfolio_strategy_lab(
-            args.dry_run,
-            output_dir=args.portfolio_lab_output_dir,
-            top_n=args.portfolio_top_n,
-            slippage_bps=args.portfolio_slippage_bps,
-            brokerage_bps=args.portfolio_brokerage_bps,
-        ):
-            print("  ⚠️  Portfolio strategy lab failed — see logs above")
-            failed.append("Portfolio strategy lab")
-
     # 7b. Weekly fundamentals backfill (default: Sundays only, or --fundamentals-backfill)
     run_fundamentals = (
         args.fundamentals_backfill
@@ -710,6 +820,9 @@ def main() -> int:
     if args.comprehensive:
         if not step_comprehensive_r_reports(args.dry_run):
             failed.append("Comprehensive R reports")
+
+    if not step_cleanup_legacy_sqlite(args.dry_run):
+        failed.append("Legacy SQLite cleanup")
 
     _print_summary(failed, t_total, args.dry_run)
     return 1 if failed else 0

@@ -38,7 +38,11 @@ FNO_DIR = DATA / "fno"
 FNO_DIR.mkdir(parents=True, exist_ok=True)
 
 FNO_DB  = FNO_DIR / "fno_eod.db"
-PG_DSN  = "dbname=nse_market user=nse_admin host=/tmp"
+PG_DSN  = (
+    os.environ.get("AGENT_ADDA_PG_DSN")
+    or os.environ.get("PG_DSN")
+    or "dbname=nse_market user=nse_admin host=/tmp"
+)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # NSE HTTP Session (cookie-based auth)

@@ -2166,7 +2166,11 @@ def _index_reference_aliases() -> dict[str, str]:
     try:
         import psycopg2
 
-        conn = psycopg2.connect("dbname=nse_market user=nse_admin host=/tmp")
+        conn = psycopg2.connect(
+        os.environ.get("AGENT_ADDA_PG_DSN")
+        or os.environ.get("PG_DSN")
+        or "dbname=nse_market user=nse_admin host=/tmp"
+    )
         try:
             with conn.cursor() as cur:
                 cur.execute("SELECT index_symbol, display_name FROM ref.indices")
@@ -4570,7 +4574,11 @@ def _intraday_market_overview_from_pg(preferred: list[str], live_error: str | No
         import psycopg2
         from psycopg2.extras import RealDictCursor
 
-        conn = psycopg2.connect("dbname=nse_market user=nse_admin host=/tmp")
+        conn = psycopg2.connect(
+        os.environ.get("AGENT_ADDA_PG_DSN")
+        or os.environ.get("PG_DSN")
+        or "dbname=nse_market user=nse_admin host=/tmp"
+    )
         try:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute(
@@ -4675,7 +4683,11 @@ def get_intraday_market_recap(minutes: int = 15) -> dict:
         import psycopg2
         from psycopg2.extras import RealDictCursor
 
-        conn = psycopg2.connect("dbname=nse_market user=nse_admin host=/tmp")
+        conn = psycopg2.connect(
+        os.environ.get("AGENT_ADDA_PG_DSN")
+        or os.environ.get("PG_DSN")
+        or "dbname=nse_market user=nse_admin host=/tmp"
+    )
         try:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 # PG-recap-fix: previously this query required snapshots inside a
@@ -8371,7 +8383,11 @@ def get_fno_analytics(symbol: str | None = None, top_n: int = 20) -> dict:
     """Return PostgreSQL-backed F&O analytics: PCR, max pain, buildup, signal."""
     try:
         import psycopg2
-        conn = psycopg2.connect("dbname=nse_market user=nse_admin host=/tmp")
+        conn = psycopg2.connect(
+        os.environ.get("AGENT_ADDA_PG_DSN")
+        or os.environ.get("PG_DSN")
+        or "dbname=nse_market user=nse_admin host=/tmp"
+    )
         try:
             params: list[Any] = []
             where = ""
@@ -8444,7 +8460,11 @@ def run_option_payoff_scenario(
     """Run PostgreSQL option payoff what-if scenarios."""
     try:
         import psycopg2
-        conn = psycopg2.connect("dbname=nse_market user=nse_admin host=/tmp")
+        conn = psycopg2.connect(
+        os.environ.get("AGENT_ADDA_PG_DSN")
+        or os.environ.get("PG_DSN")
+        or "dbname=nse_market user=nse_admin host=/tmp"
+    )
         try:
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", UserWarning)

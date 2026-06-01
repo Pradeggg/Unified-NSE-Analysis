@@ -12,7 +12,11 @@ import psycopg2
 from psycopg2.extras import execute_values
 
 
-DEFAULT_DSN = "dbname=nse_market user=nse_admin host=/tmp"
+DEFAULT_DSN = (
+    os.environ.get("AGENT_ADDA_PG_DSN")
+    or os.environ.get("PG_DSN")
+    or "dbname=nse_market user=nse_admin host=/tmp"
+)
 SOURCE_TAG = "historical_stage_backfill:market.equity_eod"
 
 

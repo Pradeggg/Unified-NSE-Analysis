@@ -26,7 +26,11 @@ DATA    = BASE / "data"
 GEN_CSV = BASE / "reports" / "generated_csv" / "2026"
 REPORTS_DIR = BASE / "reports"
 PAGE_SIZE = 500
-PG_DSN  = "dbname=nse_market user=nse_admin host=/tmp"
+PG_DSN  = (
+    os.environ.get("AGENT_ADDA_PG_DSN")
+    or os.environ.get("PG_DSN")
+    or "dbname=nse_market user=nse_admin host=/tmp"
+)
 FUNDAMENTAL_SCORE_CSVS = [
     DATA / "fundamental_scores_database.csv",
     BASE / "organized" / "data" / "fundamental_scores_database.csv",

@@ -18,7 +18,11 @@ from typing import Iterable
 import pandas as pd
 
 
-DEFAULT_DSN = "dbname=nse_market user=nse_admin host=/tmp"
+DEFAULT_DSN = (
+    os.environ.get("AGENT_ADDA_PG_DSN")
+    or os.environ.get("PG_DSN")
+    or "dbname=nse_market user=nse_admin host=/tmp"
+)
 UPSERT_SQL = """
 INSERT INTO market.equity_eod
     (trade_date, symbol, series, open, high, low, close, volume)

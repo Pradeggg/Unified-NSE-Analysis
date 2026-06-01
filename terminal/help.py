@@ -321,10 +321,17 @@ SECTIONS: dict[str, dict] = {
         "title":  "Portfolio & P&L",
         "icon":   "💼",
         "color":  "green",
-        "aliases": ["pnl", "portfolio", "holdings", "profit", "loss"],
+        "aliases": ["pnl", "portfolio", "holdings", "profit", "loss", "my-portfolio"],
         "entries": [
-            ("/pnl",                        "Live portfolio P&L from data/holdings.csv"),
-            ("",                            "Edit data/holdings.csv: symbol, qty, avg_cost, buy_date"),
+            ("/my-portfolio",               "Live intraday P&L + multi-strategy signals (auto-refreshes every 60s during market hours)"),
+            ("/my-portfolio eod",           "Force full EOD comprehensive analysis (CANSLIM · Minervini · Fundamental · Value · RSI)"),
+            ("/my-portfolio buy",           "Show only BUY / STRONG BUY stocks from your portfolio"),
+            ("/my-portfolio sell",          "Show only SELL candidates — prioritised by loss depth"),
+            ("/my-portfolio hold",          "Show only HOLD stocks — useful for monitoring"),
+            ("",                            "Portfolio CSV: docs/my_portfolio.csv.csv (broker export format)"),
+            ("",                            "EOD report auto-generates at 16:15 IST via daily_refresh.py"),
+            ("",                            "HTML reports: reports/latest/portfolio_intraday.html  |  portfolio_analysis.html"),
+            ("/pnl",                        "Legacy: live portfolio P&L from data/holdings.csv"),
         ],
     },
     "company": {
@@ -385,6 +392,7 @@ SECTIONS: dict[str, dict] = {
         "entries": [
             ("/backtest list",             "List EOD Strategy Lab strategies"),
             ("/strategy-lab validate",     "Validate EOD backtesting data readiness"),
+            ("/strategy-lab run",          "Run portfolio replay, DB persistence, and HTML report"),
             ("/strategy-council DMART",    "Iterative strategist + critic EOD simulation"),
             ("/strategy-council DMART --iterations 3 --horizon 1w,2w,4w", "Run with explicit iterations and horizons"),
             ("/strategy-council DMART --llm", "Use configured LLM strategist and critics with deterministic fallback"),

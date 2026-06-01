@@ -33,6 +33,30 @@ from typing import Any, Iterable
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
+def _load_dotenv(path: Path) -> None:
+    if not path.exists():
+        return
+    try:
+        from dotenv import load_dotenv  # type: ignore
+        load_dotenv(path, override=False)
+        return
+    except Exception:
+        pass
+    for raw in path.read_text(encoding="utf-8", errors="ignore").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        if key and key not in os.environ:
+            os.environ[key] = value.strip().strip('"').strip("'")
+
+
+ROOT = Path(__file__).resolve().parent
+_load_dotenv(ROOT / ".env")
+if ROOT.parent.name == ".worktrees":
+    _load_dotenv(ROOT.parent.parent / ".env")
+
 # Reuse theme + LLM helper from the sector rotation report so look & feel and
 # JSON-parsing semantics stay in lock-step with the rest of the suite.
 from sector_rotation_report import (  # noqa: E402
@@ -46,12 +70,16 @@ from sector_rotation_report import (  # noqa: E402
     AGENT_LOGO_PATH,
 )
 
-ROOT = Path(__file__).resolve().parent
 REPORTS_DIR = ROOT / "reports"
 TOP_PICKS_DIR = REPORTS_DIR / "top_picks"
 LATEST_DIR = REPORTS_DIR / "latest"
 DEFAULT_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 MAX_PICKS = 10
+PG_DSN = (
+    os.environ.get("AGENT_ADDA_PG_DSN")
+    or os.environ.get("PG_DSN")
+    or "dbname=nse_market user=nse_admin host=/tmp"
+)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -213,8 +241,8 @@ _METRIC_TOOLTIPS: dict[str, str] = {
     "CANSLIM (O'Neil)": "William O'Neil CANSLIM score (0–25): C=current earnings, A=annual earnings, N=new highs/products, S=supply/demand, L=leader vs laggard, I=institutional sponsorship, M=market direction.",
     "Minervini Trend": "Mark Minervini stage-2 uptrend template score (0–8): 8 trend-template checks on price vs EMAs, 52w distance, RSI relative strength.",
     # CANSLIM component-level tooltips (used by the per-stock breakdown)
-    "CANSLIM-C": "C — Current quarterly earnings (0–5). Primary: latest quarter PAT YoY growth (>25% = 5, >10% = 3, >0 = 1). Fallback proxy: 20-day (≈1M) price momentum.",
-    "CANSLIM-A": "A — Annual earnings growth (0–5). Primary: PAT CAGR from annual results (>25% = 5, >15% = 3, >5% = 1). Fallback proxy: 50-day (≈3M) price momentum.",
+    "CANSLIM-C": "C — Current quarterly earnings (0–5). Tier 1: PAT YoY from scores.quarterly_results. Tier 2: pat_yoy_pct from fund_details pnl_summary. Tier 3: quarterly trend from fund_details. Tier 4 (⚠ proxy): 20-day price momentum — only fires when no financial data is available at all.",
+    "CANSLIM-A": "A — Annual earnings growth (0–5). Tier 1: PAT CAGR from scores.annual_results. Tier 2: pat_yoy_pct from fund_details (1Y growth). Tier 3: TTM 4Q vs prior 4Q. Tier 4 (⚠ proxy): 3-month price momentum — only fires when no financial data is available at all.",
     "CANSLIM-N": "N — New highs / new products (0–5). Proxy using volume surge (>2x 20d avg = 5) or distance from 52-week high (within 5% = 5, within 15% = 3).",
     "CANSLIM-S": "S — Supply & demand (0–5). EMA stack — Price > EMA50 > EMA200 (full stack) = 5; partial stack = 3; price > EMA200 only = 1; below = 0.",
     "CANSLIM-L": "L — Leader vs Laggard (0–5). Relative strength vs Nifty 500: >10pp outperformance = 5, >5pp = 3, positive = 1.",
@@ -1523,9 +1551,32 @@ def _canslim_breakdown(snap: dict, tech: dict, fund: dict | None,
     parsed = parsed or {}
     comps: dict[str, dict] = {}
 
+    # ── Enrich parsed from stage_snapshots.fund_details when scores.fundamentals
+    #    is incomplete (e.g. newly listed or not yet backfilled).
+    #    snap["fund_details"] is a jsonb dict coming from the PG query in get_snapshot().
+    if not parsed.get("pat_yoy_pct"):
+        raw_fd = snap.get("fund_details") if snap else None
+        if raw_fd:
+            try:
+                fd_dict = raw_fd if isinstance(raw_fd, dict) else json.loads(raw_fd)
+                snap_fund = {"pnl_summary": fd_dict.get("pnl_summary"),
+                             "quarterly_summary": fd_dict.get("quarterly_summary"),
+                             "balance_sheet_summary": fd_dict.get("balance_sheet_summary"),
+                             "ratios_summary": fd_dict.get("ratios_summary"),
+                             "investor_summary": fd_dict.get("investor_summary")}
+                snap_parsed = _parse_summaries(snap_fund)
+                # Merge: snap_parsed fills gaps in parsed without overwriting real data
+                for k, v in snap_parsed.items():
+                    if v is not None and parsed.get(k) is None:
+                        parsed[k] = v
+            except (TypeError, ValueError, KeyError):
+                pass
+
     # ── C: Current quarterly earnings (5 pts)
-    #   Primary: latest qtr PAT YoY growth (vs same qtr 4 periods back).
-    #   Fallback: 20-day price momentum proxy (matches upstream pipeline).
+    #   Tier 1 (real):   structured scores.quarterly_results — PAT YoY (same quarter last year)
+    #   Tier 2 (real):   fund_details.pnl_summary parsed pat_yoy_pct — still actual reported data
+    #   Tier 3 (real):   fund_details.quarterly_summary pat_q_trend — derive QoQ from last 4 qtrs
+    #   Tier 4 (proxy):  20-day price momentum — last resort when no financial data exists at all
     c_score = None; c_label = "—"; c_method = ""
     try:
         if len(qtr) >= 5 and qtr[0].get("pat") and qtr[4].get("pat"):
@@ -1536,17 +1587,41 @@ def _canslim_breakdown(snap: dict, tech: dict, fund: dict | None,
                 c_label = f"PAT YoY {g*100:+.1f}%"; c_method = "real"
     except Exception:
         pass
+    # Tier 2: pat_yoy_pct from parsed fund_details (actual YoY from screener.in summary)
+    if c_score is None and parsed.get("pat_yoy_pct") is not None:
+        try:
+            g = float(parsed["pat_yoy_pct"]) / 100.0
+            c_score = 5 if g > 0.25 else 3 if g > 0.10 else 1 if g > 0 else 0
+            c_label = f"PAT YoY {g*100:+.1f}% (fund_details)"; c_method = "real"
+        except (TypeError, ValueError):
+            pass
+    # Tier 3: quarterly trend from fund_details — use most recent quarter vs year-ago quarter
+    if c_score is None and parsed.get("pat_q_trend") and len(parsed["pat_q_trend"]) >= 4:
+        try:
+            qt = parsed["pat_q_trend"]
+            # qt[0] = oldest visible, qt[-1] = most recent; derive Q1 vs Q1 last year
+            # With 4 quarters: [Q-4, Q-3, Q-2, Q-1] → QoQ trend as C-signal proxy
+            q_now, q_yoy = float(qt[-1]), float(qt[0])
+            if q_yoy != 0:
+                g = (q_now - q_yoy) / abs(q_yoy)
+                c_score = 5 if g > 0.25 else 3 if g > 0.10 else 1 if g > 0 else 0
+                c_label = f"Qtr trend {g*100:+.1f}% (4Q)"; c_method = "real"
+        except (TypeError, ValueError, IndexError):
+            pass
+    # Tier 4: 20-day price momentum proxy (last resort — no financial data at all)
     if c_score is None:
         m20 = (tech.get("ret_1m") or 0) / 100.0 if tech.get("ret_1m") is not None else None
         if m20 is not None:
             c_score = 5 if m20 > 0.10 else 3 if m20 > 0.05 else 1 if m20 > 0 else 0
-            c_label = f"1M return {m20*100:+.1f}%"; c_method = "proxy"
+            c_label = f"1M return {m20*100:+.1f}% (proxy)"; c_method = "proxy"
     comps["C"] = {"name": "Current Earnings", "score": c_score, "max": 5,
                   "detail": c_label, "method": c_method}
 
     # ── A: Annual earnings growth (5 pts)
-    #   Primary: PAT CAGR from annual results (3Y if available, else 2Y).
-    #   Fallback: 50-day (~3M) price momentum.
+    #   Tier 1 (real):  structured scores.annual_results — PAT CAGR 3Y/2Y
+    #   Tier 2 (real):  fund_details.pnl_summary pat_yoy_pct as a 1Y growth signal
+    #   Tier 3 (real):  quarterly trend — annualise trailing 4Q vs prior 4Q if available
+    #   Tier 4 (proxy): 3M price momentum
     a_score = None; a_label = "—"; a_method = ""
     try:
         if len(ann) >= 3:
@@ -1565,16 +1640,40 @@ def _canslim_breakdown(snap: dict, tech: dict, fund: dict | None,
             a_label = f"PAT CAGR {cagr*100:+.1f}% ({years}Y)"; a_method = "real"
     except Exception:
         pass
+    # Tier 2: pat_yoy_pct from fund_details pnl_summary (1Y growth, real reported data)
+    if a_score is None and parsed.get("pat_yoy_pct") is not None:
+        try:
+            g = float(parsed["pat_yoy_pct"]) / 100.0
+            a_score = 5 if g > 0.25 else 3 if g > 0.15 else 1 if g > 0.05 else 0
+            a_label = f"PAT YoY {g*100:+.1f}% (fund_details 1Y)"; a_method = "real"
+        except (TypeError, ValueError):
+            pass
+    # Tier 3: annualise trailing 4Q vs prior 4Q from quarterly trend
+    if a_score is None and parsed.get("pat_q_trend") and len(parsed["pat_q_trend"]) >= 4:
+        try:
+            qt = parsed["pat_q_trend"]
+            ttm_now  = sum(float(v) for v in qt[-4:]) if len(qt) >= 4 else None
+            ttm_prev = sum(float(v) for v in qt[:4])  if len(qt) >= 8 else None
+            if ttm_now and ttm_prev and ttm_prev != 0:
+                g = (ttm_now - ttm_prev) / abs(ttm_prev)
+                a_score = 5 if g > 0.25 else 3 if g > 0.15 else 1 if g > 0.05 else 0
+                a_label = f"TTM PAT {g*100:+.1f}% (4Q vs 4Q)"; a_method = "real"
+        except (TypeError, ValueError, IndexError):
+            pass
+    # Tier 4: 3M price momentum proxy (last resort)
     if a_score is None:
         m3 = (tech.get("ret_3m") or 0) / 100.0 if tech.get("ret_3m") is not None else None
         if m3 is not None:
             a_score = 5 if m3 > 0.20 else 3 if m3 > 0.10 else 1 if m3 > 0.05 else 0
-            a_label = f"3M return {m3*100:+.1f}%"; a_method = "proxy"
+            a_label = f"3M return {m3*100:+.1f}% (proxy)"; a_method = "proxy"
     comps["A"] = {"name": "Annual Earnings", "score": a_score, "max": 5,
                   "detail": a_label, "method": a_method}
 
-    # ── N: New highs / new products (5 pts) — proxy: volume surge + distance from 52w high
-    n_score = None; n_label = "—"; n_method = "proxy"
+    # ── N: New Highs / Volume (5 pts)
+    #   Volume surge (institutional accumulation) + distance from 52-week high.
+    #   These are the standard O'Neil N screener signals — computed from real
+    #   market data, not an inferior substitute. Method = "derived".
+    n_score = None; n_label = "—"; n_method = "derived"
     vr = tech.get("last_vol_ratio")
     dfh = tech.get("dist_from_high_pct")
     if vr is not None:
@@ -1594,8 +1693,11 @@ def _canslim_breakdown(snap: dict, tech: dict, fund: dict | None,
     comps["N"] = {"name": "New Highs / Volume", "score": n_score, "max": 5,
                   "detail": n_label, "method": n_method}
 
-    # ── S: Supply & Demand (5 pts) — EMA stack (price > 50 > 200)
-    s_score = None; s_label = "—"; s_method = "proxy"
+    # ── S: Supply & Demand (5 pts)
+    #   EMA stack (price > EMA50 > EMA200) — this IS the O'Neil demand signal.
+    #   Institutional demand is proven by price staying above its moving averages.
+    #   Method = "derived" (real price data, not an earnings proxy).
+    s_score = None; s_label = "—"; s_method = "derived"
     try:
         last = float(tech.get("last") or 0)
         e50 = float(tech.get("ema50") or 0)
@@ -1670,7 +1772,7 @@ def _canslim_breakdown(snap: dict, tech: dict, fund: dict | None,
 # Data access
 # ─────────────────────────────────────────────────────────────────────────────
 def _connect():
-    return psycopg2.connect(dbname="nse_market")
+    return psycopg2.connect(PG_DSN)
 
 
 def _resolve_snapshot_date(conn, override: str | None) -> str:
@@ -1697,94 +1799,194 @@ def _fetchone(conn, sql: str, params: tuple = ()) -> dict | None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Pick selection — merges sector-rotation candidates + stage-2 leaders
+# Pick selection — four-signal pipeline
+#
+# Signal 1: Dynamic sector rotation rank (scores.sector_top_stocks)
+# Signal 2: Stage 2 VCP-confirmed picks  (scores.stage2_vcp_picks)
+# Signal 3: Stage 2 universe             (scores.stage_snapshots WHERE stage=S2)
+# Signal 4: Composite investment_score   (ties/fallback)
+#
+# Conviction tiers:
+#   "vcp+sector"  — appears in both top-VCP picks AND a top-ranked sector  ★★★
+#   "sector+s2"   — Stage 2 stock from a dynamically top-ranked sector     ★★
+#   "vcp"         — VCP pick not in top sector (strong pattern, weak sector) ★★
+#   "sector_rot"  — non-Stage-2 top of a leading sector                    ★
+#   "stage2"      — Stage 2 fallback when above tiers are exhausted        ★
 # ─────────────────────────────────────────────────────────────────────────────
 @dataclass
 class PickRationale:
     symbol: str
     sector: str
-    source: str   # "sector_rot", "stage2", "dual"
+    source: str      # "vcp+sector" | "sector+s2" | "vcp" | "sector_rot" | "stage2"
     sector_rot_score: float | None
     stage2_score: float | None
+    vcp_score: float | None
+    sector_strength: float | None
     rationale: str
 
 
-def _load_sector_candidates(conn, snap_date: str) -> list[dict]:
-    """Pull sector-rotation candidates from the snapshot (richer than the MD)."""
+_SECTOR_EXCLUDE = frozenset({
+    "Other", "N/A", "", "Unknown", "Miscellaneous",
+})
+
+def _load_top_sectors(conn, snap_date: str, top_n: int = 10) -> dict[str, float]:
+    """Return {sector_name: sector_strength} for the top-N dynamically ranked sectors.
+
+    Uses scores.sector_top_stocks (written by sector_rotation_tracker).
+    Excludes generic catch-all buckets ("Other", "N/A", etc.) so sector
+    rotation signal reflects actual thematic momentum.
+    Falls back to a curated default list when no recent data is available.
+    """
+    # Find the freshest score_date on or before snap_date
+    rows = _fetchall(conn, """
+        SELECT sector_name, AVG(sector_strength) AS strength
+        FROM scores.sector_top_stocks
+        WHERE score_date = (
+            SELECT MAX(score_date) FROM scores.sector_top_stocks
+            WHERE score_date <= %s
+        )
+        GROUP BY sector_name
+        ORDER BY strength DESC NULLS LAST
+        LIMIT %s
+    """, (snap_date, top_n + len(_SECTOR_EXCLUDE) + 5))
+    if rows:
+        filtered = [
+            r for r in rows
+            if (r["sector_name"] or "").strip() not in _SECTOR_EXCLUDE
+        ][:top_n]
+        if filtered:
+            return {r["sector_name"]: float(r["strength"] or 0) for r in filtered}
+    # Fallback: curated default when no sector_top_stocks data exists
+    return {s: 70.0 for s in (
+        "Capital Goods & Industrials", "EV & Auto Ancillaries",
+        "Metals & Mining", "Pharma & Healthcare", "IT & Technology",
+        "Defence & Aerospace", "Capital Markets", "Chemicals & Specialty",
+        "Energy - Power", "PSU / CPSE",
+    )}
+
+
+def _load_vcp_picks(conn, snap_date: str, min_inv_score: float = 55.0) -> list[dict]:
+    """Stage 2 VCP-confirmed picks from scores.stage2_vcp_picks."""
+    return _fetchall(conn, """
+        SELECT symbol, sector, price, investment_score, enhanced_fund_score,
+               vcp_score, vcp_breakout_pct, vcp_contraction_pct,
+               rsi, relative_strength, trading_signal, trend_signal,
+               supertrend_state, narrative, fund_details
+        FROM scores.stage2_vcp_picks
+        WHERE snapshot_date = (
+            SELECT MAX(snapshot_date) FROM scores.stage2_vcp_picks
+            WHERE snapshot_date <= %s
+        )
+          AND investment_score >= %s
+          AND supertrend_state = 'BULLISH'
+        ORDER BY investment_score DESC NULLS LAST
+        LIMIT 40
+    """, (snap_date, min_inv_score))
+
+
+def _load_stage2_leaders(conn, snap_date: str) -> list[dict]:
+    """Stage 2 universe from the latest snapshot."""
     return _fetchall(conn, """
         SELECT symbol, sector, price, technical_score, relative_strength,
-               enhanced_fund_score, investment_score, trading_signal, stance, stage
+               enhanced_fund_score, investment_score, trading_signal,
+               trend_signal, stance, stage
         FROM scores.stage_snapshots
         WHERE snapshot_date=%s
-          AND sector IN (
-            'Pharma & Healthcare','Capital Markets','Defence & Aerospace',
-            'Metals & Mining','Energy - Power','Capital Goods & Industrials',
-            'Commodities'
-          )
+          AND stage='STAGE_2'
+          AND supertrend_state='BULLISH'
+          AND trend_signal IN ('BULLISH','STRONG_BULLISH')
         ORDER BY investment_score DESC NULLS LAST
         LIMIT 50
     """, (snap_date,))
 
 
-def _load_stage2_leaders(conn, snap_date: str) -> list[dict]:
-    return _fetchall(conn, """
-        SELECT symbol, sector, price, technical_score, relative_strength,
-               enhanced_fund_score, investment_score, trading_signal, stance, stage
-        FROM scores.stage_snapshots
-        WHERE snapshot_date=%s AND stage='STAGE_2'
-        ORDER BY investment_score DESC NULLS LAST
-        LIMIT 30
-    """, (snap_date,))
-
+_MAX_PER_SECTOR = 2   # cap to ensure diversification across sectors
 
 def build_pick_list(conn, snap_date: str, n: int = MAX_PICKS) -> list[PickRationale]:
-    sec = _load_sector_candidates(conn, snap_date)
-    st2 = _load_stage2_leaders(conn, snap_date)
+    """Build ranked pick list using four aligned signals."""
+    top_sectors     = _load_top_sectors(conn, snap_date, top_n=12)
+    vcp_picks       = _load_vcp_picks(conn, snap_date)
+    stage2_leaders  = _load_stage2_leaders(conn, snap_date)
 
-    sec_top_syms = {r["symbol"]: r for r in sec[:15]}
-    st2_top_syms = {r["symbol"]: r for r in st2[:15]}
-    dual = set(sec_top_syms) & set(st2_top_syms)
+    vcp_syms  = {r["symbol"]: r for r in vcp_picks}
+    st2_syms  = {r["symbol"]: r for r in stage2_leaders}
 
     picks: list[PickRationale] = []
     seen: set[str] = set()
+    per_sector: dict[str, int] = {}
 
-    # Phase 1: dual-confirmed (highest conviction)
-    for sym in sorted(dual, key=lambda s: -(float(sec_top_syms[s].get("investment_score") or 0))):
-        if len(picks) >= n: break
-        r = sec_top_syms[sym]
+    def _add(sym: str, row: dict, source: str, rationale: str,
+             vcp_row: dict | None = None) -> None:
+        if sym in seen or len(picks) >= n:
+            return
+        sect = (row.get("sector") or "").strip()
+        # Enforce diversification cap (higher-conviction tiers bypass it slightly)
+        bypass = source in ("vcp+sector",)
+        sector_cap = _MAX_PER_SECTOR + (1 if bypass else 0)
+        if sect and per_sector.get(sect, 0) >= sector_cap:
+            return
+        per_sector[sect] = per_sector.get(sect, 0) + 1
         picks.append(PickRationale(
-            symbol=sym, sector=r["sector"], source="dual",
-            sector_rot_score=float(r["investment_score"] or 0),
-            stage2_score=float(st2_top_syms[sym]["investment_score"] or 0),
-            rationale=f"Dual-confirmed: sector-rotation leader AND stage-2 momentum (inv.score {r['investment_score']})"
+            symbol=sym,
+            sector=row.get("sector") or "",
+            source=source,
+            sector_rot_score=float(row.get("investment_score") or 0),
+            stage2_score=float(st2_syms[sym]["investment_score"] or 0) if sym in st2_syms else None,
+            vcp_score=float((vcp_row or {}).get("vcp_score") or 0) if vcp_row else None,
+            sector_strength=top_sectors.get(row.get("sector") or "", None),
+            rationale=rationale,
         ))
         seen.add(sym)
 
-    # Phase 2: top sector-rotation only
-    for r in sec:
+    # ── Tier 1: VCP-confirmed + in a top-ranked sector  ───────────────────
+    for r in vcp_picks:
+        sym = r["symbol"]
+        sect = r.get("sector") or ""
+        if sect not in top_sectors:
+            continue
+        strength = top_sectors[sect]
+        inv  = float(r.get("investment_score") or 0)
+        vcp  = float(r.get("vcp_score") or 0)
+        _add(sym, r, "vcp+sector",
+             f"VCP-confirmed Stage 2 (vcp={vcp:.0f}, inv={inv:.1f}) "
+             f"in top-ranked sector {sect} (strength={strength:.0f})",
+             vcp_row=r)
+
+    # ── Tier 2: Stage 2 + top-ranked sector (no VCP confirmation needed) ──
+    for r in stage2_leaders:
+        if len(picks) >= n: break
+        sym  = r["symbol"]
+        sect = r.get("sector") or ""
+        if sect not in top_sectors:
+            continue
+        inv  = float(r.get("investment_score") or 0)
+        strength = top_sectors[sect]
+        vcp_row  = vcp_syms.get(sym)
+        src = "vcp+sector" if vcp_row else "sector+s2"
+        _add(sym, r, src,
+             f"Stage 2 leader in top sector {sect} (strength={strength:.0f}), "
+             f"inv={inv:.1f}" + (f", VCP confirmed" if vcp_row else ""),
+             vcp_row=vcp_row)
+
+    # ── Tier 3: VCP picks not already included ────────────────────────────
+    for r in vcp_picks:
+        if len(picks) >= n: break
+        sym  = r["symbol"]
+        inv  = float(r.get("investment_score") or 0)
+        vcp  = float(r.get("vcp_score") or 0)
+        _add(sym, r, "vcp",
+             f"VCP-confirmed Stage 2 (vcp={vcp:.0f}, inv={inv:.1f}); "
+             f"sector {r.get('sector','')} not in current top-10 rotation",
+             vcp_row=r)
+
+    # ── Tier 4: Stage 2 leaders by investment_score (broad fallback) ──────
+    for r in stage2_leaders:
         if len(picks) >= n: break
         sym = r["symbol"]
-        if sym in seen: continue
-        picks.append(PickRationale(
-            symbol=sym, sector=r["sector"], source="sector_rot",
-            sector_rot_score=float(r["investment_score"] or 0),
-            stage2_score=None,
-            rationale=f"Top of leading sector ({r['sector']}); inv.score {r['investment_score']}, RS {r['relative_strength']}%"
-        ))
-        seen.add(sym)
-
-    # Phase 3: top stage-2 only
-    for r in st2:
-        if len(picks) >= n: break
-        sym = r["symbol"]
-        if sym in seen: continue
-        picks.append(PickRationale(
-            symbol=sym, sector=r["sector"], source="stage2",
-            sector_rot_score=None,
-            stage2_score=float(r["investment_score"] or 0),
-            rationale=f"Stage-2 momentum leader; inv.score {r['investment_score']}, fund {r['enhanced_fund_score']}"
-        ))
-        seen.add(sym)
+        inv = float(r.get("investment_score") or 0)
+        _add(sym, r, "stage2",
+             f"Stage 2 momentum leader; inv={inv:.1f}, "
+             f"fund={r.get('enhanced_fund_score')}")
 
     return picks[:n]
 
@@ -4133,8 +4335,9 @@ def _stock_card_html(idx: int, p: PickRationale, e: dict, narr: dict) -> str:
     cs_stored = cs_breakdown["stored_total"]
     comps = cs_breakdown["components"]
     method_badge = {
-        "real":    '<span style="font-size:.6rem;background:#dcfce7;color:#15803d;padding:1px 5px;border-radius:3px;margin-left:4px">real</span>',
-        "proxy":   '<span style="font-size:.6rem;background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:3px;margin-left:4px">proxy</span>',
+        "real":    '<span style="font-size:.6rem;background:#dcfce7;color:#15803d;padding:1px 5px;border-radius:3px;margin-left:4px" title="Computed from actual reported financial data">✓ real</span>',
+        "derived": '<span style="font-size:.6rem;background:#e0f2fe;color:#0369a1;padding:1px 5px;border-radius:3px;margin-left:4px" title="Derived from live market data (price, volume, EMA) — the standard O\'Neil screener signal for this criterion">derived</span>',
+        "proxy":   '<span style="font-size:.6rem;background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:3px;margin-left:4px" title="⚠ Price-momentum proxy used — structured earnings data not yet available for this stock. Check screener.in.">⚠ proxy</span>',
         "context": '<span style="font-size:.6rem;background:#e0e7ff;color:#3730a3;padding:1px 5px;border-radius:3px;margin-left:4px">context</span>',
         "":        "",
     }

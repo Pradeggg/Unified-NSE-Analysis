@@ -33,7 +33,11 @@ INDEX_HISTORY_FALLBACK_CSVS = [
 ]
 STOCK_CACHE_RDATA = ROOT / "data" / "nse_stock_cache.RData"
 AGENT_LOGO_PATH = ROOT / "docs" / "Agent-adda-logo.jpg"
-PG_DSN = "dbname=nse_market user=nse_admin host=/tmp"
+PG_DSN = (
+    os.environ.get("AGENT_ADDA_PG_DSN")
+    or os.environ.get("PG_DSN")
+    or "dbname=nse_market user=nse_admin host=/tmp"
+)
 AGENT_BRAND = "Agent Adda - Market Intelligence Agent"
 REPORT_DISCLAIMER = (
     "This report is not investment advice. It is a learning journey demonstrating how AI "

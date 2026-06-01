@@ -35,6 +35,7 @@ import argparse
 import html
 import json
 import math
+import os
 import sqlite3
 import warnings
 from datetime import date, datetime, timedelta
@@ -44,10 +45,22 @@ from typing import Optional
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parent
+try:
+    _WT_INDEX = ROOT.parts.index(".worktrees")
+    DISPLAY_ROOT = Path(*ROOT.parts[:_WT_INDEX])
+except ValueError:
+    DISPLAY_ROOT = ROOT
 DB_PATH = ROOT / "data" / "sector_rotation_tracker.db"
 REPORTS_DIR = ROOT / "reports" / "sector_rotation"
 STOCK_CSV = ROOT / "data" / "nse_sec_full_data.csv"
-PG_DSN = "dbname=nse_market user=nse_admin host=/tmp"
+STRATEGY_LAB_ROOT = ROOT / "portfolio" / "data" / "nse_pg_strategy_lab" / "latest"
+STRATEGY_LAB_SUMMARY = STRATEGY_LAB_ROOT / "reports" / "strategy_comparison_summary.json"
+PORTFOLIO_LAB_REPORT = DISPLAY_ROOT / "reports" / "latest" / "portfolio_strategy_lab.html"
+PG_DSN = (
+    os.environ.get("AGENT_ADDA_PG_DSN")
+    or os.environ.get("PG_DSN")
+    or "dbname=nse_market user=nse_admin host=/tmp"
+)
 FUNDAMENTAL_SCORE_PATHS = [
     ROOT / "data" / "fundamental_scores_database.csv",
     ROOT / "organized" / "data" / "fundamental_scores_database.csv",
@@ -222,6 +235,119 @@ def _pg_stage_counts(snap_date: str) -> dict[str, int] | None:
     return {stage: counts.get(stage, 0) for stage in ["STAGE_1", "STAGE_2", "STAGE_3", "STAGE_4"]}
 
 
+def _load_json(path: Path) -> dict:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def _strategy_lab_report_url(path: Path) -> str:
+    try:
+        return path.resolve().as_uri()
+    except Exception:
+        return str(path)
+
+
+def _load_strategy_lab_context(snap_date: str) -> dict:
+    """Load latest portfolio strategy-lab results and enrich open positions with Stage 2 snapshot fields."""
+    summary = _load_json(STRATEGY_LAB_SUMMARY)
+    leaderboard = summary.get("leaderboard") or []
+    if not leaderboard:
+        return {
+            "available": False,
+            "error": f"Strategy lab summary not found or empty: {STRATEGY_LAB_SUMMARY}",
+            "summary_path": str(STRATEGY_LAB_SUMMARY),
+            "lab_report_path": str(PORTFOLIO_LAB_REPORT),
+            "lab_report_url": _strategy_lab_report_url(PORTFOLIO_LAB_REPORT),
+        }
+
+    leaderboard = sorted(
+        leaderboard,
+        key=lambda r: (
+            int(r.get("rank") or 9999),
+            -float(r.get("total_return_pct") or 0),
+        ),
+    )
+    best = leaderboard[0]
+    vcp = next((r for r in leaderboard if r.get("strategy_id") == "vcp_breakout_v1"), None)
+
+    snapshot = _pg_stage_snapshots(snap_date)
+    snap_by_symbol: dict[str, dict] = {}
+    if not snapshot.empty:
+        for _, row in snapshot.iterrows():
+            snap_by_symbol[str(row.get("symbol") or "").upper()] = row.to_dict()
+
+    def enrich_strategy(entry: dict | None) -> dict | None:
+        if not entry:
+            return None
+        strategy_id = str(entry.get("strategy_id") or "")
+        state_path = STRATEGY_LAB_ROOT / "runs" / strategy_id / "state" / "replay_state.json"
+        state = _load_json(state_path)
+        positions = []
+        for pos in state.get("positions") or []:
+            symbol = str(pos.get("symbol") or "").upper()
+            snap = snap_by_symbol.get(symbol, {})
+            market_price = snap.get("live_price") or snap.get("price")
+            avg_cost = pos.get("avg_cost") or pos.get("avg_price")
+            qty = pos.get("quantity") or 0
+            try:
+                market_value = float(qty) * float(market_price) if market_price is not None else None
+            except (TypeError, ValueError):
+                market_value = None
+            try:
+                unrealized_pct = ((float(market_price) - float(avg_cost)) / float(avg_cost) * 100) if market_price and avg_cost else None
+            except (TypeError, ValueError, ZeroDivisionError):
+                unrealized_pct = None
+            positions.append({
+                **pos,
+                "symbol": symbol,
+                "company_name": snap.get("company_name") or "",
+                "sector": snap.get("sector") or "",
+                "stage": snap.get("stage") or "UNKNOWN",
+                "stage_score": snap.get("stage_score"),
+                "trading_signal": snap.get("trading_signal") or "",
+                "investment_score": snap.get("investment_score"),
+                "rsi": snap.get("rsi"),
+                "change_1w_pct": snap.get("change_1w_pct"),
+                "market_price": market_price,
+                "market_value": market_value,
+                "unrealized_pct": unrealized_pct,
+            })
+
+        report_path = Path(str(entry.get("report_path") or ""))
+        visible_report_path = DISPLAY_ROOT / report_path
+        if not visible_report_path.exists():
+            visible_report_path = ROOT / report_path
+        return {
+            "entry": entry,
+            "state_summary": state.get("summary") or {},
+            "state_path": str(state_path),
+            "report_path": str(report_path),
+            "report_url": _strategy_lab_report_url(visible_report_path) if report_path else "",
+            "positions": positions,
+        }
+
+    watched = [enrich_strategy(best)]
+    if vcp and vcp.get("strategy_id") != best.get("strategy_id"):
+        watched.append(enrich_strategy(vcp))
+
+    return {
+        "available": True,
+        "summary_path": str(STRATEGY_LAB_SUMMARY),
+        "lab_report_path": str(PORTFOLIO_LAB_REPORT),
+        "lab_report_url": _strategy_lab_report_url(PORTFOLIO_LAB_REPORT),
+        "latest_eod_date": summary.get("latest_eod_date") or summary.get("end_date"),
+        "run_id": summary.get("run_id"),
+        "row_count": summary.get("row_count"),
+        "symbol_count": summary.get("symbol_count"),
+        "leaderboard": leaderboard,
+        "best": watched[0],
+        "vcp": enrich_strategy(vcp) if vcp else None,
+        "watched": [w for w in watched if w],
+    }
+
+
 def _write_snapshot_to_pg(rows: list[dict]) -> int:
     try:
         import psycopg2
@@ -271,7 +397,7 @@ def _write_snapshot_to_pg(rows: list[dict]) -> int:
     )
 
     try:
-        conn = psycopg2.connect("dbname=nse_market user=nse_admin host=/tmp")
+        conn = psycopg2.connect(PG_DSN)
         try:
             with conn, conn.cursor() as cur:
                 snapshot_dates = sorted({row.get("snapshot_date") for row in rows if row.get("snapshot_date")})
@@ -1647,10 +1773,12 @@ def build_change_report(
       - stage_up/down: other stage movers
       - summary: counts
     """
-    conn = get_conn()
-    dates = list_snapshot_dates(conn)
+    pg_dates = _pg_snapshot_dates()
+    conn = None if pg_dates else get_conn()
+    dates = pg_dates or list_snapshot_dates(conn)
     if not dates:
-        conn.close()
+        if conn is not None:
+            conn.close()
         return {"error": "No snapshots in DB yet. Run --snapshot first."}
 
     today_snap = snap_date or dates[0]
@@ -1668,18 +1796,26 @@ def build_change_report(
     result["stage2_now"] = s2_now.to_dict("records")
 
     if prev_snap:
-        # Ensure changes computed
-        existing = conn.execute(
-            "SELECT COUNT(*) FROM stage_changes WHERE change_date=? AND compare_date=?",
-            (today_snap, prev_snap)
-        ).fetchone()[0]
-        if not existing:
-            _compute_changes(conn, today_snap, prev_snap)
-
-        chg = pd.read_sql_query(
-            "SELECT * FROM stage_changes WHERE change_date=? AND compare_date=? ORDER BY change_type, stage_score_now DESC",
-            conn, params=(today_snap, prev_snap)
-        )
+        if conn is None:
+            chg = _pg_query(
+                """
+                SELECT * FROM scores.stage_changes
+                WHERE change_date = %s AND compare_date = %s
+                ORDER BY change_type, stage_score_now DESC NULLS LAST
+                """,
+                (today_snap, prev_snap),
+            )
+        else:
+            existing = conn.execute(
+                "SELECT COUNT(*) FROM stage_changes WHERE change_date=? AND compare_date=?",
+                (today_snap, prev_snap)
+            ).fetchone()[0]
+            if not existing:
+                _compute_changes(conn, today_snap, prev_snap)
+            chg = pd.read_sql_query(
+                "SELECT * FROM stage_changes WHERE change_date=? AND compare_date=? ORDER BY change_type, stage_score_now DESC",
+                conn, params=(today_snap, prev_snap)
+            )
         result["new_stage2"]   = chg[chg.change_type == "NEW_STAGE2"].to_dict("records")
         result["exit_stage2"]  = chg[chg.change_type == "EXIT_STAGE2"].to_dict("records")
         result["stage_up"]     = chg[chg.change_type == "STAGE_UP"].to_dict("records")
@@ -1691,16 +1827,26 @@ def build_change_report(
             week_target = datetime.fromisoformat(today_snap).date() - timedelta(days=7)
             week_snap = _closest_snapshot(dates, week_target)
             if week_snap:
-                ex2 = conn.execute(
-                    "SELECT COUNT(*) FROM stage_changes WHERE change_date=? AND compare_date=?",
-                    (today_snap, week_snap)
-                ).fetchone()[0]
-                if not ex2:
-                    _compute_changes(conn, today_snap, week_snap)
-                chg_w = pd.read_sql_query(
-                    "SELECT * FROM stage_changes WHERE change_date=? AND compare_date=? ORDER BY change_type",
-                    conn, params=(today_snap, week_snap)
-                )
+                if conn is None:
+                    chg_w = _pg_query(
+                        """
+                        SELECT * FROM scores.stage_changes
+                        WHERE change_date = %s AND compare_date = %s
+                        ORDER BY change_type
+                        """,
+                        (today_snap, week_snap),
+                    )
+                else:
+                    ex2 = conn.execute(
+                        "SELECT COUNT(*) FROM stage_changes WHERE change_date=? AND compare_date=?",
+                        (today_snap, week_snap)
+                    ).fetchone()[0]
+                    if not ex2:
+                        _compute_changes(conn, today_snap, week_snap)
+                    chg_w = pd.read_sql_query(
+                        "SELECT * FROM stage_changes WHERE change_date=? AND compare_date=? ORDER BY change_type",
+                        conn, params=(today_snap, week_snap)
+                    )
                 result["week_snap"] = week_snap
                 result["week_new_stage2"]  = chg_w[chg_w.change_type == "NEW_STAGE2"].to_dict("records")
                 result["week_exit_stage2"] = chg_w[chg_w.change_type == "EXIT_STAGE2"].to_dict("records")
@@ -1764,17 +1910,23 @@ def build_change_report(
         date_old = str(hist_records[idx + 1].get("snapshot_date", ""))
         if not date_new or not date_old:
             continue
-        existing = conn.execute(
-            "SELECT COUNT(*) FROM stage_changes WHERE change_date=? AND compare_date=?",
-            (date_new, date_old),
-        ).fetchone()[0]
-        if not existing:
-            _compute_changes(conn, date_new, date_old)
-        chg_pair = pd.read_sql_query(
-            "SELECT * FROM stage_changes WHERE change_date=? AND compare_date=?",
-            conn,
-            params=(date_new, date_old),
-        )
+        if conn is None:
+            chg_pair = _pg_query(
+                "SELECT * FROM scores.stage_changes WHERE change_date = %s AND compare_date = %s",
+                (date_new, date_old),
+            )
+        else:
+            existing = conn.execute(
+                "SELECT COUNT(*) FROM stage_changes WHERE change_date=? AND compare_date=?",
+                (date_new, date_old),
+            ).fetchone()[0]
+            if not existing:
+                _compute_changes(conn, date_new, date_old)
+            chg_pair = pd.read_sql_query(
+                "SELECT * FROM stage_changes WHERE change_date=? AND compare_date=?",
+                conn,
+                params=(date_new, date_old),
+            )
         old_s2 = int(hist_records[idx + 1].get("stage2_count") or 0)
         row.update({
             "compare_date": date_old,
@@ -1796,20 +1948,29 @@ def build_change_report(
             "stage_changes_day":  len(result.get("all_changes", [])),
         })
 
-    result["summary"]["stage_counts"] = _pg_stage_counts(today_snap) or {
-        "STAGE_1": int(conn.execute("SELECT COUNT(*) FROM stage_snapshots WHERE snapshot_date=? AND stage='STAGE_1'", (today_snap,)).fetchone()[0]),
-        "STAGE_2": int(conn.execute("SELECT COUNT(*) FROM stage_snapshots WHERE snapshot_date=? AND stage='STAGE_2'", (today_snap,)).fetchone()[0]),
-        "STAGE_3": int(conn.execute("SELECT COUNT(*) FROM stage_snapshots WHERE snapshot_date=? AND stage='STAGE_3'", (today_snap,)).fetchone()[0]),
-        "STAGE_4": int(conn.execute("SELECT COUNT(*) FROM stage_snapshots WHERE snapshot_date=? AND stage='STAGE_4'", (today_snap,)).fetchone()[0]),
-    }
+    result["summary"]["stage_counts"] = _pg_stage_counts(today_snap) or (
+        {
+            "STAGE_1": int(conn.execute("SELECT COUNT(*) FROM stage_snapshots WHERE snapshot_date=? AND stage='STAGE_1'", (today_snap,)).fetchone()[0]),
+            "STAGE_2": int(conn.execute("SELECT COUNT(*) FROM stage_snapshots WHERE snapshot_date=? AND stage='STAGE_2'", (today_snap,)).fetchone()[0]),
+            "STAGE_3": int(conn.execute("SELECT COUNT(*) FROM stage_snapshots WHERE snapshot_date=? AND stage='STAGE_3'", (today_snap,)).fetchone()[0]),
+            "STAGE_4": int(conn.execute("SELECT COUNT(*) FROM stage_snapshots WHERE snapshot_date=? AND stage='STAGE_4'", (today_snap,)).fetchone()[0]),
+        }
+        if conn is not None else {"STAGE_1": 0, "STAGE_2": len(s2_now), "STAGE_3": 0, "STAGE_4": 0}
+    )
 
     if prev_snap and "all_changes" in result:
         chg = pd.DataFrame(result.get("all_changes", []) + result.get("new_stage2", []) + result.get("exit_stage2", []) + result.get("stage_up", []) + result.get("stage_down", []))
         # Re-load full changes for transition counting
-        chg_all = pd.read_sql_query(
-            "SELECT * FROM stage_changes WHERE change_date=? AND compare_date=?",
-            conn, params=(today_snap, prev_snap)
-        )
+        if conn is None:
+            chg_all = _pg_query(
+                "SELECT * FROM scores.stage_changes WHERE change_date = %s AND compare_date = %s",
+                (today_snap, prev_snap),
+            )
+        else:
+            chg_all = pd.read_sql_query(
+                "SELECT * FROM stage_changes WHERE change_date=? AND compare_date=?",
+                conn, params=(today_snap, prev_snap)
+            )
         result["summary"]["transitions"] = {
             "S1_to_S2": int(len(chg_all[(chg_all.stage_prev == "STAGE_1") & (chg_all.stage_now == "STAGE_2")])),
             "S2_to_S3": int(len(chg_all[(chg_all.stage_prev == "STAGE_2") & (chg_all.stage_now == "STAGE_3")])),
@@ -1821,8 +1982,24 @@ def build_change_report(
     # Top investment picks from stage2_now sorted by investment_score
     top_picks = sorted(result["stage2_now"], key=lambda r: float(r.get("investment_score") or 0), reverse=True)[:15]
     result["top_picks"] = top_picks
+    result["vcp_setups"] = sorted(
+        [
+            r for r in result["stage2_now"]
+            if str(r.get("supertrend_state") or "").upper() == "BULLISH"
+            and _num_or_none(r.get("change_1w_pct")) is not None
+            and abs(float(r.get("change_1w_pct") or 0)) < 2.0
+            and _num_or_none(r.get("rsi")) is not None
+            and 45 <= float(r.get("rsi") or 0) <= 65
+        ],
+        key=lambda r: (
+            abs(float(r.get("change_1w_pct") or 0)),
+            -float(r.get("investment_score") or 0),
+        ),
+    )
+    result["strategy_lab"] = _load_strategy_lab_context(today_snap)
 
-    conn.close()
+    if conn is not None:
+        conn.close()
     return result
 
 
@@ -2577,6 +2754,28 @@ def build_html_report(report: dict) -> str:
 
     # ── Top Picks ─────────────────────────────────────────────────────────────
     top_picks = report.get("top_picks", [])
+    vcp_setups = report.get("vcp_setups", [])
+
+    def vcp_section_html(rows):
+        note = (
+            "Stage 2 + bullish Supertrend + weekly range under 2% + RSI 45-65. "
+            "This is the VCP/tight-range pocket inside the Stage 2 tracker."
+        )
+        if rows:
+            body = s2_table(rows[:30])
+        else:
+            body = '<p style="color:#94a3b8;padding:16px">No Stage 2 names currently meet the VCP / tight-range filter.</p>'
+        return (
+            '<div class="section" style="margin-bottom:20px">'
+            '<div class="sec-hdr" style="border-left:4px solid #7c3aed">'
+            '<h2>🎯 VCP / Tight Range Setups</h2>'
+            f'<span class="badge-count">{len(rows)}</span>'
+            '</div>'
+            f'<p style="color:#64748b;font-size:.82rem;margin:0 0 12px">{note}</p>'
+            f'{body}'
+            '</div>'
+        )
+
     def top_picks_html(picks):
         if not picks:
             return ""
@@ -2655,12 +2854,150 @@ def build_html_report(report: dict) -> str:
             '</div>'
         )
     picks_section = top_picks_html(top_picks)
+    vcp_section = vcp_section_html(vcp_setups)
+
+    def strategy_lab_html(ctx: dict, strategy_key: str = "best") -> str:
+        if not ctx or not ctx.get("available"):
+            return (
+                '<div style="padding:20px;color:#64748b">'
+                f'{_H(str((ctx or {}).get("error") or "Strategy lab output is not available."))}'
+                '</div>'
+            )
+        strat = ctx.get(strategy_key)
+        if not strat:
+            return '<div style="padding:20px;color:#64748b">Strategy not present in the latest lab run.</div>'
+
+        entry = strat.get("entry") or {}
+        positions = strat.get("positions") or []
+
+        def _fmt_num(v, suffix="", decimals=2, default="—"):
+            try:
+                fv = float(v)
+                if math.isnan(fv):
+                    return default
+                return f"{fv:,.{decimals}f}{suffix}"
+            except (TypeError, ValueError):
+                return default
+
+        metrics = [
+            ("Rank", f"#{entry.get('rank', '—')}"),
+            ("Return", _fmt_num(entry.get("total_return_pct"), "%")),
+            ("Max DD", _fmt_num(entry.get("max_drawdown_pct"), "%")),
+            ("Win Rate", _fmt_num(entry.get("win_rate_pct"), "%")),
+            ("Open Positions", str(entry.get("open_positions", len(positions)) or 0)),
+            ("Latest EOD", str(ctx.get("latest_eod_date") or "—")),
+        ]
+        metric_html = "".join(
+            '<div class="sum-card" style="min-width:135px">'
+            f'<div class="sc-val" style="font-size:1.25rem;color:#0f172a">{_H(value)}</div>'
+            f'<div class="sc-lbl">{_H(label)}</div>'
+            '</div>'
+            for label, value in metrics
+        )
+
+        rows = []
+        for pos in positions:
+            pct = pos.get("unrealized_pct")
+            pct_txt = _fmt_num(pct, "%")
+            pct_color = "#16a34a" if (pct is not None and float(pct) > 0) else ("#dc2626" if pct is not None and float(pct) < 0 else "#64748b")
+            rows.append(
+                "<tr>"
+                f'<td class="sym">{_H(str(pos.get("symbol") or ""))}</td>'
+                f'<td class="cname">{_H(str(pos.get("company_name") or "")[:42])}</td>'
+                f'<td>{_badge(str(pos.get("stage") or "UNKNOWN"))}</td>'
+                f'<td style="text-align:right">{_fmt_num(pos.get("quantity"), decimals=0)}</td>'
+                f'<td style="text-align:right">₹{_fmt_num(pos.get("avg_cost"))}</td>'
+                f'<td style="text-align:right">₹{_fmt_num(pos.get("market_price"))}</td>'
+                f'<td style="text-align:right">₹{_fmt_num(pos.get("market_value"), decimals=0)}</td>'
+                f'<td style="text-align:right;color:{pct_color};font-weight:700">{pct_txt}</td>'
+                f'<td>{sig_chip(pos.get("trading_signal") or "")}</td>'
+                f'<td style="text-align:right">{_fmt_num(pos.get("investment_score"), decimals=0)}</td>'
+                f'<td style="text-align:right">{_fmt_num(pos.get("rsi"), decimals=0)}</td>'
+                f'<td style="text-align:right">{_fmt_num(pos.get("change_1w_pct"), "%")}</td>'
+                "</tr>"
+            )
+
+        if rows:
+            pos_table = (
+                '<div class="tbl-wrap"><table>'
+                '<thead><tr>'
+                '<th>Symbol</th><th>Company</th><th>Stage</th><th>Qty</th><th>Avg Cost</th>'
+                '<th>Stage Price</th><th>Value</th><th>Unrl %</th><th>Signal</th><th>Inv</th><th>RSI</th><th>1W%</th>'
+                '</tr></thead><tbody>'
+                + "".join(rows)
+                + '</tbody></table></div>'
+            )
+        else:
+            pos_table = '<p style="color:#94a3b8;padding:16px">No open positions for this strategy in the latest lab state.</p>'
+
+        top_lb = "".join(
+            "<tr>"
+            f'<td>#{_H(str(r.get("rank") or "—"))}</td>'
+            f'<td class="sym">{_H(str(r.get("strategy_id") or ""))}</td>'
+            f'<td>{_H(str(r.get("name") or ""))}</td>'
+            f'<td style="text-align:right">{_fmt_num(r.get("total_return_pct"), "%")}</td>'
+            f'<td style="text-align:right">{_fmt_num(r.get("max_drawdown_pct"), "%")}</td>'
+            f'<td style="text-align:right">{_fmt_num(r.get("open_positions"), decimals=0)}</td>'
+            "</tr>"
+            for r in (ctx.get("leaderboard") or [])[:5]
+        )
+        leaderboard_html = (
+            '<details style="margin-top:16px">'
+            '<summary style="cursor:pointer;font-weight:700;color:#334155">Top strategy-lab leaderboard</summary>'
+            '<div class="tbl-wrap" style="margin-top:10px"><table>'
+            '<thead><tr><th>Rank</th><th>ID</th><th>Name</th><th>Return</th><th>Max DD</th><th>Open</th></tr></thead>'
+            f'<tbody>{top_lb}</tbody></table></div></details>'
+        )
+
+        title = "Best Portfolio Strategy" if strategy_key == "best" else "VCP Strategy From Lab"
+        accent = "#059669" if strategy_key == "best" else "#7c3aed"
+        report_url = strat.get("report_url") or ctx.get("lab_report_url") or "#"
+        lab_url = ctx.get("lab_report_url") or "#"
+        subtitle = (
+            f'{_H(str(entry.get("name") or entry.get("strategy_id") or "Strategy"))} '
+            f'({_H(str(entry.get("strategy_id") or ""))})'
+        )
+        return (
+            '<div style="padding:18px">'
+            f'<div class="sec-hdr" style="border-left:4px solid {accent};margin-bottom:12px">'
+            f'<h2>{title}</h2><span class="badge-count">{_H(str(entry.get("rank") or "—"))}</span>'
+            '</div>'
+            f'<p style="color:#64748b;font-size:.84rem;margin:0 0 12px">{subtitle}. '
+            'This tab is populated from the latest portfolio strategy-lab run before the Stage 2 tracker is rendered. '
+            f'<a href="{_H(lab_url)}">Open lab report</a> · <a href="{_H(report_url)}">Open strategy report</a></p>'
+            f'<div class="summary-grid" style="margin-bottom:14px">{metric_html}</div>'
+            f'{pos_table}'
+            f'{leaderboard_html if strategy_key == "best" else ""}'
+            '</div>'
+        )
+
+    strategy_lab = report.get("strategy_lab", {})
+    strategy_lab_tab = strategy_lab_html(strategy_lab, "best")
+    vcp_strategy_tab = strategy_lab_html(strategy_lab, "vcp")
 
     # ── Tabs ─────────────────────────────────────────────────────────────────
     help_tab_content = """
 <div style="padding:24px 28px;max-width:900px;font-size:.88rem;line-height:1.7;color:#334155">
 
   <h2 style="font-size:1.1rem;font-weight:700;color:#065f46;margin-bottom:16px">📖 How to Read This Report</h2>
+
+  <div style="background:#ecfeff;border:1px solid #a5f3fc;border-radius:10px;padding:16px;margin-bottom:20px">
+    <h3 style="font-size:.9rem;font-weight:700;color:#0e7490;margin-bottom:10px">Daily Refresh Flow</h3>
+    <p style="margin-bottom:8px">The daily refresh now runs in this dependency order:</p>
+    <p style="font-size:.84rem;color:#334155;line-height:1.8">
+      <strong>Daily refresh</strong> → <strong>Portfolio Strategy Lab</strong> → <strong>Sector Rotation</strong> → <strong>Stage 2 Tracker</strong> → <strong>Top Investment Picks Detailed Report</strong> → <strong>My Portfolio EOD Report</strong>.
+    </p>
+    <p style="margin-top:8px;color:#475569">Read this tracker after the strategy lab and sector rotation reports. The Best Strategy and VCP Strategy tabs are pulled from the latest strategy-lab run, while the Stage 2 tables use the latest PostgreSQL stage snapshot.</p>
+  </div>
+
+  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:20px">
+    <h3 style="font-size:.9rem;font-weight:700;color:#0f172a;margin-bottom:10px">Recommended Reading Order</h3>
+    <p style="margin-bottom:6px"><strong>1. Summary cards</strong> — confirm Stage 2 breadth, daily exits, and stage transition pressure.</p>
+    <p style="margin-bottom:6px"><strong>2. Best Strategy tab</strong> — see which paper strategy currently leads and which open positions it owns.</p>
+    <p style="margin-bottom:6px"><strong>3. VCP Strategy tab</strong> — inspect the VCP strategy result separately, even when it is not the top-ranked strategy.</p>
+    <p style="margin-bottom:6px"><strong>4. Stage 2 Now</strong> — scan all current Stage 2 names using Signal, RSI, Supertrend, RS, and Investment Score.</p>
+    <p><strong>5. Top Investment Picks report</strong> — use the independent detailed report for charts, entry/stop/target context, fundamentals, events, and risk notes.</p>
+  </div>
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
 
@@ -2757,6 +3094,8 @@ def build_html_report(report: dict) -> str:
         '<button class="tab-btn" data-tab="t-exit" onclick="showTab(\'t-exit\',this)">Exits (Day)</button>'
         '<button class="tab-btn" data-tab="t-all" onclick="showTab(\'t-all\',this)">All Stage Changes (Day)</button>'
         f'<button class="tab-btn" data-tab="t-week" onclick="showTab(\'t-week\',this)">Weekly View ({week})</button>'
+        '<button class="tab-btn" data-tab="t-strategy" onclick="showTab(\'t-strategy\',this)">Best Strategy</button>'
+        '<button class="tab-btn" data-tab="t-vcp-strategy" onclick="showTab(\'t-vcp-strategy\',this)">VCP Strategy</button>'
         '<button class="tab-btn" data-tab="t-help" onclick="showTab(\'t-help\',this)">📖 How to Read</button>'
         '</div>'
         f'<div class="tab-panel active" id="t-s2">{s2_table(s2_list)}</div>'
@@ -2771,6 +3110,8 @@ def build_html_report(report: dict) -> str:
         f'<h3 style="font-size:.9rem;font-weight:600;padding:14px 18px 6px;color:#2563eb">Stage 2 — all {len(w_price)} stocks (vs {week})</h3>'
         f'{s2_table(w_price)}'
         f'</div>'
+        f'<div class="tab-panel" id="t-strategy">{strategy_lab_tab}</div>'
+        f'<div class="tab-panel" id="t-vcp-strategy">{vcp_strategy_tab}</div>'
         f'<div class="tab-panel" id="t-help">{help_tab_content}</div>'
     )
 
@@ -3050,6 +3391,7 @@ function closePickModal() {
   {trans_html}
   {snapshot_section}
   {picks_section}
+  {vcp_section}
   <div class="section">
     {tabs_html}
   </div>
@@ -3161,6 +3503,10 @@ def main() -> None:
             out_path = REPORTS_DIR / f"stage2_tracker_{snap}.html"
             out_path.write_text(build_html_report(rpt), encoding="utf-8")
             print(f"\n  HTML report saved: {out_path}")
+            latest_path = ROOT / "reports" / "latest" / "stage2_tracker.html"
+            latest_path.parent.mkdir(parents=True, exist_ok=True)
+            latest_path.write_text(out_path.read_text(encoding="utf-8"), encoding="utf-8")
+            print(f"  Latest copy saved: {latest_path}")
             try:
                 import subprocess, sys
                 if sys.platform == "darwin":

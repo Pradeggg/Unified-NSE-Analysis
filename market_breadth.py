@@ -2,6 +2,7 @@
 """Market breadth indicators derived from local NSE OHLCV history."""
 
 from __future__ import annotations
+import os
 
 import html
 from datetime import datetime
@@ -16,7 +17,11 @@ BREADTH_HISTORY_CSV = ROOT / "data" / "breadth_history.csv"
 INDEX_MAPPING_CSV = ROOT / "data" / "index_stock_mapping.csv"
 SECTOR_BREADTH_CSV = ROOT / "data" / "sector_breadth.csv"
 
-PG_DSN = "dbname=nse_market user=nse_admin host=/tmp"
+PG_DSN = (
+    os.environ.get("AGENT_ADDA_PG_DSN")
+    or os.environ.get("PG_DSN")
+    or "dbname=nse_market user=nse_admin host=/tmp"
+)
 
 
 def _load_eod_from_postgres(lookback_days: int = 420) -> tuple[pd.DataFrame, pd.DataFrame]:
