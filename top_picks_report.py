@@ -236,6 +236,9 @@ body{
   font-family:'Inter','Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,sans-serif;
   font-feature-settings:"tnum","ss01"; color:var(--tp-ink);
 }
+/* Sticky TOC has top:8px + ~52px height ≈ 60px reserved so anchor jumps don't hide under it. */
+html{scroll-padding-top:72px;scroll-behavior:smooth}
+:target{scroll-margin-top:72px}
 .tp-hero{
   margin:0; padding:32px 28px 26px;
   background: radial-gradient(1200px 320px at 10% -20%, rgba(37,99,235,.32), transparent 60%),
@@ -3961,7 +3964,7 @@ def _stock_card_html(idx: int, p: PickRationale, e: dict, narr: dict) -> str:
     if qtr:
         q4 = list(reversed(qtr[:4]))
         qtr_chart = _svg_bar_chart(
-            labels=[q.get("period_label","")[-6:] for q in q4],
+            labels=[(q.get("period_label","") or "")[:8] for q in q4],
             series=[
                 ("Revenue (₹ Cr)", [q.get("revenue") for q in q4]),
                 ("PAT (₹ Cr)",     [q.get("pat") for q in q4]),
@@ -3973,7 +3976,7 @@ def _stock_card_html(idx: int, p: PickRationale, e: dict, narr: dict) -> str:
     if ann:
         a5 = list(reversed(ann[:5]))
         ann_chart = _svg_bar_chart(
-            labels=[a.get("period_label","")[-6:] for a in a5],
+            labels=[(a.get("period_label","") or "")[:8] for a in a5],
             series=[("Revenue (₹ Cr)", [a.get("revenue") for a in a5])],
             colors=["#7c3aed"],
             height=130,
