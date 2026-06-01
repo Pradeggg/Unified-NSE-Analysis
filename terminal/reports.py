@@ -11,6 +11,8 @@ import re
 import base64
 import datetime
 import html as _html
+import json
+import shutil
 from pathlib import Path
 from typing import Optional
 
@@ -2042,6 +2044,18 @@ REPORT_TYPES = {
             "Stage 2 by Sector", "Watchlist Candidates",
         ],
     },
+    "strategy-lab": {
+        "title": "Portfolio Strategy Lab — NSE Paper Trading — {date}",
+        "badge": "badge-stage2",
+        "badge_label": "PORTFOLIO STRATEGY LAB",
+        "sections": [
+            "Strategy Leaderboard",
+            "Risk-Adjusted Readout",
+            "Cost and Turnover Diagnostics",
+            "Recommended Paper Trading Focus",
+            "Run Artifacts and Methodology",
+        ],
+    },
 }
 
 
@@ -2469,31 +2483,134 @@ def _build_stage2_content() -> str:
     return "\n".join(md)
 
 
+def _build_strategy_lab_content() -> str:
+    """Build the Portfolio Strategy Lab report from native portfolio artifacts."""
+    summary_path = ROOT / "portfolio" / "data" / "nse_pg_strategy_lab" / "latest" / "reports" / "strategy_comparison_summary.json"
+    if not summary_path.exists():
+        fallback = ROOT / "portfolio" / "data" / "nse_pg_strategy_lab" / "native_20260601" / "reports" / "strategy_comparison_summary.json"
+        summary_path = fallback if fallback.exists() else summary_path
+    if not summary_path.exists():
+        raise FileNotFoundError(
+            "Portfolio strategy-lab summary not found. Run "
+            "`python -m portfolio.cli strategy-lab --output-dir portfolio/data/nse_pg_strategy_lab/latest` first."
+        )
+
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    rows = list(summary.get("leaderboard") or [])
+    now = datetime.datetime.now()
+    top = rows[0] if rows else {}
+    stage_counts = summary.get("stage_counts") or {}
+    stage2_count = stage_counts.get("STAGE_2", 0)
+    symbol_count = summary.get("symbol_count") or 0
+    stage2_pct = (float(stage2_count) / float(symbol_count) * 100.0) if symbol_count else 0.0
+
+    md: list[str] = []
+    md.append("# Portfolio Strategy Lab — NSE Paper Trading")
+    md.append(f"**Generated:** {now.strftime('%d %b %Y, %H:%M IST')} · **Source:** `scores.stage_snapshots` + `market.equity_eod`")
+    md.append("")
+    md.append("## Market and Run Snapshot")
+    md.append("")
+    md.append("| Metric | Value |")
+    md.append("|---|---|")
+    md.append(f"| Run ID | `{summary.get('run_id', 'n/a')}` |")
+    md.append(f"| Window | {summary.get('start_date')} → {summary.get('end_date')} |")
+    md.append(f"| Latest EOD Date | {summary.get('latest_eod_date', 'n/a')} |")
+    md.append(f"| Universe | {symbol_count} liquid NSE symbols |")
+    md.append(f"| Feature Rows | {summary.get('row_count', 0):,} |")
+    md.append(f"| Stage 2 Rows | {stage2_count:,} ({stage2_pct:.1f}% of symbols baseline) |")
+    md.append(f"| Benchmark | {summary.get('benchmark_id', 'Nifty 500')} |")
+    md.append(f"| Costs | {summary.get('slippage_bps')} bps slippage + {summary.get('brokerage_bps')} bps brokerage |")
+    if top:
+        md.append(f"| Current Leader | **{top.get('strategy_id')}** ({_fmt_pct(top.get('total_return_pct'), 2)} return, {_fmt_pct(top.get('max_drawdown_pct'), 2)} max DD) |")
+    md.append("")
+
+    md.append("## Strategy Leaderboard")
+    md.append("")
+    md.append("| Rank | Strategy | Return | Max DD | Excess | Profit Factor | Expectancy | Turnover | Cost Drag | Fills | Win Rate |")
+    md.append("|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
+    for row in rows:
+        md.append(
+            f"| {row.get('rank')} | **{row.get('strategy_id')}** | "
+            f"{_fmt_pct(row.get('total_return_pct'), 2)} | {_fmt_pct(row.get('max_drawdown_pct'), 2)} | "
+            f"{_fmt_pct(row.get('excess_return_pct'), 2)} | {_fmt_num(row.get('profit_factor'), 2)} | "
+            f"₹{_fmt_num(row.get('expectancy'), 0)} | {_fmt_pct(row.get('turnover_pct'), 1)} | "
+            f"{_fmt_pct(row.get('cost_drag_pct'), 2)} | {row.get('fills', 0)} | "
+            f"{_fmt_pct(row.get('win_rate_pct'), 1)} |"
+        )
+    md.append("")
+
+    md.append("## Risk-Adjusted Readout")
+    md.append("")
+    if rows:
+        best = rows[0]
+        high_return = max(rows, key=lambda row: float(row.get("total_return_pct") or 0))
+        worst_turnover = max(rows, key=lambda row: float(row.get("turnover_pct") or 0))
+        md.append(f"- **Best current candidate:** `{best.get('strategy_id')}` leads the ranking after return, drawdown, and activity checks.")
+        md.append(f"- **Highest raw return:** `{high_return.get('strategy_id')}` returned {_fmt_pct(high_return.get('total_return_pct'), 2)} but carried {_fmt_pct(high_return.get('max_drawdown_pct'), 2)} max drawdown.")
+        md.append(f"- **Turnover warning:** `{worst_turnover.get('strategy_id')}` generated {_fmt_pct(worst_turnover.get('turnover_pct'), 1)} turnover and {_fmt_pct(worst_turnover.get('cost_drag_pct'), 2)} cost drag.")
+        weak = [row for row in rows if float(row.get("profit_factor") or 0) < 1 and int(row.get("fills") or 0) > 0]
+        if weak:
+            md.append("- **Quarantine candidates:** " + ", ".join(f"`{row.get('strategy_id')}`" for row in weak[:4]) + " have profit factor below 1.0 after costs.")
+    else:
+        md.append("- No strategy rows were found in the latest strategy-lab artifact.")
+    md.append("")
+
+    md.append("## Recommended Paper Trading Focus")
+    md.append("")
+    md.append("| Action | Strategy | Reason |")
+    md.append("|---|---|---|")
+    if rows:
+        md.append(f"| Primary paper strategy | `{rows[0].get('strategy_id')}` | Best active risk-adjusted score in the latest run |")
+    if len(rows) > 1:
+        md.append(f"| Watch but constrain | `{rows[1].get('strategy_id')}` | Strong return profile but needs drawdown and exposure caps |")
+    md.append("| Avoid for now | `mean_reversion_uptrend_v1` | High churn and weak cost-adjusted result in recent runs |")
+    md.append("| Required guardrail | Portfolio controls | Add max positions, sector caps, turnover caps, and drawdown stop before daily paper allocation |")
+    md.append("")
+
+    md.append("## Run Artifacts and Methodology")
+    md.append("")
+    md.append("| Artifact | Path |")
+    md.append("|---|---|")
+    md.append(f"| Summary JSON | `{summary_path}` |")
+    md.append(f"| Feature CSV | `{summary.get('data_path', 'n/a')}` |")
+    md.append(f"| Benchmark CSV | `{summary.get('benchmark_path', 'n/a')}` |")
+    md.append(f"| Output Directory | `{summary.get('output_dir', 'n/a')}` |")
+    md.append("")
+    md.append("Methodology: each built-in strategy is replayed independently from zero positions using EOD bars, next-open fills, historical `scores.stage_snapshots`, and the configured slippage/brokerage assumptions. Ranking sorts active strategies first and then uses the strategy-lab `rank_score`.")
+    md.append("")
+    md.append("---")
+    md.append("*Paper trading only. This report is for strategy research and auditability, not investment advice or live trading instruction.*")
+    return "\n".join(md)
+
+
 def generate_preset_report(
     report_type: str,
     output_format: str = "html",
 ) -> dict:
     """
-    Generate a data-direct preset report (sector-rotation or stage2)
+    Generate a data-direct preset report (sector-rotation, stage2, or strategy-lab)
     without requiring LLM content. Pulls data straight from the DB.
 
     Args:
-        report_type: 'sector-rotation' or 'stage2'
+        report_type: 'sector-rotation', 'stage2', or 'strategy-lab'
         output_format: 'html', 'pdf', or 'md'
 
     Returns:
         dict with keys: path, format, title, report_type, success, note
     """
     rt = report_type.lower().strip()
-    if rt not in ("sector-rotation", "stage2"):
-        raise ValueError(f"generate_preset_report only supports sector-rotation and stage2, got '{rt}'")
+    if rt not in ("sector-rotation", "stage2", "strategy-lab"):
+        raise ValueError(f"generate_preset_report only supports sector-rotation, stage2, and strategy-lab, got '{rt}'")
 
     try:
         if rt == "sector-rotation":
             content = _build_sector_rotation_content()
             sym     = "NSE"
-        else:
+        elif rt == "stage2":
             content = _build_stage2_content()
+            sym     = "NSE"
+        else:
+            content = _build_strategy_lab_content()
             sym     = "NSE"
     except FileNotFoundError as e:
         return {
@@ -2518,6 +2635,16 @@ def generate_preset_report(
     else:
         result = _generate_html_report(content, title, rt, sym, filename, type_config)
 
+    if result.get("success") and rt == "strategy-lab":
+        latest_dir = ROOT / "reports" / "latest"
+        latest_dir.mkdir(parents=True, exist_ok=True)
+        source = Path(result["path"])
+        latest_path = latest_dir / f"portfolio_strategy_lab.{result.get('format', output_format)}"
+        try:
+            shutil.copy2(source, latest_path)
+            result["latest_path"] = str(latest_path)
+        except Exception:
+            pass
     result["note"] = "Generated directly from DB snapshot — no LLM required."
     return result
 

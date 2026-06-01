@@ -1,0 +1,270 @@
+{
+  "run_id": "911d7da1-740f-4bb8-81a5-ea10badb9324",
+  "symbol": "RELIANCE",
+  "as_of": "2026-05-22",
+  "verdict": {
+    "stance": "Avoid fresh entry",
+    "score": 16.0,
+    "confidence": "low",
+    "trigger": "Trigger not available until pivot/base evidence is loaded.",
+    "invalidation": "Invalidation not available until support evidence is loaded.",
+    "targets": [],
+    "summary": "RELIANCE visual scan stance: Avoid fresh entry.",
+    "caveats": []
+  },
+  "patterns": [
+    {
+      "pattern": "Trend Structure",
+      "status": "absent",
+      "confidence": 0.08,
+      "evidence": [
+        "Price is below SMA20.",
+        "Price is below SMA50.",
+        "Price is below SMA200.",
+        "Short-term average is above SMA50."
+      ],
+      "zones": {
+        "pivot": null,
+        "support": 1375.61,
+        "invalidation": 1430.08,
+        "target_1": null,
+        "target_2": null
+      },
+      "caveats": [],
+      "metrics": {
+        "latest_close": 1354.5,
+        "sma20": 1390.46,
+        "sma50": 1375.61,
+        "sma200": 1430.08,
+        "distance_52w_high_pct": -15.96
+      }
+    },
+    {
+      "pattern": "MTF Alignment",
+      "status": "confirmed",
+      "confidence": 0.8,
+      "evidence": [
+        "monthly: bearish (+30)",
+        "weekly: bearish (+25)",
+        "daily: bearish (+25)"
+      ],
+      "zones": {
+        "pivot": null,
+        "support": null,
+        "invalidation": null,
+        "target_1": null,
+        "target_2": null
+      },
+      "caveats": [],
+      "metrics": {
+        "symbol": "RELIANCE",
+        "timeframes": [
+          "monthly",
+          "weekly",
+          "daily"
+        ],
+        "readings": {
+          "monthly": {
+            "timeframe": "monthly",
+            "status": "ok",
+            "direction": "bearish",
+            "bars": 61,
+            "close": 1354.5,
+            "rsi": 48.4,
+            "macd": "bearish",
+            "ema20": 1394.8,
+            "ema50": 1315.69,
+            "above_ema20": false,
+            "above_ema50": true,
+            "sma_stack_bullish": false,
+            "sma_stack_bearish": false,
+            "pct_from_period_high": -16.0,
+            "pct_from_period_low": 34.6,
+            "note": ""
+          },
+          "weekly": {
+            "timeframe": "weekly",
+            "status": "ok",
+            "direction": "bearish",
+            "bars": 262,
+            "close": 1354.5,
+            "rsi": 44.3,
+            "macd": "bearish",
+            "ema20": 1397.52,
+            "ema50": 1408.82,
+            "above_ema20": false,
+            "above_ema50": false,
+            "sma_stack_bullish": false,
+            "sma_stack_bearish": false,
+            "pct_from_period_high": -16.0,
+            "pct_from_period_low": 5.0,
+            "note": ""
+          },
+          "daily": {
+            "timeframe": "daily",
+            "status": "ok",
+            "direction": "bearish",
+            "bars": 1243,
+            "close": 1354.5,
+            "rsi": 45.4,
+            "macd": "bearish",
+            "ema20": 1370.46,
+            "ema50": 1383.01,
+            "above_ema20": false,
+            "above_ema50": false,
+            "sma_stack_bullish": false,
+            "sma_stack_bearish": false,
+            "pct_from_period_high": -8.1,
+            "pct_from_period_low": 5.0,
+            "note": ""
+          }
+        },
+        "confluence_score": 80,
+        "direction": "bearish",
+        "verdict": "SELL",
+        "aligned_tfs": [
+          "monthly",
+          "weekly",
+          "daily"
+        ],
+        "dissonant_tfs": [],
+        "missing_tfs": [],
+        "rationale": [
+          "monthly: bearish (+30)",
+          "weekly: bearish (+25)",
+          "daily: bearish (+25)"
+        ]
+      }
+    },
+    {
+      "pattern": "VCP",
+      "status": "absent",
+      "confidence": 0.73,
+      "evidence": [
+        "Detected 3 contracting range step(s).",
+        "Range sequence: 9.15%, 6.36%, 6.0%, 1.9%."
+      ],
+      "zones": {
+        "pivot": 1473.4,
+        "support": 1312.6,
+        "invalidation": 1286.35,
+        "target_1": 1634.2,
+        "target_2": null
+      },
+      "caveats": [
+        "Contractions or volume dry-up are not strong enough."
+      ],
+      "metrics": {
+        "ranges_pct": [
+          9.15,
+          6.36,
+          6.0,
+          1.9
+        ],
+        "contractions": 3,
+        "volume_dry_up": false
+      }
+    },
+    {
+      "pattern": "Cup With Handle",
+      "status": "absent",
+      "confidence": 0.6,
+      "evidence": [
+        "Base depth is 12.04%.",
+        "Right side has not recovered near prior high.",
+        "Handle drift is within a constructive range."
+      ],
+      "zones": {
+        "pivot": 1483.2,
+        "support": 1322.7,
+        "invalidation": 1296.25,
+        "target_1": 1661.8,
+        "target_2": null
+      },
+      "caveats": [],
+      "metrics": {
+        "depth_pct": 12.04,
+        "trough_index": 57,
+        "recovery": false,
+        "handle_drift": true
+      }
+    },
+    {
+      "pattern": "Breakout / Retest",
+      "status": "absent",
+      "confidence": 0.0,
+      "evidence": [
+        "Latest close is not above pivot.",
+        "Volume expansion is not confirmed.",
+        "Retest hold is not confirmed."
+      ],
+      "zones": {
+        "pivot": 1473.4,
+        "support": 1443.93,
+        "invalidation": 1399.73,
+        "target_1": 1591.27,
+        "target_2": null
+      },
+      "caveats": [],
+      "metrics": {
+        "latest_close": 1354.5,
+        "volume_expanded": false,
+        "held_retest": false,
+        "failed": false
+      }
+    },
+    {
+      "pattern": "Volume Quality",
+      "status": "absent",
+      "confidence": 0.2,
+      "evidence": [
+        "No clear volume dry-up.",
+        "Latest volume is 0.37x the 20D average."
+      ],
+      "zones": {
+        "pivot": null,
+        "support": null,
+        "invalidation": null,
+        "target_1": null,
+        "target_2": null
+      },
+      "caveats": [],
+      "metrics": {
+        "latest_volume_ratio_20d": 0.37,
+        "dry_up": false,
+        "expansion": false
+      }
+    }
+  ],
+  "annotations": [],
+  "chart_paths": {
+    "daily": "reports/visual_scan/assets/RELIANCE_911d7da1_daily.html",
+    "weekly": "reports/visual_scan/assets/RELIANCE_911d7da1_weekly.html"
+  },
+  "tradingview": {
+    "status": "captured",
+    "path": "reports/visual_scan/assets/RELIANCE_911d7da1_tradingview_daily.png",
+    "url": "https://www.tradingview.com/chart/?symbol=NSE%3ARELIANCE",
+    "message": "TradingView screenshot captured as corroboration only."
+  },
+  "source_trail": {
+    "daily": {
+      "status": "loaded",
+      "rows": 1243
+    },
+    "weekly": {
+      "status": "derived",
+      "rows": 262
+    },
+    "mtf": {
+      "status": "derived",
+      "timeframes": [
+        "monthly",
+        "weekly",
+        "daily"
+      ]
+    }
+  },
+  "missing_evidence": [],
+  "raw_metrics": {}
+}

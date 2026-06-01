@@ -111,7 +111,7 @@ class TestSourceLabel(unittest.TestCase):
         agent_src = (ROOT / "terminal" / "agent.py").read_text()
         # The intraday_market_recap branch must use the PG label.
         self.assertIn(
-            "Sources: NSE live API + PG intraday.quote_snapshots + DB breadth",
+            "NSE live API + PG intraday.quote_snapshots + DB breadth",
             agent_src,
         )
 

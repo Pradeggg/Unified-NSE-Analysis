@@ -1,0 +1,17 @@
+{
+  "ending_equity": 1083490.735924,
+  "flat_trades": 0,
+  "invalid_fill_sequences": 0,
+  "losing_trades": 210,
+  "max_drawdown_pct": 19.462,
+  "number_of_fills": 654,
+  "number_of_trades": 324,
+  "open_positions_count": 6,
+  "realized_pnl": 76747.892673,
+  "starting_equity": 1000000.0,
+  "strategy_ids": [
+    "momentum_rotation_v1"
+  ],
+  "total_return_pct": 8.3491,
+  "winning_trades": 114
+}

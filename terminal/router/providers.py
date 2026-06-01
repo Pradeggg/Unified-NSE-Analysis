@@ -131,7 +131,7 @@ _TOP_MOVERS_EOD_HINTS = (
 _DIRECT_INTENT_KEYWORDS = (
     ("mtf", ("mtf", "multi time frame", "multi-time-frame", "multi timeframe")),
     ("fundamentals", ("fundamentals", "balance sheet", "financials", "pe ratio")),
-    ("technicals", ("technicals", "rsi", "macd", "ema", "moving average")),
+    ("technicals", ("technicals", "technical", "rsi", "macd", "ema", "moving average")),
     ("intraday_quote", ("quote", "price now", "current price", "ltp")),
 )
 
@@ -145,8 +145,34 @@ _INTENT_TOOL_MAP: dict[str, str] = {
 }
 
 
+def _topic_tool_plan(intent_tag: str, symbol: str) -> tuple[ToolCallSpec, ...]:
+    """Build the minimal evidence plan for a single-symbol topic route."""
+    sym = symbol.strip().upper()
+    if intent_tag == "technicals":
+        return (
+            ToolCallSpec(tool="resolve_symbol", args={"query": sym}),
+            ToolCallSpec(tool="get_symbol_snapshot", args={"symbol": sym}),
+            ToolCallSpec(tool="get_technical_setup", args={"symbol": sym}),
+        )
+    tool_name = _INTENT_TOOL_MAP.get(intent_tag, "get_live_quote")
+    return (ToolCallSpec(tool=tool_name, args={"symbol": sym}),)
+
+
 def _norm(text: str) -> str:
     return (text or "").strip().lower()
+
+
+def _kw_matches(kw: str, text: str, words: frozenset[str]) -> bool:
+    """True if keyword matches text without false-positive substring hits.
+
+    Single-word keywords (e.g. 'rsi', 'ema') require a whole-word match so
+    that stock names like PERSISTENT or THEMATIC are not mis-classified.
+    Multi-word / hyphenated keywords (e.g. 'moving average') keep the faster
+    substring check because splitting on whitespace would miss them.
+    """
+    if " " in kw or "-" in kw:
+        return kw in text
+    return kw in words
 
 
 def _pack_symbols(pack: ContextPack) -> tuple[str, ...]:
@@ -176,6 +202,115 @@ def _input_symbols(user_input: str) -> tuple[str, ...]:
 # ---------------------------------------------------------------------------
 # Providers
 # ---------------------------------------------------------------------------
+
+
+class CouncilCommandProvider:
+    """Routes first-class `/council` commands to Research Council wrappers."""
+
+    name = "CouncilCommandProvider"
+
+    def propose(self, user_input: str, context_pack: ContextPack) -> list[RouteCandidate]:
+        raw = (user_input or "").strip()
+        if not raw.lower().startswith("/council"):
+            return []
+        try:
+            from terminal.research_council.commands import parse_council_command
+
+            parsed = parse_council_command(raw)
+        except Exception as exc:
+            return [
+                RouteCandidate(
+                    provider=self.name,
+                    intent="research_council_parse_error",
+                    route_type="clarification",
+                    confidence="high",
+                    score=0.99,
+                    reasons=(f"/council command did not parse: {exc}",),
+                )
+            ]
+        tool_plan = self._tool_plan_for(parsed)
+        return [
+            RouteCandidate(
+                provider=self.name,
+                intent="research_council",
+                route_type="direct_tool_plan",
+                confidence="high",
+                score=0.99,
+                reasons=("First-class /council command matched",),
+                tool_plan=tool_plan,
+                evidence_requirements=(
+                    EvidenceRequirement(
+                        name="research_council_run",
+                        required_tools=tuple(spec.tool for spec in tool_plan),
+                    ),
+                ),
+                source_policy=SourcePolicy(required_freshness="mode_profile", allow_stale=False),
+            )
+        ]
+
+    @staticmethod
+    def _tool_plan_for(parsed) -> tuple[ToolCallSpec, ...]:
+        if parsed.action == "steward":
+            return (ToolCallSpec(tool="run_data_steward_check", args={"mode": parsed.mode}),)
+        report_path = _council_report_path(parsed)
+        if parsed.action == "review" and report_path:
+            return (
+                ToolCallSpec(
+                    tool="run_research_council",
+                    args={
+                        "objective": parsed.objective,
+                        "mode": parsed.mode,
+                        "symbols": parsed.symbols,
+                        "horizon": parsed.horizon,
+                        "risk_budget": parsed.risk_budget,
+                        "report_path": report_path,
+                    },
+                ),
+            )
+        if parsed.action == "report":
+            return (
+                ToolCallSpec(
+                    tool="render_research_council_report",
+                    args={
+                        "run_id": str(parsed.options.get("run") or parsed.options.get("run_id") or "latest"),
+                        "output_format": str(parsed.options.get("format") or "html"),
+                    },
+                ),
+            )
+        if parsed.action in {"review", "resume", "debug", "export"}:
+            return (
+                ToolCallSpec(
+                    tool="resume_council_run",
+                    args={
+                        "run_id": str(parsed.options.get("run") or parsed.options.get("run_id") or "latest"),
+                        "include_debug": parsed.action == "debug",
+                        "output_format": str(parsed.options.get("format") or "json"),
+                    },
+                ),
+            )
+        return (
+            ToolCallSpec(
+                tool="run_research_council",
+                args={
+                    "objective": parsed.objective,
+                    "mode": parsed.mode,
+                    "symbols": parsed.symbols,
+                    "horizon": parsed.horizon,
+                    "risk_budget": parsed.risk_budget,
+                    **_council_run_options(parsed),
+                },
+            ),
+        )
+
+
+def _council_report_path(parsed) -> str | None:
+    value = parsed.options.get("report_path") or parsed.options.get("file") or parsed.options.get("path") or parsed.options.get("report")
+    return str(value) if value else None
+
+
+def _council_run_options(parsed) -> dict:
+    excluded = {"horizon", "risk", "risk_budget", "file", "path", "report", "report_path"}
+    return {key: value for key, value in parsed.options.items() if key not in excluded}
 
 
 class PendingOptionProvider:
@@ -350,16 +485,16 @@ class EntityTopicProvider:
         if not symbols:
             return []
         text = _norm(user_input)
+        words = frozenset(re.findall(r"[a-z0-9]+", text))
         intent_tag = ""
         for tag, kws in _DIRECT_INTENT_KEYWORDS:
-            if any(kw in text for kw in kws):
+            if any(_kw_matches(kw, text, words) for kw in kws):
                 intent_tag = tag
                 break
         if not intent_tag:
             return []
         primary = symbols[0]
-        tool_name = _INTENT_TOOL_MAP.get(intent_tag, "get_live_quote")
-        tool_plan = (ToolCallSpec(tool=tool_name, args={"symbol": primary}),)
+        tool_plan = _topic_tool_plan(intent_tag, primary)
         return [
             RouteCandidate(
                 provider=self.name,
@@ -372,7 +507,10 @@ class EntityTopicProvider:
                 ),
                 tool_plan=tool_plan,
                 evidence_requirements=(
-                    EvidenceRequirement(name=intent_tag, required_tools=(tool_name,)),
+                    EvidenceRequirement(
+                        name=intent_tag,
+                        required_tools=tuple(spec.tool for spec in tool_plan),
+                    ),
                 ),
             )
         ]
@@ -536,7 +674,24 @@ class MarketSituationProvider:
         matched = next((p for p in _MARKET_PHRASES if p in text), None)
         if not matched:
             return []
-        tool_plan = (ToolCallSpec(tool="scan_intraday_market", args={}),)
+        if matched in {"scan nifty", "scan fno", "scan f&o", "intraday scan", "breakout scan", "vcp scan"}:
+            tool_plan = (ToolCallSpec(tool="scan_intraday_market", args={}),)
+            required_tools = ("scan_intraday_market",)
+        else:
+            tool_plan = (
+                ToolCallSpec(tool="get_live_market_overview", args={}),
+                ToolCallSpec(tool="get_market_breadth", args={}),
+                ToolCallSpec(
+                    tool="get_top_gainers_losers",
+                    args={"index": "NIFTY 500", "top_n": 5, "direction": "both"},
+                ),
+            )
+            intent = "market_situation"
+            required_tools = (
+                "get_live_market_overview",
+                "get_market_breadth",
+                "get_top_gainers_losers",
+            )
         return [
             RouteCandidate(
                 provider=self.name,
@@ -549,7 +704,7 @@ class MarketSituationProvider:
                 evidence_requirements=(
                     EvidenceRequirement(
                         name="market_snapshot",
-                        required_tools=("scan_intraday_market",),
+                        required_tools=required_tools,
                     ),
                 ),
                 source_policy=SourcePolicy(allow_stale=False),
@@ -572,12 +727,14 @@ class DirectIntentProvider:
         text = _norm(user_input)
         if not text:
             return []
+        words = frozenset(re.findall(r"[a-z0-9]+", text))
         for tag, kws in _DIRECT_INTENT_KEYWORDS:
-            if not any(kw in text for kw in kws):
+            if not any(_kw_matches(kw, text, words) for kw in kws):
                 continue
             tool_name = _INTENT_TOOL_MAP.get(tag, "get_live_quote")
             symbols = _input_symbols(user_input) or _pack_symbols(context_pack)
             if symbols:
+                tool_plan = _topic_tool_plan(tag, symbols[0])
                 return [
                     RouteCandidate(
                         provider=self.name,
@@ -590,7 +747,13 @@ class DirectIntentProvider:
                             f"bound to {symbols[0]!r} from "
                             f"{'input' if _input_symbols(user_input) else 'context'}",
                         ),
-                        tool_plan=(ToolCallSpec(tool=tool_name, args={"symbol": symbols[0]}),),
+                        tool_plan=tool_plan,
+                        evidence_requirements=(
+                            EvidenceRequirement(
+                                name=tag,
+                                required_tools=tuple(spec.tool for spec in tool_plan),
+                            ),
+                        ),
                     )
                 ]
             return [
@@ -613,19 +776,19 @@ class DirectIntentProvider:
 # stock asks bypass the single-facet providers cleanly.
 DEFAULT_PROVIDERS: tuple[type, ...] = (
     PendingOptionProvider,
+    CouncilCommandProvider,
     ContextualFollowupProvider,
     _CompoundStockProvider,
-    EntityTopicProvider,
     ReportProvider,
     VisualScanProvider,
     TopMoversProvider,
     MarketSituationProvider,
-    DirectIntentProvider,
 )
 
 
 __all__ = [
     "ContextualFollowupProvider",
+    "CouncilCommandProvider",
     "DEFAULT_PROVIDERS",
     "DirectIntentProvider",
     "EntityTopicProvider",

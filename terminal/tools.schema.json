@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "tool_count": 144,
+  "tool_count": 156,
   "tools": [
     {
       "name": "add_watchlist_alert",
@@ -233,6 +233,25 @@
       "source": "terminal/youtube.py:385"
     },
     {
+      "name": "apply_revision_round",
+      "description": "Apply Research Council revision and convergence rules to a serialized CouncilState.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "signature": "(state: 'dict | Any') -> 'dict'",
+      "return": "'dict'",
+      "doc_summary": "Apply Research Council convergence/revision rules.",
+      "source": "terminal/tools.py:9870"
+    },
+    {
       "name": "assess_user_situation",
       "description": "Assess what the user is asking, prior context needs, resolved entities, evidence plan, and clarification needs before routing.",
       "parameters": {
@@ -322,6 +341,38 @@
       "source": "terminal/evidence_gate.py:43"
     },
     {
+      "name": "build_research_evidence_pack",
+      "description": "Build a Research Council evidence pack from PostgreSQL-backed market, sector, stock, F&O, fundamentals, events, and report sources.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "default": "market_council"
+          },
+          "universe_filter": {
+            "type": "string",
+            "default": "liquid"
+          },
+          "symbols": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "max_stock_candidates": {
+            "type": "integer",
+            "default": 50
+          }
+        },
+        "required": []
+      },
+      "signature": "(mode: 'str' = 'market_council', universe_filter: 'str' = 'liquid', symbols: 'list[str] | None' = None, max_stock_candidates: 'int' = 50) -> 'dict'",
+      "return": "'dict'",
+      "doc_summary": "Build the Research Council evidence pack from PostgreSQL-backed sources.",
+      "source": "terminal/tools.py:9752"
+    },
+    {
       "name": "check_watchlist_alerts",
       "description": "Check all alerts against live prices/RSI and fire macOS notifications for triggered ones",
       "parameters": {
@@ -393,6 +444,29 @@
       "return": "'dict'",
       "doc_summary": "Compare multiple NSE stocks side-by-side on technical AND fundamental metrics.",
       "source": "terminal/tools.py:6652"
+    },
+    {
+      "name": "compose_plan",
+      "description": "Compose the deterministic Research Council evidence plan for an objective.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "objective": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string",
+            "default": "market_council"
+          }
+        },
+        "required": [
+          "objective"
+        ]
+      },
+      "signature": "(objective: 'str', mode: 'str' = 'market_council', **flags: 'Any') -> 'dict'",
+      "return": "'dict'",
+      "doc_summary": "Compose a deterministic Research Council evidence plan.",
+      "source": "terminal/tools.py:9815"
     },
     {
       "name": "comprehensive_stock_research",
@@ -574,6 +648,25 @@
       "return": "'dict[str, Any]'",
       "doc_summary": "",
       "source": "terminal/postgres_tools.py:200"
+    },
+    {
+      "name": "execute_plan",
+      "description": "Execute the latest Research Council plan from a serialized CouncilState.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "signature": "(state: 'dict | Any') -> 'dict'",
+      "return": "'dict'",
+      "doc_summary": "Execute the latest Research Council plan in a serialized state.",
+      "source": "terminal/tools.py:9828"
     },
     {
       "name": "explain_intraday_setup",
@@ -798,7 +891,7 @@
       "signature": "(content: 'str', report_type: 'str' = 'research', symbol: 'str' = '', title: 'str' = '', output_format: 'str' = 'html', filename: 'str' = '') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Generate a styled report file from analysis content.",
-      "source": "terminal/tools.py:9721"
+      "source": "terminal/tools.py:9982"
     },
     {
       "name": "generate_voice_briefing",
@@ -2281,6 +2374,25 @@
       "source": "terminal/results_tools.py:215"
     },
     {
+      "name": "persist_research_council_run",
+      "description": "Persist Research Council run metadata for a serialized CouncilState.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "signature": "(state: 'dict | Any') -> 'dict'",
+      "return": "'dict'",
+      "doc_summary": "Persist Research Council run metadata for a serialized state.",
+      "source": "terminal/tools.py:9918"
+    },
+    {
       "name": "promote_company_evidence_to_postgres",
       "description": "Prepare/dry-run promotion of company evidence records into PostgreSQL with source URL/path metadata.",
       "parameters": {
@@ -2431,6 +2543,35 @@
       "source": "terminal/evidence_gate.py:91"
     },
     {
+      "name": "render_research_council_report",
+      "description": "Render a Research Council report from state or locate a persisted report by run_id.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "object"
+          },
+          "run_id": {
+            "type": "string",
+            "default": "latest"
+          },
+          "output_format": {
+            "type": "string",
+            "enum": [
+              "html",
+              "md"
+            ],
+            "default": "html"
+          }
+        },
+        "required": []
+      },
+      "signature": "(state: 'dict | Any | None' = None, run_id: 'str' = 'latest', output_format: 'str' = 'html') -> 'dict'",
+      "return": "'dict'",
+      "doc_summary": "Render or locate a Research Council report.",
+      "source": "terminal/tools.py:9892"
+    },
+    {
       "name": "request_clarification",
       "description": "Return a structured clarification request when situation assessment cannot safely choose tools.",
       "parameters": {
@@ -2565,6 +2706,91 @@
       "return": "'dict'",
       "doc_summary": "Resolve a company name / partial name / alias to its NSE symbol.",
       "source": "terminal/tools.py:794"
+    },
+    {
+      "name": "resume_council_run",
+      "description": "Resume or inspect compact Research Council run metadata from PostgreSQL by run_id or latest.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "default": "latest"
+          },
+          "include_debug": {
+            "type": "boolean",
+            "default": false
+          },
+          "output_format": {
+            "type": "string",
+            "enum": [
+              "json"
+            ],
+            "default": "json"
+          }
+        },
+        "required": []
+      },
+      "signature": "(run_id: 'str' = 'latest', include_debug: 'bool' = False, output_format: 'str' = 'json') -> 'dict'",
+      "return": "'dict'",
+      "doc_summary": "Load compact Research Council run metadata from PostgreSQL.",
+      "source": "terminal/tools.py:9930"
+    },
+    {
+      "name": "review_plan_execution",
+      "description": "Review Research Council plan execution and decide whether more evidence is required.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "signature": "(state: 'dict | Any') -> 'dict'",
+      "return": "'dict'",
+      "doc_summary": "Review plan execution output and decide whether more evidence is needed.",
+      "source": "terminal/tools.py:9847"
+    },
+    {
+      "name": "run_critic_review",
+      "description": "Run deterministic Research Council critics over a serialized CouncilState.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "signature": "(state: 'dict | Any') -> 'dict'",
+      "return": "'dict'",
+      "doc_summary": "Run Research Council critic reviews against a serialized state.",
+      "source": "terminal/tools.py:9858"
+    },
+    {
+      "name": "run_data_steward_check",
+      "description": "Run Research Council data-steward freshness and universe-readiness checks.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "default": "market_council"
+          }
+        },
+        "required": []
+      },
+      "signature": "(mode: 'str' = 'market_council') -> 'dict'",
+      "return": "'dict'",
+      "doc_summary": "Run the Research Council data-steward freshness/readiness gate.",
+      "source": "terminal/tools.py:9804"
     },
     {
       "name": "run_forensic_analysis",
@@ -2755,7 +2981,56 @@
       "signature": "(symbols: 'list[str] | None' = None, indices: 'list[str] | None' = None, sectors: 'list[str] | None' = None, watchlist: 'list[str] | None' = None, output_format: 'str' = 'html', top_n: 'int' = 25, include_portfolio: 'bool' = False, persist: 'bool' = True) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Generate a grounded recommendation report scoped by symbols, indices, or sectors.",
-      "source": "terminal/tools.py:9736"
+      "source": "terminal/tools.py:9997"
+    },
+    {
+      "name": "run_research_council",
+      "description": "Run the Research Council state machine for `/council` market, stock, strategy, intraday, and report-review objectives.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "objective": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string"
+          },
+          "symbols": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "horizon": {
+            "type": "string"
+          },
+          "risk_budget": {
+            "type": "string"
+          },
+          "report_path": {
+            "type": "string"
+          },
+          "dry_run": {
+            "type": "boolean",
+            "default": false
+          },
+          "output_format": {
+            "type": "string",
+            "enum": [
+              "md",
+              "html"
+            ],
+            "default": "md"
+          }
+        },
+        "required": [
+          "objective"
+        ]
+      },
+      "signature": "(objective: 'str', mode: 'str | None' = None, symbols: 'list[str] | None' = None, horizon: 'str | None' = None, risk_budget: 'str | None' = None, dry_run: 'bool' = False, output_format: 'str' = 'md', **flags: 'Any') -> 'dict'",
+      "return": "'dict'",
+      "doc_summary": "Run the Research Council state machine and return a compact summary.",
+      "source": "terminal/tools.py:9773"
     },
     {
       "name": "run_scenario_analysis",
@@ -3512,6 +3787,25 @@
       "return": "'dict[str, Any]'",
       "doc_summary": "",
       "source": "terminal/report_context.py:139"
+    },
+    {
+      "name": "synthesize_council_decision",
+      "description": "Synthesize the final Research Council decision from findings, branch summaries, plan results, and critic reviews.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "signature": "(state: 'dict | Any') -> 'dict'",
+      "return": "'dict'",
+      "doc_summary": "Synthesize the final Research Council decision from findings and reviews.",
+      "source": "terminal/tools.py:9881"
     },
     {
       "name": "validate_answer_against_evidence",

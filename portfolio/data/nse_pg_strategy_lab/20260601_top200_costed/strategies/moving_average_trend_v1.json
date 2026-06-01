@@ -1,0 +1,70 @@
+{
+  "add_rules": [],
+  "entry": {
+    "all": [
+      {
+        "indicator": "close",
+        "operator": "above",
+        "value": "sma_20"
+      },
+      {
+        "indicator": "sma_20",
+        "operator": "above",
+        "value": "sma_50"
+      },
+      {
+        "indicator": "sma_50",
+        "operator": "above",
+        "value": "sma_200"
+      }
+    ]
+  },
+  "exit": {
+    "any": [
+      {
+        "indicator": "close",
+        "operator": "below",
+        "value": "sma_50"
+      },
+      {
+        "indicator": "sma_20",
+        "operator": "below",
+        "value": "sma_50"
+      }
+    ]
+  },
+  "moving_averages": {
+    "all": [
+      {
+        "indicator": "close",
+        "operator": "above",
+        "value": "sma_20"
+      },
+      {
+        "indicator": "sma_20",
+        "operator": "above",
+        "value": "sma_50"
+      },
+      {
+        "indicator": "sma_50",
+        "operator": "above",
+        "value": "sma_200"
+      }
+    ],
+    "timeframe": "daily"
+  },
+  "name": "Moving Average Trend",
+  "risk": {
+    "initial_stop": {
+      "indicator": "atr_14",
+      "multiple": 2.2,
+      "type": "atr"
+    },
+    "max_position_pct": 10.0,
+    "risk_per_trade_pct": 0.8
+  },
+  "strategy_id": "moving_average_trend_v1",
+  "universe": {
+    "min_price": 50
+  }
+}

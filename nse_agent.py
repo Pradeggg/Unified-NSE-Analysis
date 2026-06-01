@@ -830,7 +830,7 @@ def _handle_recommendation_report_command(parts: list[str], report_console=None)
 # ─────────────────────────────────────────────────────────────────────────────
 
 # All slash commands with a brief hint shown in the completion menu
-_REPORT_PRESET_TYPES_FOR_TEST = {"sector-rotation", "stage2", "recommendation"}
+_REPORT_PRESET_TYPES_FOR_TEST = {"sector-rotation", "stage2", "strategy-lab", "recommendation"}
 
 _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/prompts",          "Browse 60 curated research prompts"),
@@ -1062,6 +1062,7 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/report sector-rotation",           "⚡ Instant sector rotation dashboard from DB (no LLM)"),
     ("/report sector-rotation pdf",       "⚡ Sector rotation report as PDF"),
     ("/report stage2",                    "⚡ Stage 2 universe tracker — top 30 leaders + new entrants (instant)"),
+    ("/report strategy-lab",              "📈 Portfolio strategy lab — paper strategy leaderboard + risk diagnostics"),
     ("/report stage2 md",                 "⚡ Stage 2 tracker as Markdown"),
     ("/report recommendation",            "Grounded EOD recommendation report — indices, sectors, stocks, portfolio/watchlist"),
     ("/report technical RELIANCE",        "Technical analysis report for RELIANCE"),
@@ -1078,6 +1079,12 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/strategy-council DMART", "Iterative strategist + critic EOD simulation with train/validation/test discipline"),
     ("/strategy-council DMART --iterations 3 --horizon 1w,2w,4w", "Run Strategy Council with explicit horizons"),
     ("/strategy-council DMART --llm", "Use configured LLM strategist and critics, with deterministic fallback if unavailable"),
+    ("/council", "Research Council command family — market, stock, strategy, intraday, report review"),
+    ("/council today", "Run Research Council for today's market opportunities"),
+    ("/council sector NIFTY AUTO --horizon swing", "Run sector opportunity Research Council with shortlist and quant sweep"),
+    ("/council stock MODISONLTD --horizon swing", "Run stock deep-dive Research Council"),
+    ("/council report --run latest --format html", "Open or render the latest Research Council report"),
+    ("/council steward", "Run Research Council data-steward readiness checks"),
     ("/data-coverage NIFTY500", "📊 Audit EOD history coverage for an index (default 5-year threshold)"),
     ("/data-coverage NIFTY500 --backfill", "Audit and yfinance-backfill any symbols below the 5-year threshold"),
     ("/data-coverage NIFTY500 --details", "Audit and list the worst-covered symbols"),
@@ -1182,6 +1189,7 @@ _CMD_CATEGORIES: dict[str, tuple[str, str]] = {
     "/backtest": ("Strategy Lab",         "🧪"),
     "/strategy-lab": ("Strategy Lab",     "🧪"),
     "/strategy-council": ("Strategy Council", "🧠"),
+    "/council": ("Research Council",      "🧠"),
     "/data-coverage": ("Data Coverage", "📊"),
     "/forensic": ("Forensic",            "🧪"),
     "/email":    ("Report Mailer",       "✉️"),
@@ -6970,6 +6978,21 @@ def _build_command_registry():
         description="Multi-agent strategy council deliberation",
     ))
 
+    # /council
+    def _h_council(query, agent, show_trace):
+        from terminal.research_council.commands import handle_council_command
+        _print_user(query)
+        output = handle_council_command(query)
+        _remember_generated_report(output)
+        console.print(Markdown(_linkify_markdown(output)))
+        return True
+    registry.register(CommandHandler(
+        name="council",
+        match_fn=lambda q: q.startswith("/council"),
+        handler_fn=_h_council,
+        description="Research Council orchestration",
+    ))
+
     # /backtest and /strategy-lab
     def _h_backtest(query, agent, show_trace):
         from terminal.backtest import handle_backtest_command
@@ -7502,6 +7525,23 @@ def _chat_loop(agent, show_trace: bool) -> None:
                 output,
                 intent="strategy_council",
                 source_label="Strategy Council report",
+                result_type="report",
+            )
+            console.print(Markdown(_linkify_markdown(output)))
+            _separator()
+            continue
+
+        if text.lower().startswith("/council"):
+            from terminal.research_council.commands import handle_council_command
+            _print_user(text)
+            output = handle_council_command(text)
+            _remember_generated_report(output)
+            _remember_terminal_interaction(
+                agent,
+                text,
+                output,
+                intent="research_council",
+                source_label="Research Council report",
                 result_type="report",
             )
             console.print(Markdown(_linkify_markdown(output)))
@@ -8170,6 +8210,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
                     "[dim]  ─── Market Reports (Instant — direct from DB) ────────────────[/dim]\n"
                     "[dim]  Types:  sector-rotation   → Full sector breadth & rotation dashboard[/dim]\n"
                     "[dim]          stage2            → Stage 2 universe tracker (top 30 + new entrants)[/dim]\n"
+                    "[dim]          strategy-lab      → Portfolio paper strategy leaderboard + diagnostics[/dim]\n"
                     "[dim]          recommendation    → Grounded EOD recommendations across market, sectors, stocks[/dim]\n"
                     "[dim]  ─── Format ──────────────────────────────────────────────────────[/dim]\n"
                     "[dim]  Format: html (default) | pdf | md[/dim]\n"
@@ -8178,6 +8219,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
                     "[dim]    /report sector-rotation pdf       → PDF  (instant)[/dim]\n"
                     "[dim]    /report stage2                    → HTML (instant)[/dim]\n"
                     "[dim]    /report stage2 md                 → Markdown[/dim]\n"
+                    "[dim]    /report strategy-lab              → HTML portfolio strategy diagnostics[/dim]\n"
                     "[dim]    /report recommendation             → HTML grounded recommendations[/dim]\n"
                     "[dim]    /report recommendation --watchlist RELIANCE,TCS --format md[/dim]\n"
                     "[dim]    /report technical RELIANCE        → LLM analysis → HTML[/dim]\n"
@@ -8796,6 +8838,297 @@ def _chat_loop(agent, show_trace: bool) -> None:
                 continue
             except Exception as exc:
                 console.print(f"[red]  ✗ /kb failed:[/red] {exc}")
+                continue
+
+        # ── /critique-report — broker thesis vs internal DB facts ──────────
+        # PG 2026-05-27: Reconciles an external research note with our
+        # scores.stage_snapshots + scores.daily_scores + equity_eod returns,
+        # then asks gpt-4o-mini for a structured JSON verdict (agreement
+        # score, bull/bear points, target sanity, tactical trigger, invalidation).
+        # Usage:  /critique-report <SYMBOL>                              # source=kb (default)
+        #         /critique-report <SYMBOL> --brand "ICICI Direct"       # focus retrieval
+        #         /critique-report <SYMBOL> --path /tmp/report.pdf       # ad-hoc local
+        #         /critique-report <SYMBOL> --url https://.../report.pdf # ad-hoc URL (also ingests)
+        elif text.lower().startswith("/critique-report") or text.lower().startswith("/critique"):
+            try:
+                import argparse as _argparse
+                import shlex
+                from knowledge_base.critique import critique_report as _critique
+
+                tail = text.split(maxsplit=1)[1] if len(text.split(maxsplit=1)) > 1 else ""
+                parser = _argparse.ArgumentParser(prog="/critique-report", add_help=False)
+                parser.add_argument("symbol")
+                parser.add_argument("--brand", default=None)
+                parser.add_argument("--path", default=None)
+                parser.add_argument("--url", default=None)
+                parser.add_argument("--top-k", type=int, default=6)
+                parser.add_argument("--model", default=None)
+                ns = parser.parse_args(shlex.split(tail))
+
+                if ns.url:
+                    src = "url"
+                elif ns.path:
+                    src = "path"
+                else:
+                    src = "kb"
+
+                console.print(f"[dim]  → /critique-report {ns.symbol} (source={src})[/dim]")
+                result = _critique(
+                    ns.symbol, source=src, path=ns.path, url=ns.url,
+                    top_k=ns.top_k, model=ns.model, brand=ns.brand,
+                )
+
+                if not result.get("ok"):
+                    console.print(f"[red]  ✗ critique failed:[/red] {result.get('llm_error') or result.get('error')}")
+                    continue
+
+                v = result.get("verdict") or {}
+                snap = (result.get("db_snapshot") or {}).get("stage_snapshot") or {}
+                rets = (result.get("db_snapshot") or {}).get("returns") or {}
+
+                console.print(f"[bold cyan]══ /critique-report {result['symbol']} ═══════════════════════════════[/bold cyan]")
+                console.print(f"[bold]Model:[/bold] {result.get('model')}  |  [bold]Source:[/bold] {result.get('source')}")
+                console.print(f"[bold]CMP:[/bold] ₹{rets.get('cmp')}  as_of {rets.get('as_of')}  |  "
+                              f"5d {rets.get('ret_5d_pct')}%  21d {rets.get('ret_21d_pct')}%  "
+                              f"63d {rets.get('ret_63d_pct')}%  252d {rets.get('ret_252d_pct')}%")
+                if snap:
+                    console.print(f"[bold]Stage:[/bold] {snap.get('stage')}  "
+                                  f"score={snap.get('stage_score')}  "
+                                  f"stance={snap.get('stance')}  "
+                                  f"trading_signal={snap.get('trading_signal')}")
+
+                stance = v.get("recommended_stance", "?")
+                score  = v.get("agreement_score", "?")
+                colour = "green" if stance in ("STRONG_BUY", "BUY", "ACCUMULATE") else \
+                         "yellow" if stance == "HOLD" else "red"
+                console.print(f"[bold {colour}]VERDICT: {stance}[/bold {colour}]  "
+                              f"(agreement {score}/100)")
+                console.print(f"[italic]{v.get('one_line_verdict', '')}[/italic]")
+                if v.get("bull_points"):
+                    console.print("[bold green]Bull:[/bold green]")
+                    for b in v["bull_points"]:
+                        console.print(f"  + {b}")
+                if v.get("bear_points"):
+                    console.print("[bold red]Bear:[/bold red]")
+                    for b in v["bear_points"]:
+                        console.print(f"  − {b}")
+                if v.get("target_sanity"):
+                    console.print(f"[bold]Target sanity:[/bold] {v['target_sanity']}")
+                if v.get("tactical_trigger"):
+                    console.print(f"[bold]Trigger:[/bold] {v['tactical_trigger']}")
+                if v.get("invalidation"):
+                    console.print(f"[bold]Invalidation:[/bold] {v['invalidation']}")
+
+                passages = result.get("broker_passages") or []
+                if passages:
+                    console.print(f"[dim]Used {len(passages)} broker passages "
+                                  f"(top score {passages[0].get('score')})[/dim]")
+                continue
+            except SystemExit:
+                console.print("[red]  ✗ Usage:[/red] /critique-report <SYMBOL> [--brand 'ICICI Direct'] [--path FILE | --url URL] [--top-k N] [--model gpt-4o-mini]")
+                continue
+            except Exception as exc:
+                console.print(f"[red]  ✗ /critique-report failed:[/red] {exc}")
+                continue
+
+        # ── /research — discover broker PDFs and ingest them ───────────────
+        # PG 2026-05-27: Uses DuckDuckGo HTML search with site: filters to
+        # find publicly-indexed PDF reports on a symbol, then pipes each
+        # through /kb ingest. No broker login, no API keys. Paywalled or
+        # JS-only reports will not surface — that's expected.
+        # Usage:  /research <SYMBOL>                          # brand=auto, max=3
+        #         /research <SYMBOL> --brand icici            # icici only
+        #         /research <SYMBOL> --brand groww --max 5
+        #         /research <SYMBOL> --dry-run                # list candidates only
+        #         /research <SYMBOL> --skip-qa                # faster ingest
+        elif text.lower().startswith("/research"):
+            try:
+                import argparse as _argparse
+                import shlex
+                from knowledge_base.research import research_symbol as _research
+
+                tail = text.split(maxsplit=1)[1] if len(text.split(maxsplit=1)) > 1 else ""
+                parser = _argparse.ArgumentParser(prog="/research", add_help=False)
+                parser.add_argument("symbol")
+                parser.add_argument("--brand", default="auto",
+                                    choices=["auto", "icici", "groww", "moneycontrol", "equitymaster"])
+                parser.add_argument("--max", type=int, default=3, dest="max_results")
+                parser.add_argument("--dry-run", action="store_true")
+                parser.add_argument("--skip-qa", action="store_true")
+                ns = parser.parse_args(shlex.split(tail))
+
+                console.print(f"[dim]  → /research {ns.symbol} (brand={ns.brand}, max={ns.max_results})[/dim]")
+                result = _research(
+                    ns.symbol, brand=ns.brand, max_results=ns.max_results,
+                    do_qa=not ns.skip_qa, dry_run=ns.dry_run,
+                )
+
+                cands = result.get("candidates", [])
+                console.print(f"[bold]Candidates found:[/bold] {len(cands)}")
+                for c in cands:
+                    console.print(f"  • [{c['brand']}] {c['url']}")
+
+                if ns.dry_run:
+                    continue
+
+                ing = result.get("ingested", [])
+                errs = result.get("errors", [])
+                if ing:
+                    console.print(f"[green]Ingested {len(ing)} report(s):[/green]")
+                    for r in ing:
+                        console.print(f"  ✓ [{r['brand']}] chunks={r['chunks']} qa={r['qa']}  {r['url']}")
+                if errs:
+                    console.print(f"[yellow]Skipped {len(errs)} (paywall / non-PDF / fetch error):[/yellow]")
+                    for e in errs:
+                        console.print(f"  ✗ [{e['brand']}] {e['error'][:120]}  {e['url']}")
+                if not ing and not cands:
+                    console.print(f"[red]  ✗ {result.get('error', 'no reports found')}[/red]")
+                continue
+            except SystemExit:
+                console.print("[red]  ✗ Usage:[/red] /research <SYMBOL> [--brand auto|icici|groww|moneycontrol|equitymaster] [--max N] [--dry-run] [--skip-qa]")
+                continue
+            except Exception as exc:
+                console.print(f"[red]  ✗ /research failed:[/red] {exc}")
+                continue
+
+        # ── /chat-symbol — multi-turn grounded chat about one symbol ───────
+        # PG 2026-05-27: Loads KB passages + DB snapshot once, then runs a
+        # rolling-history chat against gpt-4o-mini. Each turn the LLM sees
+        # [snapshot + top-K broker passages + history + new question].
+        # Sub-loop reuses the outer prompt_toolkit session.
+        # Exit with /done, /exit, /quit, or empty line.
+        # Usage:  /chat-symbol <SYMBOL>
+        #         /chat-symbol <SYMBOL> --brand "ICICI Direct" --top-k 6
+        elif text.lower().startswith("/chat-symbol") or text.lower().startswith("/chat "):
+            try:
+                import argparse as _argparse
+                import shlex
+                from knowledge_base.chat import SymbolChatSession
+
+                tail = text.split(maxsplit=1)[1] if len(text.split(maxsplit=1)) > 1 else ""
+                parser = _argparse.ArgumentParser(prog="/chat-symbol", add_help=False)
+                parser.add_argument("symbol")
+                parser.add_argument("--brand", default=None)
+                parser.add_argument("--top-k", type=int, default=8)
+                parser.add_argument("--model", default=None)
+                ns = parser.parse_args(shlex.split(tail))
+
+                sess = SymbolChatSession(
+                    ns.symbol, top_k=ns.top_k, model=ns.model, brand=ns.brand,
+                )
+                summary = sess.context_summary()
+                console.print(f"[bold cyan]══ /chat-symbol {sess.symbol} ═══════════════════════════════[/bold cyan]")
+                console.print(
+                    f"[dim]Loaded {summary['kb_passages']} KB passages | "
+                    f"CMP ₹{summary['cmp']} as_of {summary['as_of']} | "
+                    f"stage={summary['stage']} stance={summary['stance']} | "
+                    f"model={summary['model']}[/dim]"
+                )
+                if summary["kb_top_sources"]:
+                    console.print(f"[dim]Sources: {', '.join(s for s in summary['kb_top_sources'] if s)}[/dim]")
+                console.print("[dim]Type your question. Exit with /done, /exit, /quit, or an empty line.[/dim]")
+
+                while True:
+                    try:
+                        with _pt_patch_stdout(raw=True):
+                            q = session.prompt(f"  {sess.symbol}> ")
+                    except (KeyboardInterrupt, EOFError):
+                        console.print("[dim]  (chat ended)[/dim]")
+                        break
+                    q = (q or "").strip()
+                    if not q or q.lower() in ("/done", "/exit", "/quit"):
+                        console.print(f"[dim]  (chat ended after {len(sess.history)//2} turns)[/dim]")
+                        break
+                    answer = sess.ask(q)
+                    console.print(f"[bold green]  ◆[/bold green] {answer}")
+                continue
+            except SystemExit:
+                console.print("[red]  ✗ Usage:[/red] /chat-symbol <SYMBOL> [--brand 'ICICI Direct'] [--top-k 8] [--model gpt-4o-mini]")
+                continue
+            except Exception as exc:
+                console.print(f"[red]  ✗ /chat-symbol failed:[/red] {exc}")
+                continue
+
+        # ── /analyze — one-shot: research → critique → chat ────────────────
+        # PG 2026-05-27: convenience wrapper around /research + /critique-report
+        # + /chat-symbol. Use when you want the full "fetch broker reports,
+        # see the verdict, then talk to it" loop in a single command.
+        # Usage:  /analyze <SYMBOL>
+        #         /analyze <SYMBOL> --brand icici --max 2 --skip-qa
+        #         /analyze <SYMBOL> --no-chat       # research + critique only
+        elif text.lower().startswith("/analyze"):
+            try:
+                import argparse as _argparse
+                import shlex
+                from knowledge_base.research import research_symbol as _research
+                from knowledge_base.critique import critique_report as _critique
+                from knowledge_base.chat import SymbolChatSession
+
+                tail = text.split(maxsplit=1)[1] if len(text.split(maxsplit=1)) > 1 else ""
+                parser = _argparse.ArgumentParser(prog="/analyze", add_help=False)
+                parser.add_argument("symbol")
+                parser.add_argument("--brand", default="auto")
+                parser.add_argument("--max", type=int, default=3, dest="max_results")
+                parser.add_argument("--skip-qa", action="store_true")
+                parser.add_argument("--skip-research", action="store_true",
+                                    help="Skip discovery; critique against whatever's already in the KB")
+                parser.add_argument("--no-chat", action="store_true")
+                ns = parser.parse_args(shlex.split(tail))
+
+                # 1. research
+                if not ns.skip_research:
+                    console.print(f"[bold cyan]── Step 1/3: discovering reports for {ns.symbol}[/bold cyan]")
+                    rs_result = _research(
+                        ns.symbol, brand=ns.brand, max_results=ns.max_results,
+                        do_qa=not ns.skip_qa,
+                    )
+                    ing = rs_result.get("ingested", [])
+                    console.print(f"  ingested {len(ing)} report(s), {len(rs_result.get('errors', []))} skipped")
+                else:
+                    console.print(f"[dim]  (skipping research; using existing KB content)[/dim]")
+
+                # 2. critique
+                console.print(f"[bold cyan]── Step 2/3: reconciling broker thesis vs DB[/bold cyan]")
+                cr = _critique(ns.symbol, source="kb", top_k=6)
+                if cr.get("ok"):
+                    v = cr.get("verdict") or {}
+                    stance = v.get("recommended_stance", "?")
+                    score = v.get("agreement_score", "?")
+                    colour = "green" if stance in ("STRONG_BUY", "BUY", "ACCUMULATE") else \
+                             "yellow" if stance == "HOLD" else "red"
+                    console.print(f"  [bold {colour}]{stance}[/bold {colour}] (agreement {score}/100)")
+                    console.print(f"  [italic]{v.get('one_line_verdict', '')}[/italic]")
+                    if v.get("tactical_trigger"):
+                        console.print(f"  Trigger: {v['tactical_trigger']}")
+                    if v.get("invalidation"):
+                        console.print(f"  Invalidation: {v['invalidation']}")
+                else:
+                    console.print(f"[red]  ✗ critique failed:[/red] {cr.get('llm_error') or cr.get('error')}")
+
+                # 3. chat (optional)
+                if ns.no_chat:
+                    console.print(f"[dim]  (skipping chat; /chat-symbol {ns.symbol} to resume)[/dim]")
+                    continue
+                console.print(f"[bold cyan]── Step 3/3: entering chat (exit with /done)[/bold cyan]")
+                sess = SymbolChatSession(ns.symbol, top_k=8)
+                while True:
+                    try:
+                        with _pt_patch_stdout(raw=True):
+                            q = session.prompt(f"  {sess.symbol}> ")
+                    except (KeyboardInterrupt, EOFError):
+                        break
+                    q = (q or "").strip()
+                    if not q or q.lower() in ("/done", "/exit", "/quit"):
+                        console.print(f"[dim]  (chat ended after {len(sess.history)//2} turns)[/dim]")
+                        break
+                    answer = sess.ask(q)
+                    console.print(f"[bold green]  ◆[/bold green] {answer}")
+                continue
+            except SystemExit:
+                console.print("[red]  ✗ Usage:[/red] /analyze <SYMBOL> [--brand auto|icici|groww|...] [--max N] [--skip-qa] [--skip-research] [--no-chat]")
+                continue
+            except Exception as exc:
+                console.print(f"[red]  ✗ /analyze failed:[/red] {exc}")
                 continue
 
         # ── /reports — Enhanced Comprehensive Analysis (Postgres-backed) ──

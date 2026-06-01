@@ -25,6 +25,19 @@ Print the Markdown report:
 .venv/bin/python -m portfolio.cli report --output-dir portfolio/data/demo --print
 ```
 
+Run the PostgreSQL-backed NSE strategy comparison after historical
+`scores.stage_snapshots` are available:
+
+```bash
+.venv/bin/python -m portfolio.cli strategy-lab \
+  --output-dir portfolio/data/nse_pg_strategy_lab/latest \
+  --start 2025-01-01 \
+  --lookback 2024-01-01 \
+  --top-n 200 \
+  --slippage-bps 5 \
+  --brokerage-bps 3
+```
+
 Verify the portfolio test suite:
 
 ```bash
@@ -71,11 +84,16 @@ The CLI writes these files below the selected `--output-dir`:
 - CLI defaults: `replay`, `status`, and `report` default to run ID `PT-0`,
   initial capital `1000000`, built-in fixture OHLCV data, and the built-in
   `stage2_fixture_v1` strategy unless local input files are supplied.
+- PostgreSQL strategy lab: `strategy-lab` loads NSE EOD bars from
+  `market.equity_eod`, joins historical stages from `scores.stage_snapshots`,
+  runs each built-in strategy independently, compares to `Nifty 500`, and writes
+  a leaderboard with return, drawdown, profit factor, expectancy, turnover, and
+  cost drag.
 
 ## Current Limits And Backlog
 
-- PT-0 uses fixture/default data by default; real EOD NSE data integration is
-  not wired into this package yet.
+- `replay` still uses fixture/default data by default; real EOD NSE data is
+  available through the `strategy-lab` command.
 - LLM strategy proposer agents and monitoring agents are not part of PT-0.
 - There is no live trading or broker integration. Keep the engine paper-only
   unless a later design explicitly adds a broker path.

@@ -390,6 +390,21 @@ html{scroll-padding-top:72px;scroll-behavior:smooth}
 .cs-fill.amber{background:linear-gradient(90deg,#f59e0b,#d97706)}
 .cs-fill.red{background:linear-gradient(90deg,#ef4444,#b91c1c)}
 .cs-score{font-variant-numeric:tabular-nums;font-weight:700;color:#5b21b6;font-size:.82rem;text-align:right}
+/* Analyst / Street Consensus pane */
+.ac-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.ac-tile{background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px}
+.ac-cap{font-size:.65rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#64748b;margin-bottom:5px}
+.ac-val{font-size:1.05rem;font-weight:800;color:#0f172a;font-variant-numeric:tabular-nums}
+.ac-sub{font-size:.72rem;color:#475569;margin-top:2px}
+.ac-rationale{margin:10px 0 0;font-size:.78rem;color:#475569;font-style:italic;background:#fff;border-left:3px solid #94a3b8;padding:6px 10px;border-radius:0 4px 4px 0}
+.ac-bullbear{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.ac-side{background:#fff;border-radius:8px;padding:10px 12px;border:1px solid #e2e8f0}
+.ac-side.bull{border-left:3px solid #16a34a}
+.ac-side.bear{border-left:3px solid #ef4444}
+.ac-side ul{margin:6px 0 0 18px;padding:0;font-size:.78rem;color:#334155;line-height:1.55}
+.ac-side li{margin-bottom:3px}
+.ac-disc{margin:10px 0 0;font-size:.7rem;color:#94a3b8;line-height:1.4}
+@media (max-width:640px){.ac-bullbear{grid-template-columns:1fr}}
 
 /* Score / sub-score horizontal bars */
 .tp-bar{display:flex;align-items:center;gap:8px;margin:4px 0}
@@ -2700,6 +2715,79 @@ def _rule_chart_narrative(tech: dict, rr: dict | None = None) -> str:
     return " ".join(parts)
 
 
+def _rule_analyst_consensus(s: dict, a: dict, fund: dict, snap: dict,
+                             rr: dict, rs: float, bull: list, risk: list) -> dict:
+    """Rule-based fallback analyst-consensus block when LLM is unavailable.
+
+    Synthesises a structured BUY/HOLD/SELL view + 12m target range using
+    deterministic logic on top of fundamentals (EPS × peer multiple),
+    risk-reward levels and the bull/bear factor counts. No live broker
+    feed — the rating_disclaimer makes this explicit in the UI.
+    """
+    p_ = (fund or {}).get("_parsed") or {}
+    try:
+        price = float(snap.get("price") or 0)
+    except (TypeError, ValueError):
+        price = 0
+    eps  = p_.get("eps")
+    roce = fund.get("roce")
+    pat_cagr = a.get("pat_cagr_pct")
+    # Heuristic peer-multiple by quality bucket
+    if (roce or 0) >= 25 or (pat_cagr or 0) >= 30:
+        peer_pe, quality = 35, "premium-quality compounder"
+    elif (roce or 0) >= 18 or (pat_cagr or 0) >= 20:
+        peer_pe, quality = 25, "quality growth"
+    elif (roce or 0) >= 12:
+        peer_pe, quality = 18, "average quality"
+    else:
+        peer_pe, quality = 14, "below-average quality / cyclical"
+    target_median = float(eps) * peer_pe if eps else (rr.get("target_6m") or price * 1.15)
+    target_low    = target_median * 0.80
+    target_high   = target_median * 1.20
+    upside_med    = ((target_median / price) - 1) * 100 if price else 0
+
+    # Consensus rating logic
+    if upside_med >= 20 and len(bull) >= 4 and len(risk) <= 1:
+        rating = "BUY"
+    elif upside_med >= 10 and len(bull) >= 3:
+        rating = "OVERWEIGHT"
+    elif upside_med >= 0 and len(risk) <= 2:
+        rating = "HOLD"
+    elif upside_med >= -10:
+        rating = "UNDERWEIGHT"
+    else:
+        rating = "SELL"
+
+    # Estimate-trend read from recent quarterly delivery
+    py = a.get("pat_yoy_pct"); ry = a.get("rev_yoy_pct")
+    if (py or 0) >= 15 and (ry or 0) >= 10:
+        est_trend = "Upward"
+    elif (py or 0) <= -10 or (ry or 0) <= -5:
+        est_trend = "Downward"
+    else:
+        est_trend = "Stable"
+
+    bull_pts = (bull[:3] if bull else
+                ["Setup screens cleanly on momentum + quality factors"])
+    bear_pts = (risk[:3] if risk else
+                ["No quantitative red flag in dossier — confirm qualitative risks"])
+
+    return {
+        "consensus_rating": rating,
+        "target_median": round(target_median, 1) if target_median else None,
+        "target_low":    round(target_low, 1)    if target_low    else None,
+        "target_high":   round(target_high, 1)   if target_high   else None,
+        "target_rationale": (
+            f"EPS ₹{eps:.1f} × {peer_pe}x ({quality}) = ₹{target_median:,.0f} median"
+            if eps else f"Mid-target from RR-engine 6m level (no EPS in dossier)"
+        ),
+        "bull_points": bull_pts,
+        "bear_points": bear_pts,
+        "estimate_trend": est_trend,
+        "rating_disclaimer": "Synthesised from dossier — no live broker poll wired.",
+    }
+
+
 def _decimal_to_float(obj):
     """Recursively convert Decimal/date for JSON serialisation."""
     from decimal import Decimal
@@ -2901,6 +2989,17 @@ def _build_deep_llm_prompt(stocks: list[dict], macro_context: str, snap_date: st
         '      "sector_view": "1-2 sentences linking the stock to its sector strength and peer ranking",',
         '      "valuation_note": "1 sentence flagging valuation comfort or stretch — use EPS, growth, sector context (qualitative is fine if no PE)",',
         '      "street_view": "2-3 sentences synthesising the likely sell-side / broker consensus on this name: typical analyst rating bias, key bull/bear arguments brokerages would flag, peer-relative valuation read, recent estimate revisions narrative. State this is a synthesised consensus read (no live broker feed wired). Cite metrics from the dossier where possible.",',
+        '      "analyst_consensus": {',
+        '        "consensus_rating": "BUY | OVERWEIGHT | HOLD | UNDERWEIGHT | SELL (your synthesised inference based on the dossier — fundamentals, RS, stage, valuation; NOT a real broker poll)",',
+        '        "target_median": "numeric ₹ — synthesised 12-month consensus target derived from EPS × peer-multiple logic (cite the math briefly in target_rationale)",',
+        '        "target_low": "numeric ₹ — bear-case 12m target (sector de-rate / growth disappointment)",',
+        '        "target_high": "numeric ₹ — bull-case 12m target (multiple expansion + earnings beat)",',
+        '        "target_rationale": "1 short sentence on how the synthesised targets were built (e.g. \\"₹EPS × 22x peer median = median; ±20% for bull/bear\\")",',
+        '        "bull_points": ["3 short bullets covering what brokerages would highlight — earnings momentum, margin expansion, order book, RS leadership, etc."],',
+        '        "bear_points": ["3 short bullets covering what brokerages would flag — valuation, leverage, cyclical risk, governance, etc."],',
+        '        "estimate_trend": "Upward | Stable | Downward — directional read on where EPS/revenue estimates likely sit vs 3 months ago given recent quarterly delivery",',
+        '        "rating_disclaimer": "Always include: \\"Synthesised from dossier — no live broker poll wired.\\""',
+        '      },',
         '      "key_risks": ["risk 1 with metric", "risk 2", "risk 3"],',
         '      "action": "1 sentence: entry zone or wait-for-pullback level, invalidation, stop guidance",',
         '      "potential_target_short_term": "numeric ₹ target for ~2 months (cite ATR/level used)",',
@@ -3073,6 +3172,7 @@ def _rule_based_narratives(stocks: list[dict]) -> dict:
                 f"watch for re-rating triggers around the next quarterly print. "
                 "Confirm against live broker reports before sizing."
             ),
+            "analyst_consensus": _rule_analyst_consensus(s, a, fund, snap, rr, rs, bull, risk),
             "key_risks": risk or ["No quantitative red flag in dossier"],
             "action": (
                 f"Enter ₹{_f(rr.get('entry_low'),'{:.0f}')}-₹{_f(rr.get('entry_high'),'{:.0f}')}; "
@@ -3195,6 +3295,11 @@ def generate_narratives(stocks: list[dict], macro_context: str, snap_date: str,
         # Chart narrative fallback if LLM didn't emit one
         if not per_stock[sym].get("chart_narrative"):
             per_stock[sym]["chart_narrative"] = _rule_chart_narrative(s.get("tech") or {}, rr)
+        # Analyst consensus fallback if LLM didn't emit a structured block
+        if not isinstance(per_stock[sym].get("analyst_consensus"), dict):
+            fb = (rule_fallback["per_stock"].get(sym) or {}).get("analyst_consensus")
+            if isinstance(fb, dict):
+                per_stock[sym]["analyst_consensus"] = fb
     print(f"   pass 1 done: {chunks_ok}/{len(chunks)} chunks ok, {chunks_failed} fell back to rule-based")
 
     # ---- Pass 2: portfolio-level refinement ----
@@ -4136,16 +4241,83 @@ def _stock_card_html(idx: int, p: PickRationale, e: dict, narr: dict) -> str:
 
     # Street View / Analyst consensus (collapsible per stock)
     street_view = (narr.get("street_view") or "").strip()
+    ac = narr.get("analyst_consensus") if isinstance(narr.get("analyst_consensus"), dict) else None
     street_html = ""
-    if street_view:
+    if street_view or ac:
+        # ── Structured analyst-consensus pane (rating + targets + bull/bear)
+        ac_html = ""
+        if ac:
+            rating = str(ac.get("consensus_rating") or "").upper().strip()
+            rating_cls = {
+                "BUY": "green", "OVERWEIGHT": "green",
+                "HOLD": "amber",
+                "UNDERWEIGHT": "red", "SELL": "red",
+            }.get(rating, "slate")
+            est = str(ac.get("estimate_trend") or "").strip()
+            est_cls = {"Upward": "green", "Downward": "red", "Stable": "slate"}.get(est, "slate")
+
+            def _t(v):
+                try: return f"₹{float(v):,.0f}"
+                except (TypeError, ValueError): return "—"
+            tm, tl, th = ac.get("target_median"), ac.get("target_low"), ac.get("target_high")
+            try:
+                price_now = float((snap or {}).get("price") or 0)
+                upside = ((float(tm) / price_now) - 1) * 100 if (tm and price_now) else None
+            except (TypeError, ValueError):
+                upside = None
+            upside_txt = (
+                f"<span style='color:{'#16a34a' if (upside or 0) >= 0 else '#b91c1c'};"
+                f"font-weight:700;margin-left:6px'>({upside:+.1f}%)</span>"
+                if upside is not None else ""
+            )
+            bulls = ac.get("bull_points") or []
+            bears = ac.get("bear_points") or []
+            bull_html = "".join(f"<li>{h(str(b))}</li>" for b in bulls[:4])
+            bear_html = "".join(f"<li>{h(str(b))}</li>" for b in bears[:4])
+            tr_text = ac.get("target_rationale") or ""
+            disc = ac.get("rating_disclaimer") or "Synthesised from dossier — no live broker poll wired."
+
+            ac_html = (
+                "<div class='ac-grid'>"
+                f"  <div class='ac-tile'>"
+                f"    <div class='ac-cap'>Consensus Rating</div>"
+                f"    <div><span class='tp-chip {rating_cls}' style='font-size:.85rem;padding:4px 12px'>{h(rating or '—')}</span></div>"
+                f"  </div>"
+                f"  <div class='ac-tile'>"
+                f"    <div class='ac-cap'>12m Target (median){upside_txt}</div>"
+                f"    <div class='ac-val'>{_t(tm)}</div>"
+                f"    <div class='ac-sub'>Range: {_t(tl)} – {_t(th)}</div>"
+                f"  </div>"
+                f"  <div class='ac-tile'>"
+                f"    <div class='ac-cap'>Estimate Trend (3M)</div>"
+                f"    <div><span class='tp-chip {est_cls}' style='padding:3px 10px'>{h(est or '—')}</span></div>"
+                f"  </div>"
+                "</div>"
+                f"<p class='ac-rationale'>📐 {h(tr_text)}</p>"
+                "<div class='ac-bullbear'>"
+                f"  <div class='ac-side bull'><div class='ac-cap'>📈 Bull case (would highlight)</div><ul>{bull_html}</ul></div>"
+                f"  <div class='ac-side bear'><div class='ac-cap'>📉 Bear case (would flag)</div><ul>{bear_html}</ul></div>"
+                "</div>"
+                f"<p class='ac-disc'>⚠️ {h(disc)}</p>"
+            )
+
+        # Wrap narrative paragraph (street_view) + structured pane in one details
+        body_html = ac_html
+        if street_view:
+            body_html += (
+                f"<p style='margin:12px 0 0;color:#334155;font-size:.85rem;"
+                f"line-height:1.55;border-top:1px dashed #cbd5e1;padding-top:10px'>"
+                f"<b style='color:#0f172a'>Narrative:</b> {h(street_view)}</p>"
+            )
+
         street_html = (
-            "<details class='tp-street' style='margin-top:10px;border:1px solid #e2e8f0;"
-            "border-radius:10px;padding:10px 14px;background:#f8fafc'>"
+            "<details class='tp-street' open style='margin-top:10px;border:1px solid #cbd5e1;"
+            "border-radius:10px;padding:12px 16px;background:#f8fafc'>"
             "<summary style='cursor:pointer;font-weight:700;color:#0f172a;font-size:.92rem;list-style:none'>"
-            "🏛️ Street View &amp; Analyst Consensus "
+            "🏛️ Analyst / Street Consensus "
             "<span style='font-weight:400;color:#64748b;font-size:.75rem'>(synthesised — no live broker feed)</span>"
             "</summary>"
-            f"<p style='margin:8px 0 0;color:#334155;font-size:.85rem;line-height:1.55'>{h(street_view)}</p>"
+            f"<div style='margin-top:10px'>{body_html}</div>"
             "</details>"
         )
 

@@ -1,0 +1,91 @@
+{
+  "add_rules": [],
+  "entry": {
+    "all": [
+      {
+        "indicator": "close",
+        "operator": "above",
+        "value": "sma_200"
+      },
+      {
+        "indicator": "sma_50",
+        "operator": "above",
+        "value": "sma_200"
+      },
+      {
+        "indicator": "close",
+        "operator": "below",
+        "value": "sma_20"
+      },
+      {
+        "indicator": "rsi_14",
+        "operator": "between",
+        "value": [
+          30,
+          45
+        ]
+      }
+    ]
+  },
+  "exit": {
+    "any": [
+      {
+        "indicator": "close",
+        "operator": "above",
+        "value": "sma_20"
+      },
+      {
+        "indicator": "close",
+        "operator": "below",
+        "value": "sma_50"
+      }
+    ]
+  },
+  "name": "Mean Reversion In Uptrend",
+  "pullbacks": {
+    "all": [
+      {
+        "indicator": "close",
+        "operator": "below",
+        "value": "sma_20"
+      },
+      {
+        "indicator": "rsi_14",
+        "operator": "between",
+        "value": [
+          30,
+          45
+        ]
+      }
+    ],
+    "timeframe": "daily"
+  },
+  "risk": {
+    "initial_stop": {
+      "indicator": "atr_14",
+      "multiple": 1.5,
+      "type": "atr"
+    },
+    "max_position_pct": 6.0,
+    "risk_per_trade_pct": 0.5
+  },
+  "strategy_id": "mean_reversion_uptrend_v1",
+  "trend_filters": {
+    "all": [
+      {
+        "indicator": "close",
+        "operator": "above",
+        "value": "sma_200"
+      },
+      {
+        "indicator": "sma_50",
+        "operator": "above",
+        "value": "sma_200"
+      }
+    ],
+    "timeframe": "daily"
+  },
+  "universe": {
+    "min_price": 50
+  }
+}

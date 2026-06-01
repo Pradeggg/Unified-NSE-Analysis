@@ -34,7 +34,9 @@ _log = logging.getLogger(__name__)
 
 # Premium-tier reasoning model (user choice). Override via env.
 # Fallback chain is used if the primary id is rejected by the API.
-DEFAULT_ASSESSMENT_MODEL = "gpt-5.5"
+# PG 2026-05-27: switched default from `gpt-5.5` (not a real OpenAI model id
+# — was causing every assessment call to be rejected) to gpt-4o.
+DEFAULT_ASSESSMENT_MODEL = "gpt-4o"
 DEFAULT_ASSESSMENT_REASONING_EFFORT = "high"
 ASSESSMENT_MODEL = os.getenv("ASSESSMENT_MODEL", DEFAULT_ASSESSMENT_MODEL)
 ASSESSMENT_REASONING_EFFORT = os.getenv(

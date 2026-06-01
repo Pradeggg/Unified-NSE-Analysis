@@ -1,0 +1,183 @@
+{
+  "run_id": "b134ac07-0646-418c-aadd-959897c508d2",
+  "symbol": "NIFTY BANK",
+  "as_of": "2026-05-21",
+  "verdict": {
+    "stance": "No actionable setup",
+    "score": 0.0,
+    "confidence": "low",
+    "trigger": "Trigger not available until pivot/base evidence is loaded.",
+    "invalidation": "Invalidation not available until support evidence is loaded.",
+    "targets": [],
+    "summary": "NIFTY BANK visual scan stance: No actionable setup.",
+    "caveats": [
+      "Price history was available, but no confirmed or candidate setup evidence was detected."
+    ]
+  },
+  "patterns": [
+    {
+      "pattern": "Trend Structure",
+      "status": "absent",
+      "confidence": 0.26,
+      "evidence": [
+        "Price is below SMA20.",
+        "Price is below SMA50.",
+        "Price is below SMA200.",
+        "Within 13.48% of 52-week high.",
+        "Short-term average is above SMA50."
+      ],
+      "zones": {
+        "pivot": null,
+        "support": 54712.33,
+        "invalidation": 56949.4,
+        "target_1": null,
+        "target_2": null
+      },
+      "caveats": [],
+      "metrics": {
+        "latest_close": 53439.4,
+        "sma20": 54807.15,
+        "sma50": 54712.33,
+        "sma200": 56949.4,
+        "distance_52w_high_pct": -13.48
+      }
+    },
+    {
+      "pattern": "MTF Alignment",
+      "status": "insufficient_data",
+      "confidence": 0.0,
+      "evidence": [],
+      "zones": {
+        "pivot": null,
+        "support": null,
+        "invalidation": null,
+        "target_1": null,
+        "target_2": null
+      },
+      "caveats": [
+        "MTF evidence unavailable."
+      ],
+      "metrics": {}
+    },
+    {
+      "pattern": "VCP",
+      "status": "absent",
+      "confidence": 0.41,
+      "evidence": [
+        "Detected 1 contracting range step(s).",
+        "Range sequence: 3.01%, 3.82%, 4.13%, 2.38%."
+      ],
+      "zones": {
+        "pivot": 57456.3,
+        "support": 52783.45,
+        "invalidation": 51727.78,
+        "target_1": 62129.15,
+        "target_2": null
+      },
+      "caveats": [
+        "Contractions or volume dry-up are not strong enough."
+      ],
+      "metrics": {
+        "ranges_pct": [
+          3.01,
+          3.82,
+          4.13,
+          2.38
+        ],
+        "contractions": 1,
+        "volume_dry_up": false
+      }
+    },
+    {
+      "pattern": "Cup With Handle",
+      "status": "absent",
+      "confidence": 0.6,
+      "evidence": [
+        "Base depth is 17.82%.",
+        "Right side has not recovered near prior high.",
+        "Handle drift is within a constructive range."
+      ],
+      "zones": {
+        "pivot": 61174.0,
+        "support": 53409.15,
+        "invalidation": 52340.97,
+        "target_1": 72072.65,
+        "target_2": null
+      },
+      "caveats": [],
+      "metrics": {
+        "depth_pct": 17.82,
+        "trough_index": 56,
+        "recovery": false,
+        "handle_drift": true
+      }
+    },
+    {
+      "pattern": "Breakout / Retest",
+      "status": "absent",
+      "confidence": 0.0,
+      "evidence": [
+        "Latest close is not above pivot.",
+        "Volume expansion is not confirmed.",
+        "Retest hold is not confirmed."
+      ],
+      "zones": {
+        "pivot": 57456.3,
+        "support": 56307.17,
+        "invalidation": 54583.49,
+        "target_1": 62052.8,
+        "target_2": null
+      },
+      "caveats": [],
+      "metrics": {
+        "latest_close": 53439.4,
+        "volume_expanded": false,
+        "held_retest": false,
+        "failed": false
+      }
+    },
+    {
+      "pattern": "Volume Quality",
+      "status": "absent",
+      "confidence": 0.2,
+      "evidence": [
+        "No clear volume dry-up.",
+        "Latest volume is 0.0x the 20D average."
+      ],
+      "zones": {
+        "pivot": null,
+        "support": null,
+        "invalidation": null,
+        "target_1": null,
+        "target_2": null
+      },
+      "caveats": [],
+      "metrics": {
+        "latest_volume_ratio_20d": 0.0,
+        "dry_up": false,
+        "expansion": false
+      }
+    }
+  ],
+  "annotations": [],
+  "chart_paths": {
+    "daily": "reports/visual_scan/assets/NIFTY_BANK_b134ac07_daily.html",
+    "weekly": "reports/visual_scan/assets/NIFTY_BANK_b134ac07_weekly.html"
+  },
+  "tradingview": {
+    "status": "not_attempted",
+    "message": "TradingView capture disabled."
+  },
+  "source_trail": {
+    "daily": {
+      "status": "loaded",
+      "rows": 1715
+    },
+    "weekly": {
+      "status": "derived",
+      "rows": 364
+    }
+  },
+  "missing_evidence": [],
+  "raw_metrics": {}
+}

@@ -246,6 +246,81 @@ def step_top_picks_report(dry_run: bool) -> bool:
     )
 
 
+def step_historical_stage_backfill(dry_run: bool) -> bool:
+    """Backfill deterministic historical stage snapshots from EOD data.
+
+    This keeps scores.stage_snapshots usable for portfolio backtests from
+    Jan 2025 onward while preserving richer existing daily tracker snapshots.
+    """
+    _section("STEP 7C — Historical Stage Snapshot Backfill")
+    if not _ensure_postgres_running(dry_run=dry_run):
+        return False
+    return _run(
+        "Historical Stage Snapshots → scores.stage_snapshots",
+        [
+            PYTHON,
+            "-m",
+            "scripts.backfill_historical_stage_snapshots",
+            "--start",
+            "2025-01-01",
+            "--lookback",
+            "2024-01-01",
+        ],
+        dry_run=dry_run,
+    )
+
+
+def step_portfolio_strategy_lab(
+    dry_run: bool,
+    *,
+    output_dir: str,
+    top_n: int,
+    slippage_bps: float,
+    brokerage_bps: float,
+) -> bool:
+    """Run PostgreSQL-backed paper strategy comparison and Agent Adda report."""
+    _section("STEP 7D — Portfolio Strategy Lab")
+    if not _ensure_postgres_running(dry_run=dry_run):
+        return False
+    ok = _run(
+        "Portfolio strategy-lab replay",
+        [
+            PYTHON,
+            "-m",
+            "portfolio.cli",
+            "strategy-lab",
+            "--output-dir",
+            output_dir,
+            "--start",
+            "2025-01-01",
+            "--lookback",
+            "2024-01-01",
+            "--top-n",
+            str(top_n),
+            "--slippage-bps",
+            str(slippage_bps),
+            "--brokerage-bps",
+            str(brokerage_bps),
+            "--run-id",
+            "NSE-PG-DAILY-STRATEGY-LAB",
+        ],
+        dry_run=dry_run,
+    )
+    if not ok:
+        return False
+    return _run(
+        "Agent Adda strategy-lab report",
+        [
+            PYTHON,
+            "-c",
+            "from terminal.reports import generate_preset_report; "
+            "r=generate_preset_report('strategy-lab','html'); "
+            "print(r.get('path')); print(r.get('latest_path',''))",
+        ],
+        dry_run=dry_run,
+    )
+
+
 def step_refresh_corporate_events(dry_run: bool) -> bool:
     """Refresh corporate events + insider alerts from NSE and load into
     signals.corporate_events and signals.insider_alerts. Non-fatal."""
@@ -459,6 +534,17 @@ def main() -> int:
                         help="Skip fundamentals backfill even on its scheduled day")
     parser.add_argument("--skip-results-feed", action="store_true",
                         help="Skip daily results-feed cache refresh")
+    parser.add_argument("--skip-portfolio-lab", action="store_true",
+                        help="Skip historical stage backfill and portfolio strategy-lab report")
+    parser.add_argument("--portfolio-lab-output-dir",
+                        default="portfolio/data/nse_pg_strategy_lab/latest",
+                        help="Output directory for portfolio strategy-lab artifacts")
+    parser.add_argument("--portfolio-top-n", type=int, default=200,
+                        help="Top liquid NSE symbols for portfolio strategy-lab")
+    parser.add_argument("--portfolio-slippage-bps", type=float, default=5.0,
+                        help="Slippage bps for portfolio strategy-lab fills")
+    parser.add_argument("--portfolio-brokerage-bps", type=float, default=3.0,
+                        help="Brokerage bps for portfolio strategy-lab fills")
     parser.add_argument("--skip-email", action="store_true",
                         help="Skip the Top Picks email step (STEP 5C)")
     parser.add_argument("--email-send", action="store_true",
@@ -590,6 +676,23 @@ def main() -> int:
         if not step_refresh_results_feed(args.dry_run):
             print("  ⚠️  Results-feed refresh had failures — see scores.financials_refresh_log")
             failed.append("Results-feed refresh")
+
+    # 7c/7d. Historical stage snapshots + paper strategy lab. Non-destructive:
+    # the backfill preserves existing richer tracker snapshots unless explicitly
+    # run with --replace-existing outside this orchestrator.
+    if not args.skip_portfolio_lab:
+        if not step_historical_stage_backfill(args.dry_run):
+            print("  ⚠️  Historical stage backfill failed — portfolio lab may use stale stages")
+            failed.append("Historical stage backfill")
+        if not step_portfolio_strategy_lab(
+            args.dry_run,
+            output_dir=args.portfolio_lab_output_dir,
+            top_n=args.portfolio_top_n,
+            slippage_bps=args.portfolio_slippage_bps,
+            brokerage_bps=args.portfolio_brokerage_bps,
+        ):
+            print("  ⚠️  Portfolio strategy lab failed — see logs above")
+            failed.append("Portfolio strategy lab")
 
     # 7b. Weekly fundamentals backfill (default: Sundays only, or --fundamentals-backfill)
     run_fundamentals = (

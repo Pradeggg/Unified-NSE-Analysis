@@ -1,0 +1,68 @@
+{
+  "add_rules": [],
+  "entry": {
+    "all": [
+      {
+        "indicator": "relative_strength",
+        "operator": "gte",
+        "value": 80
+      },
+      {
+        "indicator": "rsi_14",
+        "operator": "between",
+        "value": [
+          50,
+          75
+        ]
+      },
+      {
+        "indicator": "close",
+        "operator": "above",
+        "value": "sma_50"
+      },
+      {
+        "indicator": "volume_ratio_20d",
+        "operator": "gte",
+        "value": 1.1
+      }
+    ]
+  },
+  "exit": {
+    "any": [
+      {
+        "indicator": "relative_strength",
+        "operator": "below",
+        "value": 60
+      },
+      {
+        "indicator": "close",
+        "operator": "below",
+        "value": "sma_50"
+      }
+    ]
+  },
+  "name": "Momentum Rotation",
+  "risk": {
+    "initial_stop": {
+      "indicator": "atr_14",
+      "multiple": 2.0,
+      "type": "atr"
+    },
+    "max_position_pct": 8.0,
+    "risk_per_trade_pct": 0.75
+  },
+  "strategy_id": "momentum_rotation_v1",
+  "trend_filters": {
+    "all": [
+      {
+        "indicator": "close",
+        "operator": "above",
+        "value": "sma_50"
+      }
+    ],
+    "timeframe": "daily"
+  },
+  "universe": {
+    "min_price": 50
+  }
+}

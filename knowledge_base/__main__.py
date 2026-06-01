@@ -14,8 +14,25 @@ import argparse
 import json
 import sys
 
+from .ingest import ingest_any  # PG 2026-05-27: ad-hoc single-doc ingest
 from .pipeline import query_kb, run_pipeline
 from .vector_store import KBVectorStore
+
+
+# PG 2026-05-27: /kb ingest <url|path> — add one report to the KB without
+# editing financial_sources_registry.json.
+def cmd_ingest(args: argparse.Namespace) -> int:
+    result = ingest_any(
+        args.target,
+        source_id=(args.source_id or "ADHOC").upper(),
+        source_name=args.source_name or "",
+        category=args.category or "adhoc",
+        tier=args.tier,
+        hub_label=args.hub_label or "adhoc",
+        do_qa=not args.skip_qa,
+    )
+    print(json.dumps(result, indent=2, default=str))
+    return 0 if result.get("ok") else 1
 
 
 def cmd_build(args: argparse.Namespace) -> int:
@@ -79,6 +96,23 @@ def main(argv: list[str] | None = None) -> int:
 
     ps = sub.add_parser("stats", help="Print collection counts")
     ps.set_defaults(func=cmd_stats)
+
+    # PG 2026-05-27: ad-hoc ingest of a single PDF (URL or local path)
+    pi = sub.add_parser("ingest", help="Ingest a single PDF (URL or local path) into the KB")
+    pi.add_argument("target", help="PDF URL (https://...) or local file path")
+    pi.add_argument("--source-id", default="ADHOC",
+                    help="Short source identifier, e.g. ICICI_DIRECT, GROWW (default: ADHOC)")
+    pi.add_argument("--source-name", default="",
+                    help="Human-readable source name (e.g. 'ICICI Direct Retail Research')")
+    pi.add_argument("--category", default="adhoc",
+                    help="Registry-style category, e.g. broker_research (default: adhoc)")
+    pi.add_argument("--tier", type=int, default=9,
+                    help="Trust tier 1–4 for registry sources; 9 = ad-hoc (default)")
+    pi.add_argument("--hub-label", default="adhoc",
+                    help="Label for this drop point (default: adhoc)")
+    pi.add_argument("--skip-qa", action="store_true",
+                    help="Skip Q&A generation (faster, indexes raw chunks only)")
+    pi.set_defaults(func=cmd_ingest)
 
     args = p.parse_args(argv)
     return args.func(args)

@@ -1,0 +1,1045 @@
+[
+  {
+    "id": "A01",
+    "bucket": "A_index_routing",
+    "query": "NIFTY SMALLCAP 100",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 8.24524188041687,
+    "trail": [
+      "get_index_snapshot"
+    ],
+    "answer_excerpt": "**\ud83d\udcca NIFTY Smallcap 100 Overview**  - **Current Level**: 18,695.65  - **Change**: +0.87% - **Open**: 18,635.1 - **High**: 18,728.2 - **Low**: 18,567.55 - **52-Week High**: 19,224.95 - **52-Week Low**: 14,986.0  **\ud83d\udcc8 10-Day Trend Analysis** - **Trend**: The NIFTY Smallcap 100 index has shown a positive"
+  },
+  {
+    "id": "A02",
+    "bucket": "A_index_routing",
+    "query": "NIFTY SMALLCAP 250",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 5.334622859954834,
+    "trail": [
+      "get_index_snapshot"
+    ],
+    "answer_excerpt": "**\ud83d\udcc8 NIFTY SMALLCAP 250 Index Snapshot**  - **Current Level**: 17,409.0 - **Daily Range**: Opened at 17,320.15, reached a high of 17,436.25, and a low of 17,289.2 - **Change**: Up by 1.02% from the previous day - **52-week Performance**:    - **52w High**: 18,077.35   - **52w Low**: 14,143.45  **\ud83d\udcca 10"
+  },
+  {
+    "id": "A03",
+    "bucket": "A_index_routing",
+    "query": "NIFTY MIDCAP 100",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 6.290276050567627,
+    "trail": [
+      "get_index_snapshot"
+    ],
+    "answer_excerpt": "**\ud83d\udcc8 NIFTY MIDCAP 100 Index Analysis**  - **Current Status**: The NIFTY MIDCAP 100 closed last at 62,003.15 points, registering a gain of 1.1% from the previous session's close. - **Day's Range**: Today's trading range was between 61,441.15 (low) and 62,094.4 (high) - also marking a new 52-week high."
+  },
+  {
+    "id": "A04",
+    "bucket": "A_index_routing",
+    "query": "NIFTY MIDCAP 150",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 6.502293825149536,
+    "trail": [
+      "get_index_snapshot"
+    ],
+    "answer_excerpt": "**\ud83d\udcc8 NIFTY MIDCAP 150 Index Overview**  - **Current Position**: As of May 7, 2026, the NIFTY MIDCAP 150 closed at 22,804.95. - **Opening Price**: The index opened at 22,679.15. - **Daily High/Low**: The highest point today was 22,836.9, which is also its 52-week high, while the lowest was 22,615.7. -"
+  },
+  {
+    "id": "A05",
+    "bucket": "A_index_routing",
+    "query": "NIFTY MIDCAP 50",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 7.614820718765259,
+    "trail": [
+      "get_index_snapshot"
+    ],
+    "answer_excerpt": "**\ud83d\udcc8 Nifty Midcap 50 Index Analysis**  The Nifty Midcap 50 Index is currently reflecting strong performance, closing at 17,617.55 as of May 7, 2026. Here's a detailed insight into its recent performance:  - **Current Price & Performance**:   - **Close**: 17,617.55   - **Change**: +1.41%   - **Day's R"
+  },
+  {
+    "id": "A06",
+    "bucket": "A_index_routing",
+    "query": "NIFTY 500",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 5.04669189453125,
+    "trail": [
+      "get_index_snapshot"
+    ],
+    "answer_excerpt": "**Nifty 500 Index Overview**  - **Current Status**: As of the previous session on May 7, 2026, the Nifty 500 closed at 23,214. - **Opening and Closing**: The index opened at 23,219.35 and had a high of 23,304.5 while the low was 23,142.45 for the day. - **Change**: The index gained by 0.35% in that "
+  },
+  {
+    "id": "A07",
+    "bucket": "A_index_routing",
+    "query": "NIFTY 200",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 7.669770002365112,
+    "trail": [
+      "get_index_snapshot"
+    ],
+    "answer_excerpt": "**\ud83d\udcc8 Nifty 200 Index Snapshot**  - **Current Close**: 13,991.90 - **Opening Price**: 14,007.45 - **Day's High/Low**: 14,053.45 / 13,949.85 - **Change**: +0.24%    **52-Week Range**: - **High**: 14,700.95 - **Low**: 12,396.10  **10-Day Trend**: - The Nifty 200 index has closed positively on 5 out of t"
+  },
+  {
+    "id": "A08",
+    "bucket": "A_index_routing",
+    "query": "NIFTY 100",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 7.221026182174683,
+    "trail": [
+      "get_index_snapshot"
+    ],
+    "answer_excerpt": "**\ud83d\udcc8 Nifty 100 Index Overview**  The Nifty 100 index is currently positioned as follows:  - **Latest Close**: 25,319.5 (as of 2026-05-07) - **Day Range**: Opened at 25,388.85, with a high of 25,460.9 and a low of 25,267.9 during the session. - **Percentage Change**: The index increased by 0.03% in it"
+  },
+  {
+    "id": "A09",
+    "bucket": "A_index_routing",
+    "query": "NIFTY NEXT 50",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 7.317825078964233,
+    "trail": [
+      "get_index_snapshot"
+    ],
+    "answer_excerpt": "**\ud83d\udcc8 Nifty Next 50 Index Analysis**  - **Current Status**: As of the latest data on May 7, 2026, the Nifty Next 50 Index closed at 71,852.9, representing a change of +0.23% from the previous session. - **Trading Range**: The index traded between a low of 71,610.9 and a high of 72,037.6. - **52-Week R"
+  },
+  {
+    "id": "A10",
+    "bucket": "A_index_routing",
+    "query": "NIFTY BANK",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 6.516490936279297,
+    "trail": [
+      "get_index_snapshot"
+    ],
+    "answer_excerpt": "**\ud83d\udcca Nifty Bank Index Overview**  - **Current Level**: The Nifty Bank index closed at 56,047.4. It opened at 56,114.0, reached a high of 56,334.15, and a low of 55,783.2 today. - **Percentage Change**: It saw a minor increase of 0.12% from the previous close. - **52-week Range**: The index is trading"
+  },
+  {
+    "id": "A11",
+    "bucket": "A_index_routing",
+    "query": "NIFTY IT",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 6.014997959136963,
+    "trail": [
+      "get_index_snapshot"
+    ],
+    "answer_excerpt": "### \ud83d\udcc8 Nifty IT Index Analysis  **Current Snapshot:** - **Latest Close:** 29,043.5 - **Change:** -0.77% from the previous session - **52-Week Range:** 28,288.05 (Low) to 40,301.4 (High)  **10-Day Trend:** - **Closes:** The index has closed lower from its recent high of 30,124.3 ten days ago. The late"
+  },
+  {
+    "id": "A12",
+    "bucket": "A_index_routing",
+    "query": "NIFTY PHARMA",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 6.514264106750488,
+    "trail": [
+      "get_index_snapshot"
+    ],
+    "answer_excerpt": "**\ud83d\udcc8 Nifty Pharma Index Analysis**  The Nifty Pharma index recently closed at 24,135.5, reflecting a slight change of 0.1% compared to the previous session. This index is currently very close to its 52-week high of 24,268.1, suggesting strong performance over the past year.  - **Recent Performance**:"
+  },
+  {
+    "id": "A13",
+    "bucket": "A_index_routing",
+    "query": "NIFTY FMCG",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 9.954707860946655,
+    "trail": [
+      "get_index_snapshot"
+    ],
+    "answer_excerpt": "**\ud83d\udcc8 Nifty FMCG Index Overview**  - **Current Level**: 51,068.45 - **Change**: -0.76% from the previous close - **52-Week Range**: High of 58,485.05 and a Low of 45,334.15  **Trend Over the Last 10 Days:** - The index has experienced slight fluctuations, closing most recently at 51,068.45. The past 1"
+  },
+  {
+    "id": "A14",
+    "bucket": "A_index_routing",
+    "query": "NIFTY AUTO",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 4.99693489074707,
+    "trail": [
+      "get_index_snapshot"
+    ],
+    "answer_excerpt": "**\ud83d\udcca Nifty Auto Index Overview**  - **Current Level**: 27,339.95 (as of 7th May 2026) - **Today's Range**: Opened at 26,983.15, reached a high of 27,533.2, and a low of 26,878.15 - **Change**: Up by 1.93% - **52-Week Position**: High of 29,179.1, Low of 22,220.7 - **10-Day Trend**: The index has witn"
+  },
+  {
+    "id": "A15",
+    "bucket": "A_index_routing",
+    "query": "NIFTY METAL",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 10.181420087814331,
+    "trail": [
+      "get_index_snapshot"
+    ],
+    "answer_excerpt": "**\ud83d\udcc8 Nifty Metal Index Overview**  - **Current Price (Last Close):** 13,165.4 - **Day's Range:** 13,129.8 - 13,256.2 - **Opening Price:** 13,182.65 - **% Change on Last Day:** +0.27%  **Trend Analysis:** - **10-Day Trend:** The index has been bullish over the last 10 trading days with a cumulative ga"
+  },
+  {
+    "id": "A16",
+    "bucket": "A_index_routing",
+    "query": "NIFTY REALTY",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 13.104672908782959,
+    "trail": [
+      "get_index_snapshot"
+    ],
+    "answer_excerpt": "**\ud83d\udcc8 Nifty Realty Index Analysis**  - **Current Trend**: The Nifty Realty Index closed at 827.5 as of the last trading session on May 7, 2026. It has shown a positive move with a change of +0.63% from its previous close. - **10-Day Trend**: Over the last 10 trading sessions, the index has seen a 4.93"
+  },
+  {
+    "id": "A17",
+    "bucket": "A_index_routing",
+    "query": "NIFTY ENERGY",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 5.441917896270752,
+    "trail": [
+      "get_index_snapshot"
+    ],
+    "answer_excerpt": "**\ud83d\udcc8 Nifty Energy Index Snapshot**  - **Current Level:** 41,141.95 - **Day Range:** 40,840.75 - 41,241.10 - **Percentage Change:** 0.82% - **52-Week Range:** Low of 32,791.85 to a High of 41,423.35 - **10-Day Trend:**    - The index has been on an uptrend, gaining approximately 2.86% over the last 10"
+  },
+  {
+    "id": "A18",
+    "bucket": "A_index_routing",
+    "query": "NIFTY INFRA",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 7.452168941497803,
+    "trail": [
+      "get_index_snapshot"
+    ],
+    "answer_excerpt": "**\ud83d\udcca Nifty Infra Index Snapshot**  - **Current Level**: 9,512.95 - **Day's Range**: 9,457.95 - 9,554.55 - **Change**: +0.32% - **52-Week Range**: 8,426.65 - 9,792.60  **\ud83d\udcc8 Recent Trend**  - The Nifty Infra index has shown a positive trend over the past 10 trading days, closing at 9,512.95. Over this p"
+  },
+  {
+    "id": "A19",
+    "bucket": "A_index_routing",
+    "query": "NIFTY OIL & GAS",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.01169896125793457,
+    "trail": [
+      "get_global_market_assessment"
+    ],
+    "answer_excerpt": " \u25b6 GLOBAL MARKET ASSESSMENT   Risk regime: RISK_ON   As of:        2026-05-07   Regions:      US: positive (+1.74%) | Asia: positive (+3.58%) | Commodities: positive (+0.66%) | FX: mixed (-0.31%)   Key moves:    S&P 500 +1.46% | Nasdaq +2.02% | Hang Seng +1.59% | Nikkei 225 +5.58% | Crude Oil -0.48%"
+  },
+  {
+    "id": "A20",
+    "bucket": "A_index_routing",
+    "query": "NIFTY FINANCIAL SERVICES",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 12.146138906478882,
+    "trail": [
+      "get_index_snapshot"
+    ],
+    "answer_excerpt": "**\ud83d\udcc8 Nifty Financial Services Index Overview**  - **Current Level**: The Nifty Financial Services index recently closed at 26,449.5. - **Intraday Range**: Touched a high of 26,592.0 and a low of 26,352.75 during the most recent session. - **10-Day Performance**: Over the past 10 trading days, the ind"
+  },
+  {
+    "id": "A21",
+    "bucket": "A_index_routing",
+    "query": "NIFTY HEALTHCARE INDEX",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 6.960996150970459,
+    "trail": [
+      "get_index_snapshot"
+    ],
+    "answer_excerpt": "**\ud83d\udcc8 NIFTY Healthcare Index Snapshot**  - **Current Status**:    - **Close**: 15,391.1   - **Open**: 15,406.15   - **High**: 15,456.25 (also the 52-week high)   - **Low**: 15,355.55   - **Change on the day**: +0.17%    - **52-Week Range**:    - **High**: 15,456.25   - **Low**: 6,482.80  - **Recent Pe"
+  },
+  {
+    "id": "A22",
+    "bucket": "A_index_routing",
+    "query": "NIFTY PSU BANK",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 9.789169788360596,
+    "trail": [
+      "get_index_snapshot"
+    ],
+    "answer_excerpt": "**\ud83d\udcc8 Nifty PSU Bank Index Snapshot**  - **Current Levels:** As of May 7, 2026, the Nifty PSU Bank Index closed at 8,636.6, experiencing a decline of 0.49% for the day. - **Intraday Movements:**    - Open: 8,741.55   - High: 8,745.15   - Low: 8,597.4 - **52-Week Range:**    - High: 9,918.65   - Low: 6"
+  },
+  {
+    "id": "A23",
+    "bucket": "A_index_routing",
+    "query": "NIFTY PRIVATE BANK",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 5.8625168800354,
+    "trail": [
+      "get_index_snapshot"
+    ],
+    "answer_excerpt": "**\ud83d\udcc8 NIFTY PRIVATE BANK Index Overview**  - **Current Level**: 56,047.4 (as of May 7, 2026) - **Today's Range**: Opened at 56,114.0, reached a high of 56,334.15, and a low of 55,783.2 - **Change**: Up by 0.12% today  **\ud83d\udcca 52 Week Range** - **52-Week High**: 61,764.85 - **52-Week Low**: 49,954.85  **\ud83d\udcc9 "
+  },
+  {
+    "id": "A24",
+    "bucket": "A_index_routing",
+    "query": "NIFTY MEDIA",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 6.607823848724365,
+    "trail": [
+      "get_index_snapshot"
+    ],
+    "answer_excerpt": "**\ud83d\udcca Nifty Media Index Overview**  - **Current Level**: 1472.2 - **Change**: +0.21% as of 7th May 2026 - **Trading Range**: Opened at 1474.8, with a high of 1483.8 and a low of 1464.7 - **52-Week Range**: High of 1786.15, low of 1245.05  **\ud83d\udcc8 10-Day Trend Analysis** - The index has seen a moderate ris"
+  },
+  {
+    "id": "A25",
+    "bucket": "A_index_routing",
+    "query": "NIFTY CONSUMER DURABLES",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 7.51364803314209,
+    "trail": [
+      "get_index_snapshot"
+    ],
+    "answer_excerpt": "**\ud83d\udcc8 NIFTY Consumer Durables Index Snapshot**  - **Current Status**:    - **Close**: 37,058.2   - **Change**: -0.85% from the previous session   - **Open**: 37,473.0   - **High**: 37,493.45   - **Low**: 36,979.85  - **52-Week Range**:   - **52-Week High**: 44,426.55   - **52-Week Low**: 14,089.55  - "
+  },
+  {
+    "id": "A26",
+    "bucket": "A_index_routing",
+    "query": "lets analyze NIFTY SMALLCAP 100",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 19.282980918884277,
+    "trail": [
+      "get_index_snapshot"
+    ],
+    "answer_excerpt": "**\ud83d\udcc8 NIFTY SMALLCAP 100 Analysis**  - **Current Status**: The NIFTY SMALLCAP 100 index recently closed at 18,695.65 on May 7, 2026. It showed a strong performance with a daily gain of 0.87%. - **Daily Range**: The index opened at 18,635.10, reaching a high of 18,728.20 and a low of 18,567.55 during t"
+  },
+  {
+    "id": "A27",
+    "bucket": "A_index_routing",
+    "query": "lets analyze NIFTY SMALLCAP 250",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 18.5158109664917,
+    "trail": [
+      "get_index_snapshot"
+    ],
+    "answer_excerpt": "**\ud83d\udcc8 NIFTY SMALLCAP 250 Analysis**  - **Current Close:** 17,409.0 - **Day Range:** Opened at 17,320.15, with a high of 17,436.25 and a low of 17,289.2 - **Change:** Up by 1.02% as of the latest close - **52-Week Range:** High of 18,077.35 and a low of 14,143.45  **\ud83d\udcca 10-Day Trend**  - **Performance:**"
+  },
+  {
+    "id": "A28",
+    "bucket": "A_index_routing",
+    "query": "lets analyze NIFTY MIDCAP 100",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 10.48771595954895,
+    "trail": [
+      "get_index_snapshot"
+    ],
+    "answer_excerpt": "**\ud83d\udcc8 NIFTY MIDCAP 100 Index Analysis**  - **Current Level:** The NIFTY MIDCAP 100 closed at 62,003.15, experiencing a robust upward session with a 1.1% gain on the last trading day. - **52-Week Range:** The index has recently hit its 52-week high at 62,094.4, showing strong performance and momentum w"
+  },
+  {
+    "id": "A29",
+    "bucket": "A_index_routing",
+    "query": "lets analyze NIFTY MIDCAP 150",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 10.241511821746826,
+    "trail": [
+      "get_index_snapshot"
+    ],
+    "answer_excerpt": "**\ud83d\udcca NIFTY MIDCAP 150 Index Analysis**  ### Current Snapshot - **Latest Close**: 22,804.95 - **Change**: +1.1% from previous close, indicating a positive trend - **Day Range**: 22,615.70 - 22,836.90 - **52-Week Range**: 19,165.10 - 22,836.90 (currently at a 52-week high)  ### 10-Day Trend Analysis - "
+  },
+  {
+    "id": "A30",
+    "bucket": "A_index_routing",
+    "query": "lets analyze NIFTY MIDCAP 50",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 50.11767292022705,
+    "trail": [
+      "get_index_snapshot"
+    ],
+    "answer_excerpt": "**\ud83d\udcca Nifty Midcap 50 Overview**   - **Current Level:** 17,617.55   - **Day's Range:** Opened at 17,470.75, high of 17,644.10, low of 17,420.55   - **Change:** Up by 1.41% on the last trading day   - **52-Week Range:** High of 17,644.10 (reached recently), low of 14,783.90    **\ud83d\udcc8 10-Day Trend Analysis"
+  },
+  {
+    "id": "B01",
+    "bucket": "B_resolver_traps",
+    "query": "can you analyze Premier Energies",
+    "setup": [],
+    "passed": false,
+    "failures": [
+      "answer missing 'PREMIERENE'"
+    ],
+    "duration_s": 1.1317520141601562,
+    "trail": [
+      "resolve_symbol",
+      "get_symbol_snapshot",
+      "get_technical_setup",
+      "get_sector_context",
+      "scrape_screener_in",
+      "search_nse_announcements"
+    ],
+    "answer_excerpt": "\u2501\u2501\u2501 PREMIER EXPLOSIVES LTD (PREMEXPLN) \u2014 Market Brief \u2501\u2501\u2501 Data: EOD snapshot 2026-05-15  \u25b6 SNAPSHOT   Price:  \u20b9523.30  (-3.82%)   Stage:  UNKNOWN  (score: 0.00)   Signal: SELL   RS:     +2%   Sector: Other   MCap:   MID_CAP   Note:   PREMEXPLN (UNKNOWN) shows weak momentum with Technical Score 19, R"
+  },
+  {
+    "id": "B02",
+    "bucket": "B_resolver_traps",
+    "query": "can you analyze Hindustan Lever",
+    "setup": [],
+    "passed": false,
+    "failures": [
+      "answer missing 'HINDUNILVR'"
+    ],
+    "duration_s": 0.8443679809570312,
+    "trail": [
+      "resolve_symbol",
+      "get_symbol_snapshot",
+      "get_technical_setup",
+      "get_sector_context",
+      "scrape_screener_in",
+      "search_nse_announcements"
+    ],
+    "answer_excerpt": "\u2501\u2501\u2501 FLAIR WRITING INDUST LTD (FLAIR) \u2014 Market Brief \u2501\u2501\u2501 Data: EOD snapshot 2026-05-15  \u25b6 SNAPSHOT   Price:  \u20b9334.00  (+2.33%)   Stage:  UNKNOWN  (score: 0.00)   Signal: SELL   RS:     -108%   Sector: Other   MCap:   SMALL_CAP   Note:   FLAIR (UNKNOWN) shows weak momentum with Technical Score 33, RSI"
+  },
+  {
+    "id": "B03",
+    "bucket": "B_resolver_traps",
+    "query": "can you analyze Hindustan Unilever",
+    "setup": [],
+    "passed": false,
+    "failures": [
+      "answer missing 'HINDUNILVR'"
+    ],
+    "duration_s": 0.3406257629394531,
+    "trail": [
+      "resolve_symbol",
+      "get_symbol_snapshot",
+      "get_technical_setup",
+      "get_sector_context",
+      "scrape_screener_in",
+      "search_nse_announcements"
+    ],
+    "answer_excerpt": "\u2501\u2501\u2501 FLAIR WRITING INDUST LTD (FLAIR) \u2014 Market Brief \u2501\u2501\u2501 Data: EOD snapshot 2026-05-15  \u25b6 SNAPSHOT   Price:  \u20b9334.00  (+2.33%)   Stage:  UNKNOWN  (score: 0.00)   Signal: SELL   RS:     -108%   Sector: Other   MCap:   SMALL_CAP   Note:   FLAIR (UNKNOWN) shows weak momentum with Technical Score 33, RSI"
+  },
+  {
+    "id": "B04",
+    "bucket": "B_resolver_traps",
+    "query": "can you analyze Bharat Forge",
+    "setup": [],
+    "passed": false,
+    "failures": [
+      "answer missing 'BHARATFORG'"
+    ],
+    "duration_s": 12.00222897529602,
+    "trail": [
+      "resolve_symbol",
+      "get_symbol_snapshot",
+      "get_technical_setup",
+      "get_sector_context",
+      "scrape_screener_in",
+      "search_nse_announcements"
+    ],
+    "answer_excerpt": "\u2501\u2501\u2501 CAN (CAN) \u2014 Market Brief \u2501\u2501\u2501 Data: EOD snapshot 2026-05-15   \u25b6 MISSING EVIDENCE   Missing evidence: resolve_symbol, get_symbol_snapshot, get_technical_setup, get_sector_context, scrape_screener_in   No unsupported technical, fundamental, catalyst, or sector conclusion was inferred from missing d"
+  },
+  {
+    "id": "B05",
+    "bucket": "B_resolver_traps",
+    "query": "can you analyze Bharat Petroleum",
+    "setup": [],
+    "passed": false,
+    "failures": [
+      "answer missing 'BPCL'"
+    ],
+    "duration_s": 2.9842700958251953,
+    "trail": [
+      "resolve_symbol",
+      "get_symbol_snapshot",
+      "get_technical_setup",
+      "get_sector_context",
+      "scrape_screener_in",
+      "search_nse_announcements"
+    ],
+    "answer_excerpt": "\u2501\u2501\u2501 CAN (CAN) \u2014 Market Brief \u2501\u2501\u2501 Data: EOD snapshot 2026-05-15   \u25b6 MISSING EVIDENCE   Missing evidence: resolve_symbol, get_symbol_snapshot, get_technical_setup, get_sector_context, scrape_screener_in   No unsupported technical, fundamental, catalyst, or sector conclusion was inferred from missing d"
+  },
+  {
+    "id": "B06",
+    "bucket": "B_resolver_traps",
+    "query": "can you analyze Larsen and Toubro",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.4279499053955078,
+    "trail": [
+      "resolve_symbol",
+      "get_symbol_snapshot",
+      "get_technical_setup",
+      "get_sector_context",
+      "scrape_screener_in",
+      "search_nse_announcements"
+    ],
+    "answer_excerpt": "\u2501\u2501\u2501 LARSEN & TOUBRO LTD. (LT) \u2014 Market Brief \u2501\u2501\u2501 Data: EOD snapshot 2026-05-15  \u25b6 SNAPSHOT   Price:  \u20b93,909.00  (-0.80%)   Stage:  UNKNOWN  (score: 0.00)   Signal: SELL   RS:     -9%   Sector: Infrastructure   MCap:   LARGE_CAP   Note:   LT (UNKNOWN) shows weak momentum with Technical Score 16, RSI "
+  },
+  {
+    "id": "B07",
+    "bucket": "B_resolver_traps",
+    "query": "can you analyze Tata Investment Corporation",
+    "setup": [],
+    "passed": false,
+    "failures": [
+      "answer missing 'TATAINVEST'"
+    ],
+    "duration_s": 0.5139269828796387,
+    "trail": [
+      "resolve_symbol",
+      "get_symbol_snapshot",
+      "get_technical_setup",
+      "get_sector_context",
+      "scrape_screener_in",
+      "search_nse_announcements"
+    ],
+    "answer_excerpt": "\u2501\u2501\u2501 Tata Steel Limited (TATASTEEL) \u2014 Market Brief \u2501\u2501\u2501 Data: EOD snapshot 2026-05-15  \u25b6 SNAPSHOT   Price:  \u20b9216.84  (-1.94%)   Stage:  UNKNOWN  (score: 0.00)   Signal: WEAK_HOLD   RS:     -52%   Sector: Metals & Mining   MCap:   SMALL_CAP   Note:   TATASTEEL (UNKNOWN) shows mixed momentum with Techni"
+  },
+  {
+    "id": "B08",
+    "bucket": "B_resolver_traps",
+    "query": "can you analyze Tata Consultancy Services",
+    "setup": [],
+    "passed": false,
+    "failures": [
+      "answer missing 'TCS'"
+    ],
+    "duration_s": 0.3681831359863281,
+    "trail": [
+      "resolve_symbol",
+      "get_symbol_snapshot",
+      "get_technical_setup",
+      "get_sector_context",
+      "scrape_screener_in",
+      "search_nse_announcements"
+    ],
+    "answer_excerpt": "\u2501\u2501\u2501 Tata Steel Limited (TATASTEEL) \u2014 Market Brief \u2501\u2501\u2501 Data: EOD snapshot 2026-05-15  \u25b6 SNAPSHOT   Price:  \u20b9216.84  (-1.94%)   Stage:  UNKNOWN  (score: 0.00)   Signal: WEAK_HOLD   RS:     -52%   Sector: Metals & Mining   MCap:   SMALL_CAP   Note:   TATASTEEL (UNKNOWN) shows mixed momentum with Techni"
+  },
+  {
+    "id": "B09",
+    "bucket": "B_resolver_traps",
+    "query": "can you analyze Adani Enterprises",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.4288318157196045,
+    "trail": [
+      "resolve_symbol",
+      "get_symbol_snapshot",
+      "get_technical_setup",
+      "get_sector_context",
+      "scrape_screener_in",
+      "search_nse_announcements"
+    ],
+    "answer_excerpt": "\u2501\u2501\u2501 Adani Enterprises Limited (ADANIENT) \u2014 Market Brief \u2501\u2501\u2501 Data: EOD snapshot 2026-05-15  \u25b6 SNAPSHOT   Price:  \u20b92,716.00  (+0.11%)   Stage:  UNKNOWN  (score: 0.00)   Signal: WEAK_HOLD   RS:     +20%   Sector: Other   MCap:   LARGE_CAP   Note:   ADANIENT (UNKNOWN) shows weak momentum with Technical "
+  },
+  {
+    "id": "B10",
+    "bucket": "B_resolver_traps",
+    "query": "can you analyze Adani Ports",
+    "setup": [],
+    "passed": false,
+    "failures": [
+      "answer missing 'ADANIPORTS'"
+    ],
+    "duration_s": 0.33672666549682617,
+    "trail": [
+      "resolve_symbol",
+      "get_symbol_snapshot",
+      "get_technical_setup",
+      "get_sector_context",
+      "scrape_screener_in",
+      "search_nse_announcements"
+    ],
+    "answer_excerpt": "\u2501\u2501\u2501 Adani Enterprises Limited (ADANIENT) \u2014 Market Brief \u2501\u2501\u2501 Data: EOD snapshot 2026-05-15  \u25b6 SNAPSHOT   Price:  \u20b92,716.00  (+0.11%)   Stage:  UNKNOWN  (score: 0.00)   Signal: WEAK_HOLD   RS:     +20%   Sector: Other   MCap:   LARGE_CAP   Note:   ADANIENT (UNKNOWN) shows weak momentum with Technical "
+  },
+  {
+    "id": "B11",
+    "bucket": "B_resolver_traps",
+    "query": "can you analyze Power Grid",
+    "setup": [],
+    "passed": false,
+    "failures": [
+      "answer missing 'POWERGRID'"
+    ],
+    "duration_s": 2.9162538051605225,
+    "trail": [
+      "resolve_symbol",
+      "get_symbol_snapshot",
+      "get_technical_setup",
+      "get_sector_context",
+      "scrape_screener_in",
+      "search_nse_announcements"
+    ],
+    "answer_excerpt": "\u2501\u2501\u2501 CAN (CAN) \u2014 Market Brief \u2501\u2501\u2501 Data: EOD snapshot 2026-05-15   \u25b6 MISSING EVIDENCE   Missing evidence: resolve_symbol, get_symbol_snapshot, get_technical_setup, get_sector_context, scrape_screener_in   No unsupported technical, fundamental, catalyst, or sector conclusion was inferred from missing d"
+  },
+  {
+    "id": "B12",
+    "bucket": "B_resolver_traps",
+    "query": "can you analyze HDFC Bank",
+    "setup": [],
+    "passed": false,
+    "failures": [
+      "answer missing 'HDFCBANK'"
+    ],
+    "duration_s": 0.9877331256866455,
+    "trail": [
+      "resolve_symbol",
+      "get_symbol_snapshot",
+      "get_technical_setup",
+      "get_sector_context",
+      "scrape_screener_in",
+      "search_nse_announcements"
+    ],
+    "answer_excerpt": "\u2501\u2501\u2501 HDFC GOLD ETF (HDFCGOLD) \u2014 Market Brief \u2501\u2501\u2501 Data: EOD snapshot 2026-05-15  \u25b6 SNAPSHOT   Price:  \u20b9133.79  (-1.68%)   Stage:  UNKNOWN  (score: 0.00)   Signal: SELL   RS:     -24%   Sector: Other   MCap:   MICRO_CAP   Note:   HDFCGOLD (UNKNOWN) shows weak momentum with Technical Score 22, RSI 64 (b"
+  },
+  {
+    "id": "B13",
+    "bucket": "B_resolver_traps",
+    "query": "can you analyze ICICI Bank",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.3835937976837158,
+    "trail": [
+      "resolve_symbol",
+      "get_symbol_snapshot",
+      "get_technical_setup",
+      "get_sector_context",
+      "scrape_screener_in",
+      "search_nse_announcements"
+    ],
+    "answer_excerpt": "\u2501\u2501\u2501 ICICI Bank Limited (ICICIBANK) \u2014 Market Brief \u2501\u2501\u2501 Data: EOD snapshot 2026-05-15  \u25b6 SNAPSHOT   Price:  \u20b91,244.50  (-0.12%)   Stage:  UNKNOWN  (score: 0.00)   Signal: SELL   RS:     -11%   Sector: Banking - Private   MCap:   LARGE_CAP   Note:   ICICIBANK (UNKNOWN) shows weak momentum with Technica"
+  },
+  {
+    "id": "B14",
+    "bucket": "B_resolver_traps",
+    "query": "can you analyze Mahindra and Mahindra",
+    "setup": [],
+    "passed": false,
+    "failures": [
+      "answer missing 'M&M'"
+    ],
+    "duration_s": 0.4108569622039795,
+    "trail": [
+      "resolve_symbol",
+      "get_symbol_snapshot",
+      "get_technical_setup",
+      "get_sector_context",
+      "scrape_screener_in",
+      "search_nse_announcements"
+    ],
+    "answer_excerpt": "\u2501\u2501\u2501 MAHINDRA LOGISTIC LIMITED (MAHLOG) \u2014 Market Brief \u2501\u2501\u2501 Data: EOD snapshot 2026-05-15  \u25b6 SNAPSHOT   Price:  \u20b9361.05  (-1.45%)   Stage:  UNKNOWN  (score: 0.00)   Signal: SELL   RS:     -17%   Sector: Logistics & Transport   MCap:   SMALL_CAP   Note:   MAHLOG (UNKNOWN) shows weak momentum with Techn"
+  },
+  {
+    "id": "B15",
+    "bucket": "B_resolver_traps",
+    "query": "can you analyze Reliance Industries",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.3496849536895752,
+    "trail": [
+      "resolve_symbol",
+      "get_symbol_snapshot",
+      "get_technical_setup",
+      "get_sector_context",
+      "scrape_screener_in",
+      "search_nse_announcements"
+    ],
+    "answer_excerpt": "\u2501\u2501\u2501 Reliance Industries Limited (RELIANCE) \u2014 Market Brief \u2501\u2501\u2501 Data: EOD snapshot 2026-05-15  \u25b6 SNAPSHOT   Price:  \u20b91,336.40  (-1.87%)   Stage:  UNKNOWN  (score: 0.00)   Signal: SELL   RS:     -4%   Sector: Energy - Oil & Gas   MCap:   LARGE_CAP   Note:   RELIANCE (UNKNOWN) shows weak momentum with T"
+  },
+  {
+    "id": "B16",
+    "bucket": "B_resolver_traps",
+    "query": "can you analyze State Bank of India",
+    "setup": [],
+    "passed": false,
+    "failures": [
+      "answer missing 'SBIN'"
+    ],
+    "duration_s": 3.2398619651794434,
+    "trail": [
+      "resolve_symbol",
+      "get_symbol_snapshot",
+      "get_technical_setup",
+      "get_sector_context",
+      "scrape_screener_in",
+      "search_nse_announcements"
+    ],
+    "answer_excerpt": "\u2501\u2501\u2501 INDIA (INDIA) \u2014 Market Brief \u2501\u2501\u2501 Data: EOD snapshot 2026-05-15   \u25b6 MISSING EVIDENCE   Missing evidence: resolve_symbol, get_symbol_snapshot, get_technical_setup, get_sector_context, scrape_screener_in   No unsupported technical, fundamental, catalyst, or sector conclusion was inferred from missi"
+  },
+  {
+    "id": "B17",
+    "bucket": "B_resolver_traps",
+    "query": "can you analyze Asian Paints",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.4504067897796631,
+    "trail": [
+      "resolve_symbol",
+      "get_symbol_snapshot",
+      "get_technical_setup",
+      "get_sector_context",
+      "scrape_screener_in",
+      "search_nse_announcements"
+    ],
+    "answer_excerpt": "\u2501\u2501\u2501 ASIAN PAINTS LIMITED (ASIANPAINT) \u2014 Market Brief \u2501\u2501\u2501 Data: EOD snapshot 2026-05-15  \u25b6 SNAPSHOT   Price:  \u20b92,605.60  (-0.63%)   Stage:  UNKNOWN  (score: 0.00)   Signal: WEAK_HOLD   RS:     +3%   Sector: Other   MCap:   LARGE_CAP   Note:   ASIANPAINT (UNKNOWN) shows mixed momentum with Technical S"
+  },
+  {
+    "id": "B18",
+    "bucket": "B_resolver_traps",
+    "query": "can you analyze Bajaj Finance",
+    "setup": [],
+    "passed": false,
+    "failures": [
+      "answer missing 'BAJFINANCE'"
+    ],
+    "duration_s": 0.33036208152770996,
+    "trail": [
+      "resolve_symbol",
+      "get_symbol_snapshot",
+      "get_technical_setup",
+      "get_sector_context",
+      "scrape_screener_in",
+      "search_nse_announcements"
+    ],
+    "answer_excerpt": "\u2501\u2501\u2501 BAJAJ HEALTHCARE LIMITED (BAJAJHCARE) \u2014 Market Brief \u2501\u2501\u2501 Data: EOD snapshot 2026-05-15  \u25b6 SNAPSHOT   Price:  \u20b9284.15  (-3.24%)   Stage:  UNKNOWN  (score: 0.00)   Signal: SELL   RS:     -23%   Sector: Other   MCap:   SMALL_CAP   Note:   BAJAJHCARE (UNKNOWN) shows weak momentum with Technical Scor"
+  },
+  {
+    "id": "B19",
+    "bucket": "B_resolver_traps",
+    "query": "can you analyze Sun Pharma",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 14.242485046386719,
+    "trail": [
+      "get_sector_context",
+      "get_top_gainers_losers",
+      "get_top_gainers_losers",
+      "get_top_gainers_losers",
+      "get_top_gainers_losers",
+      "get_top_gainers_losers"
+    ],
+    "answer_excerpt": "**\ud83d\udcca Live Quote for Sun Pharma**  - **Current Price:** \u20b91899.5 - **Day Change:** +\u20b921.3 (+1.13%) - **Volume:** 1,925,321 shares - **Day's Range:** \u20b91865 \u2013 \u20b91901 - **52-week High/Low:** \u20b91901/\u20b91548  Sun Pharma is among the gainers in both the NIFTY 50 and NIFTY PHARMA indices, showing a positive movem"
+  },
+  {
+    "id": "B20",
+    "bucket": "B_resolver_traps",
+    "query": "can you analyze Maruti Suzuki",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.40889906883239746,
+    "trail": [
+      "resolve_symbol",
+      "get_symbol_snapshot",
+      "get_technical_setup",
+      "get_sector_context",
+      "scrape_screener_in",
+      "search_nse_announcements"
+    ],
+    "answer_excerpt": "\u2501\u2501\u2501 Maruti Suzuki India Limited (MARUTI) \u2014 Market Brief \u2501\u2501\u2501 Data: EOD snapshot 2026-05-15  \u25b6 SNAPSHOT   Price:  \u20b913,221.00  (+1.12%)   Stage:  UNKNOWN  (score: 0.00)   Signal: SELL   RS:     -4%   Sector: EV & Auto Ancillaries   MCap:   LARGE_CAP   Note:   MARUTI (UNKNOWN) shows weak momentum with T"
+  },
+  {
+    "id": "F01",
+    "bucket": "F_report_followups",
+    "query": "summarize its recommendation",
+    "setup": [
+      "/analyze RELIANCE"
+    ],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.05023980140686035,
+    "trail": [],
+    "answer_excerpt": "\u25b6 SITUATION ASSESSMENT   User is asking:   Summarize the prior analysis of RELIANCE.   Context found:    entity topic command for RELIANCE. Tools: resolve_symbol, get_symbol_snapshot, get_technical_setup, get_sector_context.   Source assessment:  Source: EOD CSV + DB snapshot. Freshness: 2026-05-15."
+  },
+  {
+    "id": "F02",
+    "bucket": "F_report_followups",
+    "query": "what does the report say",
+    "setup": [
+      "/analyze TCS"
+    ],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.05434393882751465,
+    "trail": [],
+    "answer_excerpt": "\u25b6 SITUATION ASSESSMENT   User is asking:   The user is asking a report-based follow-up.   Context found:    entity topic command for TCS. Tools: resolve_symbol, get_symbol_snapshot, get_technical_setup, get_sector_context.   Source assessment:  Source: EOD CSV + DB snapshot. Freshness: 2026-05-15. e"
+  },
+  {
+    "id": "F03",
+    "bucket": "F_report_followups",
+    "query": "summarise the report",
+    "setup": [
+      "/analyze INFY"
+    ],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.04809403419494629,
+    "trail": [],
+    "answer_excerpt": "\u25b6 SITUATION ASSESSMENT   User is asking:   The user is asking a report-based follow-up.   Context found:    entity topic command for INFY. Tools: resolve_symbol, get_symbol_snapshot, get_technical_setup, get_sector_context.   Source assessment:  Source: EOD CSV + DB snapshot. Freshness: 2026-05-15. "
+  },
+  {
+    "id": "F04",
+    "bucket": "F_report_followups",
+    "query": "give me a recap",
+    "setup": [
+      "/analyze HDFCBANK"
+    ],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.04879403114318848,
+    "trail": [],
+    "answer_excerpt": "\u25b6 SITUATION ASSESSMENT   User is asking:   Summarize the prior analysis of HDFCBANK.   Context found:    entity topic command for HDFCBANK. Tools: resolve_symbol, get_symbol_snapshot, get_technical_setup, get_sector_context.   Source assessment:  Source: EOD CSV + DB snapshot. Freshness: 2026-05-15."
+  },
+  {
+    "id": "F05",
+    "bucket": "F_report_followups",
+    "query": "tldr",
+    "setup": [
+      "/analyze SBIN"
+    ],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.046404123306274414,
+    "trail": [],
+    "answer_excerpt": "\u25b6 SITUATION ASSESSMENT   User is asking:   Summarize the prior analysis of SBIN.   Context found:    entity topic command for SBIN. Tools: resolve_symbol, get_symbol_snapshot, get_technical_setup, get_sector_context.   Source assessment:  Source: EOD CSV + DB snapshot. Freshness: 2026-05-15. entity "
+  },
+  {
+    "id": "F06",
+    "bucket": "F_report_followups",
+    "query": "summary please",
+    "setup": [
+      "/analyze TATAMOTORS"
+    ],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.05521082878112793,
+    "trail": [],
+    "answer_excerpt": "\u25b6 SITUATION ASSESSMENT   User is asking:   Summarize the prior analysis of TATAMOTORS.   Context found:    entity topic command for TATAMOTORS. Tools: resolve_symbol, get_symbol_snapshot, get_technical_setup, get_sector_context.   Source assessment:  Source: EOD CSV + DB snapshot. Freshness: 2025-10"
+  },
+  {
+    "id": "F07",
+    "bucket": "F_report_followups",
+    "query": "tl;dr",
+    "setup": [
+      "/analyze ITC"
+    ],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.04688405990600586,
+    "trail": [],
+    "answer_excerpt": "\u25b6 SITUATION ASSESSMENT   User is asking:   Summarize the prior analysis of ITC.   Context found:    entity topic command for ITC. Tools: resolve_symbol, get_symbol_snapshot, get_technical_setup, get_sector_context.   Source assessment:  Source: EOD CSV + DB snapshot. Freshness: 2026-05-15. entity to"
+  },
+  {
+    "id": "F08",
+    "bucket": "F_report_followups",
+    "query": "its recommendation",
+    "setup": [
+      "/analyze BHARTIARTL"
+    ],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.048809051513671875,
+    "trail": [],
+    "answer_excerpt": "\u25b6 SITUATION ASSESSMENT   User is asking:   Summarize the prior analysis of BHARTIARTL.   Context found:    entity topic command for BHARTIARTL. Tools: resolve_symbol, get_symbol_snapshot, get_technical_setup, get_sector_context.   Source assessment:  Source: EOD CSV + DB snapshot. Freshness: 2026-05"
+  },
+  {
+    "id": "F09",
+    "bucket": "F_report_followups",
+    "query": "what is the conclusion",
+    "setup": [
+      "/analyze ASIANPAINT"
+    ],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.04691290855407715,
+    "trail": [],
+    "answer_excerpt": "\u25b6 SITUATION ASSESSMENT   User is asking:   Summarize the prior analysis of ASIANPAINT.   Context found:    entity topic command for ASIANPAINT. Tools: resolve_symbol, get_symbol_snapshot, get_technical_setup, get_sector_context.   Source assessment:  Source: EOD CSV + DB snapshot. Freshness: 2026-05"
+  },
+  {
+    "id": "F10",
+    "bucket": "F_report_followups",
+    "query": "show me the report",
+    "setup": [
+      "/analyze LT"
+    ],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.04876303672790527,
+    "trail": [],
+    "answer_excerpt": "\u25b6 SITUATION ASSESSMENT   User is asking:   The user is asking a report-based follow-up.   Context found:    entity topic command for LT. Tools: resolve_symbol, get_symbol_snapshot, get_technical_setup, get_sector_context.   Source assessment:  Source: EOD CSV + DB snapshot. Freshness: 2026-05-15. en"
+  },
+  {
+    "id": "F11",
+    "bucket": "F_report_followups",
+    "query": "open the report",
+    "setup": [
+      "/analyze AXISBANK"
+    ],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.04828786849975586,
+    "trail": [],
+    "answer_excerpt": "\u25b6 SITUATION ASSESSMENT   User is asking:   The user is asking a report-based follow-up.   Context found:    entity topic command for AXISBANK. Tools: resolve_symbol, get_symbol_snapshot, get_technical_setup, get_sector_context.   Source assessment:  Source: EOD CSV + DB snapshot. Freshness: 2026-05-"
+  },
+  {
+    "id": "F12",
+    "bucket": "F_report_followups",
+    "query": "summarize the report",
+    "setup": [
+      "/analyze MARUTI"
+    ],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.048047780990600586,
+    "trail": [],
+    "answer_excerpt": "\u25b6 SITUATION ASSESSMENT   User is asking:   The user is asking a report-based follow-up.   Context found:    entity topic command for MARUTI. Tools: resolve_symbol, get_symbol_snapshot, get_technical_setup, get_sector_context.   Source assessment:  Source: EOD CSV + DB snapshot. Freshness: 2026-05-15"
+  },
+  {
+    "id": "F13",
+    "bucket": "F_report_followups",
+    "query": "what does it say",
+    "setup": [
+      "/analyze M&M"
+    ],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.443831205368042,
+    "trail": [
+      "resolve_symbol",
+      "get_symbol_snapshot",
+      "get_technical_setup",
+      "get_sector_context",
+      "scrape_screener_in",
+      "search_nse_announcements"
+    ],
+    "answer_excerpt": "\u2501\u2501\u2501 Mahindra & Mahindra Limited (M&M) \u2014 Market Brief \u2501\u2501\u2501 Data: EOD snapshot 2026-05-15  \u25b6 SNAPSHOT   Price:  \u20b93,123.10  (-1.60%)   Stage:  UNKNOWN  (score: 0.00)   Signal: SELL   RS:     -7%   Sector: EV & Auto Ancillaries   MCap:   LARGE_CAP   Note:   M&M (UNKNOWN) shows weak momentum with Technica"
+  },
+  {
+    "id": "F14",
+    "bucket": "F_report_followups",
+    "query": "the recommendation",
+    "setup": [
+      "/analyze WIPRO"
+    ],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.04666876792907715,
+    "trail": [],
+    "answer_excerpt": "\u25b6 SITUATION ASSESSMENT   User is asking:   Summarize the prior analysis of WIPRO.   Context found:    entity topic command for WIPRO. Tools: resolve_symbol, get_symbol_snapshot, get_technical_setup, get_sector_context.   Source assessment:  Source: EOD CSV + DB snapshot. Freshness: 2026-05-15. entit"
+  },
+  {
+    "id": "F15",
+    "bucket": "F_report_followups",
+    "query": "give me the conclusion",
+    "setup": [
+      "/analyze TITAN"
+    ],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.04928112030029297,
+    "trail": [],
+    "answer_excerpt": "\u25b6 SITUATION ASSESSMENT   User is asking:   Summarize the prior analysis of TITAN.   Context found:    entity topic command for TITAN. Tools: resolve_symbol, get_symbol_snapshot, get_technical_setup, get_sector_context.   Source assessment:  Source: EOD CSV + DB snapshot. Freshness: 2026-05-15. entit"
+  },
+  {
+    "id": "F16",
+    "bucket": "F_report_followups",
+    "query": "summary",
+    "setup": [
+      "/analyze SUNPHARMA"
+    ],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.050569772720336914,
+    "trail": [],
+    "answer_excerpt": "\u25b6 SITUATION ASSESSMENT   User is asking:   Summarize the prior analysis of SUNPHARMA.   Context found:    entity topic command for SUNPHARMA. Tools: resolve_symbol, get_symbol_snapshot, get_technical_setup, get_sector_context.   Source assessment:  Source: EOD CSV + DB snapshot. Freshness: 2026-05-1"
+  },
+  {
+    "id": "F17",
+    "bucket": "F_report_followups",
+    "query": "recap please",
+    "setup": [
+      "/analyze NTPC"
+    ],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.04937005043029785,
+    "trail": [],
+    "answer_excerpt": "\u25b6 SITUATION ASSESSMENT   User is asking:   Summarize the prior analysis of NTPC.   Context found:    entity topic command for NTPC. Tools: resolve_symbol, get_symbol_snapshot, get_technical_setup, get_sector_context.   Source assessment:  Source: EOD CSV + DB snapshot. Freshness: 2026-05-15. entity "
+  },
+  {
+    "id": "F18",
+    "bucket": "F_report_followups",
+    "query": "summarise",
+    "setup": [
+      "/analyze POWERGRID"
+    ],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.049089908599853516,
+    "trail": [],
+    "answer_excerpt": "\u25b6 SITUATION ASSESSMENT   User is asking:   Summarize the prior analysis of POWERGRID.   Context found:    entity topic command for POWERGRID. Tools: resolve_symbol, get_symbol_snapshot, get_technical_setup, get_sector_context.   Source assessment:  Source: EOD CSV + DB snapshot. Freshness: 2026-05-1"
+  },
+  {
+    "id": "F19",
+    "bucket": "F_report_followups",
+    "query": "summary of report",
+    "setup": [
+      "/analyze ULTRACEMCO"
+    ],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.04997992515563965,
+    "trail": [],
+    "answer_excerpt": "\u25b6 SITUATION ASSESSMENT   User is asking:   Summarize the prior analysis of ULTRACEMCO.   Context found:    entity topic command for ULTRACEMCO. Tools: resolve_symbol, get_symbol_snapshot, get_technical_setup, get_sector_context.   Source assessment:  Source: EOD CSV + DB snapshot. Freshness: 2026-05"
+  },
+  {
+    "id": "F20",
+    "bucket": "F_report_followups",
+    "query": "summarise it",
+    "setup": [
+      "/analyze ADANIENT"
+    ],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.0494379997253418,
+    "trail": [],
+    "answer_excerpt": "\u25b6 SITUATION ASSESSMENT   User is asking:   Summarize the prior analysis of ADANIENT.   Context found:    entity topic command for ADANIENT. Tools: resolve_symbol, get_symbol_snapshot, get_technical_setup, get_sector_context.   Source assessment:  Source: EOD CSV + DB snapshot. Freshness: 2026-05-15."
+  }
+]

@@ -1,6 +1,7 @@
 import sqlite3
 import tempfile
 import unittest
+import json
 from pathlib import Path
 
 from terminal import reports
@@ -10,6 +11,7 @@ def test_report_recommendation_is_recognized_as_preset_type():
     import nse_agent
 
     assert "recommendation" in nse_agent._REPORT_PRESET_TYPES_FOR_TEST
+    assert "strategy-lab" in nse_agent._REPORT_PRESET_TYPES_FOR_TEST
 
 
 def test_recommendation_report_command_forwards_args_and_options(monkeypatch):
@@ -299,6 +301,68 @@ class TerminalReportsTests(unittest.TestCase):
         self.assertNotIn("| **AVL** | Aditya Vision | Other | ₹543.75 | 62.2 | +14.3% | 60.6 | BUY | ✅ | 2026-05-08 |", content)
         self.assertIn("| **ABB** | ABB India | STAGE_1 | ₹5000.0 | -0.8% | 2026-05-11 |", content)
         self.assertNotIn("| **ABB** | ABB India | STAGE_1 | ₹5000.0 | -1.0% | 2026-05-08 |", content)
+
+    def test_strategy_lab_report_builds_from_portfolio_summary_and_copies_latest(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            summary_dir = root / "portfolio" / "data" / "nse_pg_strategy_lab" / "latest" / "reports"
+            summary_dir.mkdir(parents=True)
+            (summary_dir / "strategy_comparison_summary.json").write_text(
+                json.dumps(
+                    {
+                        "run_id": "TEST-LAB",
+                        "source": "PostgreSQL market.equity_eod + scores.stage_snapshots",
+                        "latest_eod_date": "2026-05-29",
+                        "row_count": 100,
+                        "symbol_count": 10,
+                        "start_date": "2025-01-01",
+                        "end_date": "2026-05-29",
+                        "initial_capital": 1000000,
+                        "slippage_bps": 5,
+                        "brokerage_bps": 3,
+                        "benchmark_id": "Nifty 500",
+                        "stage_counts": {"STAGE_2": 20, "STAGE_3": 80},
+                        "data_path": "features.csv",
+                        "benchmark_path": "benchmark.csv",
+                        "output_dir": "portfolio/data/nse_pg_strategy_lab/latest",
+                        "leaderboard": [
+                            {
+                                "rank": 1,
+                                "strategy_id": "vcp_breakout_v1",
+                                "total_return_pct": 40.4247,
+                                "max_drawdown_pct": 19.6632,
+                                "excess_return_pct": 39.6454,
+                                "profit_factor": 1.322151,
+                                "expectancy": 742.38,
+                                "turnover_pct": 3834.0,
+                                "cost_drag_pct": 3.067,
+                                "fills": 474,
+                                "win_rate_pct": 23.9362,
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            original_root = reports.ROOT
+            original_reports_dir = reports.REPORTS_DIR
+            try:
+                reports.ROOT = root
+                reports.REPORTS_DIR = root / "reports" / "generated"
+                result = reports.generate_preset_report("strategy-lab", "html")
+            finally:
+                reports.ROOT = original_root
+                reports.REPORTS_DIR = original_reports_dir
+
+            html = Path(result["path"]).read_text(encoding="utf-8")
+
+        self.assertTrue(result["success"])
+        self.assertEqual(result["report_type"], "strategy-lab")
+        self.assertIn("portfolio_strategy_lab.html", result["latest_path"])
+        self.assertIn("Portfolio Strategy Lab", html)
+        self.assertIn("vcp_breakout_v1", html)
+        self.assertIn("Cost and Turnover Diagnostics", html)
 
 
 if __name__ == "__main__":

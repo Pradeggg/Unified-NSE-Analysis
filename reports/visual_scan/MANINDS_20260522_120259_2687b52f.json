@@ -1,0 +1,322 @@
+{
+  "run_id": "2687b52f-c342-4659-bfd6-bd09c7aac048",
+  "symbol": "MANINDS",
+  "as_of": "2026-05-21",
+  "verdict": {
+    "stance": "Watchlist / base building",
+    "score": 64.9,
+    "confidence": "medium",
+    "trigger": "Daily close above pivot with volume greater than 1.5x the 20D average.",
+    "invalidation": "Close below the detected support or handle low.",
+    "targets": [
+      "Target 1 uses the measured move from the detected base.",
+      "Target 2 trails after breakout confirmation."
+    ],
+    "summary": "MANINDS visual scan stance: Watchlist / base building.",
+    "caveats": []
+  },
+  "patterns": [
+    {
+      "pattern": "Trend Structure",
+      "status": "confirmed",
+      "confidence": 1.0,
+      "evidence": [
+        "Price is above SMA20.",
+        "Price is above SMA50.",
+        "Price is above SMA200.",
+        "Within 7.26% of 52-week high.",
+        "Short-term average is above SMA50.",
+        "SMA50 is above SMA200."
+      ],
+      "zones": {
+        "pivot": null,
+        "support": 468.16,
+        "invalidation": 420.13,
+        "target_1": null,
+        "target_2": null
+      },
+      "caveats": [],
+      "metrics": {
+        "latest_close": 562.35,
+        "sma20": 543.07,
+        "sma50": 468.16,
+        "sma200": 420.13,
+        "distance_52w_high_pct": -7.26
+      }
+    },
+    {
+      "pattern": "MTF Alignment",
+      "status": "confirmed",
+      "confidence": 0.8,
+      "evidence": [
+        "monthly: bullish (+30)",
+        "weekly: bullish (+25)",
+        "daily: bullish (+25)"
+      ],
+      "zones": {
+        "pivot": null,
+        "support": null,
+        "invalidation": null,
+        "target_1": null,
+        "target_2": null
+      },
+      "caveats": [],
+      "metrics": {
+        "symbol": "MANINDS",
+        "timeframes": [
+          "monthly",
+          "weekly",
+          "daily"
+        ],
+        "readings": {
+          "monthly": {
+            "timeframe": "monthly",
+            "status": "ok",
+            "direction": "bullish",
+            "bars": 61,
+            "close": 562.35,
+            "rsi": 61.3,
+            "macd": "bullish",
+            "ema20": 392.15,
+            "ema50": 304.78,
+            "above_ema20": true,
+            "above_ema50": true,
+            "sma_stack_bullish": true,
+            "sma_stack_bearish": false,
+            "pct_from_period_high": -7.3,
+            "pct_from_period_low": 709.1,
+            "note": ""
+          },
+          "weekly": {
+            "timeframe": "weekly",
+            "status": "ok",
+            "direction": "bullish",
+            "bars": 262,
+            "close": 562.35,
+            "rsi": 65.5,
+            "macd": "bullish",
+            "ema20": 462.01,
+            "ema50": 418.29,
+            "above_ema20": true,
+            "above_ema50": true,
+            "sma_stack_bullish": true,
+            "sma_stack_bearish": false,
+            "pct_from_period_high": -7.3,
+            "pct_from_period_low": 86.2,
+            "note": ""
+          },
+          "daily": {
+            "timeframe": "daily",
+            "status": "ok",
+            "direction": "bullish",
+            "bars": 1242,
+            "close": 562.35,
+            "rsi": 60.9,
+            "macd": "bearish",
+            "ema20": 538.26,
+            "ema50": 491.61,
+            "above_ema20": true,
+            "above_ema50": true,
+            "sma_stack_bullish": true,
+            "sma_stack_bearish": false,
+            "pct_from_period_high": -7.3,
+            "pct_from_period_low": 78.2,
+            "note": ""
+          }
+        },
+        "confluence_score": 80,
+        "direction": "bullish",
+        "verdict": "BUY",
+        "aligned_tfs": [
+          "monthly",
+          "weekly",
+          "daily"
+        ],
+        "dissonant_tfs": [],
+        "missing_tfs": [],
+        "rationale": [
+          "monthly: bullish (+30)",
+          "weekly: bullish (+25)",
+          "daily: bullish (+25)"
+        ]
+      }
+    },
+    {
+      "pattern": "VCP",
+      "status": "absent",
+      "confidence": 0.41,
+      "evidence": [
+        "Detected 1 contracting range step(s).",
+        "Range sequence: 10.39%, 8.52%, 11.9%, 12.66%."
+      ],
+      "zones": {
+        "pivot": 606.4,
+        "support": 510.05,
+        "invalidation": 499.85,
+        "target_1": 702.75,
+        "target_2": null
+      },
+      "caveats": [
+        "Contractions or volume dry-up are not strong enough."
+      ],
+      "metrics": {
+        "ranges_pct": [
+          10.39,
+          8.52,
+          11.9,
+          12.66
+        ],
+        "contractions": 1,
+        "volume_dry_up": false
+      }
+    },
+    {
+      "pattern": "Cup With Handle",
+      "status": "candidate",
+      "confidence": 0.85,
+      "evidence": [
+        "Base depth is 28.6%.",
+        "Right side recovered near prior high.",
+        "Handle drift is within a constructive range."
+      ],
+      "zones": {
+        "pivot": 592.55,
+        "support": 553.9,
+        "invalidation": 542.82,
+        "target_1": 716.95,
+        "target_2": null
+      },
+      "caveats": [],
+      "metrics": {
+        "depth_pct": 28.6,
+        "trough_index": 16,
+        "recovery": true,
+        "handle_drift": true
+      }
+    },
+    {
+      "pattern": "Breakout / Retest",
+      "status": "absent",
+      "confidence": 0.25,
+      "evidence": [
+        "Latest close is not above pivot.",
+        "Volume expanded above 1.5x 20D average.",
+        "Retest hold is not confirmed."
+      ],
+      "zones": {
+        "pivot": 606.4,
+        "support": 594.27,
+        "invalidation": 576.08,
+        "target_1": 654.91,
+        "target_2": null
+      },
+      "caveats": [],
+      "metrics": {
+        "latest_close": 562.35,
+        "volume_expanded": true,
+        "held_retest": false,
+        "failed": false
+      }
+    },
+    {
+      "pattern": "Volume Quality",
+      "status": "confirmed",
+      "confidence": 0.8,
+      "evidence": [
+        "Volume dry-up detected in the recent base.",
+        "Latest volume is 4.32x the 20D average."
+      ],
+      "zones": {
+        "pivot": null,
+        "support": null,
+        "invalidation": null,
+        "target_1": null,
+        "target_2": null
+      },
+      "caveats": [],
+      "metrics": {
+        "latest_volume_ratio_20d": 4.32,
+        "dry_up": true,
+        "expansion": true
+      }
+    }
+  ],
+  "annotations": [
+    {
+      "kind": "support",
+      "label": "Trend Structure Support",
+      "price": 468.16,
+      "start": null,
+      "end": null,
+      "color": "#38bdf8"
+    },
+    {
+      "kind": "invalidation",
+      "label": "Invalidation",
+      "price": 420.13,
+      "start": null,
+      "end": null,
+      "color": "#ef4444"
+    },
+    {
+      "kind": "pivot",
+      "label": "Cup With Handle Pivot",
+      "price": 592.55,
+      "start": null,
+      "end": null,
+      "color": "#22c55e"
+    },
+    {
+      "kind": "support",
+      "label": "Cup With Handle Support",
+      "price": 553.9,
+      "start": null,
+      "end": null,
+      "color": "#38bdf8"
+    },
+    {
+      "kind": "invalidation",
+      "label": "Invalidation",
+      "price": 542.82,
+      "start": null,
+      "end": null,
+      "color": "#ef4444"
+    },
+    {
+      "kind": "target",
+      "label": "Target 1",
+      "price": 716.95,
+      "start": null,
+      "end": null,
+      "color": "#f59e0b"
+    }
+  ],
+  "chart_paths": {
+    "daily": "reports/visual_scan/assets/MANINDS_2687b52f_daily.html",
+    "weekly": "reports/visual_scan/assets/MANINDS_2687b52f_weekly.html"
+  },
+  "tradingview": {
+    "status": "not_attempted",
+    "message": "TradingView capture disabled."
+  },
+  "source_trail": {
+    "daily": {
+      "status": "loaded",
+      "rows": 1242
+    },
+    "weekly": {
+      "status": "derived",
+      "rows": 262
+    },
+    "mtf": {
+      "status": "derived",
+      "timeframes": [
+        "monthly",
+        "weekly",
+        "daily"
+      ]
+    }
+  },
+  "missing_evidence": [],
+  "raw_metrics": {}
+}

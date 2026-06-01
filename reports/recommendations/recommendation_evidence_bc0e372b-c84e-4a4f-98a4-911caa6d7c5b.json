@@ -1,0 +1,297 @@
+{
+  "pack": {
+    "run_id": "bc0e372b-c84e-4a4f-98a4-911caa6d7c5b",
+    "as_of": "2026-05-21",
+    "generated_at": "2026-05-22T13:29:54",
+    "indices": {
+      "NIFTY 50": {
+        "subject": "NIFTY 50",
+        "scope": "index",
+        "sector": "",
+        "technical": {
+          "subject": "NIFTY 50",
+          "latest_date": "2026-05-21",
+          "latest_close": 23654.7,
+          "ret_1w": -0.15,
+          "ret_1m": -3.75,
+          "ret_3m": -7.49,
+          "ret_6m": -9.26,
+          "rs_1m": 0.0,
+          "rs_3m": 0.0,
+          "sma20": 23902.26,
+          "sma50": 23716.97,
+          "sma200": 24970.59,
+          "price_above_sma20": false,
+          "price_above_sma50": false,
+          "price_above_sma200": false,
+          "rsi14": 37.42,
+          "macd": -90.88,
+          "macd_signal": -52.76,
+          "macd_hist": -38.12,
+          "volume_ratio_20d": 0.91,
+          "high_52w": 26373.2,
+          "low_52w": 22182.55,
+          "drawdown_from_52w_high_pct": -10.31,
+          "support": 23262.55,
+          "resistance": 24515.95,
+          "trend_label": "bearish",
+          "conflicts": [],
+          "missing_evidence": []
+        },
+        "snapshot": {},
+        "fundamentals": {},
+        "portfolio": {},
+        "missing_evidence": []
+      }
+    },
+    "sectors": {
+      "Other": {
+        "stock_count": 1,
+        "stage2_count": 0,
+        "buy_signal_count": 0,
+        "avg_relative_strength": 12.67,
+        "rotation_label": "neutral",
+        "top_symbols": [
+          "DIXON"
+        ]
+      }
+    },
+    "stocks": {
+      "DIXON": {
+        "subject": "DIXON",
+        "scope": "stock",
+        "sector": "Other",
+        "technical": {
+          "subject": "DIXON",
+          "latest_date": "2026-05-21",
+          "latest_close": 11258.0,
+          "ret_1w": 1.4,
+          "ret_1m": -0.06,
+          "ret_3m": 1.68,
+          "ret_6m": -24.77,
+          "rs_1m": 3.69,
+          "rs_3m": 9.17,
+          "sma20": 11055.27,
+          "sma50": 10732.5,
+          "sma200": 13481.44,
+          "price_above_sma20": true,
+          "price_above_sma50": true,
+          "price_above_sma200": false,
+          "rsi14": 51.3,
+          "macd": 48.78,
+          "macd_signal": 53.34,
+          "macd_hist": -4.55,
+          "volume_ratio_20d": 1.0,
+          "high_52w": 18471.0,
+          "low_52w": 9600.0,
+          "drawdown_from_52w_high_pct": -39.05,
+          "support": 10100.0,
+          "resistance": 11674.0,
+          "trend_label": "neutral",
+          "conflicts": [
+            "short-term momentum weak against medium-term trend"
+          ],
+          "missing_evidence": []
+        },
+        "snapshot": {
+          "snapshot_date": "2026-05-21",
+          "symbol": "DIXON",
+          "company_name": "DIXON",
+          "sector": "Other",
+          "market_cap_cat": "LARGE_CAP",
+          "price": 11258.0,
+          "live_price": 11638.0,
+          "price_date": "2026-05-21",
+          "change_1d_pct": 2.37,
+          "change_1w_pct": 1.4,
+          "change_1m_pct": -0.08,
+          "stage": "STAGE_1",
+          "stage_score": 0.0,
+          "technical_score": 51.3,
+          "rsi": 51.3,
+          "trend_signal": "BEARISH",
+          "trading_signal": "HOLD",
+          "relative_strength": 12.67,
+          "supertrend_state": "BEARISH",
+          "supertrend_value": 11579.85,
+          "can_slim_score": 9.0,
+          "minervini_score": 16.0,
+          "fundamental_score": null,
+          "enhanced_fund_score": null,
+          "earnings_quality": null,
+          "sales_growth": null,
+          "financial_strength": null,
+          "institutional_backing": null,
+          "investment_score": 52.3,
+          "stance": "NEUTRAL",
+          "narrative": "DIXON (STAGE 1) shows mixed momentum with Technical Score 51, RSI 51 (neutral), and a HOLD signal on BEARISH. Fundamentals: Fund Score \u2014, Earnings Quality \u2014, Sales Growth \u2014. Composite Investment Score 52 \u2014 suitable for monitoring on confirmation.",
+          "fund_details": {
+            "pnl_summary": "Sales: 48,873 Cr (YoY +25.8%); NetProfit: 1,644 Cr (YoY +33.3%); EPS: 236.61",
+            "ratios_summary": "P/E: 45.6; ROCE: 42.0; ROE: 37.4; Div Yield: 0.07; Book Value: 769; Mkt Cap: 65,544",
+            "quarterly_summary": "Sales last 3Q: 14,855, 10,672, 10,511 Cr; Net Profit last 3Q: 746, 321, 298 Cr",
+            "balance_sheet_summary": null
+          },
+          "source_csv": "scores.daily_scores"
+        },
+        "fundamentals": {
+          "symbol": "DIXON",
+          "pnl_summary": "Sales: 48,873 Cr (YoY +25.8%); NetProfit: 1,644 Cr (YoY +33.3%); EPS: 236.61",
+          "quarterly_summary": "Sales last 3Q: 14,855, 10,672, 10,511 Cr; Net Profit last 3Q: 746, 321, 298 Cr",
+          "balance_sheet_summary": null,
+          "cash_flow_summary": null,
+          "investor_summary": "Promoters 28.69% | FII 18.30% | DII 28.14% | Public 24.87%",
+          "ratios_summary": "P/E: 45.6; ROCE: 42.0; ROE: 37.4; Div Yield: 0.07; Book Value: 769; Mkt Cap: 65,544",
+          "piotroski_score": null,
+          "beneish_m_score": null,
+          "altman_z_score": null,
+          "forensic_risk": null,
+          "revenue_growth_3y": null,
+          "pat_growth_3y": null,
+          "roe": null,
+          "roce": null,
+          "debt_to_equity": null,
+          "promoter_holding": null,
+          "updated_at": "2026-05-19T09:06:36.641318+05:30"
+        },
+        "portfolio": {},
+        "missing_evidence": []
+      }
+    },
+    "portfolio": {},
+    "market_regime": {
+      "label": "risk_off",
+      "constructive_count": 0,
+      "weak_count": 1,
+      "index_count": 1,
+      "trend_labels": [
+        "bearish"
+      ]
+    },
+    "source_trail": {
+      "index_history": {
+        "name": "index_history",
+        "source": "PostgreSQL market index history or CSV fallback",
+        "rows": 133405,
+        "latest": "2026-05-21",
+        "status": "primary",
+        "missing_columns": []
+      },
+      "equity_history": {
+        "name": "equity_history",
+        "source": "PostgreSQL market equity history or CSV fallback",
+        "rows": 2509765,
+        "latest": "2026-05-21",
+        "status": "primary",
+        "missing_columns": []
+      },
+      "snapshots": {
+        "name": "snapshots",
+        "source": "scores latest snapshot or CSV fallback",
+        "rows": 1222,
+        "latest": "",
+        "status": "primary",
+        "missing_columns": []
+      },
+      "fundamentals": {
+        "name": "fundamentals",
+        "source": "screener fundamentals or cache fallback",
+        "rows": 616,
+        "latest": "2026-05-22",
+        "status": "primary",
+        "missing_columns": []
+      },
+      "portfolio": {
+        "name": "portfolio",
+        "source": "portfolio holdings source",
+        "rows": 0,
+        "latest": "",
+        "status": "missing",
+        "missing_columns": []
+      },
+      "watchlist": {
+        "name": "watchlist",
+        "source": "command-provided watchlist symbols",
+        "rows": 0,
+        "latest": "",
+        "status": "missing",
+        "missing_columns": [],
+        "symbols": []
+      }
+    },
+    "missing_evidence": {
+      "portfolio": [
+        "source_missing"
+      ],
+      "watchlist": [
+        "source_missing"
+      ]
+    },
+    "filters": {
+      "symbols": [
+        "DIXON"
+      ],
+      "indices": [
+        "NIFTY 50"
+      ],
+      "sectors": []
+    }
+  },
+  "recommendations": [
+    {
+      "subject": "DIXON",
+      "scope": "stock",
+      "label": "WATCHLIST",
+      "confidence": "low",
+      "score": 59.35,
+      "why": "Signals are mixed, so keep it on the watchlist until the listed conflicts resolve.",
+      "technical_evidence": [
+        "Stage STAGE_1",
+        "Signal HOLD",
+        "Technical score 51.3",
+        "Relative strength 12.67",
+        "Trend neutral",
+        "Close 11258.0",
+        "Above SMA20 True",
+        "Above SMA50 True",
+        "Above SMA200 False",
+        "RSI14 51.3"
+      ],
+      "fundamental_evidence": [
+        "Fundamental quality quality_supportive",
+        "ROE 37.4",
+        "ROCE 42.0"
+      ],
+      "trigger": "Wait for price action to confirm above resistance or a fresh BUY/Stage 2 continuation signal.",
+      "invalidation": "Invalidate on a decisive close below support near 10100.0.",
+      "risk": "Market regime is risk-off; require smaller sizing and stronger confirmation.",
+      "missing_evidence": [],
+      "conflicts": [
+        "short-term momentum weak against medium-term trend"
+      ]
+    },
+    {
+      "subject": "NIFTY 50",
+      "scope": "index",
+      "label": "AVOID_FRESH_ENTRY",
+      "confidence": "high",
+      "score": 28.0,
+      "why": "Risk controls block fresh entry because the setup has weak trend, signal, stage, or fundamentals.",
+      "technical_evidence": [
+        "Trend bearish",
+        "Close 23654.7",
+        "Above SMA20 False",
+        "Above SMA50 False",
+        "Above SMA200 False",
+        "RSI14 37.42"
+      ],
+      "fundamental_evidence": [
+        "Fundamental quality quality_unknown"
+      ],
+      "trigger": "Reconsider only after trend stabilizes and Stage/SELL/quality weakness clears.",
+      "invalidation": "Invalidate on a decisive close below support near 23262.55.",
+      "risk": "Market regime is risk-off; require smaller sizing and stronger confirmation.",
+      "missing_evidence": [],
+      "conflicts": []
+    }
+  ]
+}

@@ -16,6 +16,14 @@ def test_parse_council_today_command_extracts_mode_and_flags():
     assert parsed.objective == "/council today --horizon swing --risk moderate"
 
 
+def test_parse_council_today_evidence_only_flag():
+    parsed = parse_council_command("/council today --evidence-only --horizon swing --risk moderate")
+
+    assert parsed.action == "today"
+    assert parsed.mode == "market_council"
+    assert parsed.options["evidence_only"] is True
+
+
 def test_parse_council_stock_and_compare_commands_extract_symbols():
     stock = parse_council_command("/council stock MODISONLTD --horizon swing")
     compare = parse_council_command("/council compare APOLLO BEL HAL --horizon positional")
@@ -104,6 +112,33 @@ def test_handle_council_command_dispatches_run_without_duplicate_kwargs(monkeypa
     assert captured["kwargs"]["horizon"] == "swing"
     assert captured["kwargs"]["risk_budget"] == "moderate"
     assert "Run:    research_test" in output
+
+
+def test_handle_council_evidence_only_dispatches_flag(monkeypatch):
+    from terminal.research_council import commands
+
+    captured = {}
+
+    def fake_run_research_council(objective, **kwargs):
+        captured["objective"] = objective
+        captured["kwargs"] = kwargs
+        return {
+            "ok": True,
+            "run_id": "research_evidence",
+            "mode": kwargs["mode"],
+            "stage": "persistence",
+            "final_label": None,
+            "evidence_only": True,
+            "report_paths": {"markdown": "/tmp/research_evidence.md"},
+        }
+
+    monkeypatch.setattr("terminal.tools.run_research_council", fake_run_research_council)
+
+    output = commands.handle_council_command("/council today --evidence-only --horizon swing --risk moderate")
+
+    assert captured["objective"] == "/council today --evidence-only --horizon swing --risk moderate"
+    assert captured["kwargs"]["evidence_only"] is True
+    assert "Evidence: only" in output
 
 
 def test_handle_council_sector_command_dispatches_sector_option(monkeypatch):

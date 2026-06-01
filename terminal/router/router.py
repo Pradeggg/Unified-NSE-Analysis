@@ -77,6 +77,8 @@ def _binding_from_pack(pack: ContextPack, winner: RouteCandidate) -> ContextBind
 def _binding_type_for(candidate: RouteCandidate) -> str:
     if candidate.provider == "PendingOptionProvider":
         return "pending_option"
+    if candidate.provider == "CouncilCommandProvider":
+        return "research_council"
     if candidate.provider == "ContextualFollowupProvider":
         return "followup"
     if candidate.provider == "EntityTopicProvider":

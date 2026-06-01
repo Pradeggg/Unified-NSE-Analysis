@@ -1,0 +1,361 @@
+[
+  {
+    "id": "B01",
+    "bucket": "B_resolver_traps",
+    "query": "can you analyze Premier Energies",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 1.2250549793243408,
+    "trail": [
+      "resolve_symbol",
+      "get_symbol_snapshot",
+      "get_technical_setup",
+      "get_sector_context",
+      "scrape_screener_in",
+      "search_nse_announcements"
+    ],
+    "answer_excerpt": "\u2501\u2501\u2501 PREMIER ENERGIES LIMITED (PREMIERENE) \u2014 Market Brief \u2501\u2501\u2501 Data: EOD snapshot 2026-05-15  \u25b6 SNAPSHOT   Price:  \u20b9981.60  (+0.43%)   Stage:  UNKNOWN  (score: 0.00)   Signal: SELL   RS:     -6%   Sector: Other   MCap:   MID_CAP   Note:   PREMIERENE (UNKNOWN) shows weak momentum with Technical Score 2"
+  },
+  {
+    "id": "B02",
+    "bucket": "B_resolver_traps",
+    "query": "can you analyze Hindustan Lever",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.49869704246520996,
+    "trail": [
+      "resolve_symbol",
+      "get_symbol_snapshot",
+      "get_technical_setup",
+      "get_sector_context",
+      "scrape_screener_in",
+      "search_nse_announcements"
+    ],
+    "answer_excerpt": "\u2501\u2501\u2501 HINDUSTAN UNILEVER LTD. (HINDUNILVR) \u2014 Market Brief \u2501\u2501\u2501 Data: EOD snapshot 2026-05-15  \u25b6 SNAPSHOT   Price:  \u20b92,272.20  (+1.05%)   Stage:  UNKNOWN  (score: 0.00)   Signal: SELL   RS:     +3%   Sector: FMCG & Consumer Goods   MCap:   LARGE_CAP   Note:   HINDUNILVR (UNKNOWN) shows weak momentum wit"
+  },
+  {
+    "id": "B03",
+    "bucket": "B_resolver_traps",
+    "query": "can you analyze Hindustan Unilever",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.3548572063446045,
+    "trail": [
+      "resolve_symbol",
+      "get_symbol_snapshot",
+      "get_technical_setup",
+      "get_sector_context",
+      "scrape_screener_in",
+      "search_nse_announcements"
+    ],
+    "answer_excerpt": "\u2501\u2501\u2501 HINDUSTAN UNILEVER LTD. (HINDUNILVR) \u2014 Market Brief \u2501\u2501\u2501 Data: EOD snapshot 2026-05-15  \u25b6 SNAPSHOT   Price:  \u20b92,272.20  (+1.05%)   Stage:  UNKNOWN  (score: 0.00)   Signal: SELL   RS:     +3%   Sector: FMCG & Consumer Goods   MCap:   LARGE_CAP   Note:   HINDUNILVR (UNKNOWN) shows weak momentum wit"
+  },
+  {
+    "id": "B04",
+    "bucket": "B_resolver_traps",
+    "query": "can you analyze Bharat Forge",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.4199507236480713,
+    "trail": [
+      "resolve_symbol",
+      "get_symbol_snapshot",
+      "get_technical_setup",
+      "get_sector_context",
+      "scrape_screener_in",
+      "search_nse_announcements"
+    ],
+    "answer_excerpt": "\u2501\u2501\u2501 BHARAT FORGE LTD (BHARATFORG) \u2014 Market Brief \u2501\u2501\u2501 Data: EOD snapshot 2026-05-15  \u25b6 SNAPSHOT   Price:  \u20b91,913.10  (-1.84%)   Stage:  UNKNOWN  (score: 0.00)   Signal: SELL   RS:     -35%   Sector: EV & Auto Ancillaries   MCap:   LARGE_CAP   Note:   BHARATFORG (UNKNOWN) shows weak momentum with Tech"
+  },
+  {
+    "id": "B05",
+    "bucket": "B_resolver_traps",
+    "query": "can you analyze Bharat Petroleum",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 1.4463071823120117,
+    "trail": [
+      "resolve_symbol",
+      "get_symbol_snapshot",
+      "get_technical_setup",
+      "get_sector_context",
+      "scrape_screener_in",
+      "search_nse_announcements"
+    ],
+    "answer_excerpt": "\u2501\u2501\u2501 Bharat Petroleum Corporation Limited (BPCL) \u2014 Market Brief \u2501\u2501\u2501 Data: EOD snapshot 2026-05-15  \u25b6 SNAPSHOT   Price:  \u20b9284.45  (-3.58%)   Stage:  UNKNOWN  (score: 0.00)   Signal: SELL   RS:     -11%   Sector: PSU / CPSE   MCap:   SMALL_CAP   Note:   BPCL (UNKNOWN) shows weak momentum with Technical"
+  },
+  {
+    "id": "B06",
+    "bucket": "B_resolver_traps",
+    "query": "can you analyze Larsen and Toubro",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.41768503189086914,
+    "trail": [
+      "resolve_symbol",
+      "get_symbol_snapshot",
+      "get_technical_setup",
+      "get_sector_context",
+      "scrape_screener_in",
+      "search_nse_announcements"
+    ],
+    "answer_excerpt": "\u2501\u2501\u2501 LARSEN & TOUBRO LTD. (LT) \u2014 Market Brief \u2501\u2501\u2501 Data: EOD snapshot 2026-05-15  \u25b6 SNAPSHOT   Price:  \u20b93,909.00  (-0.80%)   Stage:  UNKNOWN  (score: 0.00)   Signal: SELL   RS:     -9%   Sector: Infrastructure   MCap:   LARGE_CAP   Note:   LT (UNKNOWN) shows weak momentum with Technical Score 16, RSI "
+  },
+  {
+    "id": "B07",
+    "bucket": "B_resolver_traps",
+    "query": "can you analyze Tata Investment Corporation",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.48499298095703125,
+    "trail": [
+      "resolve_symbol",
+      "get_symbol_snapshot",
+      "get_technical_setup",
+      "get_sector_context",
+      "scrape_screener_in",
+      "search_nse_announcements"
+    ],
+    "answer_excerpt": "\u2501\u2501\u2501 TATA INVESTMENT CORP LTD (TATAINVEST) \u2014 Market Brief \u2501\u2501\u2501 Data: EOD snapshot 2026-05-15  \u25b6 SNAPSHOT   Price:  \u20b9675.95  (+0.72%)   Stage:  UNKNOWN  (score: 0.00)   Signal: SELL   RS:     -8%   Sector: Other   MCap:   MID_CAP   Note:   TATAINVEST (UNKNOWN) shows weak momentum with Technical Score 1"
+  },
+  {
+    "id": "B08",
+    "bucket": "B_resolver_traps",
+    "query": "can you analyze Tata Consultancy Services",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.4316380023956299,
+    "trail": [
+      "resolve_symbol",
+      "get_symbol_snapshot",
+      "get_technical_setup",
+      "get_sector_context",
+      "scrape_screener_in",
+      "search_nse_announcements"
+    ],
+    "answer_excerpt": "\u2501\u2501\u2501 Tata Consultancy Services Limited (TCS) \u2014 Market Brief \u2501\u2501\u2501 Data: EOD snapshot 2026-05-15  \u25b6 SNAPSHOT   Price:  \u20b92,264.00  (+0.80%)   Stage:  UNKNOWN  (score: 0.00)   Signal: SELL   RS:     -16%   Sector: IT & Technology   MCap:   LARGE_CAP   Note:   TCS (UNKNOWN) shows weak momentum with Technic"
+  },
+  {
+    "id": "B09",
+    "bucket": "B_resolver_traps",
+    "query": "can you analyze Adani Enterprises",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.5135612487792969,
+    "trail": [
+      "resolve_symbol",
+      "get_symbol_snapshot",
+      "get_technical_setup",
+      "get_sector_context",
+      "scrape_screener_in",
+      "search_nse_announcements"
+    ],
+    "answer_excerpt": "\u2501\u2501\u2501 Adani Enterprises Limited (ADANIENT) \u2014 Market Brief \u2501\u2501\u2501 Data: EOD snapshot 2026-05-15  \u25b6 SNAPSHOT   Price:  \u20b92,716.00  (+0.11%)   Stage:  UNKNOWN  (score: 0.00)   Signal: WEAK_HOLD   RS:     +20%   Sector: Other   MCap:   LARGE_CAP   Note:   ADANIENT (UNKNOWN) shows weak momentum with Technical "
+  },
+  {
+    "id": "B10",
+    "bucket": "B_resolver_traps",
+    "query": "can you analyze Adani Ports",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.43386173248291016,
+    "trail": [
+      "resolve_symbol",
+      "get_symbol_snapshot",
+      "get_technical_setup",
+      "get_sector_context",
+      "scrape_screener_in",
+      "search_nse_announcements"
+    ],
+    "answer_excerpt": "\u2501\u2501\u2501 Adani Ports and Special Economic Zone Limited (ADANIPORTS) \u2014 Market Brief \u2501\u2501\u2501 Data: EOD snapshot 2026-05-15  \u25b6 SNAPSHOT   Price:  \u20b91,795.10  (+1.22%)   Stage:  UNKNOWN  (score: 0.00)   Signal: WEAK_HOLD   RS:     +12%   Sector: Infrastructure   MCap:   LARGE_CAP   Note:   ADANIPORTS (UNKNOWN) sh"
+  },
+  {
+    "id": "B11",
+    "bucket": "B_resolver_traps",
+    "query": "can you analyze Power Grid",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 12.43195390701294,
+    "trail": [
+      "resolve_symbol",
+      "get_symbol_snapshot",
+      "get_technical_setup",
+      "get_sector_context",
+      "scrape_screener_in",
+      "search_nse_announcements"
+    ],
+    "answer_excerpt": "\u2501\u2501\u2501 Power Grid Corporation of India Limited (POWERGRID) \u2014 Market Brief \u2501\u2501\u2501 Data: EOD snapshot 2026-05-15  \u25b6 SNAPSHOT   Price:  \u20b9305.85  (+1.36%)   Stage:  UNKNOWN  (score: 0.00)   Signal: SELL   RS:     -5%   Sector: PSU / CPSE   MCap:   SMALL_CAP   Note:   POWERGRID (UNKNOWN) shows weak momentum wi"
+  },
+  {
+    "id": "B12",
+    "bucket": "B_resolver_traps",
+    "query": "can you analyze HDFC Bank",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.4922449588775635,
+    "trail": [
+      "resolve_symbol",
+      "get_symbol_snapshot",
+      "get_technical_setup",
+      "get_sector_context",
+      "scrape_screener_in",
+      "search_nse_announcements"
+    ],
+    "answer_excerpt": "\u2501\u2501\u2501 HDFC Bank Limited (HDFCBANK) \u2014 Market Brief \u2501\u2501\u2501 Data: EOD snapshot 2026-05-15  \u25b6 SNAPSHOT   Price:  \u20b9767.50  (-0.27%)   Stage:  UNKNOWN  (score: 0.00)   Signal: SELL   RS:     -7%   Sector: Banking - Private   MCap:   MID_CAP   Note:   HDFCBANK (UNKNOWN) shows weak momentum with Technical Score "
+  },
+  {
+    "id": "B13",
+    "bucket": "B_resolver_traps",
+    "query": "can you analyze ICICI Bank",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.5638670921325684,
+    "trail": [
+      "resolve_symbol",
+      "get_symbol_snapshot",
+      "get_technical_setup",
+      "get_sector_context",
+      "scrape_screener_in",
+      "search_nse_announcements"
+    ],
+    "answer_excerpt": "\u2501\u2501\u2501 ICICI Bank Limited (ICICIBANK) \u2014 Market Brief \u2501\u2501\u2501 Data: EOD snapshot 2026-05-15  \u25b6 SNAPSHOT   Price:  \u20b91,244.50  (-0.12%)   Stage:  UNKNOWN  (score: 0.00)   Signal: SELL   RS:     -11%   Sector: Banking - Private   MCap:   LARGE_CAP   Note:   ICICIBANK (UNKNOWN) shows weak momentum with Technica"
+  },
+  {
+    "id": "B14",
+    "bucket": "B_resolver_traps",
+    "query": "can you analyze Mahindra and Mahindra",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.4747128486633301,
+    "trail": [
+      "resolve_symbol",
+      "get_symbol_snapshot",
+      "get_technical_setup",
+      "get_sector_context",
+      "scrape_screener_in",
+      "search_nse_announcements"
+    ],
+    "answer_excerpt": "\u2501\u2501\u2501 Mahindra & Mahindra Limited (M&M) \u2014 Market Brief \u2501\u2501\u2501 Data: EOD snapshot 2026-05-15  \u25b6 SNAPSHOT   Price:  \u20b93,123.10  (-1.60%)   Stage:  UNKNOWN  (score: 0.00)   Signal: SELL   RS:     -7%   Sector: EV & Auto Ancillaries   MCap:   LARGE_CAP   Note:   M&M (UNKNOWN) shows weak momentum with Technica"
+  },
+  {
+    "id": "B15",
+    "bucket": "B_resolver_traps",
+    "query": "can you analyze Reliance Industries",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.40014100074768066,
+    "trail": [
+      "resolve_symbol",
+      "get_symbol_snapshot",
+      "get_technical_setup",
+      "get_sector_context",
+      "scrape_screener_in",
+      "search_nse_announcements"
+    ],
+    "answer_excerpt": "\u2501\u2501\u2501 Reliance Industries Limited (RELIANCE) \u2014 Market Brief \u2501\u2501\u2501 Data: EOD snapshot 2026-05-15  \u25b6 SNAPSHOT   Price:  \u20b91,336.40  (-1.87%)   Stage:  UNKNOWN  (score: 0.00)   Signal: SELL   RS:     -4%   Sector: Energy - Oil & Gas   MCap:   LARGE_CAP   Note:   RELIANCE (UNKNOWN) shows weak momentum with T"
+  },
+  {
+    "id": "B16",
+    "bucket": "B_resolver_traps",
+    "query": "can you analyze State Bank of India",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.5042152404785156,
+    "trail": [
+      "resolve_symbol",
+      "get_symbol_snapshot",
+      "get_technical_setup",
+      "get_sector_context",
+      "scrape_screener_in",
+      "search_nse_announcements"
+    ],
+    "answer_excerpt": "\u2501\u2501\u2501 State Bank of India (SBIN) \u2014 Market Brief \u2501\u2501\u2501 Data: EOD snapshot 2026-05-15  \u25b6 SNAPSHOT   Price:  \u20b9963.20  (-1.70%)   Stage:  UNKNOWN  (score: 0.00)   Signal: SELL   RS:     -13%   Sector: Banking - PSU   MCap:   MID_CAP   Note:   SBIN (UNKNOWN) shows weak momentum with Technical Score 16, RSI 2"
+  },
+  {
+    "id": "B17",
+    "bucket": "B_resolver_traps",
+    "query": "can you analyze Asian Paints",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.4552140235900879,
+    "trail": [
+      "resolve_symbol",
+      "get_symbol_snapshot",
+      "get_technical_setup",
+      "get_sector_context",
+      "scrape_screener_in",
+      "search_nse_announcements"
+    ],
+    "answer_excerpt": "\u2501\u2501\u2501 ASIAN PAINTS LIMITED (ASIANPAINT) \u2014 Market Brief \u2501\u2501\u2501 Data: EOD snapshot 2026-05-15  \u25b6 SNAPSHOT   Price:  \u20b92,605.60  (-0.63%)   Stage:  UNKNOWN  (score: 0.00)   Signal: WEAK_HOLD   RS:     +3%   Sector: Other   MCap:   LARGE_CAP   Note:   ASIANPAINT (UNKNOWN) shows mixed momentum with Technical S"
+  },
+  {
+    "id": "B18",
+    "bucket": "B_resolver_traps",
+    "query": "can you analyze Bajaj Finance",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 17.3107750415802,
+    "trail": [
+      "resolve_symbol",
+      "get_symbol_snapshot",
+      "get_technical_setup",
+      "get_sector_context",
+      "scrape_screener_in",
+      "search_nse_announcements"
+    ],
+    "answer_excerpt": "\u2501\u2501\u2501 Bajaj Finance Limited (BAJFINANCE) \u2014 Market Brief \u2501\u2501\u2501 Data: EOD snapshot 2026-05-15  \u25b6 SNAPSHOT   Price:  \u20b9910.45  (-0.19%)   Stage:  UNKNOWN  (score: 0.00)   Signal: SELL   RS:     -3%   Sector: Financial Services   MCap:   MID_CAP   Note:   BAJFINANCE (UNKNOWN) shows weak momentum with Technic"
+  },
+  {
+    "id": "B19",
+    "bucket": "B_resolver_traps",
+    "query": "can you analyze Sun Pharma",
+    "setup": [],
+    "passed": false,
+    "failures": [
+      "answer contained forbidden 'SYMBOL VALIDATION FAILED'"
+    ],
+    "duration_s": 12.950610876083374,
+    "trail": [
+      "get_sector_context",
+      "get_sector_context",
+      "get_sector_context"
+    ],
+    "answer_excerpt": "\u25b6 SYMBOL VALIDATION FAILED   Requested symbol(s): SUNPHARMA   Missing from executed evidence: SUNPHARMA   No technical, fundamental, catalyst, or sector conclusion was inferred from mismatched symbol evidence.  \u25b6 SOURCE TRAIL   get_sector_context: ok   get_sector_context: ok   get_sector_context: ok"
+  },
+  {
+    "id": "B20",
+    "bucket": "B_resolver_traps",
+    "query": "can you analyze Maruti Suzuki",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 0.47057032585144043,
+    "trail": [
+      "resolve_symbol",
+      "get_symbol_snapshot",
+      "get_technical_setup",
+      "get_sector_context",
+      "scrape_screener_in",
+      "search_nse_announcements"
+    ],
+    "answer_excerpt": "\u2501\u2501\u2501 Maruti Suzuki India Limited (MARUTI) \u2014 Market Brief \u2501\u2501\u2501 Data: EOD snapshot 2026-05-15  \u25b6 SNAPSHOT   Price:  \u20b913,221.00  (+1.12%)   Stage:  UNKNOWN  (score: 0.00)   Signal: SELL   RS:     -4%   Sector: EV & Auto Ancillaries   MCap:   LARGE_CAP   Note:   MARUTI (UNKNOWN) shows weak momentum with T"
+  }
+]

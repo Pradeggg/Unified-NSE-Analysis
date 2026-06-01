@@ -1,0 +1,97 @@
+{
+  "add_rules": [
+    {
+      "indicator": "volume_ratio_20d",
+      "kind": "breakout_add",
+      "operator": "gte",
+      "risk_per_trade_pct": 0.4,
+      "size_pct": 3.0,
+      "timeframe": "daily",
+      "value": 1.8
+    }
+  ],
+  "breakouts": {
+    "all": [
+      {
+        "indicator": "volume_ratio_20d",
+        "operator": "gte",
+        "value": 1.5
+      }
+    ],
+    "timeframe": "daily"
+  },
+  "entry": {
+    "all": [
+      {
+        "indicator": "stage",
+        "operator": "eq",
+        "value": "STAGE_2"
+      },
+      {
+        "indicator": "close",
+        "operator": "above",
+        "value": "sma_20"
+      },
+      {
+        "indicator": "sma_20",
+        "operator": "above",
+        "value": "sma_50"
+      },
+      {
+        "indicator": "volume_ratio_20d",
+        "operator": "gte",
+        "value": 1.5
+      },
+      {
+        "indicator": "rsi_14",
+        "operator": "between",
+        "value": [
+          50,
+          75
+        ]
+      }
+    ]
+  },
+  "exit": {
+    "any": [
+      {
+        "indicator": "close",
+        "operator": "below",
+        "value": "sma_20"
+      },
+      {
+        "indicator": "rsi_14",
+        "operator": "below",
+        "value": 45
+      }
+    ]
+  },
+  "name": "VCP Breakout",
+  "pullbacks": {
+    "all": [
+      {
+        "indicator": "rsi_14",
+        "operator": "between",
+        "value": [
+          45,
+          65
+        ]
+      }
+    ],
+    "timeframe": "daily"
+  },
+  "risk": {
+    "initial_stop": {
+      "indicator": "atr_14",
+      "multiple": 1.8,
+      "type": "atr"
+    },
+    "max_position_pct": 8.0,
+    "risk_per_trade_pct": 0.75
+  },
+  "strategy_id": "vcp_breakout_v1",
+  "universe": {
+    "min_price": 50,
+    "stage": "STAGE_2"
+  }
+}

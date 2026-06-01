@@ -13,8 +13,22 @@ from ._common import CHROMA_DIR, load_dotenv
 
 load_dotenv()
 
-EMBED_MODEL = os.environ.get("KB_EMBED_MODEL", "text-embedding-3-small")
-EMBED_BATCH = 64
+# PG 2026-05-27: pluggable embedding backend.
+#   KB_EMBED_BACKEND = "openai" (default) | "sentence-transformers" | "auto"
+#   - "openai":  hosted, 1536-d, requires US-geography key.
+#   - "sentence-transformers": local CPU, 384-d (all-MiniLM-L6-v2 default).
+#   - "auto": try openai first, fall back to ST on failure.
+# Collections are namespaced by backend so the two embedding spaces never mix
+# (Chroma would reject dim-mismatched inserts otherwise).
+EMBED_BACKEND = os.environ.get("KB_EMBED_BACKEND", "openai").lower().strip()
+EMBED_MODEL   = os.environ.get("KB_EMBED_MODEL", "text-embedding-3-small")
+ST_MODEL      = os.environ.get("KB_ST_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+EMBED_BATCH   = 64
+
+_COLLECTION_SUFFIX = {
+    "openai": "",                      # legacy / existing data stays in kb_chunks / kb_qa
+    "sentence-transformers": "_st",    # PG: separate space for 384-d vectors
+}
 
 
 class KBVectorStore:
@@ -23,13 +37,31 @@ class KBVectorStore:
     def __init__(self) -> None:
         import chromadb  # noqa: WPS433
         self._client = chromadb.PersistentClient(path=str(CHROMA_DIR))
+
+        # PG 2026-05-27: resolve backend; "auto" probes OpenAI first.
+        self._backend = self._resolve_backend(EMBED_BACKEND)
+        suffix = _COLLECTION_SUFFIX.get(self._backend, "")
+
         self._chunks = self._client.get_or_create_collection(
-            name="kb_chunks", metadata={"hnsw:space": "cosine"}
+            name=f"kb_chunks{suffix}", metadata={"hnsw:space": "cosine"}
         )
         self._qa = self._client.get_or_create_collection(
-            name="kb_qa", metadata={"hnsw:space": "cosine"}
+            name=f"kb_qa{suffix}", metadata={"hnsw:space": "cosine"}
         )
-        self._openai = self._make_openai()
+
+        self._openai = self._make_openai() if self._backend == "openai" else None
+        self._st_model = self._make_st() if self._backend == "sentence-transformers" else None
+
+    # ─── backend resolution ────────────────────────────────────────────
+    def _resolve_backend(self, requested: str) -> str:
+        if requested == "sentence-transformers":
+            return "sentence-transformers"
+        if requested == "auto":
+            # PG: cheap probe — if no OPENAI_API_KEY, skip straight to ST.
+            if not os.environ.get("OPENAI_API_KEY"):
+                return "sentence-transformers"
+            return "openai"  # will fall through to ST inside _embed on failure
+        return "openai"
 
     # ─── embedding ─────────────────────────────────────────────────────
     def _make_openai(self):
@@ -42,15 +74,41 @@ class KBVectorStore:
         except Exception:
             return None
 
-    def _embed(self, texts: list[str]) -> list[list[float]]:
+    def _make_st(self):
+        # PG 2026-05-27: lazy-load to avoid 2 GB torch import on OpenAI users.
+        try:
+            from sentence_transformers import SentenceTransformer  # type: ignore
+        except Exception as exc:  # pragma: no cover - import error path
+            raise RuntimeError(
+                "sentence-transformers not installed; "
+                "run: pip install sentence-transformers"
+            ) from exc
+        return SentenceTransformer(ST_MODEL)
+
+    def _embed_openai(self, texts: list[str]) -> list[list[float]]:
         if not self._openai:
-            raise RuntimeError("OPENAI_API_KEY not set; cannot embed.")
+            raise RuntimeError("OPENAI_API_KEY not set; cannot embed via openai.")
         out: list[list[float]] = []
         for i in range(0, len(texts), EMBED_BATCH):
             batch = texts[i : i + EMBED_BATCH]
             resp = self._openai.embeddings.create(model=EMBED_MODEL, input=batch)
             out.extend(d.embedding for d in resp.data)
         return out
+
+    def _embed_st(self, texts: list[str]) -> list[list[float]]:
+        if self._st_model is None:
+            self._st_model = self._make_st()
+        # PG: SentenceTransformer returns numpy arrays; convert to plain lists
+        # so Chroma's JSON serializer accepts them.
+        vecs = self._st_model.encode(
+            texts, batch_size=32, show_progress_bar=False, normalize_embeddings=True
+        )
+        return [list(map(float, v)) for v in vecs]
+
+    def _embed(self, texts: list[str]) -> list[list[float]]:
+        if self._backend == "sentence-transformers":
+            return self._embed_st(texts)
+        return self._embed_openai(texts)
 
     # ─── upsert ────────────────────────────────────────────────────────
     @staticmethod

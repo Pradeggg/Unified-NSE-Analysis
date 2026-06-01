@@ -26,6 +26,14 @@ from .chunker import chunk_document                      # noqa: F401
 from .qa_generator import generate_qa_for_chunk          # noqa: F401
 from .vector_store import KBVectorStore                  # noqa: F401
 from .pipeline import run_pipeline, query_kb             # noqa: F401
+# PG 2026-05-27: ad-hoc single-document ingest (broker reports, etc.)
+from .ingest import ingest_pdf_url, ingest_local_pdf, ingest_any  # noqa: F401
+# PG 2026-05-27: broker-vs-DB critique with LLM verdict
+from .critique import critique_report, fetch_db_snapshot  # noqa: F401
+# PG 2026-05-27: multi-turn grounded chat about a symbol
+from .chat import SymbolChatSession  # noqa: F401
+# PG 2026-05-27: DuckDuckGo discovery + auto-ingest of broker PDFs
+from .research import research_symbol, search_research_reports  # noqa: F401
 
 __all__ = [
     "load_registry", "iter_sources",
@@ -34,4 +42,8 @@ __all__ = [
     "generate_qa_for_chunk",
     "KBVectorStore",
     "run_pipeline", "query_kb",
+    "ingest_pdf_url", "ingest_local_pdf", "ingest_any",
+    "critique_report", "fetch_db_snapshot",
+    "SymbolChatSession",
+    "research_symbol", "search_research_reports",
 ]

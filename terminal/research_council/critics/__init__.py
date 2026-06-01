@@ -1,0 +1,1 @@
+"""Research Council critic registry."""

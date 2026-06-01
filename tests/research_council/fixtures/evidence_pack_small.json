@@ -1,0 +1,45 @@
+{
+  "pack_id": "evidence_20260526_market_council",
+  "as_of": "2026-05-26",
+  "mode": "market_council",
+  "universe_filter": "liquid",
+  "symbols": [],
+  "sections": {
+    "market": {
+      "regime": "CHOP",
+      "breadth": {
+        "pct_above_50dma": 48
+      }
+    },
+    "sectors": {
+      "leaders": ["Nifty Metal", "Nifty Pharma"]
+    },
+    "stocks": {
+      "count": 3,
+      "candidates": [
+        {"symbol": "AAA", "score": 91},
+        {"symbol": "BBB", "score": 88},
+        {"symbol": "CCC", "score": 84}
+      ],
+      "truncated": false
+    },
+    "derivatives": {
+      "latest_date": "2026-05-22"
+    },
+    "fundamentals": {
+      "latest_date": "2026-05-26"
+    },
+    "events": {
+      "upcoming_count": 12
+    },
+    "reports": {
+      "sector_rotation": "reports/latest/sector_rotation.html"
+    }
+  },
+  "source_trail": [
+    {"source": "market.equity_eod", "rows": 2465, "latest_date": "2026-05-26", "freshness": null, "fallback": false, "metadata": {}}
+  ],
+  "missing_evidence": [
+    {"scope": "data_steward", "subject": "run", "field": "fno_stale", "severity": "warn", "reason": null}
+  ]
+}

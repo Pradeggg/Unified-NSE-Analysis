@@ -5,6 +5,9 @@ from __future__ import annotations
 from typing import Any
 
 
+_OPTION_TYPE_TOKENS = {"CE", "PE", "FUT", "CALL", "PUT"}
+
+
 def _get_options_chain(symbol: str, expiry_index: int = 0) -> dict:
     from terminal.tools import get_options_chain
 
@@ -209,6 +212,36 @@ def recommend_options_strategy(
 
 def get_fno_overview(symbol: str = "NIFTY", expiry_index: int = 0) -> dict:
     sym = symbol.strip().upper()
+    if sym in _OPTION_TYPE_TOKENS:
+        message = (
+            f"{sym} is an option type, not an F&O underlying symbol. "
+            "Use an underlying such as NIFTY, BANKNIFTY, FINNIFTY, or a stock F&O symbol."
+        )
+        return {
+            "status": "invalid_input",
+            "symbol": sym,
+            "error": message,
+            "option_chain": {"status": "missing", "symbol": sym, "error": message},
+            "pcr": None,
+            "max_pain": None,
+            "top_oi_strikes": {"calls": [], "puts": []},
+            "futures": {"status": "missing", "symbol": sym, "error": message},
+            "basis": None,
+            "cost_of_carry": None,
+            "recommendation": {
+                "status": "blocked",
+                "strategy": None,
+                "reason": "A valid F&O underlying symbol is required before recommending an options strategy.",
+                "framing": "Research-only; not investment advice.",
+            },
+            "missing_evidence": ["valid_underlying_symbol"],
+            "source_trail": {
+                "get_options_chain": "skipped",
+                "get_futures_analysis": "skipped",
+                "get_strategy_recommendations": "skipped",
+            },
+            "framing": "Research-only F&O overview; not investment advice.",
+        }
     chain = get_option_chain_summary(sym, expiry_index=expiry_index)
     futures_raw = _get_futures_analysis(sym)
     futures = _normalize_futures(futures_raw, sym)

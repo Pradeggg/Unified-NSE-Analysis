@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Market Dashboard · whole market</title>
+<style>
+:root { color-scheme: dark; --bg:#081018; --panel:#101a24; --line:#263746; --text:#e7eef5; --muted:#91a4b7; --green:#38d188; --red:#ff5f6d; --yellow:#f7c948; --cyan:#51d6ff; --mag:#d97bff; }
+body { margin:0; background:var(--bg); color:var(--text); font:14px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+header { padding:20px 24px 12px; border-bottom:1px solid var(--line); background:#0b141d; position:sticky; top:0; z-index:2; }
+h1 { margin:0; font-size:22px; letter-spacing:0; }
+.sub { color:var(--muted); margin-top:4px; }
+.grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; padding:16px; }
+.panel { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:14px; min-width:0; }
+.wide { grid-column:span 3; }
+h2 { margin:0 0 10px; font-size:15px; color:#d8f3ff; }
+ul { list-style:none; padding:0; margin:0; display:grid; gap:8px; }
+li { border-top:1px solid rgba(255,255,255,.07); padding-top:8px; }
+code { display:inline-block; color:var(--cyan); background:#07131d; border:1px solid #1f4255; border-radius:5px; padding:2px 6px; margin:2px 6px 2px 0; }
+small,.metric em,.metric span,p,li span { color:var(--muted); }
+.metric { display:grid; grid-template-columns:1fr auto auto; gap:10px; align-items:center; border-top:1px solid rgba(255,255,255,.07); padding:7px 0; }
+table { width:100%; border-collapse:collapse; }
+th,td { text-align:left; border-top:1px solid rgba(255,255,255,.08); padding:8px; }
+details { border:1px solid var(--line); border-radius:8px; padding:10px; margin:8px 0; background:#0b1520; }
+summary { cursor:pointer; color:var(--cyan); font-weight:700; }
+.positive { color:var(--green); } .negative { color:var(--red); } .warning { color:var(--yellow); } .neutral { color:var(--muted); }
+@media (max-width: 900px) { .grid { grid-template-columns:1fr; } .wide { grid-column:span 1; } }
+</style>
+</head>
+<body>
+<header><h1>Market Dashboard Command Center</h1><div class="sub">focus: whole market · fetched: 2026-05-15 13:20:00 · research-only opportunity radar</div></header>
+<main class="grid">
+<section class="panel "><h2>Market Pulse</h2><div class="metric"><span>NIFTY 50</span><b>23,600</b><em>+0.42%</em></div><div class="metric"><span>NIFTY BANK</span><b>54,100</b><em>+0.12%</em></div><div class="metric"><span>NIFTY IT</span><b>28,200</b><em>-0.55%</em></div><div class="metric"><span>NIFTY METAL</span><b>13,000</b><em>+1.10%</em></div><div class="metric"><span>INDIA VIX</span><b>16</b><em>-1.20%</em></div></section>
+<section class="panel "><h2>Reaction Engine</h2><ul><li class="positive"><b>Risk-on confirmation</b><span>NIFTY +0.42%, breadth 320A/180D, VIX -1.20%</span><code>/scan momentum</code></li><li class="positive"><b>Sector rotation active</b><span>NIFTY METAL leads at +1.10%</span><code>/scan METAL</code></li><li class="warning"><b>Mover anomaly</b><span>AAA moved +6.10%</span><code>/analyze AAA</code></li></ul></section>
+<section class="panel "><h2>Action Board</h2><ul><li><b>Confirm momentum</b><code>/scan momentum</code><span>NIFTY +0.42%, breadth 320A/180D, VIX -1.20%</span><small>Wait for intraday invalidation levels before acting.</small></li><li><b>Find relative strength</b><code>/screen highrs</code><span>Breadth and headline tape are aligned.</span><small>Avoid extended names without pullback or base.</small></li><li><b>Inspect sector pocket</b><code>/scan METAL</code><span>NIFTY METAL leads at +1.10%</span><small>Confirm stock-level liquidity and setup.</small></li><li><b>Inspect mover</b><code>/analyze AAA</code><span>AAA moved +6.10%</span><small>High velocity moves can reverse quickly.</small></li><li><b>Check F&amp;O map</b><code>/fno NIFTY</code><span>Validate support, resistance, PCR, and futures basis.</span><small>Options data can shift fast near expiry.</small></li><li><b>Inspect VCP pocket</b><code>/scan vcp</code><span>Find volatility contraction candidates for research.</span><small>A scan result is not a breakout confirmation.</small></li></ul></section>
+<section class="panel wide"><h2>Opportunity Radar</h2><ul><li><b>Pocket of Strength · NIFTY METAL</b><span>Relative Strength, MTF Watch</span><p>NIFTY METAL is the strongest visible sector at +1.10%</p><code>/scan METAL</code><small>Confirm constituents, breadth, and intraday levels before considering risk.</small></li><li><b>Relative Strength Candidate · AAA</b><span>Relative Strength, MTF Watch</span><p>AAA appears in high-RS screener with RS 88</p><code>/strategy-council AAA</code><small>Require price setup and invalidation; RS alone is not an entry.</small></li><li><b>VCP Candidate · AAA</b><span>VCP, Intraday, MTF Watch</span><p>VCP scan returned AAA on 15m; setup WATCH</p><code>/intraday AAA</code><small>Confirm higher timeframe trend, liquidity, and invalidation before acting.</small></li><li><b>Supertrend Confirmation · BBB</b><span>Supertrend, Intraday, MTF Watch</span><p>Supertrend scan returned BBB on 15m; setup LONG_SETUP</p><code>/intraday BBB</code><small>Confirm higher timeframe trend, liquidity, and invalidation before acting.</small></li><li><b>VWAP Scan Needed · VWAP</b><span>VWAP</span><p>No confirmed VWAP evidence in this snapshot; run the scan for current candidates.</p><code>/scan vwap</code><small>Do not assume formation without scan evidence.</small></li><li><b>ORB Follow-through Watch · AAA</b><span>ORB, VWAP, Momentum</span><p>AAA is a top mover at +6.10%; inspect ORB/VWAP follow-through.</p><code>/intraday AAA</code><small>Large intraday movers can be late; require fresh trigger and invalidation.</small></li></ul></section>
+<section class="panel wide"><h2>F&amp;O Control</h2><table><thead><tr><th>Symbol</th><th>PCR</th><th>Support</th><th>Resistance</th><th>Basis</th><th>Status</th></tr></thead><tbody><tr><td>NIFTY</td><td>1.28</td><td>23,500</td><td>23,800</td><td>42 / 0.18%</td><td>available</td></tr><tr><td>BANKNIFTY</td><td>1.05</td><td>53,500</td><td>54,500</td><td>85 / 0.16%</td><td>available</td></tr></tbody></table></section>
+<section class="panel wide"><h2>Top Stocks in Top Indices</h2><details data-index-card open><summary>NIFTY METAL +1.10%</summary><ul><li><b>TATASTEEL</b><span>+3.20%</span><code>/analyze TATASTEEL · /intraday TATASTEEL · /strategy-council TATASTEEL</code></li></ul></details><details data-index-card open><summary>NIFTY 50 +0.42%</summary><ul><li><b>AAA</b><span>+6.10%</span><code>/analyze AAA · /intraday AAA · /strategy-council AAA</code></li></ul></details><details data-index-card open><summary>NIFTY BANK +0.12%</summary><ul><li><b>AAA</b><span>+6.10%</span><code>/analyze AAA · /intraday AAA · /strategy-council AAA</code></li></ul></details></section>
+<section class="panel "><h2>Movers</h2><div class="metric"><span>AAA</span><b>+6.10%</b><em>120.0</em></div><div class="metric"><span>ZZZ</span><b>-5.40%</b><em>88.0</em></div></section>
+<section class="panel "><h2>Catalyst Tape</h2><p>Market headline</p></section>
+<section class="panel "><h2>RS Leaders</h2><p>AAA RS88%</p></section>
+<section class="panel wide"><h2>Source/Freshness Audit</h2><p>Fetched 2026-05-15 13:20:00. Missing data is labeled unavailable. Research only, not investment advice.</p></section>
+</main>
+<script>
+document.querySelectorAll('[data-index-card]').forEach(function(card) {
+  card.addEventListener('toggle', function() { card.classList.toggle('active', card.open); });
+});
+</script>
+</body>
+</html>

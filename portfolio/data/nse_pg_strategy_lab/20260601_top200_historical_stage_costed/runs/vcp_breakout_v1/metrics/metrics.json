@@ -1,0 +1,17 @@
+{
+  "starting_equity": 1000000.0,
+  "ending_equity": 1404247.444493,
+  "total_return_pct": 40.4247,
+  "max_drawdown_pct": 19.6632,
+  "number_of_trades": 188,
+  "number_of_fills": 474,
+  "realized_pnl": 139567.913516,
+  "winning_trades": 45,
+  "losing_trades": 143,
+  "flat_trades": 0,
+  "open_positions_count": 9,
+  "invalid_fill_sequences": 0,
+  "strategy_ids": [
+    "vcp_breakout_v1"
+  ]
+}

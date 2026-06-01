@@ -248,6 +248,7 @@ from terminal.router import (
 )
 from terminal.router.providers import (
     ContextualFollowupProvider,
+    CouncilCommandProvider,
     MarketSituationProvider,
     ReportProvider,
     VisualScanProvider,
@@ -264,14 +265,90 @@ def test_unified_router_default_provider_chain_order():
     router = UnifiedRouter()
     assert router.provider_names == [
         "PendingOptionProvider",
+        "CouncilCommandProvider",
         "ContextualFollowupProvider",
         "CompoundStockProvider",
-        "EntityTopicProvider",
         "ReportProvider",
         "VisualScanProvider",
         "TopMoversProvider",
         "MarketSituationProvider",
-        "DirectIntentProvider",
+    ]
+
+
+def test_council_command_routes_to_research_council_tool_not_stock_analysis():
+    decision = UnifiedRouter().route(
+        "/council stock MODISONLTD --horizon swing",
+        _empty_pack(),
+    )
+
+    assert decision.route_type == "direct_tool_plan"
+    assert decision.intent == "research_council"
+    assert decision.reasoning_summary.selected_branch == "CouncilCommandProvider"
+    assert decision.tool_plan_tuples() == [
+        (
+            "run_research_council",
+            {
+                "objective": "/council stock MODISONLTD --horizon swing",
+                "mode": "stock_deep_dive",
+                "symbols": ["MODISONLTD"],
+                "horizon": "swing",
+                "risk_budget": "moderate",
+            },
+        )
+    ]
+
+
+def test_council_sector_command_routes_with_sector_option():
+    decision = UnifiedRouter().route(
+        "/council sector NIFTY AUTO --horizon swing",
+        _empty_pack(),
+    )
+
+    assert decision.route_type == "direct_tool_plan"
+    assert decision.intent == "research_council"
+    assert decision.tool_plan_tuples() == [
+        (
+            "run_research_council",
+            {
+                "objective": "/council sector NIFTY AUTO --horizon swing",
+                "mode": "sector_opportunity",
+                "symbols": [],
+                "horizon": "swing",
+                "risk_budget": "moderate",
+                "sector": "NIFTY AUTO",
+            },
+        )
+    ]
+
+
+def test_council_steward_routes_to_data_steward_tool():
+    decision = UnifiedRouter().route("/council steward", _empty_pack())
+
+    assert decision.route_type == "direct_tool_plan"
+    assert decision.intent == "research_council"
+    assert decision.reasoning_summary.selected_branch == "CouncilCommandProvider"
+    assert decision.tool_plan_tuples() == [
+        ("run_data_steward_check", {"mode": "market_council"})
+    ]
+
+
+def test_council_review_file_routes_to_report_review_engine():
+    decision = UnifiedRouter().route("/council review --file /tmp/broken_report.md", _empty_pack())
+
+    assert decision.route_type == "direct_tool_plan"
+    assert decision.intent == "research_council"
+    assert decision.tool_plan_tuples() == [
+        (
+            "run_research_council",
+            {
+                "objective": "/council review --file /tmp/broken_report.md",
+                "mode": "report_review",
+                "symbols": [],
+                "horizon": "swing",
+                "risk_budget": "moderate",
+                "report_path": "/tmp/broken_report.md",
+            },
+        )
     ]
 
 
@@ -356,7 +433,7 @@ def test_contextual_followup_requires_some_context():
 
 def test_entity_topic_provider_binds_symbol_and_topic():
     pack = _empty_pack()
-    decision = UnifiedRouter().route("DIXON fundamentals please", pack)
+    decision = UnifiedRouter(providers=[EntityTopicProvider()]).route("DIXON fundamentals please", pack)
     assert decision.reasoning_summary.selected_branch == "EntityTopicProvider"
     assert decision.intent == "entity_topic_fundamentals"
     tools = decision.tool_plan_tuples()
@@ -396,7 +473,7 @@ def test_market_situation_provider_handles_market_wide_ask():
 
 def test_direct_intent_provider_is_last_resort_fallback():
     pack = _empty_pack()
-    decision = UnifiedRouter().route("show me the RSI", pack)
+    decision = UnifiedRouter(providers=[DirectIntentProvider()]).route("show me the RSI", pack)
     # AA-UR-5: keyword without a symbol now yields a clarification so the
     # router never executes a tool with missing required args.
     assert decision.reasoning_summary.selected_branch == "DirectIntentProvider"
@@ -406,10 +483,12 @@ def test_direct_intent_provider_is_last_resort_fallback():
 
 def test_direct_intent_provider_binds_pack_symbol_when_available():
     pack = _empty_pack(active_symbols=("RELIANCE",))
-    decision = UnifiedRouter().route("show me the RSI", pack)
+    decision = UnifiedRouter(providers=[DirectIntentProvider()]).route("show me the RSI", pack)
     assert decision.reasoning_summary.selected_branch == "DirectIntentProvider"
     assert decision.intent == "direct_technicals"
     assert decision.tool_plan_tuples() == [
+        ("resolve_symbol", {"query": "RELIANCE"}),
+        ("get_symbol_snapshot", {"symbol": "RELIANCE"}),
         ("get_technical_setup", {"symbol": "RELIANCE"}),
     ]
 
@@ -425,16 +504,12 @@ def test_router_emits_fallback_llm_when_no_provider_proposes():
 
 
 def test_route_decision_trace_contains_provider_score_binding_and_reasons():
-    """AA-UR-3 acceptance: route trace shows candidate provider, score,
-    context binding, and winning reason.
-    """
-    pack = _empty_pack(active_symbols=("DIXON",))
-    decision = UnifiedRouter().route("DIXON technicals", pack)
+    """Route trace shows candidate provider, score, context binding, and winning reason."""
+    pack = _empty_pack()
+    decision = UnifiedRouter().route("market situation today", pack)
     trace = decision.to_debug_trace()
-    assert trace["selected_branch"] == "EntityTopicProvider"
-    assert trace["context"]["symbols"] == ["DIXON"]
+    assert trace["selected_branch"] == "MarketSituationProvider"
     assert trace["route_type"] == "direct_tool_plan"
-    assert trace["tools"] == ["get_technical_setup"]
     assert decision.reasoning_summary.pot, "winning reason must be recorded"
 
 

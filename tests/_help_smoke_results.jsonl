@@ -1,0 +1,70 @@
+{"section": "modes", "command": "/auto", "exit_code": 0, "duration_s": 14.15, "bytes_out": 7587, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "modes", "command": "/eod", "exit_code": 0, "duration_s": 16.03, "bytes_out": 7575, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "screens", "command": "/screen stage2", "exit_code": 0, "duration_s": 8.29, "bytes_out": 5661, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "screens", "command": "/screen momentum", "exit_code": 0, "duration_s": 15.88, "bytes_out": 7590, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "mtf", "command": "/mtf RELIANCE", "exit_code": 0, "duration_s": 3.36, "bytes_out": 4273, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "scan", "command": "/scan orb", "exit_code": 0, "duration_s": 39.92, "bytes_out": 3799, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "charts", "command": "/chart RELIANCE 3mo", "exit_code": 0, "duration_s": 9.73, "bytes_out": 4194, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "fno", "command": "/options NIFTY", "exit_code": 0, "duration_s": 8.61, "bytes_out": 4271, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "fno", "command": "/oi NIFTY", "exit_code": 0, "duration_s": 8.04, "bytes_out": 4271, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "search", "command": "/search RELIANCE news", "exit_code": 0, "duration_s": 7.8, "bytes_out": 3652, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "search", "command": "/results-feed --weeks 2", "exit_code": 0, "duration_s": 5.43, "bytes_out": 9557, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "learn", "command": "/learn PE ratio", "exit_code": 0, "duration_s": 7.25, "bytes_out": 4984, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "learn", "command": "/define ROCE", "exit_code": 0, "duration_s": 7.12, "bytes_out": 5418, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "youtube", "command": "/youtube channels", "exit_code": 0, "duration_s": 6.35, "bytes_out": 3845, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "forensic", "command": "/forensic RELIANCE", "exit_code": 0, "duration_s": 8.71, "bytes_out": 3769, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "forensic", "command": "/canslim RELIANCE", "exit_code": 0, "duration_s": 8.34, "bytes_out": 3357, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "email", "command": "/email sector --to test@example.com --dry-run", "exit_code": 0, "duration_s": 11.83, "bytes_out": 2944, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "events", "command": "/events RELIANCE", "exit_code": 0, "duration_s": 10.62, "bytes_out": 9463, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "macro", "command": "/heat", "exit_code": 0, "duration_s": 18.05, "bytes_out": 7859, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "macro", "command": "/cycle", "exit_code": 0, "duration_s": 16.49, "bytes_out": 7492, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "macro", "command": "/dashboard", "exit_code": 0, "duration_s": 16.21, "bytes_out": 7543, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "macro", "command": "/voice script", "exit_code": 0, "duration_s": 18.19, "bytes_out": 8050, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "macro", "command": "/us indices", "exit_code": 0, "duration_s": 9.36, "bytes_out": 8077, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "monitors", "command": "/monitor status", "exit_code": 0, "duration_s": 16.8, "bytes_out": 7931, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "monitors", "command": "/monitor list", "exit_code": 0, "duration_s": 15.85, "bytes_out": 7921, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "monitors", "command": "/alert list", "exit_code": 0, "duration_s": 15.97, "bytes_out": 7895, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "ric", "command": "/ric", "exit_code": 0, "duration_s": 15.33, "bytes_out": 7110, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "ric", "command": "/ric sherlock RELIANCE", "exit_code": 0, "duration_s": 9.4, "bytes_out": 9563, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "portfolio", "command": "/pnl", "exit_code": 0, "duration_s": 16.57, "bytes_out": 7575, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "company", "command": "/company-xray DMART", "exit_code": 0, "duration_s": 8.2, "bytes_out": 4087, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "analyze", "command": "/analyze RELIANCE", "exit_code": 0, "duration_s": 10.43, "bytes_out": 5030, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "reports", "command": "/report sector-rotation", "exit_code": 0, "duration_s": 27.24, "bytes_out": 11183, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "reports", "command": "/report technical RELIANCE", "exit_code": 0, "duration_s": 11.37, "bytes_out": 3543, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "strategy_lab", "command": "/backtest list", "exit_code": 0, "duration_s": 4.17, "bytes_out": 6202, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "strategy_lab", "command": "/strategy-lab validate", "exit_code": 0, "duration_s": 2.9, "bytes_out": 2682, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "data", "command": "/data-status", "exit_code": 0, "duration_s": 15.69, "bytes_out": 8122, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "data", "command": "/doctor", "exit_code": 0, "duration_s": 4.36, "bytes_out": 3183, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "data", "command": "/refresh status", "exit_code": 0, "duration_s": 16.61, "bytes_out": 7998, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "data", "command": "/refresh-data --check", "exit_code": 0, "duration_s": 16.62, "bytes_out": 7775, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "data", "command": "/data-coverage NIFTY500", "exit_code": 0, "duration_s": 4.43, "bytes_out": 3121, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "prompts", "command": "/prompts", "exit_code": 0, "duration_s": 16.3, "bytes_out": 7471, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "prompts", "command": "/prompts intraday", "exit_code": 0, "duration_s": 30.69, "bytes_out": 13618, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "commands", "command": "/commands", "exit_code": 0, "duration_s": 2.9, "bytes_out": 12032, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "commands", "command": "/commands alert", "exit_code": 0, "duration_s": 2.43, "bytes_out": 5462, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "export", "command": "/export html", "exit_code": 0, "duration_s": 9.33, "bytes_out": 4769, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "appearance", "command": "/theme", "exit_code": 0, "duration_s": 15.05, "bytes_out": 7820, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "appearance", "command": "/scale", "exit_code": 0, "duration_s": 14.06, "bytes_out": 7058, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "session", "command": "/help", "exit_code": 0, "duration_s": 3.28, "bytes_out": 6925, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "session", "command": "/help charts", "exit_code": 0, "duration_s": 2.63, "bytes_out": 3538, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "session", "command": "/help rsi", "exit_code": 0, "duration_s": 2.36, "bytes_out": 8722, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "session", "command": "/model", "exit_code": 0, "duration_s": 25.98, "bytes_out": 11013, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "session", "command": "/context", "exit_code": 0, "duration_s": 13.52, "bytes_out": 4285, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "combo:resolve_then_chart_then_forensic#1", "command": "/chart RELIANCE 3mo", "exit_code": 0, "duration_s": 37.85, "bytes_out": 10526, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "combo:resolve_then_chart_then_forensic#2", "command": "/forensic RELIANCE", "exit_code": 0, "duration_s": 9.3, "bytes_out": 3365, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "combo:resolve_then_chart_then_forensic#3", "command": "/search RELIANCE news", "exit_code": 0, "duration_s": 9.57, "bytes_out": 4737, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "combo:ric_sherlock_then_report#1", "command": "/ric sherlock TCS", "exit_code": 0, "duration_s": 8.97, "bytes_out": 9611, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "combo:ric_sherlock_then_report#2", "command": "/report technical TCS", "exit_code": 0, "duration_s": 8.02, "bytes_out": 3352, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "combo:mtf_then_dryrun_email_pipe#1", "command": "/mtf RELIANCE | /email --to test@example.com --dry-run", "exit_code": 0, "duration_s": 3.33, "bytes_out": 4273, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "combo:scan_then_screen_then_dashboard#1", "command": "/scan momentum", "exit_code": 0, "duration_s": 38.28, "bytes_out": 3771, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "combo:scan_then_screen_then_dashboard#2", "command": "/screen highrs", "exit_code": 0, "duration_s": 16.05, "bytes_out": 7807, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "combo:scan_then_screen_then_dashboard#3", "command": "/dashboard", "exit_code": 0, "duration_s": 36.39, "bytes_out": 9834, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "combo:company_index_then_xray#1", "command": "/company-index DMART --max-pages 3 --document-limit 0", "exit_code": 0, "duration_s": 10.04, "bytes_out": 4676, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "combo:company_index_then_xray#2", "command": "/company-xray DMART", "exit_code": 0, "duration_s": 7.87, "bytes_out": 4118, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "combo:learn_then_compare#1", "command": "/learn PE ratio", "exit_code": 0, "duration_s": 6.17, "bytes_out": 3419, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "combo:learn_then_compare#2", "command": "/compare ROCE ROE", "exit_code": 0, "duration_s": 7.86, "bytes_out": 5434, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "combo:events_then_results_feed#1", "command": "/events NIFTY 50", "exit_code": 0, "duration_s": 11.45, "bytes_out": 6666, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "combo:events_then_results_feed#2", "command": "/results-feed --weeks 2", "exit_code": 0, "duration_s": 6.33, "bytes_out": 9588, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "combo:doctor_then_refresh_status#1", "command": "/doctor", "exit_code": 0, "duration_s": 3.61, "bytes_out": 3183, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "combo:doctor_then_refresh_status#2", "command": "/refresh status", "exit_code": 0, "duration_s": 17.0, "bytes_out": 7874, "passed": true, "failure_reason": "", "stdout_tail": ""}
+{"section": "combo:doctor_then_refresh_status#3", "command": "/data-status", "exit_code": 0, "duration_s": 15.85, "bytes_out": 8428, "passed": true, "failure_reason": "", "stdout_tail": ""}

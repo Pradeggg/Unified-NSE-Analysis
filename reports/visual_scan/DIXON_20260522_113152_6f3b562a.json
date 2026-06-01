@@ -1,0 +1,233 @@
+{
+  "run_id": "6f3b562a-bc32-4e0c-b8e1-02c271e33178",
+  "symbol": "DIXON",
+  "as_of": "2026-05-21",
+  "verdict": {
+    "stance": "Avoid fresh entry",
+    "score": 21.0,
+    "confidence": "low",
+    "trigger": "Daily close above pivot with volume greater than 1.5x the 20D average.",
+    "invalidation": "Close below the detected support or handle low.",
+    "targets": [
+      "Target 1 uses the measured move from the detected base.",
+      "Target 2 trails after breakout confirmation."
+    ],
+    "summary": "DIXON visual scan stance: Avoid fresh entry.",
+    "caveats": []
+  },
+  "patterns": [
+    {
+      "pattern": "Trend Structure",
+      "status": "candidate",
+      "confidence": 0.52,
+      "evidence": [
+        "Price is above SMA20.",
+        "Price is above SMA50.",
+        "Price is below SMA200.",
+        "Short-term average is above SMA50."
+      ],
+      "zones": {
+        "pivot": null,
+        "support": 10732.5,
+        "invalidation": 13481.44,
+        "target_1": null,
+        "target_2": null
+      },
+      "caveats": [],
+      "metrics": {
+        "latest_close": 11258.0,
+        "sma20": 11055.27,
+        "sma50": 10732.5,
+        "sma200": 13481.44,
+        "distance_52w_high_pct": -39.05
+      }
+    },
+    {
+      "pattern": "MTF Alignment",
+      "status": "insufficient_data",
+      "confidence": 0.0,
+      "evidence": [],
+      "zones": {
+        "pivot": null,
+        "support": null,
+        "invalidation": null,
+        "target_1": null,
+        "target_2": null
+      },
+      "caveats": [
+        "MTF evidence unavailable."
+      ],
+      "metrics": {}
+    },
+    {
+      "pattern": "VCP",
+      "status": "absent",
+      "confidence": 0.53,
+      "evidence": [
+        "Detected 1 contracting range step(s).",
+        "Range sequence: 7.43%, 9.8%, 11.61%, 4.27%.",
+        "Price is near the pivot/resistance area."
+      ],
+      "zones": {
+        "pivot": 11674.0,
+        "support": 10100.0,
+        "invalidation": 9898.0,
+        "target_1": 13248.0,
+        "target_2": null
+      },
+      "caveats": [
+        "Contractions or volume dry-up are not strong enough."
+      ],
+      "metrics": {
+        "ranges_pct": [
+          7.43,
+          9.8,
+          11.61,
+          4.27
+        ],
+        "contractions": 1,
+        "volume_dry_up": false
+      }
+    },
+    {
+      "pattern": "Cup With Handle",
+      "status": "candidate",
+      "confidence": 0.85,
+      "evidence": [
+        "Base depth is 19.3%.",
+        "Right side recovered near prior high.",
+        "Handle drift is within a constructive range."
+      ],
+      "zones": {
+        "pivot": 11987.0,
+        "support": 10780.0,
+        "invalidation": 10564.4,
+        "target_1": 14301.0,
+        "target_2": null
+      },
+      "caveats": [],
+      "metrics": {
+        "depth_pct": 19.3,
+        "trough_index": 54,
+        "recovery": true,
+        "handle_drift": true
+      }
+    },
+    {
+      "pattern": "Breakout / Retest",
+      "status": "absent",
+      "confidence": 0.0,
+      "evidence": [
+        "Latest close is not above pivot.",
+        "Volume expansion is not confirmed.",
+        "Retest hold is not confirmed."
+      ],
+      "zones": {
+        "pivot": 11674.0,
+        "support": 11440.52,
+        "invalidation": 11090.3,
+        "target_1": 12607.92,
+        "target_2": null
+      },
+      "caveats": [],
+      "metrics": {
+        "latest_close": 11258.0,
+        "volume_expanded": false,
+        "held_retest": false,
+        "failed": false
+      }
+    },
+    {
+      "pattern": "Volume Quality",
+      "status": "absent",
+      "confidence": 0.2,
+      "evidence": [
+        "No clear volume dry-up.",
+        "Latest volume is 1.0x the 20D average."
+      ],
+      "zones": {
+        "pivot": null,
+        "support": null,
+        "invalidation": null,
+        "target_1": null,
+        "target_2": null
+      },
+      "caveats": [],
+      "metrics": {
+        "latest_volume_ratio_20d": 1.0,
+        "dry_up": false,
+        "expansion": false
+      }
+    }
+  ],
+  "annotations": [
+    {
+      "kind": "support",
+      "label": "Trend Structure Support",
+      "price": 10732.5,
+      "start": null,
+      "end": null,
+      "color": "#38bdf8"
+    },
+    {
+      "kind": "invalidation",
+      "label": "Invalidation",
+      "price": 13481.44,
+      "start": null,
+      "end": null,
+      "color": "#ef4444"
+    },
+    {
+      "kind": "pivot",
+      "label": "Cup With Handle Pivot",
+      "price": 11987.0,
+      "start": null,
+      "end": null,
+      "color": "#22c55e"
+    },
+    {
+      "kind": "support",
+      "label": "Cup With Handle Support",
+      "price": 10780.0,
+      "start": null,
+      "end": null,
+      "color": "#38bdf8"
+    },
+    {
+      "kind": "invalidation",
+      "label": "Invalidation",
+      "price": 10564.4,
+      "start": null,
+      "end": null,
+      "color": "#ef4444"
+    },
+    {
+      "kind": "target",
+      "label": "Target 1",
+      "price": 14301.0,
+      "start": null,
+      "end": null,
+      "color": "#f59e0b"
+    }
+  ],
+  "chart_paths": {
+    "daily": "reports/visual_scan/assets/DIXON_6f3b562a_daily.html",
+    "weekly": "reports/visual_scan/assets/DIXON_6f3b562a_weekly.html"
+  },
+  "tradingview": {
+    "status": "not_attempted",
+    "message": "TradingView capture disabled."
+  },
+  "source_trail": {
+    "daily": {
+      "status": "loaded",
+      "rows": 1242
+    },
+    "weekly": {
+      "status": "derived",
+      "rows": 262
+    }
+  },
+  "missing_evidence": [],
+  "raw_metrics": {}
+}

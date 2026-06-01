@@ -1,0 +1,17 @@
+{
+  "starting_equity": 1000000.0,
+  "ending_equity": 1089046.14262,
+  "total_return_pct": 8.9046,
+  "max_drawdown_pct": 24.5495,
+  "number_of_trades": 137,
+  "number_of_fills": 413,
+  "realized_pnl": -78245.095174,
+  "winning_trades": 48,
+  "losing_trades": 89,
+  "flat_trades": 0,
+  "open_positions_count": 9,
+  "invalid_fill_sequences": 0,
+  "strategy_ids": [
+    "donchian_turtle_breakout_v1"
+  ]
+}

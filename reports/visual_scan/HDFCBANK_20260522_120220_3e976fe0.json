@@ -1,0 +1,267 @@
+{
+  "run_id": "3e976fe0-1b9e-44b3-a741-9f4f8550dd94",
+  "symbol": "HDFCBANK",
+  "as_of": "2026-05-21",
+  "verdict": {
+    "stance": "Avoid fresh entry",
+    "score": 16.0,
+    "confidence": "low",
+    "trigger": "Trigger not available until pivot/base evidence is loaded.",
+    "invalidation": "Invalidation not available until support evidence is loaded.",
+    "targets": [],
+    "summary": "HDFCBANK visual scan stance: Avoid fresh entry.",
+    "caveats": []
+  },
+  "patterns": [
+    {
+      "pattern": "Trend Structure",
+      "status": "absent",
+      "confidence": 0.0,
+      "evidence": [
+        "Price is below SMA20.",
+        "Price is below SMA50.",
+        "Price is below SMA200."
+      ],
+      "zones": {
+        "pivot": null,
+        "support": 787.35,
+        "invalidation": 922.61,
+        "target_1": null,
+        "target_2": null
+      },
+      "caveats": [],
+      "metrics": {
+        "latest_close": 759.15,
+        "sma20": 772.76,
+        "sma50": 787.35,
+        "sma200": 922.61,
+        "distance_52w_high_pct": -25.61
+      }
+    },
+    {
+      "pattern": "MTF Alignment",
+      "status": "confirmed",
+      "confidence": 0.8,
+      "evidence": [
+        "monthly: bearish (+30)",
+        "weekly: bearish (+25)",
+        "daily: bearish (+25)"
+      ],
+      "zones": {
+        "pivot": null,
+        "support": null,
+        "invalidation": null,
+        "target_1": null,
+        "target_2": null
+      },
+      "caveats": [],
+      "metrics": {
+        "symbol": "HDFCBANK",
+        "timeframes": [
+          "monthly",
+          "weekly",
+          "daily"
+        ],
+        "readings": {
+          "monthly": {
+            "timeframe": "monthly",
+            "status": "ok",
+            "direction": "bearish",
+            "bars": 61,
+            "close": 759.15,
+            "rsi": 38.6,
+            "macd": "bearish",
+            "ema20": 876.3,
+            "ema50": 845.8,
+            "above_ema20": false,
+            "above_ema50": false,
+            "sma_stack_bullish": false,
+            "sma_stack_bearish": false,
+            "pct_from_period_high": -25.6,
+            "pct_from_period_low": 19.4,
+            "note": ""
+          },
+          "weekly": {
+            "timeframe": "weekly",
+            "status": "ok",
+            "direction": "bearish",
+            "bars": 262,
+            "close": 759.15,
+            "rsi": 30.4,
+            "macd": "bearish",
+            "ema20": 831.48,
+            "ema50": 883.52,
+            "above_ema20": false,
+            "above_ema50": false,
+            "sma_stack_bullish": false,
+            "sma_stack_bearish": false,
+            "pct_from_period_high": -25.6,
+            "pct_from_period_low": 4.5,
+            "note": ""
+          },
+          "daily": {
+            "timeframe": "daily",
+            "status": "ok",
+            "direction": "bearish",
+            "bars": 1242,
+            "close": 759.15,
+            "rsi": 41.8,
+            "macd": "bullish",
+            "ema20": 772.3,
+            "ema50": 799.49,
+            "above_ema20": false,
+            "above_ema50": false,
+            "sma_stack_bullish": false,
+            "sma_stack_bearish": true,
+            "pct_from_period_high": -13.9,
+            "pct_from_period_low": 4.5,
+            "note": ""
+          }
+        },
+        "confluence_score": 80,
+        "direction": "bearish",
+        "verdict": "SELL",
+        "aligned_tfs": [
+          "monthly",
+          "weekly",
+          "daily"
+        ],
+        "dissonant_tfs": [],
+        "missing_tfs": [],
+        "rationale": [
+          "monthly: bearish (+30)",
+          "weekly: bearish (+25)",
+          "daily: bearish (+25)"
+        ]
+      }
+    },
+    {
+      "pattern": "VCP",
+      "status": "absent",
+      "confidence": 0.57,
+      "evidence": [
+        "Detected 2 contracting range step(s).",
+        "Range sequence: 4.8%, 5.03%, 4.58%, 1.73%."
+      ],
+      "zones": {
+        "pivot": 820.05,
+        "support": 747.0,
+        "invalidation": 732.06,
+        "target_1": 893.1,
+        "target_2": null
+      },
+      "caveats": [
+        "Contractions or volume dry-up are not strong enough."
+      ],
+      "metrics": {
+        "ranges_pct": [
+          4.8,
+          5.03,
+          4.58,
+          1.73
+        ],
+        "contractions": 2,
+        "volume_dry_up": false
+      }
+    },
+    {
+      "pattern": "Cup With Handle",
+      "status": "absent",
+      "confidence": 0.6,
+      "evidence": [
+        "Base depth is 23.25%.",
+        "Right side has not recovered near prior high.",
+        "Handle drift is within a constructive range."
+      ],
+      "zones": {
+        "pivot": 953.1,
+        "support": 759.15,
+        "invalidation": 743.97,
+        "target_1": 1174.65,
+        "target_2": null
+      },
+      "caveats": [],
+      "metrics": {
+        "depth_pct": 23.25,
+        "trough_index": 54,
+        "recovery": false,
+        "handle_drift": true
+      }
+    },
+    {
+      "pattern": "Breakout / Retest",
+      "status": "absent",
+      "confidence": 0.0,
+      "evidence": [
+        "Latest close is not above pivot.",
+        "Volume expansion is not confirmed.",
+        "Retest hold is not confirmed."
+      ],
+      "zones": {
+        "pivot": 820.05,
+        "support": 803.65,
+        "invalidation": 779.05,
+        "target_1": 885.65,
+        "target_2": null
+      },
+      "caveats": [],
+      "metrics": {
+        "latest_close": 759.15,
+        "volume_expanded": false,
+        "held_retest": false,
+        "failed": false
+      }
+    },
+    {
+      "pattern": "Volume Quality",
+      "status": "absent",
+      "confidence": 0.2,
+      "evidence": [
+        "No clear volume dry-up.",
+        "Latest volume is 1.05x the 20D average."
+      ],
+      "zones": {
+        "pivot": null,
+        "support": null,
+        "invalidation": null,
+        "target_1": null,
+        "target_2": null
+      },
+      "caveats": [],
+      "metrics": {
+        "latest_volume_ratio_20d": 1.05,
+        "dry_up": false,
+        "expansion": false
+      }
+    }
+  ],
+  "annotations": [],
+  "chart_paths": {
+    "daily": "reports/visual_scan/assets/HDFCBANK_3e976fe0_daily.html",
+    "weekly": "reports/visual_scan/assets/HDFCBANK_3e976fe0_weekly.html"
+  },
+  "tradingview": {
+    "status": "not_attempted",
+    "message": "TradingView capture disabled."
+  },
+  "source_trail": {
+    "daily": {
+      "status": "loaded",
+      "rows": 1242
+    },
+    "weekly": {
+      "status": "derived",
+      "rows": 262
+    },
+    "mtf": {
+      "status": "derived",
+      "timeframes": [
+        "monthly",
+        "weekly",
+        "daily"
+      ]
+    }
+  },
+  "missing_evidence": [],
+  "raw_metrics": {}
+}

@@ -1,6 +1,23 @@
 from terminal import fno_composite
 
 
+def test_fno_overview_rejects_option_type_as_underlying(monkeypatch):
+    def fail_tool(*args, **kwargs):
+        raise AssertionError("F&O data tools should not run for option-type tokens")
+
+    monkeypatch.setattr(fno_composite, "_get_options_chain", fail_tool)
+    monkeypatch.setattr(fno_composite, "_get_futures_analysis", fail_tool)
+    monkeypatch.setattr(fno_composite, "_get_strategy_recommendations", fail_tool)
+
+    result = fno_composite.get_fno_overview("CE")
+
+    assert result["status"] == "invalid_input"
+    assert result["symbol"] == "CE"
+    assert "option type" in result["error"].lower()
+    assert result["missing_evidence"] == ["valid_underlying_symbol"]
+    assert result["source_trail"]["get_options_chain"] == "skipped"
+
+
 def test_get_fno_overview_requires_chain_and_futures_evidence(monkeypatch):
     monkeypatch.setattr(
         fno_composite,

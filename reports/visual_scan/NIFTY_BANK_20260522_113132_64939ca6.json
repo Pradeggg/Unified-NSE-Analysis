@@ -1,0 +1,145 @@
+{
+  "run_id": "64939ca6-d18d-490c-a58e-bc2a0971741f",
+  "symbol": "NIFTY BANK",
+  "as_of": "",
+  "verdict": {
+    "stance": "Insufficient evidence",
+    "score": 0.0,
+    "confidence": "low",
+    "trigger": "Trigger not available until pivot/base evidence is loaded.",
+    "invalidation": "Invalidation not available until support evidence is loaded.",
+    "targets": [],
+    "summary": "NIFTY BANK visual scan stance: Insufficient evidence.",
+    "caveats": [
+      "Pattern evidence is insufficient for a trading trigger."
+    ]
+  },
+  "patterns": [
+    {
+      "pattern": "Trend Structure",
+      "status": "insufficient_data",
+      "confidence": 0.0,
+      "evidence": [],
+      "zones": {
+        "pivot": null,
+        "support": null,
+        "invalidation": null,
+        "target_1": null,
+        "target_2": null
+      },
+      "caveats": [
+        "Need at least 50 daily candles for trend structure."
+      ],
+      "metrics": {}
+    },
+    {
+      "pattern": "MTF Alignment",
+      "status": "insufficient_data",
+      "confidence": 0.0,
+      "evidence": [],
+      "zones": {
+        "pivot": null,
+        "support": null,
+        "invalidation": null,
+        "target_1": null,
+        "target_2": null
+      },
+      "caveats": [
+        "MTF evidence unavailable."
+      ],
+      "metrics": {}
+    },
+    {
+      "pattern": "VCP",
+      "status": "insufficient_data",
+      "confidence": 0.0,
+      "evidence": [],
+      "zones": {
+        "pivot": null,
+        "support": null,
+        "invalidation": null,
+        "target_1": null,
+        "target_2": null
+      },
+      "caveats": [
+        "Need numeric high, low, volume, and at least 10 candles."
+      ],
+      "metrics": {}
+    },
+    {
+      "pattern": "Cup With Handle",
+      "status": "insufficient_data",
+      "confidence": 0.0,
+      "evidence": [],
+      "zones": {
+        "pivot": null,
+        "support": null,
+        "invalidation": null,
+        "target_1": null,
+        "target_2": null
+      },
+      "caveats": [
+        "Need at least 12 daily candles."
+      ],
+      "metrics": {}
+    },
+    {
+      "pattern": "Breakout / Retest",
+      "status": "insufficient_data",
+      "confidence": 0.0,
+      "evidence": [],
+      "zones": {
+        "pivot": null,
+        "support": null,
+        "invalidation": null,
+        "target_1": null,
+        "target_2": null
+      },
+      "caveats": [
+        "Need at least 20 candles and a pivot."
+      ],
+      "metrics": {}
+    },
+    {
+      "pattern": "Volume Quality",
+      "status": "insufficient_data",
+      "confidence": 0.0,
+      "evidence": [],
+      "zones": {
+        "pivot": null,
+        "support": null,
+        "invalidation": null,
+        "target_1": null,
+        "target_2": null
+      },
+      "caveats": [
+        "Need at least 20 numeric volume bars."
+      ],
+      "metrics": {}
+    }
+  ],
+  "annotations": [],
+  "chart_paths": {
+    "daily": "reports/visual_scan/assets/NIFTY_BANK_64939ca6_daily.html",
+    "weekly": "reports/visual_scan/assets/NIFTY_BANK_64939ca6_weekly.html"
+  },
+  "tradingview": {
+    "status": "not_attempted",
+    "message": "TradingView capture disabled."
+  },
+  "source_trail": {
+    "daily": {
+      "status": "missing",
+      "rows": 0
+    },
+    "weekly": {
+      "status": "missing",
+      "rows": 0
+    }
+  },
+  "missing_evidence": [
+    "daily_history",
+    "weekly_history"
+  ],
+  "raw_metrics": {}
+}

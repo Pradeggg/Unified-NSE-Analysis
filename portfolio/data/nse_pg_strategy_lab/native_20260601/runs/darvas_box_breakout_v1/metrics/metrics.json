@@ -1,0 +1,17 @@
+{
+  "ending_equity": 983973.829682,
+  "flat_trades": 0,
+  "invalid_fill_sequences": 0,
+  "losing_trades": 200,
+  "max_drawdown_pct": 22.8992,
+  "number_of_fills": 597,
+  "number_of_trades": 295,
+  "open_positions_count": 7,
+  "realized_pnl": -42793.634385,
+  "starting_equity": 1000000.0,
+  "strategy_ids": [
+    "darvas_box_breakout_v1"
+  ],
+  "total_return_pct": -1.6026,
+  "winning_trades": 95
+}

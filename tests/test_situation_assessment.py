@@ -1017,7 +1017,7 @@ def test_assessment_llm_rejects_scan_symbols_without_symbols():
 def test_assessment_llm_defaults_to_gpt55_high_reasoning():
     from terminal import assessment_llm
 
-    assert assessment_llm.DEFAULT_ASSESSMENT_MODEL == "gpt-5.5"
+    assert assessment_llm.DEFAULT_ASSESSMENT_MODEL == "gpt-4o"
     assert assessment_llm.DEFAULT_ASSESSMENT_REASONING_EFFORT == "high"
 
 
@@ -1050,9 +1050,9 @@ def test_assessment_llm_uses_responses_reasoning_for_gpt5_class_models():
             self.responses = FakeResponses()
 
     client = FakeClient()
-    raw = _call_llm(client, "gpt-5.5", {"user_input": "x"})
+    raw = _call_llm(client, "gpt-5", {"user_input": "x"})
 
     assert raw == '{"decision":"fallback_to_router"}'
-    assert client.responses.kwargs["model"] == "gpt-5.5"
+    assert client.responses.kwargs["model"] == "gpt-5"
     assert client.responses.kwargs["reasoning"] == {"effort": "high"}
     assert client.responses.kwargs["text"]["format"]["type"] == "json_object"

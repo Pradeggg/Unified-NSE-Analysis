@@ -4069,7 +4069,9 @@ class Agent:
             _ran = [(tr["tool"], {}) for tr in tool_results] or tool_plan
             synthesis_intent = _synthesis_intent_from_plan(_ran)
 
-        answer_body = _synthesize_no_llm(synthesis_intent, tool_results)
+        answer_body = _synthesize_and_narrate(
+            synthesis_intent, clean_input, tool_results, self.backend,
+        )
         answer_body = _apply_response_guardrails(
             clean_input, synthesis_intent, tool_results, answer_body,
         )
@@ -4519,7 +4521,9 @@ class Agent:
                 answer_body = (
                     render_assessment_block(bound)
                     + "\n\n"
-                    + _synthesize_no_llm(synthesis_intent, tool_results)
+                    + _synthesize_and_narrate(
+                        synthesis_intent, ctx.clean_input, tool_results, self.backend,
+                    )
                 )
                 answer_body = _apply_response_guardrails(
                     ctx.clean_input, synthesis_intent, tool_results, answer_body,
@@ -4602,7 +4606,9 @@ class Agent:
             )
         tool_results = _execute_plan(entity_plan)
         ctx.trace.extend(tool_results)
-        answer_body = _synthesize_no_llm("entity_topic_command", tool_results)
+        answer_body = _synthesize_and_narrate(
+            "entity_topic_command", ctx.clean_input, tool_results, self.backend,
+        )
         answer_body = _apply_response_guardrails(
             ctx.clean_input, "entity_topic_command", tool_results, answer_body,
         )
@@ -4756,7 +4762,9 @@ class Agent:
             answer_body = (
                 render_assessment_block(bound)
                 + "\n\n"
-                + _synthesize_no_llm(synthesis_intent, tool_results)
+                + _synthesize_and_narrate(
+                    synthesis_intent, ctx.clean_input, tool_results, self.backend,
+                )
             )
             answer_body = _apply_response_guardrails(
                 ctx.clean_input, synthesis_intent, tool_results, answer_body,
@@ -4837,7 +4845,7 @@ class Agent:
             answer_body = (
                 render_assessment_block(assessment)
                 + "\n\n"
-                + _synthesize_no_llm(synthesis_intent, tool_results)
+                + _synthesize_and_narrate(synthesis_intent, ctx.clean_input, tool_results, self.backend)
             )
             answer_body = _apply_response_guardrails(
                 ctx.clean_input, synthesis_intent, tool_results, answer_body,
@@ -5149,7 +5157,7 @@ class Agent:
                 }
 
         # If we exhausted rounds without a text response, synthesize from tool results
-        answer = _synthesize_no_llm("stock_brief", tool_results)
+        answer = _synthesize_and_narrate("stock_brief", user_input, tool_results, self.backend)
         answer = _apply_response_guardrails(user_input, "llm_driven_fallback", tool_results, answer)
         # Still save the turn so context is preserved
         self._remember_interaction(user_input, answer, tool_results)

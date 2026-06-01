@@ -1,0 +1,15 @@
+{
+  "starting_equity": 1000000.0,
+  "ending_equity": 1000000.0,
+  "total_return_pct": 0.0,
+  "max_drawdown_pct": 0.0,
+  "number_of_trades": 0,
+  "number_of_fills": 0,
+  "realized_pnl": 0.0,
+  "winning_trades": 0,
+  "losing_trades": 0,
+  "flat_trades": 0,
+  "open_positions_count": 0,
+  "invalid_fill_sequences": 0,
+  "strategy_ids": []
+}

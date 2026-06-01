@@ -1,0 +1,17 @@
+{
+  "starting_equity": 1000000.0,
+  "ending_equity": 1468225.756513,
+  "total_return_pct": 46.8226,
+  "max_drawdown_pct": 39.8367,
+  "number_of_trades": 100,
+  "number_of_fills": 352,
+  "realized_pnl": 253232.405048,
+  "winning_trades": 14,
+  "losing_trades": 86,
+  "flat_trades": 0,
+  "open_positions_count": 12,
+  "invalid_fill_sequences": 0,
+  "strategy_ids": [
+    "stage2_continuation_v1"
+  ]
+}

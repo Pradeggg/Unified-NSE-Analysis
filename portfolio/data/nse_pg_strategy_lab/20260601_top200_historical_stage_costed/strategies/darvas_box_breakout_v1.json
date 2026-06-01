@@ -1,0 +1,81 @@
+{
+  "add_rules": [],
+  "breakouts": {
+    "all": [
+      {
+        "indicator": "close",
+        "operator": "above",
+        "value": "sma_50"
+      }
+    ],
+    "timeframe": "daily"
+  },
+  "entry": {
+    "all": [
+      {
+        "indicator": "stage",
+        "operator": "eq",
+        "value": "STAGE_2"
+      },
+      {
+        "indicator": "close",
+        "operator": "above",
+        "value": "sma_50"
+      },
+      {
+        "indicator": "relative_strength",
+        "operator": "gte",
+        "value": 70
+      },
+      {
+        "indicator": "volume_ratio_20d",
+        "operator": "gte",
+        "value": 1.4
+      }
+    ]
+  },
+  "exit": {
+    "any": [
+      {
+        "indicator": "close",
+        "operator": "below",
+        "value": "sma_50"
+      },
+      {
+        "indicator": "relative_strength",
+        "operator": "below",
+        "value": 55
+      },
+      {
+        "indicator": "trailing_stop",
+        "operator": "gte",
+        "value": 1
+      }
+    ]
+  },
+  "name": "Darvas Box Breakout",
+  "risk": {
+    "initial_stop": {
+      "indicator": "atr_14",
+      "multiple": 2.0,
+      "type": "atr"
+    },
+    "max_position_pct": 8.0,
+    "risk_per_trade_pct": 0.75
+  },
+  "strategy_id": "darvas_box_breakout_v1",
+  "universe": {
+    "min_price": 50,
+    "stage": "STAGE_2"
+  },
+  "volume": {
+    "all": [
+      {
+        "indicator": "volume_ratio_20d",
+        "operator": "gte",
+        "value": 1.4
+      }
+    ],
+    "timeframe": "daily"
+  }
+}

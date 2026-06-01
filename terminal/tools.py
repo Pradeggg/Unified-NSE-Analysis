@@ -9718,6 +9718,268 @@ TOOL_REGISTRY.update({
 # PG: Enables any LLM output to be written as a formatted report file.
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _research_council_state_from_payload(payload: Any):
+    from terminal.research_council.schemas import CouncilState
+
+    if isinstance(payload, CouncilState):
+        return payload
+    if isinstance(payload, dict):
+        return CouncilState.from_dict(payload)
+    raise ValueError("Expected CouncilState or CouncilState dict")
+
+
+def _research_council_state_summary(state: Any) -> dict:
+    decision = getattr(state, "decision", None)
+    flags = getattr(state, "flags", {}) or {}
+    return {
+        "ok": True,
+        "run_id": getattr(state, "run_id", None),
+        "mode": getattr(state, "mode", None),
+        "stage": getattr(state, "stage", None),
+        "horizon": getattr(state, "horizon", None),
+        "risk_budget": getattr(state, "risk_budget", None),
+        "evidence_only": bool(flags.get("evidence_only")),
+        "final_label": getattr(decision, "final_label", None) if decision else None,
+        "confidence": getattr(decision, "confidence", None) if decision else None,
+        "candidate_count": len(getattr(decision, "candidates", []) or []) if decision else 0,
+        "report_paths": {
+            "markdown": flags.get("markdown_report_path"),
+            "html": flags.get("html_report_path") or getattr(state, "html_path", None),
+        },
+        "events": list(getattr(state, "events", []) or []),
+    }
+
+
+def build_research_evidence_pack(
+    mode: str = "market_council",
+    universe_filter: str = "liquid",
+    symbols: list[str] | None = None,
+    max_stock_candidates: int = 50,
+) -> dict:
+    """Build the Research Council evidence pack from PostgreSQL-backed sources."""
+    try:
+        from terminal.research_council.evidence_pack_builder import build_research_evidence_pack as _build
+
+        pack = _build(
+            mode=mode,
+            universe_filter=universe_filter,
+            symbols=symbols or [],
+            max_stock_candidates=int(max_stock_candidates),
+        )
+        return {"ok": True, "pack": pack.to_dict(), "pack_id": pack.pack_id}
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+
+
+def run_research_council(
+    objective: str,
+    mode: str | None = None,
+    symbols: list[str] | None = None,
+    horizon: str | None = None,
+    risk_budget: str | None = None,
+    dry_run: bool = False,
+    output_format: str = "md",
+    **flags: Any,
+) -> dict:
+    """Run the Research Council state machine and return a compact summary."""
+    try:
+        from terminal.research_council.engine import run_council
+
+        run_flags = dict(flags)
+        if mode:
+            run_flags["mode"] = mode
+        if symbols is not None:
+            run_flags["symbols"] = symbols
+        if horizon:
+            run_flags["horizon"] = horizon
+        if risk_budget:
+            run_flags["risk_budget"] = risk_budget
+        run_flags["dry_run"] = bool(dry_run)
+        run_flags["output_format"] = output_format
+        state = run_council(objective, **run_flags)
+        return _research_council_state_summary(state)
+    except Exception as exc:
+        return {"ok": False, "error": str(exc), "objective": objective}
+
+
+def run_data_steward_check(mode: str = "market_council") -> dict:
+    """Run the Research Council data-steward freshness/readiness gate."""
+    try:
+        from terminal.research_council.states.data_steward import run_check
+
+        verdict = run_check(mode=mode)
+        return {"ok": True, "mode": mode, "verdict": verdict.to_dict()}
+    except Exception as exc:
+        return {"ok": False, "error": str(exc), "mode": mode}
+
+
+def compose_plan(objective: str, mode: str = "market_council", **flags: Any) -> dict:
+    """Compose a deterministic Research Council evidence plan."""
+    try:
+        from terminal.research_council.engine import initialize_state
+        from terminal.research_council.states import plan_build
+
+        state = initialize_state(objective, mode=mode, **flags)
+        state = plan_build.run(state)
+        return {"ok": True, "run_id": state.run_id, "plans": [plan.to_dict() for plan in state.plans]}
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+
+
+def execute_plan(state: dict | Any) -> dict:
+    """Execute the latest Research Council plan in a serialized state."""
+    try:
+        from terminal.research_council.states import plan_execute
+
+        updated = plan_execute.run(_research_council_state_from_payload(state))
+        return {
+            "ok": True,
+            "run_id": updated.run_id,
+            "plans": [plan.to_dict() for plan in updated.plans],
+            "execution_results": {
+                plan_id: {step_id: result.to_dict() for step_id, result in results.items()}
+                for plan_id, results in updated.execution_results.items()
+            },
+        }
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+
+
+def review_plan_execution(state: dict | Any) -> dict:
+    """Review plan execution output and decide whether more evidence is needed."""
+    try:
+        from terminal.research_council.states import plan_review
+
+        updated = plan_review.run(_research_council_state_from_payload(state))
+        return {"ok": True, "run_id": updated.run_id, "plan_reviews": [review.to_dict() for review in updated.plan_reviews]}
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+
+
+def run_critic_review(state: dict | Any) -> dict:
+    """Run Research Council critic reviews against a serialized state."""
+    try:
+        from terminal.research_council.states import critic_review
+
+        updated = critic_review.run(_research_council_state_from_payload(state))
+        reviews = [[review.to_dict() for review in group] for group in updated.critic_reviews]
+        return {"ok": True, "run_id": updated.run_id, "critic_reviews": reviews, "flags": updated.flags}
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+
+
+def apply_revision_round(state: dict | Any) -> dict:
+    """Apply Research Council convergence/revision rules."""
+    try:
+        from terminal.research_council.states import revision
+
+        updated = revision.run(_research_council_state_from_payload(state))
+        return {"ok": True, "run_id": updated.run_id, "revision_history": [item.to_dict() for item in updated.revision_history], "flags": updated.flags}
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+
+
+def synthesize_council_decision(state: dict | Any) -> dict:
+    """Synthesize the final Research Council decision from findings and reviews."""
+    try:
+        from terminal.research_council.states import synthesis
+
+        updated = synthesis.run(_research_council_state_from_payload(state))
+        return {"ok": True, "run_id": updated.run_id, "decision": updated.decision.to_dict() if updated.decision else None}
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+
+
+def render_research_council_report(
+    state: dict | Any | None = None,
+    run_id: str = "latest",
+    output_format: str = "html",
+) -> dict:
+    """Render or locate a Research Council report."""
+    try:
+        if state is not None:
+            from terminal.research_council.states import render_html as render_state
+
+            updated = render_state.run(_research_council_state_from_payload(state))
+            flags = updated.flags
+            return {
+                "ok": True,
+                "run_id": updated.run_id,
+                "report_path": flags.get("html_report_path") if output_format == "html" else flags.get("markdown_report_path"),
+                "report_paths": {"markdown": flags.get("markdown_report_path"), "html": flags.get("html_report_path")},
+            }
+        resumed = resume_council_run(run_id=run_id)
+        if not resumed.get("ok"):
+            return resumed
+        return {"ok": True, "run_id": resumed.get("run_id"), "report_path": resumed.get("report_path"), "report_paths": resumed.get("report_paths", {})}
+    except Exception as exc:
+        return {"ok": False, "error": str(exc), "run_id": run_id}
+
+
+def persist_research_council_run(state: dict | Any) -> dict:
+    """Persist Research Council run metadata for a serialized state."""
+    try:
+        from terminal.research_council.persistence import save_council_run_metadata
+
+        council_state = _research_council_state_from_payload(state)
+        saved = save_council_run_metadata(council_state)
+        return {"ok": True, **saved}
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+
+
+def resume_council_run(run_id: str = "latest", include_debug: bool = False, output_format: str = "json") -> dict:
+    """Load compact Research Council run metadata from PostgreSQL."""
+    try:
+        from terminal.research_council.persistence import connect
+
+        with connect() as conn:
+            with conn.cursor() as cur:
+                if run_id == "latest":
+                    cur.execute(
+                        """
+                        SELECT run_id, generated_at, report_path, final_label, council_status,
+                               council_mode, horizon, risk_budget
+                        FROM recommendation_reports.runs
+                        ORDER BY generated_at DESC
+                        LIMIT 1
+                        """
+                    )
+                else:
+                    cur.execute(
+                        """
+                        SELECT run_id, generated_at, report_path, final_label, council_status,
+                               council_mode, horizon, risk_budget
+                        FROM recommendation_reports.runs
+                        WHERE run_id = %s
+                        """,
+                        (run_id,),
+                    )
+                row = cur.fetchone()
+        if not row:
+            return {"ok": False, "error": f"Research Council run not found: {run_id}", "run_id": run_id}
+        values = list(row)
+        result = {
+            "ok": True,
+            "run_id": values[0],
+            "generated_at": str(values[1]),
+            "report_path": values[2],
+            "report_paths": {"markdown": values[2], "html": str(values[2]).replace(".md", ".html") if values[2] else None},
+            "final_label": values[3],
+            "stage": values[4],
+            "mode": values[5],
+            "horizon": values[6],
+            "risk_budget": values[7],
+        }
+        if output_format == "json":
+            result["export"] = dict(result)
+        if include_debug:
+            result["debug"] = {"source": "recommendation_reports.runs"}
+        return result
+    except Exception as exc:
+        return {"ok": False, "error": str(exc), "run_id": run_id}
+
+
 def _generate_report_tool(content: str, report_type: str = "research",
                           symbol: str = "", title: str = "",
                           output_format: str = "html", filename: str = "") -> dict:
@@ -9759,6 +10021,113 @@ def run_recommendation_report(
 
 
 TOOL_REGISTRY.update({
+    "build_research_evidence_pack": (
+        build_research_evidence_pack,
+        "Build a Research Council evidence pack from PostgreSQL-backed market, sector, stock, F&O, fundamentals, events, and report sources.",
+        {
+            "type": "object",
+            "properties": {
+                "mode": {"type": "string", "default": "market_council"},
+                "universe_filter": {"type": "string", "default": "liquid"},
+                "symbols": {"type": "array", "items": {"type": "string"}},
+                "max_stock_candidates": {"type": "integer", "default": 50},
+            },
+            "required": [],
+        },
+    ),
+    "run_research_council": (
+        run_research_council,
+        "Run the Research Council state machine for `/council` market, stock, strategy, intraday, and report-review objectives.",
+        {
+            "type": "object",
+            "properties": {
+                "objective": {"type": "string"},
+                "mode": {"type": "string"},
+                "symbols": {"type": "array", "items": {"type": "string"}},
+                "horizon": {"type": "string"},
+                "risk_budget": {"type": "string"},
+                "report_path": {"type": "string"},
+                "dry_run": {"type": "boolean", "default": False},
+                "evidence_only": {"type": "boolean", "default": False},
+                "output_format": {"type": "string", "enum": ["md", "html"], "default": "md"},
+            },
+            "required": ["objective"],
+        },
+    ),
+    "run_data_steward_check": (
+        run_data_steward_check,
+        "Run Research Council data-steward freshness and universe-readiness checks.",
+        {
+            "type": "object",
+            "properties": {"mode": {"type": "string", "default": "market_council"}},
+            "required": [],
+        },
+    ),
+    "compose_plan": (
+        compose_plan,
+        "Compose the deterministic Research Council evidence plan for an objective.",
+        {
+            "type": "object",
+            "properties": {"objective": {"type": "string"}, "mode": {"type": "string", "default": "market_council"}},
+            "required": ["objective"],
+        },
+    ),
+    "execute_plan": (
+        execute_plan,
+        "Execute the latest Research Council plan from a serialized CouncilState.",
+        {"type": "object", "properties": {"state": {"type": "object"}}, "required": ["state"]},
+    ),
+    "review_plan_execution": (
+        review_plan_execution,
+        "Review Research Council plan execution and decide whether more evidence is required.",
+        {"type": "object", "properties": {"state": {"type": "object"}}, "required": ["state"]},
+    ),
+    "run_critic_review": (
+        run_critic_review,
+        "Run deterministic Research Council critics over a serialized CouncilState.",
+        {"type": "object", "properties": {"state": {"type": "object"}}, "required": ["state"]},
+    ),
+    "apply_revision_round": (
+        apply_revision_round,
+        "Apply Research Council revision and convergence rules to a serialized CouncilState.",
+        {"type": "object", "properties": {"state": {"type": "object"}}, "required": ["state"]},
+    ),
+    "synthesize_council_decision": (
+        synthesize_council_decision,
+        "Synthesize the final Research Council decision from findings, branch summaries, plan results, and critic reviews.",
+        {"type": "object", "properties": {"state": {"type": "object"}}, "required": ["state"]},
+    ),
+    "render_research_council_report": (
+        render_research_council_report,
+        "Render a Research Council report from state or locate a persisted report by run_id.",
+        {
+            "type": "object",
+            "properties": {
+                "state": {"type": "object"},
+                "run_id": {"type": "string", "default": "latest"},
+                "output_format": {"type": "string", "enum": ["html", "md"], "default": "html"},
+            },
+            "required": [],
+        },
+    ),
+    "persist_research_council_run": (
+        persist_research_council_run,
+        "Persist Research Council run metadata for a serialized CouncilState.",
+        {"type": "object", "properties": {"state": {"type": "object"}}, "required": ["state"]},
+    ),
+    "resume_council_run": (
+        resume_council_run,
+        "Resume or inspect compact Research Council run metadata from PostgreSQL by run_id or latest.",
+        {
+            "type": "object",
+            "properties": {
+                "run_id": {"type": "string", "default": "latest"},
+                "include_debug": {"type": "boolean", "default": False},
+                "output_format": {"type": "string", "enum": ["json"], "default": "json"},
+            },
+            "required": [],
+        },
+    ),
     "list_generated_reports": (
         list_generated_reports,
         "List generated report artifacts with type, symbol, path, timestamp, and size metadata.",

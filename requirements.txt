@@ -66,3 +66,11 @@ plotext>=5.2
 # Agent REPL UI (nse_agent.py): coloured banner + prompt toolkit input bar
 colorama>=0.4.6
 prompt_toolkit>=3.0.43
+
+# Stock Email Agent (stock_email_agent/): IMAP scan + LLM summaries
+# imaplib/email are stdlib; bs4 parses email HTML and linked filings.
+beautifulsoup4>=4.12.0
+rich>=13.7.0
+anthropic>=0.40.0
+# pypdf is a fallback for PDF text extraction (pymupdf is the primary, already listed above)
+pypdf>=4.0.0

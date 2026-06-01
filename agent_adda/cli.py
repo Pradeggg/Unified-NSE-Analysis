@@ -43,6 +43,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     subparsers.add_parser("terminal", help="Launch the NSE terminal.")
     subparsers.add_parser("agent", help="Launch the NLP market agent.")
+    strategy_lab = subparsers.add_parser("strategy-lab", help="Run the PostgreSQL portfolio strategy lab.")
+    strategy_lab.add_argument("--output-dir", default="portfolio/data/nse_pg_strategy_lab/latest")
+    strategy_lab.add_argument("--top-n", type=int, default=200)
+    strategy_lab.add_argument("--slippage-bps", type=float, default=5.0)
+    strategy_lab.add_argument("--brokerage-bps", type=float, default=3.0)
     return parser
 
 
@@ -85,6 +90,24 @@ def _run_data_bootstrap(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_strategy_lab(args: argparse.Namespace) -> int:
+    from portfolio.cli import main as portfolio_main
+
+    return portfolio_main(
+        [
+            "strategy-lab",
+            "--output-dir",
+            args.output_dir,
+            "--top-n",
+            str(args.top_n),
+            "--slippage-bps",
+            str(args.slippage_bps),
+            "--brokerage-bps",
+            str(args.brokerage_bps),
+        ]
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -94,6 +117,8 @@ def main(argv: list[str] | None = None) -> int:
         return _run_doctor(args)
     if args.command == "data" and args.data_command == "bootstrap":
         return _run_data_bootstrap(args)
+    if args.command == "strategy-lab":
+        return _run_strategy_lab(args)
     if args.command == "terminal":
         from nse_terminal import main as terminal_main
 

@@ -166,6 +166,21 @@ def _metrics(trades: list[Trade], initial_capital: float) -> dict[str, float | i
     pnl = sum(trade.pnl for trade in trades)
     wins = [trade for trade in trades if trade.pnl > 0]
     losses = [trade for trade in trades if trade.pnl < 0]
+    returns = pd.Series([float(trade.return_pct) for trade in trades], dtype="float64")
+    sharpe = None
+    if len(returns) >= 2:
+        std = float(returns.std(ddof=1))
+        if std > 0:
+            sharpe = round((float(returns.mean()) / std) * (len(returns) ** 0.5), 4)
+    profit_factor = None
+    gross_loss = abs(sum(trade.pnl for trade in losses))
+    if gross_loss > 0:
+        profit_factor = round(sum(trade.pnl for trade in wins) / gross_loss, 4)
+    equity = pd.Series([initial_capital] + [initial_capital + value for value in pd.Series([trade.pnl for trade in trades]).cumsum().tolist()])
+    max_drawdown_pct = None
+    if initial_capital and not equity.empty:
+        drawdown = (equity / equity.cummax() - 1.0) * 100.0
+        max_drawdown_pct = round(float(drawdown.min()), 4)
     return {
         "trade_count": len(trades),
         "total_pnl": round(pnl, 4),
@@ -174,6 +189,9 @@ def _metrics(trades: list[Trade], initial_capital: float) -> dict[str, float | i
         "win_rate_pct": round((len(wins) / len(trades)) * 100, 4) if trades else None,
         "avg_winner": round(sum(t.pnl for t in wins) / len(wins), 4) if wins else None,
         "avg_loser": round(sum(t.pnl for t in losses) / len(losses), 4) if losses else None,
+        "sharpe": sharpe,
+        "profit_factor": profit_factor,
+        "max_drawdown_pct": max_drawdown_pct,
     }
 
 
@@ -273,6 +291,7 @@ def run_backtest(df: pd.DataFrame, config: BacktestConfig) -> BacktestResult:
             final = sdf.iloc[-1]
             exit_price = float(final["close"])
             pnl = round((exit_price - position["entry_price"]) * position["quantity"], 6)
+            cash += position["quantity"] * exit_price
             trades.append(
                 Trade(
                     symbol=symbol,

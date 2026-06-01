@@ -1,0 +1,102 @@
+{
+  "add_rules": [
+    {
+      "indicator": "close",
+      "kind": "pullback_add",
+      "operator": "above",
+      "risk_per_trade_pct": 0.5,
+      "size_pct": 5.0,
+      "timeframe": "daily",
+      "value": "sma_20"
+    }
+  ],
+  "entry": {
+    "all": [
+      {
+        "indicator": "stage",
+        "operator": "eq",
+        "value": "STAGE_2"
+      },
+      {
+        "indicator": "close",
+        "operator": "above",
+        "value": "sma_50"
+      },
+      {
+        "indicator": "sma_50",
+        "operator": "above",
+        "value": "sma_200"
+      },
+      {
+        "indicator": "rsi_14",
+        "operator": "between",
+        "value": [
+          45,
+          70
+        ]
+      }
+    ]
+  },
+  "exit": {
+    "any": [
+      {
+        "indicator": "stage",
+        "operator": "in",
+        "value": [
+          "STAGE_3",
+          "STAGE_4"
+        ]
+      },
+      {
+        "indicator": "close",
+        "operator": "below",
+        "value": "sma_50"
+      },
+      {
+        "indicator": "trailing_stop",
+        "operator": "gte",
+        "value": 1
+      }
+    ]
+  },
+  "name": "Stage 2 Continuation",
+  "risk": {
+    "initial_stop": {
+      "indicator": "atr_14",
+      "multiple": 2.0,
+      "type": "atr"
+    },
+    "max_position_pct": 10.0,
+    "risk_per_trade_pct": 1.0
+  },
+  "strategy_id": "stage2_continuation_v1",
+  "trend_filters": {
+    "all": [
+      {
+        "indicator": "close",
+        "operator": "above",
+        "value": "sma_50"
+      },
+      {
+        "indicator": "sma_50",
+        "operator": "above",
+        "value": "sma_200"
+      }
+    ],
+    "timeframe": "daily"
+  },
+  "universe": {
+    "min_price": 50,
+    "stage": "STAGE_2"
+  },
+  "volume": {
+    "all": [
+      {
+        "indicator": "volume_ratio_20d",
+        "operator": "gte",
+        "value": 1.1
+      }
+    ],
+    "timeframe": "daily"
+  }
+}

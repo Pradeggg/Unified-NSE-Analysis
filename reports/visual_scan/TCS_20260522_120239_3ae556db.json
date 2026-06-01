@@ -1,0 +1,267 @@
+{
+  "run_id": "3ae556db-25e5-4b14-a05a-9f637d51102a",
+  "symbol": "TCS",
+  "as_of": "2026-05-21",
+  "verdict": {
+    "stance": "Avoid fresh entry",
+    "score": 16.0,
+    "confidence": "low",
+    "trigger": "Trigger not available until pivot/base evidence is loaded.",
+    "invalidation": "Invalidation not available until support evidence is loaded.",
+    "targets": [],
+    "summary": "TCS visual scan stance: Avoid fresh entry.",
+    "caveats": []
+  },
+  "patterns": [
+    {
+      "pattern": "Trend Structure",
+      "status": "absent",
+      "confidence": 0.0,
+      "evidence": [
+        "Price is below SMA20.",
+        "Price is below SMA50.",
+        "Price is below SMA200."
+      ],
+      "zones": {
+        "pivot": null,
+        "support": 2435.58,
+        "invalidation": 2901.41,
+        "target_1": null,
+        "target_2": null
+      },
+      "caveats": [],
+      "metrics": {
+        "latest_close": 2327.2,
+        "sma20": 2377.12,
+        "sma50": 2435.58,
+        "sma200": 2901.41,
+        "distance_52w_high_pct": -34.59
+      }
+    },
+    {
+      "pattern": "MTF Alignment",
+      "status": "confirmed",
+      "confidence": 0.8,
+      "evidence": [
+        "monthly: bearish (+30)",
+        "weekly: bearish (+25)",
+        "daily: bearish (+25)"
+      ],
+      "zones": {
+        "pivot": null,
+        "support": null,
+        "invalidation": null,
+        "target_1": null,
+        "target_2": null
+      },
+      "caveats": [],
+      "metrics": {
+        "symbol": "TCS",
+        "timeframes": [
+          "monthly",
+          "weekly",
+          "daily"
+        ],
+        "readings": {
+          "monthly": {
+            "timeframe": "monthly",
+            "status": "ok",
+            "direction": "bearish",
+            "bars": 61,
+            "close": 2327.2,
+            "rsi": 32.3,
+            "macd": "bearish",
+            "ema20": 3092.59,
+            "ema50": 3328.46,
+            "above_ema20": false,
+            "above_ema50": false,
+            "sma_stack_bullish": false,
+            "sma_stack_bearish": true,
+            "pct_from_period_high": -49.3,
+            "pct_from_period_low": 5.5,
+            "note": ""
+          },
+          "weekly": {
+            "timeframe": "weekly",
+            "status": "ok",
+            "direction": "bearish",
+            "bars": 262,
+            "close": 2327.2,
+            "rsi": 32.1,
+            "macd": "bearish",
+            "ema20": 2598.54,
+            "ema50": 2921.56,
+            "above_ema20": false,
+            "above_ema50": false,
+            "sma_stack_bullish": false,
+            "sma_stack_bearish": true,
+            "pct_from_period_high": -34.4,
+            "pct_from_period_low": 5.5,
+            "note": ""
+          },
+          "daily": {
+            "timeframe": "daily",
+            "status": "ok",
+            "direction": "bearish",
+            "bars": 1242,
+            "close": 2327.2,
+            "rsi": 40.1,
+            "macd": "bearish",
+            "ema20": 2369.76,
+            "ema50": 2476.81,
+            "above_ema20": false,
+            "above_ema50": false,
+            "sma_stack_bullish": false,
+            "sma_stack_bearish": true,
+            "pct_from_period_high": -11.1,
+            "pct_from_period_low": 5.5,
+            "note": ""
+          }
+        },
+        "confluence_score": 80,
+        "direction": "bearish",
+        "verdict": "SELL",
+        "aligned_tfs": [
+          "monthly",
+          "weekly",
+          "daily"
+        ],
+        "dissonant_tfs": [],
+        "missing_tfs": [],
+        "rationale": [
+          "monthly: bearish (+30)",
+          "weekly: bearish (+25)",
+          "daily: bearish (+25)"
+        ]
+      }
+    },
+    {
+      "pattern": "VCP",
+      "status": "absent",
+      "confidence": 0.57,
+      "evidence": [
+        "Detected 2 contracting range step(s).",
+        "Range sequence: 9.04%, 5.06%, 9.08%, 1.2%."
+      ],
+      "zones": {
+        "pivot": 2614.0,
+        "support": 2206.4,
+        "invalidation": 2162.27,
+        "target_1": 3021.6,
+        "target_2": null
+      },
+      "caveats": [
+        "Contractions or volume dry-up are not strong enough."
+      ],
+      "metrics": {
+        "ranges_pct": [
+          9.04,
+          5.06,
+          9.08,
+          1.2
+        ],
+        "contractions": 2,
+        "volume_dry_up": false
+      }
+    },
+    {
+      "pattern": "Cup With Handle",
+      "status": "absent",
+      "confidence": 0.6,
+      "evidence": [
+        "Base depth is 31.27%.",
+        "Right side has not recovered near prior high.",
+        "Handle drift is within a constructive range."
+      ],
+      "zones": {
+        "pivot": 3268.0,
+        "support": 2264.0,
+        "invalidation": 2218.72,
+        "target_1": 4290.0,
+        "target_2": null
+      },
+      "caveats": [],
+      "metrics": {
+        "depth_pct": 31.27,
+        "trough_index": 84,
+        "recovery": false,
+        "handle_drift": true
+      }
+    },
+    {
+      "pattern": "Breakout / Retest",
+      "status": "absent",
+      "confidence": 0.0,
+      "evidence": [
+        "Latest close is not above pivot.",
+        "Volume expansion is not confirmed.",
+        "Retest hold is not confirmed."
+      ],
+      "zones": {
+        "pivot": 2614.0,
+        "support": 2561.72,
+        "invalidation": 2483.3,
+        "target_1": 2823.12,
+        "target_2": null
+      },
+      "caveats": [],
+      "metrics": {
+        "latest_close": 2327.2,
+        "volume_expanded": false,
+        "held_retest": false,
+        "failed": false
+      }
+    },
+    {
+      "pattern": "Volume Quality",
+      "status": "absent",
+      "confidence": 0.2,
+      "evidence": [
+        "No clear volume dry-up.",
+        "Latest volume is 0.81x the 20D average."
+      ],
+      "zones": {
+        "pivot": null,
+        "support": null,
+        "invalidation": null,
+        "target_1": null,
+        "target_2": null
+      },
+      "caveats": [],
+      "metrics": {
+        "latest_volume_ratio_20d": 0.81,
+        "dry_up": false,
+        "expansion": false
+      }
+    }
+  ],
+  "annotations": [],
+  "chart_paths": {
+    "daily": "reports/visual_scan/assets/TCS_3ae556db_daily.html",
+    "weekly": "reports/visual_scan/assets/TCS_3ae556db_weekly.html"
+  },
+  "tradingview": {
+    "status": "not_attempted",
+    "message": "TradingView capture disabled."
+  },
+  "source_trail": {
+    "daily": {
+      "status": "loaded",
+      "rows": 1242
+    },
+    "weekly": {
+      "status": "derived",
+      "rows": 262
+    },
+    "mtf": {
+      "status": "derived",
+      "timeframes": [
+        "monthly",
+        "weekly",
+        "daily"
+      ]
+    }
+  },
+  "missing_evidence": [],
+  "raw_metrics": {}
+}

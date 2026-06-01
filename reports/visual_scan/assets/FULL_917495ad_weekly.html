@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>FULL Visual Scan - Weekly</title>
+  <style>
+    body { margin: 0; background: #0f172a; color: #e2e8f0; font-family: Arial, sans-serif; }
+    main { max-width: 1200px; margin: 0 auto; padding: 24px; }
+    h1 { margin: 0 0 8px; font-size: 24px; font-weight: 700; }
+    .meta { margin: 0 0 16px; color: #94a3b8; }
+    svg { width: 100%; height: auto; background: #111827; border: 1px solid #334155; }
+    .grid { stroke: #1f2937; stroke-width: 1; }
+    .axis, .date-label { fill: #94a3b8; font-size: 13px; }
+    .end { text-anchor: end; }
+    .wick { stroke-width: 1.4; }
+    .candle.up, .wick.up { fill: #14b8a6; stroke: #14b8a6; }
+    .candle.down, .wick.down { fill: #f43f5e; stroke: #f43f5e; }
+    .volume { fill: #475569; opacity: 0.65; }
+    .close-line, .sma20, .sma50, .sma200 { fill: none; stroke-width: 2; }
+    .close-line { stroke: #e2e8f0; opacity: 0.75; }
+    .sma20 { stroke: #38bdf8; }
+    .sma50 { stroke: #22c55e; }
+    .sma200 { stroke: #f97316; }
+    .annotation { stroke-width: 1.5; stroke-dasharray: 6 5; }
+    .annotation-label { font-size: 14px; font-weight: 700; }
+    .empty-chart { min-height: 360px; display: grid; place-items: center; background: #111827; border: 1px solid #334155; color: #94a3b8; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>FULL Visual Scan - Weekly</h1>
+    
+    <div class='empty-chart'>No usable OHLC data available.</div>
+  </main>
+</body>
+</html>

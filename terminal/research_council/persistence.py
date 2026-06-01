@@ -13,10 +13,13 @@ from terminal.research_council.schemas import (
     AgentFinding,
     BranchSummary,
     CouncilState,
+    CriticFinding,
     CriticReview,
+    Decision,
     EvidencePack,
     ExecutionResult,
     Plan,
+    PlanStep,
     StrategyBuildRequest,
     StrategyBuildResult,
 )
@@ -139,6 +142,236 @@ def load_evidence_pack(
 
 def persist_research_council_run(run: object) -> dict:
     return {"status": "not_implemented", "run": run}
+
+
+def resume_council_run(
+    run_id: str,
+    *,
+    conn: Any | None = None,
+    dsn: str | None = None,
+) -> CouncilState | None:
+    """Reconstruct a CouncilState from persisted artifacts.
+
+    Loads run metadata, evidence pack, agent findings, plans, execution results,
+    and critic reviews. Returns None when the run_id is not found.
+    """
+    own_conn = conn is None
+    conn = conn or connect(dsn)
+    try:
+        # ── 1. Run metadata ────────────────────────────────────────────────
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT run_id, generated_at, council_mode, horizon, risk_budget,
+                       universe_filter, final_label, council_status,
+                       budgets_remaining, evidence_pack_id
+                FROM recommendation_reports.runs
+                WHERE run_id = %s
+                """,
+                (run_id,),
+            )
+            row = cur.fetchone()
+        if not row:
+            return None
+        if isinstance(row, dict):
+            meta = row
+        else:
+            keys = ("run_id", "generated_at", "council_mode", "horizon", "risk_budget",
+                    "universe_filter", "final_label", "council_status",
+                    "budgets_remaining", "evidence_pack_id")
+            meta = dict(zip(keys, row))
+
+        # ── 2. Evidence pack ───────────────────────────────────────────────
+        pack_id = meta.get("evidence_pack_id")
+        evidence_pack = load_evidence_pack(pack_id, conn=conn) if pack_id else None
+
+        # ── 3. Agent findings ──────────────────────────────────────────────
+        specialist_findings: dict[str, Any] = {}
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT body FROM recommendation_reports.agent_findings
+                WHERE run_id = %s
+                ORDER BY iteration, agent_name
+                """,
+                (run_id,),
+            )
+            for (body,) in (cur.fetchall() or []):
+                body_dict = _unwrap_json(body)
+                if isinstance(body_dict, dict):
+                    finding = AgentFinding.from_dict(body_dict)
+                    specialist_findings[finding.agent] = finding
+
+        # ── 4. Plans ───────────────────────────────────────────────────────
+        plans: list[Plan] = []
+        plan_ids: list[str] = []
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT plan_id, iteration, central_question, steps
+                FROM recommendation_reports.council_plans
+                WHERE run_id = %s
+                ORDER BY iteration
+                """,
+                (run_id,),
+            )
+            for plan_row in (cur.fetchall() or []):
+                if isinstance(plan_row, dict):
+                    plan_id, iteration, central_question, steps_raw = (
+                        plan_row["plan_id"], plan_row["iteration"],
+                        plan_row["central_question"], plan_row["steps"],
+                    )
+                else:
+                    plan_id, iteration, central_question, steps_raw = plan_row
+                steps_data = _unwrap_json(steps_raw) or []
+                plan_ids.append(plan_id)
+                plans.append(Plan(
+                    plan_id=plan_id,
+                    run_id=run_id,
+                    iteration=iteration,
+                    central_question=central_question,
+                    steps=[PlanStep.from_dict(s) for s in steps_data],
+                ))
+
+        # ── 5. Execution results ───────────────────────────────────────────
+        execution_results: dict[str, dict[str, ExecutionResult]] = {}
+        if plan_ids:
+            with conn.cursor() as cur:
+                placeholders = ", ".join(["%s"] * len(plan_ids))
+                cur.execute(
+                    f"""
+                    SELECT plan_id, result_id, step_id, status, outputs, error, elapsed_ms
+                    FROM recommendation_reports.execution_results
+                    WHERE plan_id IN ({placeholders})
+                    """,
+                    plan_ids,
+                )
+                for er_row in (cur.fetchall() or []):
+                    if isinstance(er_row, dict):
+                        pid, result_id, step_id, status, outputs_raw, error, elapsed_ms = (
+                            er_row["plan_id"], er_row["result_id"], er_row["step_id"],
+                            er_row["status"], er_row["outputs"], er_row["error"], er_row["elapsed_ms"],
+                        )
+                    else:
+                        pid, result_id, step_id, status, outputs_raw, error, elapsed_ms = er_row
+                    outputs = _unwrap_json(outputs_raw) or []
+                    if pid not in execution_results:
+                        execution_results[pid] = {}
+                    execution_results[pid][step_id] = ExecutionResult(
+                        result_id=result_id,
+                        step_id=step_id,
+                        status=status,
+                        outputs=outputs,
+                        error=error,
+                        elapsed_ms=elapsed_ms,
+                    )
+
+        # ── 6. Critic reviews ──────────────────────────────────────────────
+        critic_reviews_by_iter: dict[int, list[CriticReview]] = {}
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT review_id, critic, iteration, severity_max, findings, summary
+                FROM recommendation_reports.critic_reviews
+                WHERE run_id = %s
+                ORDER BY iteration
+                """,
+                (run_id,),
+            )
+            for cr_row in (cur.fetchall() or []):
+                if isinstance(cr_row, dict):
+                    review_id, critic, iteration, severity_max, findings_raw, summary = (
+                        cr_row["review_id"], cr_row["critic"], cr_row["iteration"],
+                        cr_row["severity_max"], cr_row["findings"], cr_row["summary"],
+                    )
+                else:
+                    review_id, critic, iteration, severity_max, findings_raw, summary = cr_row
+                findings_data = _unwrap_json(findings_raw) or []
+                review = CriticReview(
+                    review_id=review_id,
+                    critic=critic,
+                    run_id=run_id,
+                    iteration=iteration,
+                    severity_max=severity_max,
+                    findings=[CriticFinding.from_dict(f) for f in findings_data],
+                    summary=summary,
+                )
+                critic_reviews_by_iter.setdefault(iteration, []).append(review)
+        critic_reviews = [critics for _, critics in sorted(critic_reviews_by_iter.items())]
+
+        # ── 7. Reconstruct partial Decision ───────────────────────────────
+        decision: Decision | None = None
+        if meta.get("final_label"):
+            decision = Decision(
+                final_label=meta["final_label"],
+                confidence=0.0,
+                rationale="Reconstructed from persisted run metadata.",
+                candidates=[],
+            )
+
+        # ── 8. Build CouncilState ─────────────────────────────────────────
+        generated_at = meta.get("generated_at")
+        if isinstance(generated_at, str):
+            try:
+                generated_at = datetime.fromisoformat(generated_at)
+            except ValueError:
+                generated_at = datetime.now()
+        created_at = generated_at or datetime.now()
+
+        budgets_raw = _unwrap_json(meta.get("budgets_remaining") or {})
+        budgets = budgets_raw if isinstance(budgets_raw, dict) else {"wall_clock_s": 480, "tokens": 200_000}
+
+        return CouncilState(
+            run_id=meta["run_id"],
+            session_id="resumed",
+            created_at=created_at,
+            mode=meta.get("council_mode") or "market_council",
+            stage=meta.get("council_status") or "persistence",
+            objective="(resumed)",
+            horizon=meta.get("horizon") or "swing",
+            risk_budget=meta.get("risk_budget") or "moderate",
+            universe_filter=meta.get("universe_filter") or "liquid",
+            evidence_pack_id=pack_id,
+            evidence_pack=evidence_pack,
+            specialist_findings=specialist_findings,
+            plans=plans,
+            execution_results=execution_results,
+            critic_reviews=critic_reviews,
+            decision=decision,
+            budgets=budgets,
+            flags={"resumed": True, "source_run_id": run_id},
+        )
+    finally:
+        if own_conn:
+            conn.close()
+
+
+def export_council_run(
+    run_id: str,
+    *,
+    output_path: str | None = None,
+    conn: Any | None = None,
+    dsn: str | None = None,
+) -> dict[str, Any]:
+    """Export a full council run state as a JSON-serialisable dict.
+
+    When output_path is provided, the JSON artifact is written to that path.
+    Always returns the serialised dict.
+    """
+    import json
+
+    state = resume_council_run(run_id, conn=conn, dsn=dsn)
+    if state is None:
+        return {"ok": False, "error": f"run not found: {run_id}", "run_id": run_id}
+
+    artifact = _json_safe(state.to_dict())
+    if output_path:
+        from pathlib import Path
+        path = Path(output_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(artifact, indent=2, default=str), encoding="utf-8")
+        return {"ok": True, "run_id": run_id, "export_path": str(path), "artifact": artifact}
+    return {"ok": True, "run_id": run_id, "export_path": None, "artifact": artifact}
 
 
 def save_agent_findings(

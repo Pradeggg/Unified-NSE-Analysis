@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Strategy Council — DMART</title>
+<style>
+body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; margin: 2rem; color: #1a1a1a; }
+h1 { margin: 0 0 0.5rem; }
+h2 { margin-top: 2rem; border-bottom: 2px solid #ddd; padding-bottom: 0.25rem; }
+.kv, .grid { border-collapse: collapse; margin: 0.5rem 0 1rem; }
+.kv th, .kv td, .grid th, .grid td { border: 1px solid #ddd; padding: 0.35rem 0.7rem; }
+.kv th { background: #f5f5f5; text-align: left; font-weight: 600; min-width: 8rem; }
+.grid th { background: #f5f5f5; }
+.recommendation { padding: 0.4rem 0.9rem; border-radius: 0.4rem; font-weight: 700; display: inline-block; }
+.recommendation.TRADE_RESEARCH { background: #e7f6ec; color: #1f7a3a; }
+.recommendation.WAIT { background: #fff7e0; color: #8a6d00; }
+.recommendation.NO_TRADE { background: #fdecec; color: #b32d2d; }
+.verdict { padding: 0.1rem 0.4rem; border-radius: 0.25rem; font-size: 0.85em; }
+.verdict.accept { background: #e7f6ec; color: #1f7a3a; }
+.verdict.revise { background: #fff7e0; color: #8a6d00; }
+.verdict.reject { background: #fdecec; color: #b32d2d; }
+.critic { margin: 0.7rem 0; padding: 0.6rem 0.9rem; background: #fafafa; border-left: 4px solid #888; }
+.empty { color: #888; font-style: italic; }
+footer { margin-top: 3rem; color: #888; font-size: 0.85em; }
+</style>
+</head>
+<body>
+<h1>Strategy Council — DMART</h1>
+<p>Recommendation: <span class="recommendation TRADE_RESEARCH">TRADE_RESEARCH</span></p>
+<p><strong>Rationale:</strong> Final recommendation is based on validation-selected strategy and one-shot test results. This is research-only output, not investment advice.</p>
+
+<h2>Locked strategy</h2>
+<table class='kv'><tr><th>Strategy</th><td>stage2</td></tr><tr><th>Horizon</th><td>5d</td></tr><tr><th>Origin</th><td>deterministic_fallback</td></tr><tr><th>Thesis</th><td>stage2 candidate for DMART over 5 trading days.</td></tr></table>
+
+<h2>Evidence</h2>
+<table class='kv'><tr><th>Symbol</th><td>DMART</td></tr><tr><th>As of</th><td>2026-05-18</td></tr><tr><th>Close</th><td>4304.7</td></tr><tr><th>Bars</th><td>1239</td></tr><tr><th>Regime</th><td>bull (bias 3.6274%)</td></tr><tr><th>Beta</th><td>-0.3242</td></tr><tr><th>ATR%</th><td>2.036</td></tr><tr><th>Missing</th><td>filing</td></tr><tr><th>Freshness</th><td>eod=available, strategy_evidence_readiness=ready, regime=bull, factor_exposure=available, microstructure=available</td></tr></table>
+
+<h2>Iterations</h2>
+<table class='grid'><thead><tr><th>#</th><th>Candidates</th><th>Best train</th><th>Best validation</th><th>Critic verdicts</th></tr></thead><tbody><tr><td>1</td><td>5</td><td>14.30%</td><td>-7.05%</td><td>data_leakage:accept, market_risk:revise, drawdown:accept, correlation:accept, factor:accept, regime:revise</td></tr></tbody></table>
+
+<h2>Final critiques</h2>
+<section class='critic'><h3>data_leakage — <span class='verdict accept'>accept</span></h3><h4>Issues</h4><ul><li>—</li></ul><h4>Required changes</h4><ul><li>—</li></ul></section><section class='critic'><h3>market_risk — <span class='verdict revise'>revise</span></h3><h4>Issues</h4><ul><li>All validation returns are negative.</li></ul><h4>Required changes</h4><ul><li>tighten filters or return NO_TRADE</li></ul></section><section class='critic'><h3>drawdown — <span class='verdict accept'>accept</span></h3><h4>Issues</h4><ul><li>—</li></ul><h4>Required changes</h4><ul><li>—</li></ul></section><section class='critic'><h3>correlation — <span class='verdict accept'>accept</span></h3><h4>Issues</h4><ul><li>—</li></ul><h4>Required changes</h4><ul><li>—</li></ul></section><section class='critic'><h3>factor — <span class='verdict accept'>accept</span></h3><h4>Issues</h4><ul><li>—</li></ul><h4>Required changes</h4><ul><li>—</li></ul></section><section class='critic'><h3>regime — <span class='verdict revise'>revise</span></h3><h4>Issues</h4><ul><li>all validation returns negative under bull regime (max=-7.05%)</li></ul><h4>Required changes</h4><ul><li>design strategies suited to bull conditions</li></ul></section>
+
+<footer>Generated 2026-05-18T19:17:49. Research-only output — not investment advice.</footer>
+</body>
+</html>

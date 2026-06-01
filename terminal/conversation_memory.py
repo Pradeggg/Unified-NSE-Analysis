@@ -7,12 +7,15 @@ The memory has two layers:
 
 from __future__ import annotations
 
+import logging
 import os
 import re
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from psycopg2.extras import Json
 
@@ -582,6 +585,7 @@ def load_memory_fail_open(session_id: str = DEFAULT_SESSION_ID) -> ConversationM
     try:
         return ConversationMemory.load_from_postgres(session_id)
     except Exception:
+        logger.warning("Failed to load memory from PostgreSQL — starting fresh session", exc_info=True)
         return ConversationMemory(session_id=session_id)
 
 

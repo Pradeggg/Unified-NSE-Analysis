@@ -73,11 +73,12 @@ class TestAgentPreLLMHallucinationGate:
 
         # PG-HALL-GUARD: Use a phrase that triggers grounded-intent
         # classification ("top gainers") but is too vague for any
-        # deterministic _keyword_intent handler to claim. Specifically
-        # avoid words like "indin/market/status/breadth" which would
-        # route to market_situation_assessment.
+        # deterministic _keyword_intent handler to claim. Patch
+        # _execute_route to None so the unified router falls through to
+        # the legacy LLM path where the hallucination guard lives.
         with patch("terminal.agent._execute_plan") as execute_plan, \
-             patch("terminal.agent._keyword_intent") as kw:
+             patch("terminal.agent._keyword_intent") as kw, \
+             patch.object(agent, "_execute_route", return_value=None):
             kw.return_value = {"intent": "general_chat", "plan": []}
             execute_plan.return_value = []
             result = agent.query("show top gainers please")

@@ -1,0 +1,17 @@
+{
+  "starting_equity": 1000000.0,
+  "ending_equity": 828310.866488,
+  "total_return_pct": -17.1689,
+  "max_drawdown_pct": 22.9933,
+  "number_of_trades": 2353,
+  "number_of_fills": 4719,
+  "realized_pnl": -163861.089246,
+  "winning_trades": 1071,
+  "losing_trades": 1282,
+  "flat_trades": 0,
+  "open_positions_count": 13,
+  "invalid_fill_sequences": 0,
+  "strategy_ids": [
+    "mean_reversion_uptrend_v1"
+  ]
+}

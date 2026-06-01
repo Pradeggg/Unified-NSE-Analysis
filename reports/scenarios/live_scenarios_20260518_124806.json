@@ -1,0 +1,41 @@
+[
+  {
+    "id": "A01",
+    "bucket": "A_index_routing",
+    "query": "NIFTY SMALLCAP 100",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 5.873656988143921,
+    "trail": [
+      "get_index_snapshot"
+    ],
+    "answer_excerpt": "**\ud83d\udcc8 NIFTY SMALLCAP 100 Index Overview**  - **Latest Close**: 18,695.65 (as of 7th May 2026) - **Day Range**: Open at 18,635.10, High of 18,728.20, Low of 18,567.55 - **Change**: Gained 0.87% compared to the previous close - **52-week Range**: The highest was 19,224.95, and the lowest was 14,986.00  "
+  },
+  {
+    "id": "A02",
+    "bucket": "A_index_routing",
+    "query": "NIFTY SMALLCAP 250",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 5.034125089645386,
+    "trail": [
+      "get_index_snapshot"
+    ],
+    "answer_excerpt": "**\ud83d\udcc8 NIFTY SMALLCAP 100 Index Snapshot**  - **Current Status**: The NIFTY SMALLCAP 100 closed at 18,695.65 on May 7, 2026. The index was up by 0.87% on its last trading day, indicating a solid gain. It opened at 18,635.1 and saw a high of 18,728.2 and a low of 18,567.55 during the session. - **52-Wee"
+  },
+  {
+    "id": "A03",
+    "bucket": "A_index_routing",
+    "query": "NIFTY MIDCAP 100",
+    "setup": [],
+    "passed": true,
+    "failures": [],
+    "duration_s": 6.646010160446167,
+    "trail": [
+      "get_index_snapshot"
+    ],
+    "answer_excerpt": "**\ud83d\udcc8 NIFTY MIDCAP 100 Index Performance**  - **Current Level:** 62,003.15  - **Change Percentage:** +1.1% vs previous close - **Day's Range:** 61,441.15 - 62,094.4 - **52-Week Range:** 52,032.85 - 62,094.4 - **Trend Over the Last 10 Days:** Up 6 out of 10 sessions, with a 3.42% overall gain  The NIFT"
+  }
+]

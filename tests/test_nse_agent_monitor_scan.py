@@ -444,6 +444,48 @@ class NSEAgentScanRewriteTests(unittest.TestCase):
         _, _, args = nse_agent._scan_command_tool_call("/scan  NIFTY   IT")
         self.assertEqual(args["index"], "NIFTY IT")
 
+    # PG-SCAN-SYM 2026-05-26: `/scan <TICKER>` must route to
+    # scan_symbols_intraday, not scan_intraday_market(index=<TICKER>),
+    # which would return "No stocks found for index: <TICKER>".
+    def test_scan_command_routes_single_ticker_to_symbol_scan(self):
+        status, tool_name, args = nse_agent._scan_command_tool_call("/scan MODISONLTD")
+        self.assertEqual(tool_name, "scan_symbols_intraday")
+        self.assertEqual(args["symbols"], ["MODISONLTD"])
+        self.assertEqual(args["interval"], "15m")
+        self.assertEqual(args["min_rr"], 1.3)
+        self.assertIn("MODISONLTD", status)
+
+    def test_scan_command_routes_comma_separated_tickers_to_symbol_scan(self):
+        status, tool_name, args = nse_agent._scan_command_tool_call(
+            "/scan RELIANCE, TCS, INFY"
+        )
+        self.assertEqual(tool_name, "scan_symbols_intraday")
+        self.assertEqual(args["symbols"], ["RELIANCE", "TCS", "INFY"])
+        self.assertIn("RELIANCE", status)
+
+    def test_scan_command_routes_space_separated_tickers_to_symbol_scan(self):
+        _, tool_name, args = nse_agent._scan_command_tool_call(
+            "/scan RELIANCE TCS INFY HDFCBANK"
+        )
+        self.assertEqual(tool_name, "scan_symbols_intraday")
+        self.assertEqual(args["symbols"], ["RELIANCE", "TCS", "INFY", "HDFCBANK"])
+
+    def test_scan_command_keeps_indices_on_index_scan_path(self):
+        """Index inputs must still go through scan_intraday_market — not
+        be misclassified as symbols by the new ticker-detection branch."""
+        for raw in ("/scan NIFTY 50", "/scan NIFTY BANK", "/scan banknifty"):
+            with self.subTest(raw=raw):
+                _, tool_name, _ = nse_agent._scan_command_tool_call(raw)
+                self.assertEqual(tool_name, "scan_intraday_market")
+
+    def test_rewrite_scan_single_ticker_query_text(self):
+        rewritten, status = nse_agent._rewrite_scan_command("/scan MODISONLTD")
+        self.assertEqual(
+            rewritten,
+            "Scan MODISONLTD for intraday research setups using all strategies on 15m charts",
+        )
+        self.assertEqual(status, "Intraday scan: MODISONLTD")
+
 
 class MarketDashboardLiveTests(unittest.TestCase):
     def _sample_snapshot(self):

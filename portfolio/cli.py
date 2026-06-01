@@ -12,12 +12,15 @@ from typing import Any
 import pandas as pd
 
 from portfolio.agents.report_agent import ReportAgent
+from portfolio.data_sources.postgres import default_dsn, load_postgres_replay_data
 from portfolio.defaults import sample_ohlcv, valid_strategy_spec
 from portfolio.engine.audit_log import AuditLog
 from portfolio.engine.benchmark import compare_to_benchmark
 from portfolio.engine.event_loop import ReplayConfig, run_replay
+from portfolio.engine.leaderboard import calculate_strategy_diagnostics
 from portfolio.engine.metrics import PortfolioMetrics, calculate_metrics
 from portfolio.engine.run_manifest import build_run_manifest
+from portfolio.engine.strategy_library import built_in_strategy_specs
 from portfolio.engine.validation import validate_ohlcv
 
 
@@ -61,6 +64,21 @@ def main(argv: list[str] | None = None) -> int:
     report.add_argument("--report", type=Path, default=None)
     report.add_argument("--print", action="store_true", dest="print_report")
     report.set_defaults(func=_cmd_report)
+
+    strategy_lab = subcommands.add_parser("strategy-lab", help="Compare built-in strategies on PostgreSQL NSE EOD data")
+    strategy_lab.add_argument("--output-dir", type=Path, default=Path("portfolio/data/nse_pg_strategy_lab/latest"))
+    strategy_lab.add_argument("--source", choices=["postgres"], default="postgres")
+    strategy_lab.add_argument("--dsn", default=default_dsn())
+    strategy_lab.add_argument("--start", default="2025-01-01")
+    strategy_lab.add_argument("--lookback", default="2024-01-01")
+    strategy_lab.add_argument("--end", default=None)
+    strategy_lab.add_argument("--top-n", type=int, default=200)
+    strategy_lab.add_argument("--benchmark-id", default="Nifty 500")
+    strategy_lab.add_argument("--initial-capital", type=float, default=1_000_000.0)
+    strategy_lab.add_argument("--slippage-bps", type=float, default=5.0)
+    strategy_lab.add_argument("--brokerage-bps", type=float, default=3.0)
+    strategy_lab.add_argument("--run-id", default="NSE-PG-STRATEGY-LAB")
+    strategy_lab.set_defaults(func=_cmd_strategy_lab)
 
     args = parser.parse_args(argv)
     try:
@@ -226,6 +244,135 @@ def _cmd_report(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_strategy_lab(args: argparse.Namespace) -> int:
+    output_dir = args.output_dir
+    data_bundle = load_postgres_replay_data(
+        dsn=args.dsn,
+        start_date=args.start,
+        lookback_date=args.lookback,
+        end_date=args.end,
+        top_n=args.top_n,
+        benchmark_id=args.benchmark_id,
+    )
+    data = data_bundle.features
+    validation = validate_ohlcv(data)
+    validation_path = output_dir / VALIDATION_RELATIVE_PATH
+    _write_json(validation_path, validation.as_dict())
+    if not validation.is_usable:
+        raise CliArtifactError(
+            f"data validation failed: {validation.error_count} error(s), "
+            f"{validation.warning_count} warning(s); see {validation_path}"
+        )
+
+    data_path = output_dir / "data/replay_features.csv"
+    benchmark_path = output_dir / "data/benchmark.csv"
+    data_path.parent.mkdir(parents=True, exist_ok=True)
+    data.to_csv(data_path, index=False)
+    data_bundle.benchmark.to_csv(benchmark_path, index=False)
+
+    strategy_specs = built_in_strategy_specs()
+    leaderboard_rows: list[dict[str, Any]] = []
+    report_agent = ReportAgent()
+    run_config = ReplayConfig(
+        initial_capital=args.initial_capital,
+        slippage_bps=args.slippage_bps,
+        brokerage_bps=args.brokerage_bps,
+    )
+    for spec in strategy_specs:
+        strategy_id = str(spec["strategy_id"])
+        run_dir = output_dir / "runs" / strategy_id
+        result = run_replay(data, [spec], run_config)
+        metrics = calculate_metrics(result)
+        benchmark = compare_to_benchmark(
+            _benchmark_nav_history(result.nav_history),
+            data_bundle.benchmark,
+            benchmark_id=args.benchmark_id,
+        )
+        diagnostics = calculate_strategy_diagnostics(result, metrics.as_dict())
+        state = _strategy_lab_state_payload(
+            run_id=f"{args.run_id}-{strategy_id}",
+            result=result,
+            metrics=metrics.as_dict(),
+            config={
+                "source": args.source,
+                "stage_source": "scores.stage_snapshots",
+                "start": args.start,
+                "lookback": args.lookback,
+                "end": args.end,
+                "top_n": args.top_n,
+                "latest_eod_date": data_bundle.latest_eod_date,
+                "initial_capital": args.initial_capital,
+                "slippage_bps": args.slippage_bps,
+                "brokerage_bps": args.brokerage_bps,
+            },
+        )
+        _write_json(run_dir / STATE_RELATIVE_PATH, state)
+        _write_json(run_dir / METRICS_RELATIVE_PATH, metrics.as_dict())
+        _write_json(run_dir / BENCHMARK_RELATIVE_PATH, benchmark.as_dict())
+        _write_json(run_dir / "diagnostics/diagnostics.json", diagnostics.as_dict())
+        report_agent.write_markdown_report(
+            run_dir / REPORT_RELATIVE_PATH,
+            replay_result=result,
+            metrics=metrics,
+            audit_log_path=run_dir / AUDIT_RELATIVE_PATH,
+        )
+        closed_trades = metrics.winning_trades + metrics.losing_trades + metrics.flat_trades
+        win_rate_pct = round(metrics.winning_trades / closed_trades * 100.0, 4) if closed_trades else 0.0
+        leaderboard_rows.append(
+            {
+                "active": metrics.number_of_fills > 0,
+                "strategy_id": strategy_id,
+                "name": str(spec.get("name", strategy_id)),
+                "ending_equity": metrics.ending_equity,
+                "total_return_pct": metrics.total_return_pct,
+                "max_drawdown_pct": metrics.max_drawdown_pct,
+                "benchmark_return_pct": benchmark.benchmark_return_pct,
+                "excess_return_pct": benchmark.excess_return_pct,
+                "fills": metrics.number_of_fills,
+                "closed_trades": metrics.number_of_trades,
+                "win_rate_pct": win_rate_pct,
+                "realized_pnl": metrics.realized_pnl,
+                "open_positions": metrics.open_positions_count,
+                **diagnostics.as_dict(),
+                "report_path": str(run_dir / REPORT_RELATIVE_PATH),
+            }
+        )
+
+    leaderboard = _strategy_lab_leaderboard(leaderboard_rows)
+    reports_dir = output_dir / "reports"
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    leaderboard_path = reports_dir / "strategy_leaderboard.csv"
+    leaderboard.to_csv(leaderboard_path, index=False)
+    summary = {
+        "run_id": args.run_id,
+        "source": "PostgreSQL market.equity_eod + scores.stage_snapshots",
+        "stage_source": "scores.stage_snapshots",
+        "latest_eod_date": data_bundle.latest_eod_date,
+        "data_path": str(data_path),
+        "benchmark_path": str(benchmark_path),
+        "output_dir": str(output_dir),
+        "row_count": int(len(data)),
+        "symbol_count": int(data["symbol"].nunique()) if "symbol" in data.columns else 0,
+        "start_date": str(data["date"].min()) if not data.empty else args.start,
+        "end_date": str(data["date"].max()) if not data.empty else args.end,
+        "initial_capital": args.initial_capital,
+        "slippage_bps": args.slippage_bps,
+        "brokerage_bps": args.brokerage_bps,
+        "benchmark_id": args.benchmark_id,
+        "data_quality": validation.as_dict(),
+        "stage_counts": data["stage"].value_counts().to_dict() if "stage" in data.columns else {},
+        "leaderboard": leaderboard.to_dict(orient="records"),
+    }
+    _write_json(reports_dir / "strategy_comparison_summary.json", summary)
+    _write_strategy_lab_report(reports_dir / "strategy_comparison_report.md", summary)
+
+    print(f"Strategy lab complete: {output_dir}")
+    print(f"Leaderboard: {leaderboard_path}")
+    print(f"Report: {reports_dir / 'strategy_comparison_report.md'}")
+    print(f"Summary: {reports_dir / 'strategy_comparison_summary.json'}")
+    return 0
+
+
 def _load_ohlcv(path: Path | None) -> pd.DataFrame:
     if path is None:
         return sample_ohlcv()
@@ -239,6 +386,79 @@ def _load_strategy_specs(path: Path | None) -> list[dict[str, Any]]:
     if isinstance(raw, list):
         return [dict(item) for item in raw]
     return [dict(raw)]
+
+
+def _strategy_lab_leaderboard(rows: list[dict[str, Any]]) -> pd.DataFrame:
+    if not rows:
+        return pd.DataFrame()
+    frame = pd.DataFrame(rows)
+    frame = frame.sort_values(
+        ["active", "rank_score", "total_return_pct"],
+        ascending=[False, False, False],
+    ).reset_index(drop=True)
+    frame.insert(0, "rank", frame.index + 1)
+    return frame.drop(columns=["active"])
+
+
+def _strategy_lab_state_payload(
+    *,
+    run_id: str,
+    result: Any,
+    metrics: dict[str, Any],
+    config: dict[str, Any],
+) -> dict[str, Any]:
+    state = _state_payload(run_id, result, metrics)
+    state["config"] = config
+    state["events"] = []
+    state["summary"]["events"] = len(result.events)
+    return state
+
+
+def _write_strategy_lab_report(path: Path, summary: dict[str, Any]) -> None:
+    rows = list(summary.get("leaderboard") or [])
+    lines = [
+        "# NSE PostgreSQL Strategy Lab",
+        "",
+        "Source: PostgreSQL `market.equity_eod` joined to `scores.stage_snapshots`.",
+        f"Benchmark: `{summary.get('benchmark_id')}`.",
+        (
+            f"Window: {summary.get('start_date')} to {summary.get('end_date')}; "
+            f"rows: {summary.get('row_count')}; symbols: {summary.get('symbol_count')}."
+        ),
+        (
+            f"Costs: {summary.get('slippage_bps')} bps slippage + "
+            f"{summary.get('brokerage_bps')} bps brokerage. "
+            f"Starting capital: {summary.get('initial_capital')}."
+        ),
+        "",
+        "## Leaderboard",
+        "",
+        (
+            "| Rank | Strategy | Return % | Max DD % | Excess % | Profit Factor | "
+            "Expectancy | Turnover % | Cost Drag % | Fills | Win Rate % |"
+        ),
+        "|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
+    ]
+    for row in rows:
+        lines.append(
+            "| {rank} | {strategy_id} | {total_return_pct:.2f} | {max_drawdown_pct:.2f} | "
+            "{excess_return_pct:.2f} | {profit_factor:.2f} | {expectancy:.2f} | "
+            "{turnover_pct:.2f} | {cost_drag_pct:.2f} | {fills} | {win_rate_pct:.2f} |".format(
+                **row
+            )
+        )
+    lines.extend(
+        [
+            "",
+            "## Notes",
+            "",
+            "- Ranking sorts active strategies first, then by `rank_score`.",
+            "- `rank_score` is return minus max drawdown, with inactive strategies penalized.",
+            "- Stage values are sourced from `scores.stage_snapshots`.",
+        ]
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def _fixture_buy_hold_benchmark(data: pd.DataFrame) -> pd.DataFrame:

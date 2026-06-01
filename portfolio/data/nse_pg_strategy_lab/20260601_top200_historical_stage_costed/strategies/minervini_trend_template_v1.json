@@ -1,0 +1,128 @@
+{
+  "add_rules": [
+    {
+      "indicator": "close",
+      "kind": "trend_add",
+      "operator": "above",
+      "risk_per_trade_pct": 0.5,
+      "size_pct": 4.0,
+      "timeframe": "daily",
+      "value": "sma_20"
+    }
+  ],
+  "entry": {
+    "all": [
+      {
+        "indicator": "stage",
+        "operator": "eq",
+        "value": "STAGE_2"
+      },
+      {
+        "indicator": "close",
+        "operator": "above",
+        "value": "sma_50"
+      },
+      {
+        "indicator": "sma_50",
+        "operator": "above",
+        "value": "sma_100"
+      }
+    ]
+  },
+  "exit": {
+    "any": [
+      {
+        "indicator": "close",
+        "operator": "below",
+        "value": "sma_50"
+      },
+      {
+        "indicator": "relative_strength",
+        "operator": "below",
+        "value": 65
+      },
+      {
+        "indicator": "stage",
+        "operator": "in",
+        "value": [
+          "STAGE_3",
+          "STAGE_4"
+        ]
+      }
+    ]
+  },
+  "fundamentals": {
+    "all": [
+      {
+        "indicator": "eps_growth_pct",
+        "operator": "gte",
+        "value": 20
+      },
+      {
+        "indicator": "sales_growth_pct",
+        "operator": "gte",
+        "value": 15
+      },
+      {
+        "indicator": "roe_pct",
+        "operator": "gte",
+        "value": 15
+      }
+    ]
+  },
+  "name": "Minervini Trend Template",
+  "risk": {
+    "initial_stop": {
+      "indicator": "atr_14",
+      "multiple": 2.0,
+      "type": "atr"
+    },
+    "max_position_pct": 10.0,
+    "risk_per_trade_pct": 1.0
+  },
+  "stage_2": {
+    "all": [
+      {
+        "indicator": "stage",
+        "operator": "eq",
+        "value": "STAGE_2"
+      }
+    ],
+    "timeframe": "daily"
+  },
+  "strategy_id": "minervini_trend_template_v1",
+  "trend_filters": {
+    "all": [
+      {
+        "indicator": "close",
+        "operator": "above",
+        "value": "sma_50"
+      },
+      {
+        "indicator": "sma_50",
+        "operator": "above",
+        "value": "sma_200"
+      },
+      {
+        "indicator": "relative_strength",
+        "operator": "gte",
+        "value": 80
+      }
+    ],
+    "timeframe": "daily"
+  },
+  "universe": {
+    "min_price": 50,
+    "stage": "STAGE_2"
+  },
+  "volume": {
+    "all": [
+      {
+        "indicator": "volume_ratio_20d",
+        "operator": "gte",
+        "value": 1.2
+      }
+    ],
+    "timeframe": "daily"
+  }
+}

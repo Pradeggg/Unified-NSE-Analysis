@@ -1,0 +1,9 @@
+{
+  "benchmark_id": "Nifty 500",
+  "portfolio_return_pct": 14.2609,
+  "benchmark_return_pct": 0.7793,
+  "excess_return_pct": 13.4816,
+  "portfolio_max_drawdown_pct": 16.4672,
+  "benchmark_max_drawdown_pct": 14.8178,
+  "observation_count": 332
+}

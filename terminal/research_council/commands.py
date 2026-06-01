@@ -168,8 +168,10 @@ def _render_run_result(result: dict[str, Any]) -> str:
         f"  Run:    {result.get('run_id', '-')}",
         f"  Mode:   {result.get('mode', '-')}",
         f"  Stage:  {result.get('stage', '-')}",
-        f"  Label:  {result.get('final_label', '-')}",
+        f"  Label:  {result.get('final_label') or '-'}",
     ]
+    if result.get("evidence_only"):
+        lines.append("  Evidence: only")
     if report_paths.get("markdown"):
         lines.append(f"  Report: {report_paths['markdown']}")
     if report_paths.get("html"):

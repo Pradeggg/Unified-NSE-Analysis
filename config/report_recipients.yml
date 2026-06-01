@@ -1,0 +1,31 @@
+# =============================================================================
+# Agent Adda — Email distribution lists for generated reports
+# =============================================================================
+# Edit this file to add or remove email recipients for each report. Changes
+# take effect on the next run (no code change / restart needed).
+#
+# Structure per report:
+#   <report_key>:
+#     to:   [primary recipients in the "To:" line]
+#     bcc:  [recipients hidden from each other in "Bcc:"]
+#
+# IMPORTANT: Every email created via this config is opened as a DRAFT in
+# Outlook for the user to review before sending. Nothing is auto-sent.
+# -----------------------------------------------------------------------------
+
+top_picks:
+  to:
+    - pgorai@deloitte.com
+  bcc:
+    - hibhatia@deloitte.com
+    - hikhan@deloitte.com
+    - parsmishra@DELOITTE.com
+    - sandeepksharma@deloitte.com
+    - aprithviraj@deloitte.com
+    - sgorai@deloitte.com
+    - mbinjola@deloitte.com
+    - avsen@deloitte.com
+    - amahale@deloitte.com
+    - vitangirala@deloitte.com
+    - ajkumar@deloitte.com
+    - kchouhan@deloitte.com
