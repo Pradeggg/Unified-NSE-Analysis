@@ -39,7 +39,17 @@ from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Optional
 
-from terminal.db import connect as pg_connect
+import psycopg2
+
+_PG_DSN = (
+    os.environ.get("AGENT_ADDA_PG_DSN")
+    or os.environ.get("PG_DSN")
+    or "dbname=nse_market user=nse_admin host=/tmp"
+)
+
+def pg_connect():
+    """Open a PostgreSQL connection using the project-standard DSN."""
+    return psycopg2.connect(_PG_DSN)
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 _HERE = Path(__file__).resolve().parent.parent          # project root
