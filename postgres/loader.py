@@ -199,9 +199,10 @@ def find_latest_fundamental_details_csv() -> Path | None:
 # ---------------------------------------------------------------------------
 
 def equity_eod_csv_paths():
+    # NOTE: DATA / "data" / ... paths removed — they reference a stale nested
+    # directory (data/data/) left over from a legacy layout and should never
+    # be read. The two correct locations are data/nse-raw/ and data/ directly.
     candidates = [
-        DATA / "data" / "nse-raw" / "nse_sec_full_data.csv",
-        DATA / "data" / "nse_sec_full_data.csv",
         DATA / "nse-raw" / "nse_sec_full_data.csv",
         DATA / "nse_sec_full_data.csv",
     ]
