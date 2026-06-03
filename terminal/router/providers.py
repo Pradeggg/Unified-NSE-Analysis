@@ -98,8 +98,16 @@ _MARKET_PHRASES = (
     "market breadth",
     "market open",
     "market status",
+    "market sentiment",
+    "market performance",
+    "market performing",
+    "market signal",
+    "market regime",
+    "market narrative",
     "nifty today",
     "nifty now",
+    "nifty doing",
+    "what is nifty",
     "whats moving",
     "what's moving",
     "what is moving",
@@ -107,6 +115,7 @@ _MARKET_PHRASES = (
     "sector rotation",
     "sector strength",
     "sector performance",
+    "sector outlook",
     "sectors are",
     "sector today",
     "which sector",
@@ -114,11 +123,53 @@ _MARKET_PHRASES = (
     "leading sector",
     "best sector",
     "top sector",
-    "doing well",        # "which sectors are doing well"
-    "outperforming",     # "what sectors are outperforming"
+    "doing well",
+    "outperforming",
     "underperforming",
     "sector leader",
     "sector overview",
+    "sector strong",
+    "sector weak",
+    "sector doing",
+    # ── Market breadth / stage / A/D ──────────────────────────────────────────
+    "stage distribution",
+    "stage 2 stocks",
+    "stage 2 today",
+    "stage 2 in",            # "stocks that entered stage 2 in the last"
+    "entered stage 2",
+    "entered stage",
+    "stocks in stage",
+    "canslim score",
+    "canslim screen",
+    "advance decline",
+    "advances and declines",
+    "a/d ratio",
+    "breadth",               # bare word — "breadth" alone means market breadth
+    "breadth today",
+    "market breadth",
+    "small cap stocks",
+    "midcap stocks",
+    "largecap stocks",
+    "compared to",           # "IT stocks compared to pharma"
+    "comparing sectors",
+    "sector vs",
+    "deep analysis",         # "deep analysis of Nifty IT"
+    # ── FII/DII / macro / global ──────────────────────────────────────────────
+    "fii",                   # bare "FII" or "FII today"
+    "fii dii",
+    "fii activity",
+    "fii-backed",
+    "fii backed",
+    "dii activity",
+    "foreign flows",
+    "institutional activity",
+    "macro proxies",
+    "macro signals",
+    "global risk",
+    "global market",
+    "global cues",
+    "global impact",
+    "global impact on india",
     # ── Screeners / scans ─────────────────────────────────────────────────────
     "screener",
     "scan nifty",
@@ -131,7 +182,15 @@ _MARKET_PHRASES = (
     "relative strength",
     "breakout scan",
     "vcp scan",
-    # ── Broad "which stocks" questions ─────────────────────────────────────────
+    "momentum stocks",
+    "momentum leaders",
+    "52 week high",
+    "52-week high",
+    "52w high",
+    "new high stocks",
+    "canslim screen",
+    "stage 2 screen",
+    # ── Broad "which stocks" / market summary questions ─────────────────────────
     "stocks up today",
     "stocks down today",
     "which stocks are up",
@@ -139,7 +198,19 @@ _MARKET_PHRASES = (
     "stocks doing well",
     "what stocks are",
     "stocks today",
+    "stocks in",              # "stocks in pharma"
+    "money flowing",          # "where is the money flowing"
+    "capital flows",
+    "overview of how",        # "give me an overview of how the market"
+    "how the market",
+    "sectors",                # bare "sectors" query
 )
+
+# Single-word queries that unambiguously refer to market state.
+# Kept separate so we can apply a minimum-length guard if needed.
+_MARKET_BARE_WORDS = frozenset({
+    "market", "sectors", "breadth", "fii", "dii",
+})
 _TOP_MOVERS_PHRASES = (
     "top gainers",
     "top losers",
@@ -147,6 +218,25 @@ _TOP_MOVERS_PHRASES = (
     "biggest gainers",
     "biggest losers",
     "biggest movers",
+    "gainers today",
+    "losers today",
+    "gainers in nifty",
+    "losers in nifty",
+    "gained the most",
+    "lost the most",
+    "up the most",
+    "down the most",
+    "stocks gained",
+    "stocks lost",
+    "what's hot",
+    "whats hot",
+    "hot stocks",
+    "what is hot",
+    "best performers today",
+    "worst performers today",
+    "which stocks gained",
+    "which stocks lost",
+    "top performers",
 )
 _TOP_MOVERS_INTRADAY_HINTS = (
     "intraday",
@@ -711,7 +801,15 @@ class MarketSituationProvider:
         text = _norm(user_input)
         if not text:
             return []
+        # Standard phrase match
         matched = next((p for p in _MARKET_PHRASES if p in text), None)
+        # Bare-word match for unambiguous single/two-token market queries
+        # (e.g. "market", "sectors", "breadth", "fii")
+        if not matched:
+            tokens = frozenset(re.findall(r"[a-z]+", text))
+            bare_hit = tokens & _MARKET_BARE_WORDS
+            if bare_hit and len(text.split()) <= 3:
+                matched = next(iter(bare_hit))
         if not matched:
             return []
         if matched in {"scan nifty", "scan fno", "scan f&o", "intraday scan", "breakout scan", "vcp scan"}:
