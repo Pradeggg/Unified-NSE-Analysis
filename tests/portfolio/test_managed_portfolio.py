@@ -24,6 +24,20 @@ def test_policy_validation_rejects_invalid_risk():
         ManagedPortfolioPolicy(risk_per_new_position_pct=0)
 
 
+@pytest.mark.parametrize(
+    "field",
+    [
+        "first_add_pct_of_target",
+        "second_add_pct_of_target",
+        "trim_when_position_pct_above",
+        "trim_to_position_pct",
+    ],
+)
+def test_policy_validation_rejects_invalid_add_and_trim_fields(field):
+    with pytest.raises(ValueError, match=field):
+        ManagedPortfolioPolicy(**{field: 0})
+
+
 def _features() -> pd.DataFrame:
     return pd.DataFrame(
         [
@@ -133,6 +147,90 @@ def test_managed_portfolio_skips_when_sector_cap_exceeded(tmp_path):
     assert result["state"]["positions"] == {}
 
 
+def test_managed_portfolio_uses_mark_to_market_prices_for_sector_cap(tmp_path):
+    features = pd.DataFrame(
+        [
+            {
+                "date": "2025-01-02",
+                "symbol": "AAA",
+                "open": 100.0,
+                "high": 101.0,
+                "low": 99.0,
+                "close": 100.0,
+                "atr_14": 10.0,
+                "sector": "Industrials",
+                "stage": "STAGE_2",
+                "relative_strength": 80.0,
+                "rsi_14": 60.0,
+            },
+            {
+                "date": "2025-01-03",
+                "symbol": "AAA",
+                "open": 1000.0,
+                "high": 1001.0,
+                "low": 999.0,
+                "close": 1000.0,
+                "atr_14": 10.0,
+                "sector": "Industrials",
+                "stage": "STAGE_2",
+                "relative_strength": 85.0,
+                "rsi_14": 65.0,
+            },
+            {
+                "date": "2025-01-03",
+                "symbol": "BBB",
+                "open": 100.0,
+                "high": 101.0,
+                "low": 99.0,
+                "close": 100.0,
+                "atr_14": 10.0,
+                "sector": "Industrials",
+                "stage": "STAGE_2",
+                "relative_strength": 82.0,
+                "rsi_14": 62.0,
+            },
+        ]
+    )
+    policy = ManagedPortfolioPolicy(initial_capital=100_000, max_sector_pct=20, max_single_stock_pct=50)
+    orders = [
+        {
+            "order_id": "ord1",
+            "strategy_id": "s1",
+            "symbol": "AAA",
+            "side": "BUY",
+            "quantity": 999,
+            "submitted_at": "2025-01-02",
+            "reason": "entry rule matched",
+        },
+        {
+            "order_id": "ord2",
+            "strategy_id": "s1",
+            "symbol": "BBB",
+            "side": "BUY",
+            "quantity": 999,
+            "submitted_at": "2025-01-03",
+            "reason": "entry rule matched",
+        },
+    ]
+
+    result = build_managed_portfolio(
+        output_dir=tmp_path,
+        run_id="RUN1",
+        selected_strategy_id="s1",
+        selected_strategy_name="Strategy One",
+        features=features,
+        strategy_orders=orders,
+        policy=policy,
+        llm_council="off",
+    )
+
+    assert [row["action"] for row in result["decisions"]] == ["ENTER", "SKIP"]
+    skip = result["decisions"][1]
+    assert skip["symbol"] == "BBB"
+    assert skip["reason_codes"] == "SECTOR_CAP"
+    assert result["state"]["positions"].keys() == {"AAA"}
+
+
 def test_managed_portfolio_skips_add_when_combined_position_exceeds_stock_cap(tmp_path):
     policy = ManagedPortfolioPolicy(initial_capital=100_000, max_single_stock_pct=3, max_sector_pct=20)
     orders = [
@@ -201,7 +299,7 @@ def test_managed_portfolio_audits_order_when_feature_date_is_missing(tmp_path):
     assert len(result["decisions"]) == 1
     skip = result["decisions"][0]
     assert skip["action"] == "SKIP"
-    assert skip["reason_codes"] in {"MISSING_PRICE", "MISSING_FEATURE_DATE"}
+    assert skip["reason_codes"] == "MISSING_FEATURE_DATE"
     assert result["state"]["positions"] == {}
 
 

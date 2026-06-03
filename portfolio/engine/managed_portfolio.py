@@ -40,6 +40,10 @@ class ManagedPortfolioPolicy:
             "max_portfolio_open_risk_pct",
             "max_positions",
             "initial_entry_pct_of_target",
+            "first_add_pct_of_target",
+            "second_add_pct_of_target",
+            "trim_when_position_pct_above",
+            "trim_to_position_pct",
             "default_reward_risk",
         )
         for name in positive_fields:
@@ -190,22 +194,22 @@ class _ManagedPortfolioBuilder:
             day = feature_days.get(date_str)
             if day is None:
                 for order in orders_by_date.get(date_str, []):
-                    self._decision(date_str, order, "SKIP", 0, None, None, None, 0.0, ["MISSING_FEATURE_DATE"])
+                    self._decision(date_str, order, "SKIP", 0, None, None, None, 0.0, ["MISSING_FEATURE_DATE"], {})
                 continue
 
             marks = {str(row["symbol"]).upper(): float(row["close"]) for _, row in day.iterrows()}
             for order in orders_by_date.get(date_str, []):
                 row = self._feature_row(date_str, str(order.get("symbol") or ""))
                 if row is None:
-                    self._decision(date_str, order, "SKIP", 0, None, None, None, 0.0, ["MISSING_PRICE"])
+                    self._decision(date_str, order, "SKIP", 0, None, None, None, 0.0, ["MISSING_PRICE"], marks)
                     continue
                 side = str(order.get("side") or "").upper()
                 if side == "BUY":
-                    self._handle_buy(date_str, order, row)
+                    self._handle_buy(date_str, order, row, marks)
                 elif side == "SELL":
-                    self._handle_sell(date_str, order, row)
+                    self._handle_sell(date_str, order, row, marks)
                 else:
-                    self._decision(date_str, order, "SKIP", 0, None, None, None, 0.0, ["UNSUPPORTED_SIDE"])
+                    self._decision(date_str, order, "SKIP", 0, None, None, None, 0.0, ["UNSUPPORTED_SIDE"], marks)
             self._mark_day(date_str, marks)
 
         state = self._state()
@@ -218,38 +222,40 @@ class _ManagedPortfolioBuilder:
             "llm_reviews": self._llm_reviews(),
         }
 
-    def _handle_buy(self, date_str: str, order: dict[str, Any], row: pd.Series) -> None:
+    def _handle_buy(self, date_str: str, order: dict[str, Any], row: pd.Series, marks: dict[str, float]) -> None:
         symbol = str(order.get("symbol") or "").upper()
+        sector = str(row.get("sector") or "Unknown")
         price = _positive(row.get("close"))
         atr = _positive(row.get("atr_14"))
         if price is None or atr is None:
-            self._decision(date_str, order, "SKIP", 0, price, None, None, 0.0, ["INVALID_RISK_INPUT"])
+            self._decision(date_str, order, "SKIP", 0, price, None, None, 0.0, ["INVALID_RISK_INPUT"], marks, sector)
             return
 
         stop = round(price - atr * 2.0, 6)
         if stop <= 0 or stop >= price:
-            self._decision(date_str, order, "SKIP", 0, price, stop, None, 0.0, ["INVALID_STOP"])
+            self._decision(date_str, order, "SKIP", 0, price, stop, None, 0.0, ["INVALID_STOP"], marks, sector)
             return
 
         target = round(price + (price - stop) * self.policy.default_reward_risk, 6)
         action = "ADD" if symbol in self.positions else "ENTER"
-        quantity, risk_amount, reasons = self._size_order(symbol, row, price, stop, action)
+        quantity, risk_amount, reasons = self._size_order(symbol, row, price, stop, action, marks)
         if quantity <= 0 or reasons:
-            self._decision(date_str, order, "SKIP", 0, price, stop, target, risk_amount, reasons or ["ZERO_QUANTITY"])
+            self._decision(date_str, order, "SKIP", 0, price, stop, target, risk_amount, reasons or ["ZERO_QUANTITY"], marks, sector)
             return
 
         self._apply_buy(date_str, order, row, quantity, price, stop, target)
-        self._decision(date_str, order, action, quantity, price, stop, target, risk_amount, ["POLICY_OK"])
+        self._decision(date_str, order, action, quantity, price, stop, target, risk_amount, ["POLICY_OK"], marks, sector)
 
-    def _handle_sell(self, date_str: str, order: dict[str, Any], row: pd.Series) -> None:
+    def _handle_sell(self, date_str: str, order: dict[str, Any], row: pd.Series, marks: dict[str, float]) -> None:
         symbol = str(order.get("symbol") or "").upper()
         position = self.positions.get(symbol)
+        sector = position.sector if position is not None else str(row.get("sector") or "Unknown")
         price = _positive(row.get("close"))
         if position is None or position.quantity <= 0:
-            self._decision(date_str, order, "SKIP", 0, price, None, None, 0.0, ["NO_POSITION"])
+            self._decision(date_str, order, "SKIP", 0, price, None, None, 0.0, ["NO_POSITION"], marks, sector)
             return
         if price is None:
-            self._decision(date_str, order, "SKIP", 0, None, None, None, 0.0, ["MISSING_PRICE"])
+            self._decision(date_str, order, "SKIP", 0, None, None, None, 0.0, ["MISSING_PRICE"], marks, sector)
             return
 
         quantity = position.quantity
@@ -258,7 +264,7 @@ class _ManagedPortfolioBuilder:
         self.cash += proceeds
         self.realized_pnl += proceeds - cost
         self.positions.pop(symbol, None)
-        self._decision(date_str, order, "EXIT", quantity, price, None, None, 0.0, ["STRATEGY_EXIT"])
+        self._decision(date_str, order, "EXIT", quantity, price, None, None, 0.0, ["STRATEGY_EXIT"], marks, sector)
 
     def _size_order(
         self,
@@ -267,8 +273,10 @@ class _ManagedPortfolioBuilder:
         price: float,
         stop: float,
         action: str,
+        marks: dict[str, float],
     ) -> tuple[int, float, list[str]]:
-        nav = self._nav({symbol: price})
+        current_marks = {**marks, symbol: price}
+        nav = self._nav(current_marks)
         risk_pct = self.policy.risk_per_add_pct if action == "ADD" else self.policy.risk_per_new_position_pct
         stage_pct = self.policy.first_add_pct_of_target if action == "ADD" else self.policy.initial_entry_pct_of_target
         risk_per_share = price - stop
@@ -285,12 +293,16 @@ class _ManagedPortfolioBuilder:
             value = quantity * price
             risk_amount = quantity * risk_per_share
         current_position = self.positions.get(symbol)
-        current_value = current_position.quantity * price if current_position is not None else 0.0
+        current_value = (
+            current_position.quantity * current_marks.get(symbol, current_position.avg_cost)
+            if current_position is not None
+            else 0.0
+        )
         if current_value + value > nav * self.policy.max_single_stock_pct / 100.0:
             reasons.append("STOCK_CAP")
-        if self._sector_value(str(row.get("sector") or "Unknown")) + value > nav * self.policy.max_sector_pct / 100.0:
+        if self._sector_value(str(row.get("sector") or "Unknown"), current_marks) + value > nav * self.policy.max_sector_pct / 100.0:
             reasons.append("SECTOR_CAP")
-        if self._gross_exposure({symbol: price}) + value > nav * self.policy.max_gross_exposure_pct / 100.0:
+        if self._gross_exposure(current_marks) + value > nav * self.policy.max_gross_exposure_pct / 100.0:
             reasons.append("GROSS_EXPOSURE_CAP")
         if symbol not in self.positions and len(self.positions) >= self.policy.max_positions:
             reasons.append("MAX_POSITIONS")
@@ -348,10 +360,17 @@ class _ManagedPortfolioBuilder:
         target: float | None,
         risk: float,
         reasons: list[str],
+        marks: dict[str, float],
+        sector: str | None = None,
     ) -> None:
         symbol = str(order.get("symbol") or "").upper()
-        marks = {symbol: price} if price is not None else {}
-        nav = self._nav(marks)
+        current_marks = {**marks}
+        if price is not None:
+            current_marks[symbol] = price
+        nav = self._nav(current_marks)
+        decision_sector = sector
+        if decision_sector is None and symbol in self.positions:
+            decision_sector = self.positions[symbol].sector
         row = {
             "date": date_str,
             "decision_id": f"dec_{len(self.decisions) + 1:06d}",
@@ -362,8 +381,8 @@ class _ManagedPortfolioBuilder:
             "stop_price": _round(stop),
             "target_price": _round(target),
             "risk_amount": _round(risk),
-            "position_value_after": _round(self._position_value(symbol, marks)),
-            "sector_exposure_after_pct": _round(self._sector_exposure_pct(symbol, marks, nav)),
+            "position_value_after": _round(self._position_value(symbol, current_marks)),
+            "sector_exposure_after_pct": _round(self._sector_exposure_pct(decision_sector, current_marks, nav)),
             "portfolio_open_risk_after_pct": _round((self._open_risk() / nav * 100.0) if nav else 0.0),
             "reason_codes": "|".join(reasons),
             "source_strategy_order_id": str(order.get("order_id") or ""),
@@ -416,13 +435,12 @@ class _ManagedPortfolioBuilder:
             return 0.0
         return position.quantity * marks.get(symbol, position.avg_cost)
 
-    def _sector_exposure_pct(self, symbol: str, marks: dict[str, float], nav: float) -> float:
-        position = self.positions.get(symbol)
-        if position is None or nav <= 0:
+    def _sector_exposure_pct(self, sector: str | None, marks: dict[str, float], nav: float) -> float:
+        if sector is None or nav <= 0:
             return 0.0
         total = 0.0
         for held_symbol, held_position in self.positions.items():
-            if held_position.sector == position.sector:
+            if held_position.sector == sector:
                 total += held_position.quantity * marks.get(held_symbol, held_position.avg_cost)
         return total / nav * 100.0
 
@@ -432,11 +450,11 @@ class _ManagedPortfolioBuilder:
     def _gross_exposure(self, marks: dict[str, float]) -> float:
         return self._market_value(marks)
 
-    def _sector_value(self, sector: str) -> float:
+    def _sector_value(self, sector: str, marks: dict[str, float]) -> float:
         total = 0.0
-        for position in self.positions.values():
+        for symbol, position in self.positions.items():
             if position.sector == sector:
-                total += position.quantity * position.avg_cost
+                total += position.quantity * marks.get(symbol, position.avg_cost)
         return total
 
     def _open_risk(self) -> float:
