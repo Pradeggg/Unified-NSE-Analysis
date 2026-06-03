@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import csv
 import hashlib
 import json
 from dataclasses import asdict, dataclass, field
@@ -186,8 +185,14 @@ class _ManagedPortfolioBuilder:
         for order in self.orders:
             orders_by_date.setdefault(str(order.get("submitted_at") or "")[:10], []).append(order)
 
-        for date, day in self.features.groupby("date", sort=True):
-            date_str = str(date)[:10]
+        feature_days = {str(date)[:10]: day for date, day in self.features.groupby("date", sort=True)}
+        for date_str in sorted(set(feature_days) | set(orders_by_date)):
+            day = feature_days.get(date_str)
+            if day is None:
+                for order in orders_by_date.get(date_str, []):
+                    self._decision(date_str, order, "SKIP", 0, None, None, None, 0.0, ["MISSING_FEATURE_DATE"])
+                continue
+
             marks = {str(row["symbol"]).upper(): float(row["close"]) for _, row in day.iterrows()}
             for order in orders_by_date.get(date_str, []):
                 row = self._feature_row(date_str, str(order.get("symbol") or ""))
@@ -279,7 +284,9 @@ class _ManagedPortfolioBuilder:
             quantity = int(self.cash // price)
             value = quantity * price
             risk_amount = quantity * risk_per_share
-        if value > nav * self.policy.max_single_stock_pct / 100.0:
+        current_position = self.positions.get(symbol)
+        current_value = current_position.quantity * price if current_position is not None else 0.0
+        if current_value + value > nav * self.policy.max_single_stock_pct / 100.0:
             reasons.append("STOCK_CAP")
         if self._sector_value(str(row.get("sector") or "Unknown")) + value > nav * self.policy.max_sector_pct / 100.0:
             reasons.append("SECTOR_CAP")
@@ -343,6 +350,8 @@ class _ManagedPortfolioBuilder:
         reasons: list[str],
     ) -> None:
         symbol = str(order.get("symbol") or "").upper()
+        marks = {symbol: price} if price is not None else {}
+        nav = self._nav(marks)
         row = {
             "date": date_str,
             "decision_id": f"dec_{len(self.decisions) + 1:06d}",
@@ -353,11 +362,9 @@ class _ManagedPortfolioBuilder:
             "stop_price": _round(stop),
             "target_price": _round(target),
             "risk_amount": _round(risk),
-            "position_value_after": _round(
-                (self.positions.get(symbol).quantity * price) if symbol in self.positions and price else 0.0
-            ),
-            "sector_exposure_after_pct": 0.0,
-            "portfolio_open_risk_after_pct": 0.0,
+            "position_value_after": _round(self._position_value(symbol, marks)),
+            "sector_exposure_after_pct": _round(self._sector_exposure_pct(symbol, marks, nav)),
+            "portfolio_open_risk_after_pct": _round((self._open_risk() / nav * 100.0) if nav else 0.0),
             "reason_codes": "|".join(reasons),
             "source_strategy_order_id": str(order.get("order_id") or ""),
         }
@@ -402,6 +409,22 @@ class _ManagedPortfolioBuilder:
             mark = marks.get(symbol, position.avg_cost)
             total += position.quantity * mark
         return total
+
+    def _position_value(self, symbol: str, marks: dict[str, float]) -> float:
+        position = self.positions.get(symbol)
+        if position is None:
+            return 0.0
+        return position.quantity * marks.get(symbol, position.avg_cost)
+
+    def _sector_exposure_pct(self, symbol: str, marks: dict[str, float], nav: float) -> float:
+        position = self.positions.get(symbol)
+        if position is None or nav <= 0:
+            return 0.0
+        total = 0.0
+        for held_symbol, held_position in self.positions.items():
+            if held_position.sector == position.sector:
+                total += held_position.quantity * marks.get(held_symbol, held_position.avg_cost)
+        return total / nav * 100.0
 
     def _nav(self, marks: dict[str, float]) -> float:
         return self.cash + self._market_value(marks)
