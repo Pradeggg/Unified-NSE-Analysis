@@ -83,11 +83,43 @@ _VISUAL_PHRASES = (
     "render chart",
 )
 _MARKET_PHRASES = (
+    # ── Market state ─────────────────────────────────────────────────────────
     "market situation",
     "todays market",
     "today's market",
     "market today",
+    "how is the market",
+    "how is market",
+    "market doing",
+    "market now",
+    "market outlook",
+    "market overview",
+    "market pulse",
+    "market breadth",
+    "market open",
+    "market status",
+    "nifty today",
+    "nifty now",
+    "whats moving",
+    "what's moving",
+    "what is moving",
+    # ── Sector queries ────────────────────────────────────────────────────────
     "sector rotation",
+    "sector strength",
+    "sector performance",
+    "sectors are",
+    "sector today",
+    "which sector",
+    "what sector",
+    "leading sector",
+    "best sector",
+    "top sector",
+    "doing well",        # "which sectors are doing well"
+    "outperforming",     # "what sectors are outperforming"
+    "underperforming",
+    "sector leader",
+    "sector overview",
+    # ── Screeners / scans ─────────────────────────────────────────────────────
     "screener",
     "scan nifty",
     "scan fno",
@@ -99,6 +131,14 @@ _MARKET_PHRASES = (
     "relative strength",
     "breakout scan",
     "vcp scan",
+    # ── Broad "which stocks" questions ─────────────────────────────────────────
+    "stocks up today",
+    "stocks down today",
+    "which stocks are up",
+    "which stocks are down",
+    "stocks doing well",
+    "what stocks are",
+    "stocks today",
 )
 _TOP_MOVERS_PHRASES = (
     "top gainers",
