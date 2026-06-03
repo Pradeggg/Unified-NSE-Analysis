@@ -4486,6 +4486,16 @@ def get_live_market_overview() -> dict:
         broad: dict = {}
         sector: dict = {}
         other: dict = {}
+        breadth_by_index: dict[str, dict] = {}
+
+        def _int_or_none(value) -> int | None:
+            try:
+                if value is None:
+                    return None
+                return int(float(str(value).replace(",", "")))
+            except (TypeError, ValueError):
+                return None
+
         for item in data:
             nm = (item.get("index") or "").strip().upper()
             if not nm:
@@ -4505,6 +4515,15 @@ def get_live_market_overview() -> dict:
                 "day_high":   item.get("dayHigh", item.get("high")),
                 "day_low":    item.get("dayLow", item.get("low")),
             }
+            adv = _int_or_none(item.get("advances"))
+            dec = _int_or_none(item.get("declines"))
+            unc = _int_or_none(item.get("unchanged"))
+            if adv is not None and dec is not None:
+                breadth_by_index[nm] = {
+                    "advances": adv,
+                    "declines": dec,
+                    "unchanged": unc if unc is not None else 0,
+                }
             if nm in BROAD_MARKET:
                 broad[nm] = entry
             elif nm in SECTORAL or nm.startswith("NIFTY "):
@@ -4531,28 +4550,25 @@ def get_live_market_overview() -> dict:
         bot_sectors = [{"name": k, **v} for k, v in sector_sorted[-5:][::-1]]
 
         adv_dec = {}
-        try:
-            # Migrated from deprecated `equity-stockIndices?index=NIFTY%20500`
-            # to `live-analysis-variations` (the documented replacement).
-            # The variations payload exposes advance/decline counts both at
-            # the bucket level and via per-row `pChange` — derive defensively.
-            url2 = "https://www.nseindia.com/api/live-analysis-variations?index=gainers"
-            r2 = s.get(url2, timeout=10)
-            payload2 = r2.json() or {}
-            bucket = payload2.get("allSec") or payload2.get("NIFTY") or {}
-            items = bucket.get("data") or []
-            adv = bucket.get("advances")
-            dec = bucket.get("declines")
-            unc = bucket.get("unchanged")
-            if adv is None or dec is None:
-                # Fall back to row-level tally when the bucket summary is absent.
-                adv = sum(1 for x in items if float(x.get("perChange", x.get("pChange", 0)) or 0) > 0)
-                dec = sum(1 for x in items if float(x.get("perChange", x.get("pChange", 0)) or 0) < 0)
-                unc = len(items) - adv - dec
-            adv_dec = {"advances": int(adv), "declines": int(dec),
-                       "unchanged": int(unc) if unc is not None else 0}
-        except Exception:
-            pass
+        breadth_index = None
+        # Priority: broadest index first; validate that data is plausible
+        # (advances+declines must exceed 50 to be meaningful breadth, not just
+        # a handful of constituents from a partial/stale API response at close).
+        for candidate in (
+            "NIFTY TOTAL MARKET", "NIFTY 500", "NIFTY MIDCAP 100",
+            "NIFTY 200", "NIFTY 100", "NIFTY 50",
+        ):
+            bd = breadth_by_index.get(candidate)
+            if bd is None:
+                continue
+            adv = bd.get("advances") or 0
+            dec = bd.get("declines") or 0
+            # Reject incomplete API responses (e.g. advances=20, declines=0 at close)
+            if adv + dec < 50:
+                continue
+            adv_dec = bd
+            breadth_index = candidate
+            break
         return {
             "indices":           indices,        # flat dict (back-compat)
             "broad_market":      broad,
@@ -4561,6 +4577,7 @@ def get_live_market_overview() -> dict:
             "top_sectors":       top_sectors,
             "bottom_sectors":    bot_sectors,
             "adv_dec":           adv_dec,
+            "breadth_index":     breadth_index,
             "as_of":             datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "source":            "NSE live API",
         }
