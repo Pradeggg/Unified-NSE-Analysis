@@ -303,6 +303,59 @@ def test_managed_portfolio_audits_order_when_feature_date_is_missing(tmp_path):
     assert result["state"]["positions"] == {}
 
 
+def test_managed_portfolio_ignores_orders_before_policy_start_date(tmp_path):
+    features = pd.concat(
+        [
+            pd.DataFrame(
+                [
+                    {
+                        "date": "2024-12-31",
+                        "symbol": "AAA",
+                        "open": 100.0,
+                        "high": 101.0,
+                        "low": 99.0,
+                        "close": 100.0,
+                        "atr_14": 10.0,
+                        "sector": "Industrials",
+                        "stage": "STAGE_2",
+                        "relative_strength": 80.0,
+                        "rsi_14": 60.0,
+                    }
+                ]
+            ),
+            _features(),
+        ],
+        ignore_index=True,
+    )
+    policy = ManagedPortfolioPolicy(initial_capital=100_000, max_single_stock_pct=20, start_date="2025-01-01")
+    orders = [
+        {
+            "order_id": "ord_before_start",
+            "strategy_id": "s1",
+            "symbol": "AAA",
+            "side": "BUY",
+            "quantity": 999,
+            "submitted_at": "2024-12-31",
+            "reason": "entry rule matched",
+        }
+    ]
+
+    result = build_managed_portfolio(
+        output_dir=tmp_path,
+        run_id="RUN1",
+        selected_strategy_id="s1",
+        selected_strategy_name="Strategy One",
+        features=features,
+        strategy_orders=orders,
+        policy=policy,
+        llm_council="off",
+    )
+
+    assert result["decisions"] == []
+    assert result["state"]["positions"] == {}
+    assert result["state"]["as_of"] == "2025-01-04"
+
+
 def test_managed_portfolio_exits_on_strategy_sell(tmp_path):
     policy = ManagedPortfolioPolicy(initial_capital=100_000, max_single_stock_pct=20)
     orders = [

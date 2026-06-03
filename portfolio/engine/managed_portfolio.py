@@ -187,9 +187,16 @@ class _ManagedPortfolioBuilder:
     def run(self) -> dict[str, Any]:
         orders_by_date: dict[str, list[dict[str, Any]]] = {}
         for order in self.orders:
-            orders_by_date.setdefault(str(order.get("submitted_at") or "")[:10], []).append(order)
+            date_key = str(order.get("submitted_at") or "")[:10]
+            if date_key < self.policy.start_date:
+                continue
+            orders_by_date.setdefault(date_key, []).append(order)
 
-        feature_days = {str(date)[:10]: day for date, day in self.features.groupby("date", sort=True)}
+        feature_days = {
+            str(date)[:10]: day
+            for date, day in self.features.groupby("date", sort=True)
+            if str(date)[:10] >= self.policy.start_date
+        }
         for date_str in sorted(set(feature_days) | set(orders_by_date)):
             day = feature_days.get(date_str)
             if day is None:
