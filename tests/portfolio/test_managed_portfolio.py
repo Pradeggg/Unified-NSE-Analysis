@@ -394,3 +394,29 @@ def test_managed_portfolio_exits_on_strategy_sell(tmp_path):
     assert "ENTER" in actions
     assert "EXIT" in actions
     assert result["state"]["positions"] == {}
+
+
+def test_managed_portfolio_writes_artifacts(tmp_path):
+    policy = ManagedPortfolioPolicy(initial_capital=100_000, max_single_stock_pct=20)
+    orders = [{"order_id": "ord1", "strategy_id": "s1", "symbol": "AAA", "side": "BUY", "quantity": 999, "submitted_at": "2025-01-02", "reason": "entry rule matched"}]
+
+    result = build_managed_portfolio(
+        output_dir=tmp_path,
+        run_id="RUN1",
+        selected_strategy_id="s1",
+        selected_strategy_name="Strategy One",
+        features=_features(),
+        strategy_orders=orders,
+        policy=policy,
+        llm_council="optional",
+    )
+
+    managed_dir = tmp_path / "managed"
+    assert (managed_dir / "portfolio_policy.yaml").exists()
+    assert (managed_dir / "managed_portfolio_state.json").exists()
+    assert (managed_dir / "managed_positions.csv").exists()
+    assert (managed_dir / "managed_orders.csv").exists()
+    assert (managed_dir / "managed_decisions.csv").exists()
+    assert (managed_dir / "managed_daily_pnl.csv").exists()
+    assert (managed_dir / "llm_council_review.jsonl").exists()
+    assert result["artifacts"]["state"].endswith("managed_portfolio_state.json")

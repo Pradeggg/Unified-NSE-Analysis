@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import hashlib
 import json
 from dataclasses import asdict, dataclass, field
@@ -141,7 +142,6 @@ def build_managed_portfolio(
     policy: ManagedPortfolioPolicy,
     llm_council: str = "off",
 ) -> dict[str, Any]:
-    _ = output_dir
     manager = _ManagedPortfolioBuilder(
         run_id=run_id,
         selected_strategy_id=selected_strategy_id,
@@ -151,7 +151,9 @@ def build_managed_portfolio(
         policy=policy,
         llm_council=llm_council,
     )
-    return manager.run()
+    result = manager.run()
+    _write_managed_artifacts(output_dir, policy, result)
+    return result
 
 
 class _ManagedPortfolioBuilder:
@@ -501,6 +503,79 @@ def _position_dict(position: ManagedPosition) -> dict[str, Any]:
         "open_risk": _round(position.open_risk()),
         "lots": [asdict(lot) for lot in position.lots],
     }
+
+
+def _write_managed_artifacts(output_dir: Path, policy: ManagedPortfolioPolicy, result: dict[str, Any]) -> None:
+    managed_dir = output_dir / "managed"
+    managed_dir.mkdir(parents=True, exist_ok=True)
+    paths = {
+        "policy": managed_dir / "portfolio_policy.yaml",
+        "state": managed_dir / "managed_portfolio_state.json",
+        "positions": managed_dir / "managed_positions.csv",
+        "orders": managed_dir / "managed_orders.csv",
+        "decisions": managed_dir / "managed_decisions.csv",
+        "daily_pnl": managed_dir / "managed_daily_pnl.csv",
+        "llm_reviews": managed_dir / "llm_council_review.jsonl",
+    }
+    artifacts = {name: str(path) for name, path in paths.items()}
+
+    paths["policy"].write_text(_policy_yaml(policy), encoding="utf-8")
+
+    state = dict(result["state"])
+    state["artifacts"] = artifacts
+    paths["state"].write_text(json.dumps(_json_safe(state), indent=2, sort_keys=True), encoding="utf-8")
+
+    _write_csv(paths["positions"], list(state.get("positions", {}).values()))
+    _write_csv(paths["orders"], result.get("orders", []))
+    _write_csv(paths["decisions"], result.get("decisions", []))
+    _write_csv(paths["daily_pnl"], result.get("daily_pnl", []))
+
+    reviews = result.get("llm_reviews", [])
+    review_lines = [json.dumps(_json_safe(row), sort_keys=True) for row in reviews]
+    paths["llm_reviews"].write_text("\n".join(review_lines) + ("\n" if review_lines else ""), encoding="utf-8")
+
+    result["state"] = state
+    result["artifacts"] = artifacts
+
+
+def _write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
+    if not rows:
+        path.write_text("", encoding="utf-8")
+        return
+
+    keys: list[str] = []
+    for row in rows:
+        for key in row:
+            if key not in keys:
+                keys.append(key)
+
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=keys)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow({key: _csv_value(row.get(key)) for key in keys})
+
+
+def _csv_value(value: Any) -> Any:
+    if isinstance(value, (dict, list, tuple)):
+        return json.dumps(_json_safe(value), sort_keys=True)
+    return value
+
+
+def _policy_yaml(policy: ManagedPortfolioPolicy) -> str:
+    return "\n".join(f"{key}: {value}" for key, value in policy.as_dict().items()) + "\n"
+
+
+def _json_safe(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {str(key): _json_safe(val) for key, val in value.items()}
+    if isinstance(value, list):
+        return [_json_safe(item) for item in value]
+    if isinstance(value, tuple):
+        return [_json_safe(item) for item in value]
+    if hasattr(value, "item"):
+        return value.item()
+    return value
 
 
 def _positive(value: Any) -> float | None:
