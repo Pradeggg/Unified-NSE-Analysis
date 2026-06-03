@@ -1,0 +1,17 @@
+start_date: 2025-01-01
+initial_capital: 1000000
+max_gross_exposure_pct: 95
+max_single_stock_pct: 10
+max_sector_pct: 25
+risk_per_new_position_pct: 1.0
+risk_per_add_pct: 0.5
+max_portfolio_open_risk_pct: 8
+max_positions: 15
+initial_entry_pct_of_target: 50
+first_add_pct_of_target: 25
+second_add_pct_of_target: 25
+trim_when_position_pct_above: 12
+trim_to_position_pct: 8
+stop_method: atr
+target_method: reward_risk
+default_reward_risk: 2.0
