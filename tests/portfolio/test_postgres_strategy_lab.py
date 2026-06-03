@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from types import SimpleNamespace
 
 import pandas as pd
@@ -139,3 +140,42 @@ def test_strategy_lab_command_writes_leaderboard_from_postgres_adapter(monkeypat
     assert "profit_factor" in leaderboard.columns
     assert "cost_drag_pct" in leaderboard.columns
     assert "scores.stage_snapshots" in summary
+
+
+def test_strategy_lab_command_writes_managed_portfolio_when_enabled(monkeypatch, tmp_path):
+    eod = pd.DataFrame(_eod_rows("AAA", 100.0))
+    stage = pd.DataFrame(
+        {
+            "date": eod["date"],
+            "symbol": ["AAA"] * len(eod),
+            "stage": ["STAGE_2"] * len(eod),
+            "snapshot_relative_strength": [85.0] * len(eod),
+            "snapshot_rsi": [62.0] * len(eod),
+        }
+    )
+    features = prepare_replay_frame(eod, stage, start_date="2024-09-01")
+    benchmark = pd.DataFrame({"date": pd.to_datetime(features["date"].unique()), "close": range(100, 100 + features["date"].nunique())})
+
+    def fake_load_postgres_replay_data(**kwargs):
+        return SimpleNamespace(features=features, benchmark=benchmark, latest_eod_date="2024-09-16")
+
+    monkeypatch.setattr(cli, "load_postgres_replay_data", fake_load_postgres_replay_data)
+
+    code = cli.main(
+        [
+            "strategy-lab",
+            "--output-dir",
+            str(tmp_path),
+            "--top-n",
+            "1",
+            "--no-db-persist",
+            "--managed-portfolio",
+            "--llm-council",
+            "off",
+        ]
+    )
+
+    summary = json.loads((tmp_path / "reports" / "strategy_comparison_summary.json").read_text())
+    assert code == 0
+    assert "managed_portfolio" in summary
+    assert (tmp_path / "managed" / "managed_portfolio_state.json").exists()

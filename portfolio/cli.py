@@ -18,7 +18,9 @@ from portfolio.engine.audit_log import AuditLog
 from portfolio.engine.benchmark import compare_to_benchmark
 from portfolio.engine.event_loop import ReplayConfig, run_replay
 from portfolio.engine.leaderboard import calculate_strategy_diagnostics
+from portfolio.engine.managed_portfolio import build_managed_portfolio, load_policy
 from portfolio.engine.metrics import PortfolioMetrics, calculate_metrics
+from portfolio.engine.paper_portfolio import publish_daily_paper_portfolio
 from portfolio.engine.run_manifest import build_run_manifest
 from portfolio.engine.strategy_library import built_in_strategy_specs
 from portfolio.engine.validation import validate_ohlcv
@@ -78,6 +80,10 @@ def main(argv: list[str] | None = None) -> int:
     strategy_lab.add_argument("--slippage-bps", type=float, default=5.0)
     strategy_lab.add_argument("--brokerage-bps", type=float, default=3.0)
     strategy_lab.add_argument("--run-id", default="NSE-PG-STRATEGY-LAB")
+    strategy_lab.add_argument("--no-db-persist", action="store_true")
+    strategy_lab.add_argument("--managed-portfolio", action="store_true")
+    strategy_lab.add_argument("--policy", type=Path, default=Path("portfolio/config/portfolio_policy.yaml"))
+    strategy_lab.add_argument("--llm-council", choices=["off", "optional"], default="off")
     strategy_lab.set_defaults(func=_cmd_strategy_lab)
 
     args = parser.parse_args(argv)
@@ -363,6 +369,29 @@ def _cmd_strategy_lab(args: argparse.Namespace) -> int:
         "stage_counts": data["stage"].value_counts().to_dict() if "stage" in data.columns else {},
         "leaderboard": leaderboard.to_dict(orient="records"),
     }
+    summary["paper_portfolio"] = publish_daily_paper_portfolio(
+        output_dir=output_dir,
+        summary=summary,
+        leaderboard=leaderboard,
+        features=data,
+        dsn=None if getattr(args, "no_db_persist", False) else args.dsn,
+    )
+    if getattr(args, "managed_portfolio", False):
+        selected_id = str(summary["paper_portfolio"].get("selected_strategy_id") or "")
+        selected_name = str(summary["paper_portfolio"].get("selected_strategy_name") or selected_id)
+        state_path = output_dir / "runs" / selected_id / "state" / "replay_state.json"
+        selected_state = _read_json(state_path) if state_path.exists() else {}
+        policy = load_policy(args.policy)
+        summary["managed_portfolio"] = build_managed_portfolio(
+            output_dir=output_dir,
+            run_id=args.run_id,
+            selected_strategy_id=selected_id,
+            selected_strategy_name=selected_name,
+            features=data,
+            strategy_orders=selected_state.get("orders", []),
+            policy=policy,
+            llm_council=args.llm_council,
+        )
     _write_json(reports_dir / "strategy_comparison_summary.json", summary)
     _write_strategy_lab_report(reports_dir / "strategy_comparison_report.md", summary)
 
