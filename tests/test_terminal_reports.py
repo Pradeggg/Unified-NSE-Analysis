@@ -449,6 +449,110 @@ class TerminalReportsTests(unittest.TestCase):
         self.assertIn("Daily P&amp;L: ₹10,000.00", html)
         self.assertIn("Daily P&amp;L: ₹-5,000.00", html)
 
+    def test_strategy_lab_report_includes_managed_portfolio(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            summary_dir = root / "portfolio" / "data" / "nse_pg_strategy_lab" / "latest" / "reports"
+            summary_dir.mkdir(parents=True)
+            (summary_dir / "strategy_comparison_summary.json").write_text(
+                json.dumps(
+                    {
+                        "run_id": "TEST-MANAGED-LAB",
+                        "latest_eod_date": "2025-01-02",
+                        "row_count": 1,
+                        "symbol_count": 1,
+                        "start_date": "2025-01-01",
+                        "end_date": "2025-01-02",
+                        "initial_capital": 1000000,
+                        "slippage_bps": 5,
+                        "brokerage_bps": 3,
+                        "benchmark_id": "Nifty 500",
+                        "stage_counts": {"STAGE_2": 1},
+                        "output_dir": "portfolio/data/nse_pg_strategy_lab/latest",
+                        "managed_portfolio": {
+                            "state": {
+                                "policy_checksum": "policy-test",
+                                "nav": 1010000,
+                                "cash": 500000,
+                                "positions": {
+                                    "AAA": {
+                                        "symbol": "AAA",
+                                        "quantity": 25,
+                                        "avg_cost": 100,
+                                        "open_risk": 250,
+                                        "lots": [
+                                            {
+                                                "entry_date": "2025-01-02",
+                                                "quantity": 25,
+                                                "entry_price": 100,
+                                                "stop_price": 90,
+                                                "target_price": 130,
+                                            }
+                                        ],
+                                        "sector": "Capital Goods",
+                                    }
+                                },
+                            },
+                            "decisions": [
+                                {
+                                    "date": "2025-01-02",
+                                    "symbol": "AAA",
+                                    "action": "ENTER",
+                                    "quantity": 25,
+                                    "reason_codes": ["POLICY_OK", "RISK|OK"],
+                                }
+                            ],
+                            "orders": [
+                                {
+                                    "date": "2025-01-02",
+                                    "symbol": "AAA",
+                                    "action": "ENTER",
+                                    "quantity": 25,
+                                }
+                            ],
+                        },
+                        "leaderboard": [
+                            {
+                                "rank": 1,
+                                "strategy_id": "vcp_breakout_v1",
+                                "total_return_pct": 1,
+                                "max_drawdown_pct": 1,
+                                "excess_return_pct": 1,
+                                "profit_factor": 1.1,
+                                "expectancy": 100,
+                                "turnover_pct": 10,
+                                "cost_drag_pct": 0.1,
+                                "fills": 1,
+                                "win_rate_pct": 50,
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            original_root = reports.ROOT
+            original_reports_dir = reports.REPORTS_DIR
+            try:
+                reports.ROOT = root
+                reports.REPORTS_DIR = root / "reports" / "generated"
+                result = reports.generate_preset_report("strategy-lab", "html")
+            finally:
+                reports.ROOT = original_root
+                reports.REPORTS_DIR = original_reports_dir
+
+            html = Path(result["path"]).read_text(encoding="utf-8")
+
+        self.assertTrue(result["success"])
+        self.assertIn("Managed Portfolio", html)
+        self.assertIn("Managed Positions", html)
+        self.assertIn("Recent Managed Decisions", html)
+        self.assertIn("Open Risk", html)
+        self.assertIn("AAA", html)
+        self.assertIn("POLICY_OK", html)
+        self.assertIn("RISK / OK", html)
+        self.assertIn("policy-test", html)
+
 
 if __name__ == "__main__":
     unittest.main()

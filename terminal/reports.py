@@ -3395,6 +3395,81 @@ def _strategy_lab_heat_color(rgb: tuple[int, int, int], intensity: float) -> str
     return f"rgb({values[0]},{values[1]},{values[2]})"
 
 
+def _strategy_lab_managed_portfolio_markdown(summary: dict[str, object]) -> str:
+    managed = summary.get("managed_portfolio") or {}
+    if not isinstance(managed, dict) or not managed:
+        return ""
+
+    state = managed.get("state") or {}
+    if not isinstance(state, dict):
+        state = {}
+    raw_positions = state.get("positions") or {}
+    if isinstance(raw_positions, dict):
+        positions = list(raw_positions.values())
+    elif isinstance(raw_positions, list):
+        positions = raw_positions
+    else:
+        positions = []
+    positions = [row for row in positions if isinstance(row, dict)]
+    decisions = [row for row in list(managed.get("decisions") or []) if isinstance(row, dict)]
+    orders = [row for row in list(managed.get("orders") or []) if isinstance(row, dict)]
+
+    def table_text(value: object) -> str:
+        return _fmt_text(value).replace("\n", " ").replace("|", " / ")
+
+    policy_checksum = state.get("policy_checksum") or managed.get("policy_checksum")
+
+    md: list[str] = []
+    md.append("## Managed Portfolio")
+    md.append("")
+    md.append("| Metric | Value |")
+    md.append("|---|---:|")
+    md.append(f"| NAV | ₹{_fmt_num(state.get('nav'), 2)} |")
+    md.append(f"| Cash | ₹{_fmt_num(state.get('cash'), 2)} |")
+    md.append(f"| Open Positions | {len(positions)} |")
+    md.append(f"| Orders | {len(orders)} |")
+    md.append(f"| Decisions | {len(decisions)} |")
+    if policy_checksum:
+        md.append(f"| Policy Checksum | `{table_text(policy_checksum)}` |")
+    md.append("")
+
+    md.append("### Managed Positions")
+    md.append("")
+    md.append("| Symbol | Qty | Avg Cost | Open Risk | Lots | Sector |")
+    md.append("|---|---:|---:|---:|---:|---|")
+    if positions:
+        for row in positions[:30]:
+            md.append(
+                f"| **{table_text(row.get('symbol'))}** | {row.get('quantity', '0')} | "
+                f"₹{_fmt_num(row.get('avg_cost'), 2)} | ₹{_fmt_num(row.get('open_risk'), 2)} | "
+                f"{len(row.get('lots') or [])} | {table_text(row.get('sector'))} |"
+            )
+    else:
+        md.append("| n/a | 0 | n/a | n/a | 0 | n/a |")
+    md.append("")
+
+    md.append("### Recent Managed Decisions")
+    md.append("")
+    md.append("| Date | Symbol | Action | Qty | Reason |")
+    md.append("|---|---|---|---:|---|")
+    if decisions:
+        for row in decisions[-20:]:
+            reason_codes = row.get("reason_codes")
+            if isinstance(reason_codes, list):
+                reason_text = ", ".join(str(value) for value in reason_codes)
+            else:
+                reason_text = _fmt_text(reason_codes)
+            md.append(
+                f"| {table_text(row.get('date'))} | **{table_text(row.get('symbol'))}** | "
+                f"{table_text(row.get('action'))} | {row.get('quantity', '0')} | {table_text(reason_text)} |"
+            )
+    else:
+        md.append("| n/a | n/a | HOLD | 0 | no managed decisions recorded |")
+    md.append("")
+
+    return "\n".join(md)
+
+
 def _build_strategy_lab_content() -> str:
     """Build the Portfolio Strategy Lab report from native portfolio artifacts."""
     summary_path = ROOT / "portfolio" / "data" / "nse_pg_strategy_lab" / "latest" / "reports" / "strategy_comparison_summary.json"
@@ -3588,6 +3663,11 @@ def _build_strategy_lab_content() -> str:
                     f"₹{_fmt_num(row.get('price'), 2)} | ₹{_fmt_num(row.get('fees'), 2)} |"
                 )
             md.append("")
+
+    managed_section = _strategy_lab_managed_portfolio_markdown(summary)
+    if managed_section:
+        md.append(managed_section)
+        md.append("")
 
     md.append("## Strategy Leaderboard")
     md.append("")
