@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pandas as pd
 import pytest
 
-from portfolio.engine.managed_portfolio import ManagedPortfolioPolicy, load_policy
+from portfolio.engine.managed_portfolio import ManagedPortfolioPolicy, build_managed_portfolio, load_policy
 
 
 def test_load_policy_reads_default_yaml():
@@ -21,3 +22,152 @@ def test_load_policy_reads_default_yaml():
 def test_policy_validation_rejects_invalid_risk():
     with pytest.raises(ValueError, match="risk_per_new_position_pct"):
         ManagedPortfolioPolicy(risk_per_new_position_pct=0)
+
+
+def _features() -> pd.DataFrame:
+    return pd.DataFrame(
+        [
+            {
+                "date": "2025-01-02",
+                "symbol": "AAA",
+                "open": 101.0,
+                "high": 103.0,
+                "low": 99.0,
+                "close": 100.0,
+                "atr_14": 10.0,
+                "sector": "Industrials",
+                "stage": "STAGE_2",
+                "relative_strength": 80.0,
+                "rsi_14": 60.0,
+            },
+            {
+                "date": "2025-01-03",
+                "symbol": "AAA",
+                "open": 111.0,
+                "high": 113.0,
+                "low": 108.0,
+                "close": 110.0,
+                "atr_14": 10.0,
+                "sector": "Industrials",
+                "stage": "STAGE_2",
+                "relative_strength": 82.0,
+                "rsi_14": 62.0,
+            },
+            {
+                "date": "2025-01-04",
+                "symbol": "AAA",
+                "open": 89.0,
+                "high": 91.0,
+                "low": 86.0,
+                "close": 88.0,
+                "atr_14": 10.0,
+                "sector": "Industrials",
+                "stage": "STAGE_2",
+                "relative_strength": 50.0,
+                "rsi_14": 40.0,
+            },
+        ]
+    )
+
+
+def test_managed_portfolio_enters_with_risk_based_half_target(tmp_path):
+    policy = ManagedPortfolioPolicy(initial_capital=100_000, max_single_stock_pct=20)
+    orders = [
+        {
+            "order_id": "ord1",
+            "strategy_id": "s1",
+            "symbol": "AAA",
+            "side": "BUY",
+            "quantity": 999,
+            "submitted_at": "2025-01-02",
+            "reason": "entry rule matched",
+        }
+    ]
+
+    result = build_managed_portfolio(
+        output_dir=tmp_path,
+        run_id="RUN1",
+        selected_strategy_id="s1",
+        selected_strategy_name="Strategy One",
+        features=_features(),
+        strategy_orders=orders,
+        policy=policy,
+        llm_council="off",
+    )
+
+    enter = [row for row in result["decisions"] if row["action"] == "ENTER"][0]
+    assert enter["quantity"] == 25
+    assert enter["stop_price"] == 80.0
+    assert enter["target_price"] == 140.0
+    assert enter["risk_amount"] == 500.0
+    assert result["state"]["cash"] == 97_500.0
+
+
+def test_managed_portfolio_skips_when_sector_cap_exceeded(tmp_path):
+    policy = ManagedPortfolioPolicy(initial_capital=100_000, max_sector_pct=1, max_single_stock_pct=20)
+    orders = [
+        {
+            "order_id": "ord1",
+            "strategy_id": "s1",
+            "symbol": "AAA",
+            "side": "BUY",
+            "quantity": 999,
+            "submitted_at": "2025-01-02",
+            "reason": "entry rule matched",
+        }
+    ]
+
+    result = build_managed_portfolio(
+        output_dir=tmp_path,
+        run_id="RUN1",
+        selected_strategy_id="s1",
+        selected_strategy_name="Strategy One",
+        features=_features(),
+        strategy_orders=orders,
+        policy=policy,
+        llm_council="off",
+    )
+
+    skip = [row for row in result["decisions"] if row["action"] == "SKIP"][0]
+    assert "SECTOR_CAP" in skip["reason_codes"]
+    assert result["state"]["positions"] == {}
+
+
+def test_managed_portfolio_exits_on_strategy_sell(tmp_path):
+    policy = ManagedPortfolioPolicy(initial_capital=100_000, max_single_stock_pct=20)
+    orders = [
+        {
+            "order_id": "ord1",
+            "strategy_id": "s1",
+            "symbol": "AAA",
+            "side": "BUY",
+            "quantity": 999,
+            "submitted_at": "2025-01-02",
+            "reason": "entry rule matched",
+        },
+        {
+            "order_id": "ord2",
+            "strategy_id": "s1",
+            "symbol": "AAA",
+            "side": "SELL",
+            "quantity": 999,
+            "submitted_at": "2025-01-04",
+            "reason": "exit rule matched",
+        },
+    ]
+
+    result = build_managed_portfolio(
+        output_dir=tmp_path,
+        run_id="RUN1",
+        selected_strategy_id="s1",
+        selected_strategy_name="Strategy One",
+        features=_features(),
+        strategy_orders=orders,
+        policy=policy,
+        llm_council="off",
+    )
+
+    actions = [row["action"] for row in result["decisions"]]
+    assert "ENTER" in actions
+    assert "EXIT" in actions
+    assert result["state"]["positions"] == {}
