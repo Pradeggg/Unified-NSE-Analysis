@@ -2776,6 +2776,42 @@ def _write_eod_html(results: list[dict], snap_date: str, *, transactions: list[d
             if fd.get(k)
         )
         narrative = r.get("narrative") or ""
+
+        # ── Volume Profile + Chart Patterns ────────────────────────────────
+        nse_sym = (r.get("db") or {}).get("symbol") or r["broker"]
+        vp_html = ""
+        pat_html = ""
+        try:
+            from terminal.volume_profile import (
+                compute_volume_profile, detect_patterns,
+                render_volume_profile_svg, render_patterns_html,
+            )
+            vp = compute_volume_profile(nse_sym, lookback=60)
+            if vp:
+                vp_svg = render_volume_profile_svg(vp, width=190, height=140)
+                va_label = "Inside Value Area ✓" if vp.price_in_value_area else "Outside Value Area"
+                vp_html = f"""
+                <div class="detail-card" style="min-width:200px">
+                  <h4>Volume Profile (60 sessions)</h4>
+                  {vp_svg}
+                  <table style="margin-top:6px;font-size:11px;width:100%">
+                    <tr><td style="color:#6b7280">POC</td><td style="text-align:right;font-weight:700;color:#dc2626">₹{vp.poc:,.1f}</td></tr>
+                    <tr><td style="color:#6b7280">VAH</td><td style="text-align:right;color:#3b82f6">₹{vp.vah:,.1f}</td></tr>
+                    <tr><td style="color:#6b7280">VAL</td><td style="text-align:right;color:#3b82f6">₹{vp.val:,.1f}</td></tr>
+                    <tr><td style="color:#6b7280">vs POC</td><td style="text-align:right;color:{'#16a34a' if vp.price_vs_poc>=0 else '#dc2626'}">{vp.price_vs_poc:+.1f}%</td></tr>
+                    <tr><td colspan="2" style="color:#64748b;font-size:10px">{va_label}</td></tr>
+                  </table>
+                </div>"""
+
+            patterns = detect_patterns(nse_sym, lookback=120)
+            pat_html = f"""
+                <div class="detail-card" style="min-width:220px;max-width:320px">
+                  <h4>Chart Patterns</h4>
+                  {render_patterns_html(patterns)}
+                </div>"""
+        except Exception:
+            pass
+
         return f"""
           <tr class="stock-detail-row" data-detail-for="{_esc(detail_id)}">
             <td colspan="{colspan}" class="stock-detail-cell">
@@ -2784,6 +2820,8 @@ def _write_eod_html(results: list[dict], snap_date: str, *, transactions: list[d
                 <div class="detail-card"><h4>Technical Details</h4><table>{_kv_rows(technical_rows)}</table></div>
                 <div class="detail-card"><h4>Fundamental Details</h4><table>{_kv_rows(fundamental_rows)}</table></div>
                 <div class="detail-card"><h4>Strategy Votes</h4><table>{_strategy_vote_rows(r)}</table></div>
+                {vp_html}
+                {pat_html}
               </div>
               {f'<div class="detail-note"><strong>Narrative:</strong> {_esc(narrative)}</div>' if narrative else ''}
               {f'<div class="detail-note"><strong>Fund details:</strong> {_esc(fund_notes)}</div>' if fund_notes else ''}
