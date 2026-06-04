@@ -914,6 +914,81 @@ class DirectIntentProvider:
         return []
 
 
+# ── Out-of-domain detection ───────────────────────────────────────────────────
+# Explicit non-financial topic patterns.  Conservative: only block very obvious
+# non-finance queries so we never accidentally block NSE-adjacent phrasing
+# ("how hot is RELIANCE today", "weather in Adani Ports", etc.).
+# Checked BEFORE any provider; if matched, router emits out_of_domain intent.
+import re as _re
+
+# ── Financial context words — if ANY appear, query is allowed through ─────────
+_FINANCIAL_CONTEXT_RE = _re.compile(
+    r"\b(stock|sector|market|nifty|sensex|nse|bse|economy|india vix|portfolio|holding|"
+    r"share|equity|ipo|mutual fund|etf|fii|dii|rs|rsi|macd|ema|stage|canslim|screener|"
+    r"minervini|vcp|breakout|intraday|futures|options|pcr|oi|technical|fundamental|"
+    r"earnings|quarterly|annual|revenue|pat|eps|roce|roe|pe ratio|p/e|mcap|"
+    r"nifty|bank nifty|midcap|smallcap|largecap|reliance|tata|hdfc|infosys)\b",
+    _re.IGNORECASE,
+)
+
+# ── Explicit OOD signal patterns ──────────────────────────────────────────────
+# Conservative: only clearly non-financial triggers.
+# Two-step approach: match OOD pattern, then check financial context overrides.
+_OUT_OF_DOMAIN_PATTERNS = (
+    # Weather / climate + explicit geography
+    r"\b(weather|forecast|rainfall|humidity|snow|typhoon|hurricane|cyclone)\b",
+    r"\b(temperature in (france|germany|usa|uk|japan|china|australia|brazil|russia|canada|"
+    r"paris|london|new york|tokyo|sydney|berlin|moscow|beijing|dubai|singapore|new delhi))\b",
+    r"\b(weather in (paris|london|new york|tokyo|sydney|berlin|moscow|beijing|dubai|singapore))\b",
+    # Sports scores (not the sport itself which could be an industry)
+    r"\b(cricket score|football score|ipl score|ipl match result|wickets today|"
+    r"goals scored|rugby score|tennis match score)\b",
+    # Entertainment
+    r"\b(movie review|cinema ticket|netflix series|ott series|song lyrics|bollywood gossip)\b",
+    # Food / lifestyle
+    r"\b(recipe for|cooking recipe|restaurant near|food delivery|hotel booking|flight booking|"
+    r"visa application|tourist visa|passport renewal)\b",
+    # Medical — very specific to avoid blocking pharma
+    r"\b(medicine dosage for|symptoms of fever|treatment for cold|doctor near me|"
+    r"hospital near me|dental clinic)\b",
+)
+
+_OOD_RE = _re.compile(
+    "|".join(_OUT_OF_DOMAIN_PATTERNS),
+    _re.IGNORECASE,
+)
+
+_OOD_RESPONSE = (
+    "I'm Agent Adda — an NSE market research assistant. "
+    "I specialise in Indian equity markets: stocks, sectors, portfolios, "
+    "intraday signals, screeners, and F&O. "
+    "I can't help with {topic}. "
+    "Try: 'sector rotation', 'top gainers today', 'RELIANCE technical', "
+    "or '/my-portfolio'."
+)
+
+
+def is_out_of_domain(text: str) -> str | None:
+    """Return a polite redirect message if the query is clearly non-financial.
+
+    Returns None when the query may be financial (pass-through to providers).
+    Two-step: (1) match explicit OOD pattern, (2) override if financial context
+    is also present anywhere in the query.  Conservative — financial queries
+    must NEVER be blocked.
+    """
+    if not text:
+        return None
+    clean = text.strip()
+    m = _OOD_RE.search(clean)
+    if not m:
+        return None
+    # If ANY financial term appears in the query, let it through
+    if _FINANCIAL_CONTEXT_RE.search(clean):
+        return None
+    topic = m.group(0).lower()
+    return _OOD_RESPONSE.format(topic=f"'{topic}'")
+
+
 # Default registration order; first provider wins ties.
 # CompoundStockProvider runs early (high score 0.95) so multi-facet
 # stock asks bypass the single-facet providers cleanly.

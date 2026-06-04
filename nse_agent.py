@@ -830,7 +830,13 @@ def _handle_recommendation_report_command(parts: list[str], report_console=None)
 # ─────────────────────────────────────────────────────────────────────────────
 
 # All slash commands with a brief hint shown in the completion menu
-_REPORT_PRESET_TYPES_FOR_TEST = {"sector-rotation", "stage2", "strategy-lab", "recommendation"}
+_REPORT_PRESET_TYPES_FOR_TEST = {
+    "sector-rotation",
+    "stage2",
+    "strategy-lab",
+    "recommendation",
+    "swing-playbook",
+}
 
 _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/prompts",          "Browse 60 curated research prompts"),
@@ -977,11 +983,13 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/company-xray DMART",              "Run Company X-Ray for DMart"),
     ("/company-xray DMART --strict",     "Run Company X-Ray with strict evidence coverage"),
     # ── Analyze / document commands ─────────────────────────────────────────
-    ("/analyze",                          "Analyze a PDF, DOCX, web page, or stock — auto-detects input type"),
+    ("/research RELIANCE",                "Comprehensive stock research report — overview, fundamentals, technicals, charts, narrative"),
+    ("/research RELIANCE pdf",            "Comprehensive stock research report as PDF"),
+    ("/analyze",                          "Analyze a PDF/DOCX/web page, or run stock broker-note ingest + critique"),
     ("/analyze report.pdf",               "Read and summarize a local PDF document"),
     ("/analyze https://example.com",      "Scrape and analyze a web page"),
     ("/analyze annual_report.docx",       "Extract and summarize a Word document"),
-    ("/analyze RELIANCE",                 "Deep 360° stock analysis — technical, fundamental, forensic, news, sentiment"),
+    ("/analyze RELIANCE",                 "Broker-note ingest + internal DB critique for RELIANCE"),
     ("/analyze ~/Downloads/concall.pdf",  "Read and analyze a concall transcript PDF"),
     # ── CANSLIM commands ────────────────────────────────────────────────────
     ("/canslim",                          "CANSLIM analysis — William O'Neil's 7-point stock quality framework"),
@@ -1064,8 +1072,10 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/report stage2",                    "⚡ Stage 2 universe tracker — top 30 leaders + new entrants (instant)"),
     ("/report portfolio-monitor",         "💼 ⚡ EOD portfolio analysis — signals, heat maps, fundamentals (instant from DB)"),
     ("/report strategy-lab",              "📈 Portfolio strategy lab — paper strategy leaderboard + risk diagnostics"),
+    ("/report swing-playbook",            "Swing trading playbook — ranked candidates, entry/stop/exit plans, portfolio actions"),
     ("/report stage2 md",                 "⚡ Stage 2 tracker as Markdown"),
     ("/report recommendation",            "Grounded EOD recommendation report — indices, sectors, stocks, portfolio/watchlist"),
+    ("/swing-playbook",                   "Generate the swing trading playbook report"),
     ("/report technical RELIANCE",        "Technical analysis report for RELIANCE"),
     ("/report fundamental TCS pdf",       "Fundamental report for TCS in PDF format"),
     ("/report forensic INFY md",          "Forensic accounting report in Markdown"),
@@ -1091,8 +1101,7 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/data-coverage NIFTY500 --backfill", "Audit and yfinance-backfill any symbols below the 5-year threshold"),
     ("/data-coverage NIFTY500 --details", "Audit and list the worst-covered symbols"),
     # ── Portfolio Monitor (my-portfolio) ───────────────────────────────────────
-    ("/my-portfolio",         "💼 First-class portfolio ledger — status, positions, transactions, P&L, alerts"),
-    ("/my-portfolio intraday","⚡ Live intraday P&L + multi-strategy signals for all your holdings"),
+    ("/my-portfolio",         "💼 Live intraday P&L + multi-strategy signals for all your holdings"),
     ("/my-portfolio eod",     "📊 Full EOD analysis — CANSLIM · Minervini · Fundamental · Value · RSI (opens HTML)"),
     ("/my-portfolio buy",     "🟢 Show only BUY / STRONG BUY holdings from your portfolio"),
     ("/my-portfolio sell",    "🔴 Show only SELL candidates — sorted by loss depth"),
@@ -1111,6 +1120,16 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/mode plan",        "Switch to plan mode (render plan, do not execute tools)"),
     ("/mode auto",        "Switch to auto-approve safe tools, prompt for risky ones"),
     ("/mode default",     "Restore default permission-prompt behaviour"),
+    ("/style",            "Show Agent Adda interaction style"),
+    ("/style codex",      "Use direct copilot style with assumptions, steps, verification, next actions"),
+    ("/verbosity",        "Show response verbosity setting"),
+    ("/verbosity concise", "Use concise responses"),
+    ("/verbosity normal", "Use normal responses"),
+    ("/verbosity deep",   "Use deeper explanations where useful"),
+    ("/steps",            "Show execution-step visibility setting"),
+    ("/steps on",         "Always show execution steps for supported workflows"),
+    ("/steps auto",       "Show execution steps for composite/deep workflows"),
+    ("/steps off",        "Hide execution-step trail"),
     ("/global",           "Global market assessment + India read-through"),
     ("/context",          "Show conversation history & context budget"),
     ("/new",              "Start a fresh session (clear history)"),
@@ -1195,6 +1214,7 @@ _CMD_CATEGORIES: dict[str, tuple[str, str]] = {
     "/canslim":  ("CANSLIM Analysis",    "📐"),
     "/strength": ("CANSLIM Analysis",    "📐"),
     "/report":   ("Report Generation",   "📝"),
+    "/swing-playbook": ("Report Generation", "📝"),
     "/backtest": ("Strategy Lab",         "🧪"),
     "/strategy-lab": ("Strategy Lab",     "🧪"),
     "/strategy-council": ("Strategy Council", "🧠"),
@@ -1221,6 +1241,9 @@ _CMD_CATEGORIES: dict[str, tuple[str, str]] = {
     "/auto":     ("Session",             "💾"),
     "/model":    ("Settings & Data",     "⚙️"),
     "/mode":     ("Settings & Data",     "⚙️"),
+    "/style":    ("Settings & Data",     "⚙️"),
+    "/verbosity": ("Settings & Data",    "⚙️"),
+    "/steps":    ("Settings & Data",     "⚙️"),
     "/context":  ("Session",             "💾"),
     "/new":      ("Session",             "💾"),
     "/reset":    ("Session",             "💾"),
@@ -2060,6 +2083,63 @@ def _parse_multi_analyze_symbols(arg: str) -> list[str]:
         and token.lower() not in {"html", "pdf", "md"}
     ]
     return list(dict.fromkeys(symbols))
+
+
+_REPORT_OUTPUT_FORMATS = {"html", "pdf", "md"}
+
+
+def _parse_research_report_command(text: str) -> dict:
+    """Parse `/research SYMBOL [format]` as a comprehensive report command."""
+    import argparse as _argparse
+    import shlex
+
+    tail = text.split(maxsplit=1)[1] if len(text.split(maxsplit=1)) > 1 else ""
+    parser = _argparse.ArgumentParser(prog="/research", add_help=False)
+    parser.add_argument("symbol")
+    parser.add_argument("output_format", nargs="?", default="")
+    parser.add_argument("--format", dest="format_flag", default="")
+    ns = parser.parse_args(shlex.split(tail))
+
+    fmt = (ns.format_flag or ns.output_format or "html").lower().strip()
+    if fmt not in _REPORT_OUTPUT_FORMATS:
+        parser.error("format must be one of: html, pdf, md")
+    return {"symbol": ns.symbol.upper(), "format": fmt}
+
+
+def _parse_analyze_stock_research_command(text: str) -> dict:
+    """Parse `/analyze SYMBOL ...` for broker-ingest + critique flow."""
+    import argparse as _argparse
+    import shlex
+
+    tail = text.split(maxsplit=1)[1] if len(text.split(maxsplit=1)) > 1 else ""
+    parser = _argparse.ArgumentParser(prog="/analyze", add_help=False)
+    parser.add_argument("symbol")
+    parser.add_argument("--brand", default="auto")
+    parser.add_argument("--max", type=int, default=3, dest="max_results")
+    parser.add_argument("--skip-qa", action="store_true")
+    parser.add_argument("--skip-research", action="store_true")
+    parser.add_argument("--chat", action="store_true")
+    parser.add_argument("--no-chat", action="store_true")
+    ns = parser.parse_args(shlex.split(tail))
+    return {
+        "symbol": ns.symbol.upper(),
+        "brand": ns.brand,
+        "max_results": ns.max_results,
+        "skip_qa": bool(ns.skip_qa),
+        "skip_research": bool(ns.skip_research),
+        "chat": bool(ns.chat and not ns.no_chat),
+    }
+
+
+def _analyze_arg_is_document_source(arg: str) -> bool:
+    """Return true when `/analyze` should keep document/URL analysis semantics."""
+    value = (arg or "").strip()
+    lower = value.lower()
+    if lower.startswith(("http://", "https://")):
+        return True
+    if any(lower.endswith(ext) for ext in (".pdf", ".docx", ".doc", ".txt", ".csv", ".md", ".xlsx")):
+        return True
+    return "/" in value or "\\" in value or "~" in value
 
 
 _ANALYZE_PATH_SYMBOL_STOPWORDS = frozenset(
@@ -4463,6 +4543,92 @@ def _print_model_command_result(result: dict) -> None:
         )
 
 
+def _handle_interaction_command(text: str) -> dict:
+    """Parse and execute `/style`, `/verbosity`, and `/steps` preferences."""
+    parts = text.strip().split()
+    if not parts:
+        return {"handled": False}
+    root = parts[0].lower()
+    if root not in {"/style", "/verbosity", "/steps"}:
+        return {"handled": False}
+
+    from terminal.interaction_profile import StepVisibility, VerbosityLevel, merge_profile, profile_for_style
+    from terminal.session_preferences import load_interaction_preferences, save_interaction_preferences
+
+    loaded = load_interaction_preferences()
+    current = loaded.profile
+    arg = parts[1].lower() if len(parts) > 1 else ""
+    valid = {
+        "/style": ["default", "codex", "institutional", "teacher", "trader"],
+        "/verbosity": [v.value for v in VerbosityLevel],
+        "/steps": [v.value for v in StepVisibility],
+    }
+
+    if not arg:
+        return {
+            "handled": True,
+            "action": "status",
+            "command": root,
+            "status": "ok",
+            "profile": current.to_dict(),
+            "warning": loaded.warning,
+            "valid": valid[root],
+        }
+
+    if arg not in valid[root]:
+        return {
+            "handled": True,
+            "action": "update",
+            "command": root,
+            "status": "error",
+            "message": f"Unknown {root[1:]} value '{arg}'",
+            "profile": current.to_dict(),
+            "valid": valid[root],
+        }
+
+    if root == "/style":
+        updated = profile_for_style(arg)
+    elif root == "/verbosity":
+        updated = merge_profile(current, {"verbosity": arg})
+    else:
+        updated = merge_profile(current, {"steps": arg})
+
+    save_interaction_preferences(updated)
+    return {
+        "handled": True,
+        "action": "update",
+        "command": root,
+        "status": "ok",
+        "profile": updated.to_dict(),
+        "valid": valid[root],
+    }
+
+
+def _print_interaction_command_result(result: dict) -> None:
+    """Render interaction preference command output."""
+    if not result.get("handled"):
+        return
+    if result.get("status") == "error":
+        console.print(f"[red]  ✗ {result.get('message', 'invalid value')}[/red]")
+        console.print(f"[dim]    valid: {', '.join(result.get('valid', []))}[/dim]")
+        return
+
+    profile = result.get("profile") or {}
+    if result.get("warning"):
+        console.print(f"[yellow]  ! {result['warning']}[/yellow]")
+    console.print(
+        "[green]  ✓ Interaction profile[/green] "
+        f"[dim]style={profile.get('style', 'default')}  "
+        f"verbosity={profile.get('verbosity', 'normal')}  "
+        f"steps={profile.get('steps', 'auto')}[/dim]"
+    )
+    if result.get("action") == "status":
+        console.print(
+            f"[dim]    valid {result.get('command', '/style')}: "
+            f"{', '.join(result.get('valid', []))}[/dim]"
+        )
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Display helpers  (all print to stdout; terminal scrolls naturally)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -4763,101 +4929,6 @@ def _print_user(query: str) -> None:
     console.print()
     console.rule(f"[bold cyan]❯[/bold cyan]  [bold]{query}[/bold]  [dim]{_ts()}[/dim]",
                  style="dim cyan", align="left")
-
-
-def _print_thinking(query: str, route_decision=None) -> None:
-    """Print the agent's situational understanding before it executes.
-
-    Shows two layers:
-      1. What the router/registry understood (deterministic, always available)
-      2. What tools it plans to call (when a direct_tool_plan exists)
-
-    Displayed as compact dim lines — informative but not intrusive.
-    """
-    # Strip mode prefixes properly (substring match, not char-set strip)
-    _q = query.strip()
-    if _q.startswith("/intraday "):
-        clean = _q[len("/intraday "):].strip()
-    elif _q.startswith("/historical "):
-        clean = _q[len("/historical "):].strip()
-    else:
-        clean = _q
-    q_lower = clean.lower()
-
-    lines: list[str] = []
-
-    # ── Layer 1: Slash-command registry check ─────────────────────────────────
-    if clean.startswith("/"):
-        try:
-            registry = _get_shared_registry()
-            matched_handler = next(
-                (h for h in registry._handlers if h.match_fn(q_lower)), None
-            )
-            if matched_handler:
-                lines.append(
-                    f"[bold dim]Understood:[/bold dim] slash command "
-                    f"[cyan]/{matched_handler.name}[/cyan]  "
-                    f"[dim]{matched_handler.description[:60]}[/dim]"
-                )
-                lines.append(
-                    f"[dim]  Route:     deterministic registry dispatch[/dim]"
-                )
-                console.print()
-                for line in lines:
-                    console.print(f"  {line}")
-                console.print()
-                return
-        except Exception:
-            pass
-
-    # ── Layer 2: UnifiedRouter (market / sector / NL queries) ─────────────────
-    from terminal.router import UnifiedRouter, ContextPack
-    try:
-        if route_decision is None:
-            _router = UnifiedRouter()
-            _pack   = ContextPack(session_id="thinking")
-            route_decision = _router.route(clean, _pack)
-    except Exception:
-        return
-
-    intent   = (route_decision.intent or "").replace("_", " ")
-    provider = route_decision.reasoning_summary.selected_branch or ""
-    route_t  = route_decision.route_type or "fallback_llm"
-    tools    = [t.tool for t in (route_decision.tool_plan or [])]
-    reasons  = route_decision.reasoning_summary.pot or ()
-
-    # Line 1: understood
-    if intent and intent not in ("fallback", ""):
-        intent_label = intent.replace("_", " ").title()
-        lines.append(
-            f"[bold dim]Understood:[/bold dim] [cyan]{intent_label}[/cyan]"
-            + (f"  [dim]via {provider}[/dim]" if provider else "")
-        )
-    else:
-        lines.append(
-            "[bold dim]Understood:[/bold dim] [dim]open-ended query — LLM will reason and select tools[/dim]"
-        )
-
-    # Line 2: reason
-    if reasons:
-        reason_text = str(reasons[0])[:88]
-        lines.append(f"[dim]  Reason:   {reason_text}[/dim]")
-
-    # Line 3: tool plan or LLM note
-    if tools:
-        tool_str = " → ".join(f"[cyan]{t}[/cyan]" for t in tools[:5])
-        lines.append(f"[bold dim]  Plan:     [/bold dim]{tool_str}")
-    else:
-        lines.append(
-            "[dim]  Plan:     LLM agentic loop — get_company_insight → "
-            "scrape_screener_in → synthesize[/dim]"
-        )
-
-    # Render
-    console.print()
-    for line in lines:
-        console.print(f"  {line}")
-    console.print()
 
 
 _MTF_FREEFORM_RE = re.compile(
@@ -7242,7 +7313,35 @@ def _build_command_registry():
         description="First-class report mailer",
     ))
 
-    # /my-portfolio — first-class EOD ledger by default; intraday on request
+    # /swing-playbook
+    def _h_swing_playbook(query, agent, show_trace):
+        from terminal.swing_playbook import handle_swing_playbook_command
+        _print_user(query)
+        output = handle_swing_playbook_command(query)
+        _remember_generated_report(output)
+        console.print(Markdown(_linkify_markdown(output)))
+        return True
+    registry.register(CommandHandler(
+        name="swing-playbook",
+        match_fn=lambda q: re.match(r"^/(?:swing-playbook|swing_playbook)(?:\s|$)", q) is not None,
+        handler_fn=_h_swing_playbook,
+        description="Swing trading playbook report",
+    ))
+
+    # /style, /verbosity, /steps — AA-COP-1.3 interaction profile commands
+    def _h_interaction(query: str, agent, show_trace: bool) -> bool:
+        """Handle /style, /verbosity, /steps interaction profile commands."""
+        _print_user(query)
+        _print_interaction_command_result(_handle_interaction_command(query))
+        return True
+    registry.register(CommandHandler(
+        name="interaction",
+        match_fn=lambda q: re.match(r"^/(?:style|verbosity|steps)(?:\s|$)", q) is not None,
+        handler_fn=_h_interaction,
+        description="/style · /verbosity · /steps — interaction profile (AA-COP-1)",
+    ))
+
+    # /my-portfolio — live intraday dashboard + EOD analysis
     def _h_my_portfolio(query: str, agent, show_trace: bool) -> bool:
         _print_user(query)
         from terminal.portfolio_monitor import (
@@ -7256,8 +7355,8 @@ def _build_command_registry():
         parts = query.strip().split()
         sub   = parts[1].lower() if len(parts) > 1 else ""
 
-        # Bare /my-portfolio and /my-portfolio eod — first-class portfolio ledger
-        if sub in ("", "eod"):
+        # /my-portfolio eod — force full EOD report
+        if sub == "eod":
             console.print("[dim]  → Running EOD portfolio analysis…[/dim]")
             result = run_eod_report()
             if result.get("success"):
@@ -7267,13 +7366,14 @@ def _build_command_registry():
                 console.print(f"[red]  ✗ EOD report failed:[/red] {result.get('note','')}")
             return True
 
-        # /my-portfolio intraday | sell | buy | hold | strong-buy — filtered live view
+        # /my-portfolio sell | buy | hold | strong-buy — filtered view
         filter_map = {
             "sell": "SELL", "buy": "BUY", "hold": "HOLD",
             "strong-buy": "STRONG BUY", "strongbuy": "STRONG BUY",
         }
         sig_filter = filter_map.get(sub)
 
+        # Default: intraday view (with optional signal filter)
         in_market = True
         try:
             from terminal.portfolio_monitor import _is_market_hours
@@ -7302,7 +7402,7 @@ def _build_command_registry():
         name="my-portfolio",
         match_fn=lambda q: q.startswith("/my-portfolio") or q.startswith("/my_portfolio"),
         handler_fn=_h_my_portfolio,
-        description="First-class portfolio ledger with optional intraday filters",
+        description="Live intraday P&L + multi-strategy signals for your portfolio",
     ))
 
     return registry
@@ -7338,6 +7438,18 @@ def _single_query(agent, query: str, show_trace: bool) -> None:
     registry = _get_shared_registry()
     if registry.dispatch(query, agent, show_trace, mode="single_query"):
         return
+
+    # Out-of-domain guard (NL only, pre-LLM)
+    if not query.lstrip().startswith("/"):
+        try:
+            from terminal.router.providers import is_out_of_domain
+            _ood = is_out_of_domain(query)
+            if _ood:
+                console.print()
+                console.print(f"[dim]  🌐  Out of domain[/dim]  [yellow]{_ood}[/yellow]")
+                return
+        except Exception:
+            pass
 
     _print_user(query)
     result = _run_with_spinner(agent, query, show_trace)
@@ -7645,6 +7757,14 @@ def _chat_loop(agent, show_trace: bool) -> None:
             _print_model_command_result(_handle_model_command(agent, text))
             continue
 
+        if (
+            text.lower() == "/style" or text.lower().startswith("/style ")
+            or text.lower() == "/verbosity" or text.lower().startswith("/verbosity ")
+            or text.lower() == "/steps" or text.lower().startswith("/steps ")
+        ):
+            _print_interaction_command_result(_handle_interaction_command(text))
+            continue
+
         # ── Utility commands ───────────────────────────────────────────
         if text.lower() in ("/help", "?", "/h") or text.lower().startswith("/help "):
             from terminal.help import print_help as _ph
@@ -7678,7 +7798,6 @@ def _chat_loop(agent, show_trace: bool) -> None:
         # commands not yet migrated to the registry.
         if text.lstrip().startswith("/"):
             _shared_reg = _get_shared_registry()
-            _print_thinking(text)   # show plan for slash commands too
             if _shared_reg.dispatch(text, agent, show_trace, mode="interactive"):
                 _separator()
                 continue
@@ -8155,7 +8274,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
             _print_prompts_library(fkey)
             continue
 
-        # ── /my-portfolio — first-class ledger + optional intraday filters ─
+        # ── /my-portfolio — live intraday + EOD portfolio analysis ───────
         if text.lower().startswith(("/my-portfolio", "/my_portfolio")):
             from terminal.portfolio_monitor import (
                 run_intraday_view,
@@ -8167,7 +8286,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
             parts = text.strip().split()
             sub   = parts[1].lower() if len(parts) > 1 else ""
 
-            if sub in ("", "eod"):
+            if sub == "eod":
                 _print_user(text)
                 console.print("[dim]  → Running EOD portfolio analysis…[/dim]")
                 result = run_eod_report()
@@ -8461,6 +8580,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
                     "[dim]  Types:  sector-rotation   → Full sector breadth & rotation dashboard[/dim]\n"
                     "[dim]          stage2            → Stage 2 universe tracker (top 30 + new entrants)[/dim]\n"
                     "[dim]          strategy-lab      → Portfolio paper strategy leaderboard + diagnostics[/dim]\n"
+                    "[dim]          swing-playbook    → Swing setups with entry, stop, target, and portfolio actions[/dim]\n"
                     "[dim]          recommendation    → Grounded EOD recommendations across market, sectors, stocks[/dim]\n"
                     "[dim]  ─── Format ──────────────────────────────────────────────────────[/dim]\n"
                     "[dim]  Format: html (default) | pdf | md[/dim]\n"
@@ -8470,6 +8590,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
                     "[dim]    /report stage2                    → HTML (instant)[/dim]\n"
                     "[dim]    /report stage2 md                 → Markdown[/dim]\n"
                     "[dim]    /report strategy-lab              → HTML portfolio strategy diagnostics[/dim]\n"
+                    "[dim]    /report swing-playbook            → HTML swing trading playbook[/dim]\n"
                     "[dim]    /report recommendation             → HTML grounded recommendations[/dim]\n"
                     "[dim]    /report recommendation --watchlist RELIANCE,TCS --format md[/dim]\n"
                     "[dim]    /report technical RELIANCE        → LLM analysis → HTML[/dim]\n"
@@ -8553,11 +8674,11 @@ def _chat_loop(agent, show_trace: bool) -> None:
             # Direct export after LLM responds — bypasses fragile tool-call path
             _analyze_report_after = (rpt_sym, rpt_type, rpt_fmt)
 
-        # ── /analyze <source> [pdf|html|md] — document analysis or deep stock 360° ──────
+        # ── /analyze <source> — document analysis or broker-note critique ───────────────
         # PG: First-class document + stock analysis. Auto-detects input type:
         #     URL → scrape web page / PDF;  .pdf/.docx → read local file;
-        #     stock symbol → full 360° analysis (technical + fundamental + forensic + news + sentiment)
-        #     Optional format suffix: /analyze RELIANCE pdf  → run analysis AND save report
+        #     stock symbol → broker report ingest + critique against internal DB facts.
+        #     Use /research SYMBOL [html|pdf|md] for generated 360° stock reports.
         elif text.lower().startswith("/analyze"):
             parts = text.split(maxsplit=1)
             arg   = parts[1].strip() if len(parts) > 1 else ""
@@ -8571,23 +8692,21 @@ def _chat_loop(agent, show_trace: bool) -> None:
 
             if not arg:
                 console.print(
-                    "[dim]  Usage: /analyze <file.pdf | file.docx | https://... | SYMBOL> [html|pdf|md][/dim]\n"
+                    "[dim]  Usage: /analyze <file.pdf | file.docx | https://... | SYMBOL> [document-format][/dim]\n"
                     "[dim]  Examples:[/dim]\n"
                     "[dim]    /analyze ~/Downloads/annual_report.pdf[/dim]\n"
                     "[dim]    /analyze https://www.bseindia.com/results/2026.pdf[/dim]\n"
                     "[dim]    /analyze concall_transcript.docx[/dim]\n"
-                    "[dim]    /analyze RELIANCE[/dim]\n"
-                    "[dim]    /analyze RELIANCE pdf       ← run AND save as PDF report[/dim]"
+                    "[dim]    /analyze RELIANCE           ← broker ingest + DB critique[/dim]\n"
+                    "[dim]    /research RELIANCE pdf      ← comprehensive generated stock report[/dim]"
                 )
                 continue
 
             _arg_lower = arg.lower()
             _is_url  = _arg_lower.startswith(("http://", "https://"))
-            _is_file = any(_arg_lower.endswith(ext) for ext in
-                          (".pdf", ".docx", ".doc", ".txt", ".csv", ".md", ".xlsx"))
-            _has_path = ("/" in arg or "\\" in arg or "~" in arg)
+            _is_document_source = _analyze_arg_is_document_source(arg)
 
-            if _is_url or _is_file or _has_path:
+            if _is_document_source:
                 # ── Document analysis mode ────────────────────────────────
                 source_label = arg if len(arg) < 60 else arg[:57] + "..."
                 _doc_export_note = f" → saving {_analyze_fmt.upper()} report" if _analyze_fmt else " → saving MD report"
@@ -8786,49 +8905,83 @@ def _chat_loop(agent, show_trace: bool) -> None:
                 _doc_export_fmt = _analyze_fmt or "md"
                 _analyze_report_after = (_analyze_sym, "research", _doc_export_fmt)
             else:
-                # ── Stock deep 360° analysis mode ─────────────────────────
-                _eff_fmt = _analyze_fmt or "html"  # default to html for stock analysis
-                _fmt_note = f" → saving {_analyze_fmt.upper()} report" if _analyze_fmt else " → saving HTML report"
-                _multi_symbols = _parse_multi_analyze_symbols(arg)
-                if len(_multi_symbols) >= 2:
-                    _analyze_sym = "_".join(_multi_symbols[:5])
-                    _symbol_list = ", ".join(_multi_symbols[:5])
+                # ── Broker ingest + critique mode for plain stock symbols ─
+                try:
+                    ns = _parse_analyze_stock_research_command(text)
+                except SystemExit:
+                    console.print("[red]  ✗ Usage:[/red] /analyze <SYMBOL> [--brand auto|icici|groww|moneycontrol|equitymaster] [--max N] [--skip-qa] [--skip-research] [--chat]")
+                    continue
+
+                from knowledge_base.research import research_symbol as _research
+                from knowledge_base.critique import critique_report as _critique
+
+                if _analyze_fmt:
                     console.print(
-                        f"[dim]  → Comparative Analysis: [bold]{_symbol_list}[/bold] "
-                        f"(technical + fundamental side-by-side){_fmt_note}[/dim]"
+                        "[yellow]  · Plain-symbol /analyze now runs broker ingest + critique. "
+                        f"Use /research {ns['symbol']} {_analyze_fmt} for a generated report.[/yellow]"
                     )
-                    text = (
-                        f"Compare {_symbol_list} from technical, fundamental, valuation, sector strength, "
-                        f"risk, and evidence-quality perspective. Use compare_stocks with symbols={_multi_symbols[:5]} "
-                        f"and aspects=['both']. Then synthesize a concise comparative report with: Executive Summary, "
-                        f"side-by-side strengths/weaknesses, key risks, and research verdict. Do not drop any requested symbol."
+
+                if not ns["skip_research"]:
+                    console.print(f"[bold cyan]── Step 1/2: discovering broker reports for {ns['symbol']}[/bold cyan]")
+                    rs_result = _research(
+                        ns["symbol"],
+                        brand=ns["brand"],
+                        max_results=ns["max_results"],
+                        do_qa=not ns["skip_qa"],
                     )
-                    _analyze_report_after = (_analyze_sym, "research", _eff_fmt)
+                    ing = rs_result.get("ingested", [])
+                    errs = rs_result.get("errors", [])
+                    console.print(f"  ingested {len(ing)} report(s), {len(errs)} skipped")
+                    for r in ing:
+                        console.print(f"  ✓ [{r.get('brand')}] chunks={r.get('chunks')} qa={r.get('qa')}  {r.get('url')}")
+                    for e in errs[:5]:
+                        console.print(f"  ✗ [{e.get('brand')}] {str(e.get('error') or '')[:120]}  {e.get('url')}")
                 else:
-                    _analyze_sym = re.sub(r"[^A-Z0-9&-]", "", arg.upper().split()[0])
-                    console.print(f"[dim]  → 360° Deep Analysis: [bold]{_analyze_sym}[/bold] "
-                                   f"(technical + fundamental + forensic + news + sentiment){_fmt_note}[/dim]")
-                    text = (
-                        f"Perform a comprehensive 360° analysis of {_analyze_sym}. Execute these tools IN ORDER:\n\n"
-                        f"1. **get_technical_setup** for {_analyze_sym} — trend, RSI, MACD, support/resistance, stage\n"
-                        f"2. **comprehensive_stock_research** for {_analyze_sym} — fundamentals, valuations, peer comparison\n"
-                        f"3. **run_forensic_analysis** for {_analyze_sym} — Beneish M-score, Piotroski F-score, Altman Z'-score\n"
-                        f"4. **search_latest_catalysts** for {_analyze_sym} — latest news, read top 2 articles for sentiment\n"
-                        f"5. **get_sector_context** for {_analyze_sym} — sector rotation status and relative strength\n"
-                        f"6. **deep_search** for {_analyze_sym} verticals=['shareholding','insider_trades','analyst_targets'] — institutional & insider activity\n\n"
-                        f"Then synthesize ALL results into a unified report with these sections:\n"
-                        f"• **Executive Summary** — 3-line bull/bear verdict with conviction level\n"
-                        f"• **Technical Position** — trend, key levels, stage, momentum signals\n"
-                        f"• **Fundamental Quality** — revenue/profit growth, margins, ROE, debt, valuations\n"
-                        f"• **Financial Health** — forensic scores (Beneish, Piotroski, Altman) with flags\n"
-                        f"• **Institutional & Insider Activity** — FII/DII changes, promoter moves, bulk deals\n"
-                        f"• **News & Sentiment** — recent catalysts, management commentary, market sentiment\n"
-                        f"• **Risk Factors** — top 3-5 risks specific to this stock\n"
-                        f"• **Investment Verdict** — BUY/HOLD/AVOID with entry zone, target, stop-loss, timeframe\n\n"
-                        f"Use data from ALL tool calls. Be specific with numbers, dates, and levels."
+                    console.print(f"[dim]  (skipping broker discovery; using existing KB content)[/dim]")
+
+                console.print(f"[bold cyan]── Step 2/2: reconciling broker thesis vs DB[/bold cyan]")
+                cr = _critique(ns["symbol"], source="kb", top_k=6)
+                if cr.get("ok"):
+                    v = cr.get("verdict") or {}
+                    stance = v.get("recommended_stance", "?")
+                    score = v.get("agreement_score", "?")
+                    colour = (
+                        "green" if stance in ("STRONG_BUY", "BUY", "ACCUMULATE")
+                        else "yellow" if stance == "HOLD"
+                        else "red"
                     )
-                    # Stock analysis: always export HTML (or specified format)
-                    _analyze_report_after = (_analyze_sym, "research", _eff_fmt)
+                    console.print(f"  [bold {colour}]{stance}[/bold {colour}] (agreement {score}/100)")
+                    console.print(f"  [italic]{v.get('one_line_verdict', '')}[/italic]")
+                    if v.get("tactical_trigger"):
+                        console.print(f"  Trigger: {v['tactical_trigger']}")
+                    if v.get("invalidation"):
+                        console.print(f"  Invalidation: {v['invalidation']}")
+                else:
+                    console.print(f"[red]  ✗ critique failed:[/red] {cr.get('llm_error') or cr.get('error')}")
+
+                if ns["chat"]:
+                    try:
+                        from knowledge_base.chat import SymbolChatSession
+
+                        console.print(f"[bold cyan]── Chat: {ns['symbol']} (exit with /done)[/bold cyan]")
+                        sess = SymbolChatSession(ns["symbol"], top_k=8)
+                        while True:
+                            try:
+                                q = prompt_session.prompt(
+                                    HTML("<ansicyan>research-chat></ansicyan> ")
+                                ).strip()
+                            except (EOFError, KeyboardInterrupt):
+                                console.print()
+                                break
+                            if not q or q.lower() in {"/done", "/exit", "/quit"}:
+                                break
+                            ans = sess.ask(q)
+                            console.print(Markdown(ans.get("answer", "")))
+                    except Exception as exc:
+                        console.print(f"[yellow]  · chat skipped: {exc}[/yellow]")
+                else:
+                    console.print(f"[dim]  Use /chat-symbol {ns['symbol']} to continue the grounded broker-note chat.[/dim]")
+                continue
 
         # ── /canslim <symbol> — William O'Neil CANSLIM analysis ──────────
         # PG: First-class CANSLIM growth quality evaluation framework.
@@ -9181,61 +9334,26 @@ def _chat_loop(agent, show_trace: bool) -> None:
                 console.print(f"[red]  ✗ /critique-report failed:[/red] {exc}")
                 continue
 
-        # ── /research — discover broker PDFs and ingest them ───────────────
-        # PG 2026-05-27: Uses DuckDuckGo HTML search with site: filters to
-        # find publicly-indexed PDF reports on a symbol, then pipes each
-        # through /kb ingest. No broker login, no API keys. Paywalled or
-        # JS-only reports will not surface — that's expected.
-        # Usage:  /research <SYMBOL>                          # brand=auto, max=3
-        #         /research <SYMBOL> --brand icici            # icici only
-        #         /research <SYMBOL> --brand groww --max 5
-        #         /research <SYMBOL> --dry-run                # list candidates only
-        #         /research <SYMBOL> --skip-qa                # faster ingest
+        # ── /research — comprehensive single-stock research report ─────────
+        # Usage:  /research <SYMBOL>              # HTML comprehensive report
+        #         /research <SYMBOL> pdf          # PDF if converter available
+        #         /research <SYMBOL> --format md  # Markdown
+        # Broker-report ingest + critique lives under /analyze <SYMBOL>.
         elif text.lower().startswith("/research"):
             try:
-                import argparse as _argparse
-                import shlex
-                from knowledge_base.research import research_symbol as _research
-
-                tail = text.split(maxsplit=1)[1] if len(text.split(maxsplit=1)) > 1 else ""
-                parser = _argparse.ArgumentParser(prog="/research", add_help=False)
-                parser.add_argument("symbol")
-                parser.add_argument("--brand", default="auto",
-                                    choices=["auto", "icici", "groww", "moneycontrol", "equitymaster"])
-                parser.add_argument("--max", type=int, default=3, dest="max_results")
-                parser.add_argument("--dry-run", action="store_true")
-                parser.add_argument("--skip-qa", action="store_true")
-                ns = parser.parse_args(shlex.split(tail))
-
-                console.print(f"[dim]  → /research {ns.symbol} (brand={ns.brand}, max={ns.max_results})[/dim]")
-                result = _research(
-                    ns.symbol, brand=ns.brand, max_results=ns.max_results,
-                    do_qa=not ns.skip_qa, dry_run=ns.dry_run,
+                parsed = _parse_research_report_command(text)
+                rpt_sym = parsed["symbol"]
+                rpt_fmt = parsed["format"]
+                console.print(
+                    f"[dim]  → Comprehensive research report for "
+                    f"[bold]{rpt_sym}[/bold] as {rpt_fmt.upper()}[/dim]"
                 )
-
-                cands = result.get("candidates", [])
-                console.print(f"[bold]Candidates found:[/bold] {len(cands)}")
-                for c in cands:
-                    console.print(f"  • [{c['brand']}] {c['url']}")
-
-                if ns.dry_run:
-                    continue
-
-                ing = result.get("ingested", [])
-                errs = result.get("errors", [])
-                if ing:
-                    console.print(f"[green]Ingested {len(ing)} report(s):[/green]")
-                    for r in ing:
-                        console.print(f"  ✓ [{r['brand']}] chunks={r['chunks']} qa={r['qa']}  {r['url']}")
-                if errs:
-                    console.print(f"[yellow]Skipped {len(errs)} (paywall / non-PDF / fetch error):[/yellow]")
-                    for e in errs:
-                        console.print(f"  ✗ [{e['brand']}] {e['error'][:120]}  {e['url']}")
-                if not ing and not cands:
-                    console.print(f"[red]  ✗ {result.get('error', 'no reports found')}[/red]")
-                continue
+                from terminal.reports import get_report_prompt
+                text = get_report_prompt("research", rpt_sym, rpt_fmt)
+                _analyze_report_after = (rpt_sym, "research", rpt_fmt)
             except SystemExit:
-                console.print("[red]  ✗ Usage:[/red] /research <SYMBOL> [--brand auto|icici|groww|moneycontrol|equitymaster] [--max N] [--dry-run] [--skip-qa]")
+                console.print("[red]  ✗ Usage:[/red] /research <SYMBOL> [html|pdf|md] [--format html|pdf|md]")
+                console.print("[dim]    Broker ingest + critique: /analyze <SYMBOL> [--brand auto|icici|groww|moneycontrol|equitymaster] [--max N] [--skip-qa][/dim]")
                 continue
             except Exception as exc:
                 console.print(f"[red]  ✗ /research failed:[/red] {exc}")
@@ -9297,88 +9415,6 @@ def _chat_loop(agent, show_trace: bool) -> None:
                 continue
             except Exception as exc:
                 console.print(f"[red]  ✗ /chat-symbol failed:[/red] {exc}")
-                continue
-
-        # ── /analyze — one-shot: research → critique → chat ────────────────
-        # PG 2026-05-27: convenience wrapper around /research + /critique-report
-        # + /chat-symbol. Use when you want the full "fetch broker reports,
-        # see the verdict, then talk to it" loop in a single command.
-        # Usage:  /analyze <SYMBOL>
-        #         /analyze <SYMBOL> --brand icici --max 2 --skip-qa
-        #         /analyze <SYMBOL> --no-chat       # research + critique only
-        elif text.lower().startswith("/analyze"):
-            try:
-                import argparse as _argparse
-                import shlex
-                from knowledge_base.research import research_symbol as _research
-                from knowledge_base.critique import critique_report as _critique
-                from knowledge_base.chat import SymbolChatSession
-
-                tail = text.split(maxsplit=1)[1] if len(text.split(maxsplit=1)) > 1 else ""
-                parser = _argparse.ArgumentParser(prog="/analyze", add_help=False)
-                parser.add_argument("symbol")
-                parser.add_argument("--brand", default="auto")
-                parser.add_argument("--max", type=int, default=3, dest="max_results")
-                parser.add_argument("--skip-qa", action="store_true")
-                parser.add_argument("--skip-research", action="store_true",
-                                    help="Skip discovery; critique against whatever's already in the KB")
-                parser.add_argument("--no-chat", action="store_true")
-                ns = parser.parse_args(shlex.split(tail))
-
-                # 1. research
-                if not ns.skip_research:
-                    console.print(f"[bold cyan]── Step 1/3: discovering reports for {ns.symbol}[/bold cyan]")
-                    rs_result = _research(
-                        ns.symbol, brand=ns.brand, max_results=ns.max_results,
-                        do_qa=not ns.skip_qa,
-                    )
-                    ing = rs_result.get("ingested", [])
-                    console.print(f"  ingested {len(ing)} report(s), {len(rs_result.get('errors', []))} skipped")
-                else:
-                    console.print(f"[dim]  (skipping research; using existing KB content)[/dim]")
-
-                # 2. critique
-                console.print(f"[bold cyan]── Step 2/3: reconciling broker thesis vs DB[/bold cyan]")
-                cr = _critique(ns.symbol, source="kb", top_k=6)
-                if cr.get("ok"):
-                    v = cr.get("verdict") or {}
-                    stance = v.get("recommended_stance", "?")
-                    score = v.get("agreement_score", "?")
-                    colour = "green" if stance in ("STRONG_BUY", "BUY", "ACCUMULATE") else \
-                             "yellow" if stance == "HOLD" else "red"
-                    console.print(f"  [bold {colour}]{stance}[/bold {colour}] (agreement {score}/100)")
-                    console.print(f"  [italic]{v.get('one_line_verdict', '')}[/italic]")
-                    if v.get("tactical_trigger"):
-                        console.print(f"  Trigger: {v['tactical_trigger']}")
-                    if v.get("invalidation"):
-                        console.print(f"  Invalidation: {v['invalidation']}")
-                else:
-                    console.print(f"[red]  ✗ critique failed:[/red] {cr.get('llm_error') or cr.get('error')}")
-
-                # 3. chat (optional)
-                if ns.no_chat:
-                    console.print(f"[dim]  (skipping chat; /chat-symbol {ns.symbol} to resume)[/dim]")
-                    continue
-                console.print(f"[bold cyan]── Step 3/3: entering chat (exit with /done)[/bold cyan]")
-                sess = SymbolChatSession(ns.symbol, top_k=8)
-                while True:
-                    try:
-                        with _pt_patch_stdout(raw=True):
-                            q = session.prompt(f"  {sess.symbol}> ")
-                    except (KeyboardInterrupt, EOFError):
-                        break
-                    q = (q or "").strip()
-                    if not q or q.lower() in ("/done", "/exit", "/quit"):
-                        console.print(f"[dim]  (chat ended after {len(sess.history)//2} turns)[/dim]")
-                        break
-                    answer = sess.ask(q)
-                    console.print(f"[bold green]  ◆[/bold green] {answer}")
-                continue
-            except SystemExit:
-                console.print("[red]  ✗ Usage:[/red] /analyze <SYMBOL> [--brand auto|icici|groww|...] [--max N] [--skip-qa] [--skip-research] [--no-chat]")
-                continue
-            except Exception as exc:
-                console.print(f"[red]  ✗ /analyze failed:[/red] {exc}")
                 continue
 
         # ── /reports — Enhanced Comprehensive Analysis (Postgres-backed) ──
@@ -10173,7 +10209,22 @@ def _chat_loop(agent, show_trace: bool) -> None:
             query = text
 
         _print_user(text)
-        _print_thinking(query)   # show situation assessment + route plan before LLM runs
+
+        # ── Out-of-domain guard (pre-LLM, deterministic) ──────────────────
+        # Only active for natural language (not slash commands, not mode prefixes).
+        if not text.lstrip().startswith("/"):
+            try:
+                from terminal.router.providers import is_out_of_domain
+                _ood_msg = is_out_of_domain(text)
+                if _ood_msg:
+                    console.print()
+                    console.print(
+                        f"[dim]  🌐  Out of domain[/dim]  [yellow]{_ood_msg}[/yellow]"
+                    )
+                    _separator()
+                    continue
+            except Exception:
+                pass  # guard must never break the normal flow
 
         try:
             result = _run_with_spinner(
@@ -10283,6 +10334,9 @@ def main() -> None:
 
     print_banner()
 
+    sys.stdout.write("\x1b[36m  Loading Agent Adda…\x1b[0m\r")
+    sys.stdout.flush()
+
     try:
         from terminal.data_readiness import (
             execute_refresh_plan,
@@ -10296,13 +10350,8 @@ def main() -> None:
             readiness = inspect_data_readiness()
             refresh_plan = plan_refresh(readiness)
             console.print(render_readiness_panel(readiness, refresh_plan))
-            if refresh_plan.action in {"run_refresh", "start_postgres"} and not args.readiness_no_refresh:
-                action_label = (
-                    "starting PostgreSQL before startup"
-                    if refresh_plan.action == "start_postgres"
-                    else "running readiness refresh before startup"
-                )
-                console.print(f"[dim]  │  {action_label}[/dim]")
+            if refresh_plan.action == "run_refresh" and not args.readiness_no_refresh:
+                console.print("[dim]  │  running readiness refresh before startup[/dim]")
                 refresh_result = execute_refresh_plan(refresh_plan)
                 console.print(
                     render_readiness_panel(
