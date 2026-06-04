@@ -1091,7 +1091,8 @@ _SLASH_COMMANDS: list[tuple[str, str]] = [
     ("/data-coverage NIFTY500 --backfill", "Audit and yfinance-backfill any symbols below the 5-year threshold"),
     ("/data-coverage NIFTY500 --details", "Audit and list the worst-covered symbols"),
     # ── Portfolio Monitor (my-portfolio) ───────────────────────────────────────
-    ("/my-portfolio",         "💼 Live intraday P&L + multi-strategy signals for all your holdings"),
+    ("/my-portfolio",         "💼 First-class portfolio ledger — status, positions, transactions, P&L, alerts"),
+    ("/my-portfolio intraday","⚡ Live intraday P&L + multi-strategy signals for all your holdings"),
     ("/my-portfolio eod",     "📊 Full EOD analysis — CANSLIM · Minervini · Fundamental · Value · RSI (opens HTML)"),
     ("/my-portfolio buy",     "🟢 Show only BUY / STRONG BUY holdings from your portfolio"),
     ("/my-portfolio sell",    "🔴 Show only SELL candidates — sorted by loss depth"),
@@ -4764,6 +4765,101 @@ def _print_user(query: str) -> None:
                  style="dim cyan", align="left")
 
 
+def _print_thinking(query: str, route_decision=None) -> None:
+    """Print the agent's situational understanding before it executes.
+
+    Shows two layers:
+      1. What the router/registry understood (deterministic, always available)
+      2. What tools it plans to call (when a direct_tool_plan exists)
+
+    Displayed as compact dim lines — informative but not intrusive.
+    """
+    # Strip mode prefixes properly (substring match, not char-set strip)
+    _q = query.strip()
+    if _q.startswith("/intraday "):
+        clean = _q[len("/intraday "):].strip()
+    elif _q.startswith("/historical "):
+        clean = _q[len("/historical "):].strip()
+    else:
+        clean = _q
+    q_lower = clean.lower()
+
+    lines: list[str] = []
+
+    # ── Layer 1: Slash-command registry check ─────────────────────────────────
+    if clean.startswith("/"):
+        try:
+            registry = _get_shared_registry()
+            matched_handler = next(
+                (h for h in registry._handlers if h.match_fn(q_lower)), None
+            )
+            if matched_handler:
+                lines.append(
+                    f"[bold dim]Understood:[/bold dim] slash command "
+                    f"[cyan]/{matched_handler.name}[/cyan]  "
+                    f"[dim]{matched_handler.description[:60]}[/dim]"
+                )
+                lines.append(
+                    f"[dim]  Route:     deterministic registry dispatch[/dim]"
+                )
+                console.print()
+                for line in lines:
+                    console.print(f"  {line}")
+                console.print()
+                return
+        except Exception:
+            pass
+
+    # ── Layer 2: UnifiedRouter (market / sector / NL queries) ─────────────────
+    from terminal.router import UnifiedRouter, ContextPack
+    try:
+        if route_decision is None:
+            _router = UnifiedRouter()
+            _pack   = ContextPack(session_id="thinking")
+            route_decision = _router.route(clean, _pack)
+    except Exception:
+        return
+
+    intent   = (route_decision.intent or "").replace("_", " ")
+    provider = route_decision.reasoning_summary.selected_branch or ""
+    route_t  = route_decision.route_type or "fallback_llm"
+    tools    = [t.tool for t in (route_decision.tool_plan or [])]
+    reasons  = route_decision.reasoning_summary.pot or ()
+
+    # Line 1: understood
+    if intent and intent not in ("fallback", ""):
+        intent_label = intent.replace("_", " ").title()
+        lines.append(
+            f"[bold dim]Understood:[/bold dim] [cyan]{intent_label}[/cyan]"
+            + (f"  [dim]via {provider}[/dim]" if provider else "")
+        )
+    else:
+        lines.append(
+            "[bold dim]Understood:[/bold dim] [dim]open-ended query — LLM will reason and select tools[/dim]"
+        )
+
+    # Line 2: reason
+    if reasons:
+        reason_text = str(reasons[0])[:88]
+        lines.append(f"[dim]  Reason:   {reason_text}[/dim]")
+
+    # Line 3: tool plan or LLM note
+    if tools:
+        tool_str = " → ".join(f"[cyan]{t}[/cyan]" for t in tools[:5])
+        lines.append(f"[bold dim]  Plan:     [/bold dim]{tool_str}")
+    else:
+        lines.append(
+            "[dim]  Plan:     LLM agentic loop — get_company_insight → "
+            "scrape_screener_in → synthesize[/dim]"
+        )
+
+    # Render
+    console.print()
+    for line in lines:
+        console.print(f"  {line}")
+    console.print()
+
+
 _MTF_FREEFORM_RE = re.compile(
     r"\b(?:mtf|multi[\s\-]?time[\s\-]?frame|multi[\s\-]?timeframe|"
     r"multi[\s\-]?tf|muti[\s\-]?time[\s\-]?frame|muti[\s\-]?timeframe|"
@@ -7146,7 +7242,7 @@ def _build_command_registry():
         description="First-class report mailer",
     ))
 
-    # /my-portfolio — live intraday dashboard + EOD analysis
+    # /my-portfolio — first-class EOD ledger by default; intraday on request
     def _h_my_portfolio(query: str, agent, show_trace: bool) -> bool:
         _print_user(query)
         from terminal.portfolio_monitor import (
@@ -7160,8 +7256,8 @@ def _build_command_registry():
         parts = query.strip().split()
         sub   = parts[1].lower() if len(parts) > 1 else ""
 
-        # /my-portfolio eod — force full EOD report
-        if sub == "eod":
+        # Bare /my-portfolio and /my-portfolio eod — first-class portfolio ledger
+        if sub in ("", "eod"):
             console.print("[dim]  → Running EOD portfolio analysis…[/dim]")
             result = run_eod_report()
             if result.get("success"):
@@ -7171,14 +7267,13 @@ def _build_command_registry():
                 console.print(f"[red]  ✗ EOD report failed:[/red] {result.get('note','')}")
             return True
 
-        # /my-portfolio sell | buy | hold | strong-buy — filtered view
+        # /my-portfolio intraday | sell | buy | hold | strong-buy — filtered live view
         filter_map = {
             "sell": "SELL", "buy": "BUY", "hold": "HOLD",
             "strong-buy": "STRONG BUY", "strongbuy": "STRONG BUY",
         }
         sig_filter = filter_map.get(sub)
 
-        # Default: intraday view (with optional signal filter)
         in_market = True
         try:
             from terminal.portfolio_monitor import _is_market_hours
@@ -7207,7 +7302,7 @@ def _build_command_registry():
         name="my-portfolio",
         match_fn=lambda q: q.startswith("/my-portfolio") or q.startswith("/my_portfolio"),
         handler_fn=_h_my_portfolio,
-        description="Live intraday P&L + multi-strategy signals for your portfolio",
+        description="First-class portfolio ledger with optional intraday filters",
     ))
 
     return registry
@@ -7583,6 +7678,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
         # commands not yet migrated to the registry.
         if text.lstrip().startswith("/"):
             _shared_reg = _get_shared_registry()
+            _print_thinking(text)   # show plan for slash commands too
             if _shared_reg.dispatch(text, agent, show_trace, mode="interactive"):
                 _separator()
                 continue
@@ -8059,7 +8155,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
             _print_prompts_library(fkey)
             continue
 
-        # ── /my-portfolio — live intraday + EOD portfolio analysis ───────
+        # ── /my-portfolio — first-class ledger + optional intraday filters ─
         if text.lower().startswith(("/my-portfolio", "/my_portfolio")):
             from terminal.portfolio_monitor import (
                 run_intraday_view,
@@ -8071,7 +8167,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
             parts = text.strip().split()
             sub   = parts[1].lower() if len(parts) > 1 else ""
 
-            if sub == "eod":
+            if sub in ("", "eod"):
                 _print_user(text)
                 console.print("[dim]  → Running EOD portfolio analysis…[/dim]")
                 result = run_eod_report()
@@ -10077,6 +10173,7 @@ def _chat_loop(agent, show_trace: bool) -> None:
             query = text
 
         _print_user(text)
+        _print_thinking(query)   # show situation assessment + route plan before LLM runs
 
         try:
             result = _run_with_spinner(
@@ -10186,9 +10283,6 @@ def main() -> None:
 
     print_banner()
 
-    sys.stdout.write("\x1b[36m  Loading Agent Adda…\x1b[0m\r")
-    sys.stdout.flush()
-
     try:
         from terminal.data_readiness import (
             execute_refresh_plan,
@@ -10202,8 +10296,13 @@ def main() -> None:
             readiness = inspect_data_readiness()
             refresh_plan = plan_refresh(readiness)
             console.print(render_readiness_panel(readiness, refresh_plan))
-            if refresh_plan.action == "run_refresh" and not args.readiness_no_refresh:
-                console.print("[dim]  │  running readiness refresh before startup[/dim]")
+            if refresh_plan.action in {"run_refresh", "start_postgres"} and not args.readiness_no_refresh:
+                action_label = (
+                    "starting PostgreSQL before startup"
+                    if refresh_plan.action == "start_postgres"
+                    else "running readiness refresh before startup"
+                )
+                console.print(f"[dim]  │  {action_label}[/dim]")
                 refresh_result = execute_refresh_plan(refresh_plan)
                 console.print(
                     render_readiness_panel(

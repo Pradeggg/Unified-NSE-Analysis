@@ -80,7 +80,7 @@ def _unified_router_enabled() -> bool:
 # ─────────────────────────────────────────────────────────────────────────────
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-OPENAI_MODEL   = os.getenv("OPENAI_MODEL", "gpt-4o")
+OPENAI_MODEL   = os.getenv("OPENAI_MODEL", "gpt-5")
 OLLAMA_HOST    = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 OLLAMA_MODEL   = os.getenv("OLLAMA_MODEL", "granite4:latest")
 
@@ -5092,11 +5092,39 @@ class Agent:
             "cache_read_input_tokens": 0, "cache_creation_input_tokens": 0,
         }
 
+        _first_round = True
         for round_n in range(max_rounds):
             resp = self.backend.chat(messages, tools=self._tool_schemas_for_query(self._tool_selection_text(user_input)))
             _accumulate_usage(_usage, resp.get("usage") or {})
 
             if resp["tool_calls"]:
+                # ── Show LLM planning on first round ─────────────────────────
+                if _first_round and resp["tool_calls"]:
+                    _first_round = False
+                    try:
+                        import logging as _log
+                        _log.getLogger(__name__).debug(
+                            "LLM first-round tools: %s",
+                            [tc.get("function", {}).get("name") for tc in resp["tool_calls"]],
+                        )
+                        # Emit planning line visible in the terminal
+                        # (uses the same import pattern as the rest of the file)
+                        _tool_names = [
+                            tc.get("function", {}).get("name", "?")
+                            for tc in resp["tool_calls"]
+                        ]
+                        _plan_line = "  → [dim]LLM plan:[/dim] " + " → ".join(
+                            f"[cyan]{n}[/cyan]" for n in _tool_names
+                        )
+                        # Emit to stderr so it appears before the spinner without
+                        # disrupting Rich's console state in the main thread.
+                        import sys as _sys
+                        print(_plan_line.replace("[dim]","").replace("[/dim]","")
+                              .replace("[cyan]","").replace("[/cyan]",""),
+                              file=_sys.stderr, flush=True)
+                    except Exception:
+                        pass
+
                 # Execute tool calls — concurrently when all are pure-read, sequentially otherwise.
                 asst_msg = self.backend.format_tool_calls_in_message(resp["tool_calls"])
                 messages.append(asst_msg)

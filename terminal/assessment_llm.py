@@ -36,14 +36,14 @@ _log = logging.getLogger(__name__)
 # Fallback chain is used if the primary id is rejected by the API.
 # PG 2026-05-27: switched default from `gpt-5.5` (not a real OpenAI model id
 # — was causing every assessment call to be rejected) to gpt-4o.
-DEFAULT_ASSESSMENT_MODEL = "gpt-4o"
+DEFAULT_ASSESSMENT_MODEL = "gpt-5"
 DEFAULT_ASSESSMENT_REASONING_EFFORT = "high"
 ASSESSMENT_MODEL = os.getenv("ASSESSMENT_MODEL", DEFAULT_ASSESSMENT_MODEL)
 ASSESSMENT_REASONING_EFFORT = os.getenv(
     "ASSESSMENT_REASONING_EFFORT",
     DEFAULT_ASSESSMENT_REASONING_EFFORT,
 )
-ASSESSMENT_FALLBACK_MODELS = ("gpt-5.2", "gpt-5.1", "gpt-5", "o3", "gpt-4o")
+ASSESSMENT_FALLBACK_MODELS = ("gpt-5-mini", "o4-mini", "o3", "gpt-4o")
 ASSESSMENT_TIMEOUT_S = float(os.getenv("ASSESSMENT_LLM_TIMEOUT", "15"))
 ASSESSMENT_ENABLED = os.getenv("ASSESSMENT_LLM_ENABLED", "1") not in {"0", "false", "False"}
 
