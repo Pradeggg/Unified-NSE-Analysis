@@ -197,9 +197,9 @@ def test_bucket_b_clarification_reply_binding(reply, options, expected):
 
 _RESOLVER_GENERIC_REFUSAL = [
     # Generic English / business words must never resolve to a ticker.
-    # NOTE: 'global' and 'oil' are excluded — both are real NSE tickers.
-    "invest", "INVEST", "energy", "ENERGY", "energies",
-    "infra", "infrastructure", "growth", "pharma", "bank",
+    # NOTE: 'global', 'oil', 'energy', 'infra' are excluded — all are real NSE tickers.
+    "invest", "INVEST", "energies",
+    "infrastructure", "growth", "pharma", "bank",
     "power", "technologies", "industries", "limited", "international",
 ]
 

@@ -1014,10 +1014,10 @@ def test_assessment_llm_rejects_scan_symbols_without_symbols():
     assert _parse_response(raw, ctx) is None
 
 
-def test_assessment_llm_defaults_to_gpt55_high_reasoning():
+def test_assessment_llm_defaults_to_gpt5_high_reasoning():
     from terminal import assessment_llm
 
-    assert assessment_llm.DEFAULT_ASSESSMENT_MODEL == "gpt-4o"
+    assert assessment_llm.DEFAULT_ASSESSMENT_MODEL == "gpt-5"
     assert assessment_llm.DEFAULT_ASSESSMENT_REASONING_EFFORT == "high"
 
 

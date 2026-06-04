@@ -46,9 +46,13 @@ class RefreshFailureHandlingTests(unittest.TestCase):
             calls.append((label, cmd))
             return True
 
-        with patch("daily_refresh.subprocess.run", return_value=SimpleNamespace(returncode=1)), patch(
-            "daily_refresh._run", side_effect=fake_run
-        ):
+        # Patch psycopg2.connect so the DSN fast-path fails and falls through
+        # to the subprocess status-check path (which is mocked to returncode=1,
+        # triggering the "Start local PostgreSQL" fallback).
+        import psycopg2 as _psycopg2
+        with patch("daily_refresh.subprocess.run", return_value=SimpleNamespace(returncode=1)), \
+             patch("daily_refresh._run", side_effect=fake_run), \
+             patch.object(_psycopg2, "connect", side_effect=Exception("no pg")):
             ok = daily_refresh.step_postgres_eod_load(dry_run=False)
 
         self.assertTrue(ok)
@@ -82,6 +86,25 @@ class RefreshFailureHandlingTests(unittest.TestCase):
         self.assertEqual(calls[1][0], "Agent Adda strategy-lab report")
         self.assertIn("generate_preset_report('strategy-lab','html')", calls[1][1][-1])
 
+    def test_swing_playbook_refresh_step_runs_generator(self):
+        calls = []
+
+        def fake_run(label, cmd, dry_run=False, cwd=None, env=None):
+            calls.append((label, cmd, dry_run))
+            return True
+
+        with patch("daily_refresh._run", side_effect=fake_run):
+            ok = daily_refresh.step_swing_playbook(dry_run=False)
+
+        self.assertTrue(ok)
+        self.assertEqual(calls[0][0], "Swing trading playbook report")
+        self.assertIn("generate_swing_playbook", calls[0][1][-1])
+        self.assertIn("parse_swing_playbook_args", calls[0][1][-1])
+        self.assertIn("raise SystemExit(0 if result.success else 1)", calls[0][1][-1])
+        self.assertNotIn("handle_swing_playbook_command", calls[0][1][-1])
+        self.assertIn("/swing-playbook --fresh", calls[0][1][-1])
+        self.assertFalse(calls[0][2])
+
     def test_historical_stage_backfill_step_preserves_existing_snapshots_by_default(self):
         calls = []
 
@@ -98,6 +121,24 @@ class RefreshFailureHandlingTests(unittest.TestCase):
         self.assertEqual(calls[0][0], "Historical Stage Snapshots → scores.stage_snapshots")
         self.assertIn("scripts.backfill_historical_stage_snapshots", calls[0][1])
         self.assertNotIn("--replace-existing", calls[0][1])
+
+    def test_materialize_vcp_picks_step_writes_persisted_picks(self):
+        calls = []
+
+        def fake_run(label, cmd, dry_run=False, cwd=None, env=None):
+            calls.append((label, cmd))
+            return True
+
+        import psycopg2 as _psycopg2
+        with patch("daily_refresh.subprocess.run", return_value=SimpleNamespace(returncode=0)), \
+             patch("daily_refresh._run", side_effect=fake_run), \
+             patch.object(_psycopg2, "connect", side_effect=Exception("no pg")):
+            ok = daily_refresh.step_materialize_stage2_vcp_picks(dry_run=False)
+
+        self.assertTrue(ok)
+        self.assertEqual(calls[0][0], "Materialize scores.stage2_vcp_picks")
+        self.assertTrue(any("materialize_stage2_vcp_picks.py" in str(a) for a in calls[0][1]))
+        self.assertIn("--lookback-days", calls[0][1])
 
 
 if __name__ == "__main__":

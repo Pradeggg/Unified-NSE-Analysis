@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "tool_count": 158,
+  "tool_count": 159,
   "tools": [
     {
       "name": "add_watchlist_alert",
@@ -31,7 +31,7 @@
       "signature": "(args: 'dict') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "",
-      "source": "terminal/tools.py:9163"
+      "source": "terminal/tools.py:9179"
     },
     {
       "name": "analyze_concall_sentiment",
@@ -81,7 +81,7 @@
       "signature": "(source: 'str', max_pages: 'int' = 50, vision_fallback: 'bool' = True, vision_threshold: 'int' = 200) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Read and extract text from a local file (PDF, DOCX, HTML, TXT, CSV) or a web URL.",
-      "source": "terminal/tools.py:9339"
+      "source": "terminal/tools.py:9355"
     },
     {
       "name": "analyze_mtf",
@@ -120,7 +120,7 @@
       "signature": "(symbol: 'str', timeframes: 'list[str] | None' = None, days: 'int' = 800) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Aligned multi-timeframe analysis for a single symbol.",
-      "source": "terminal/tools.py:9595"
+      "source": "terminal/tools.py:9611"
     },
     {
       "name": "analyze_options_buying",
@@ -152,7 +152,7 @@
       "signature": "(symbol: 'str', direction: 'str' = 'bullish', expiry: 'str | None' = None) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Deep options buying analysis for a symbol. Returns: ATM IV + regime, IV rank (estimated), expected move, strike selection guide (ITM/ATM/OTM with delta/theta/breakeven/probability), theta decay profile, OI support/resistance context, buying verdict (BUY / SPREAD / AVOID). direction: 'bullish' | 'bearish' | 'volatile'",
-      "source": "terminal/tools.py:8377"
+      "source": "terminal/tools.py:8393"
     },
     {
       "name": "analyze_youtube_channel_latest",
@@ -249,7 +249,7 @@
       "signature": "(state: 'dict | Any') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Apply Research Council convergence/revision rules.",
-      "source": "terminal/tools.py:9912"
+      "source": "terminal/tools.py:9928"
     },
     {
       "name": "assess_user_situation",
@@ -370,7 +370,7 @@
       "signature": "(mode: 'str' = 'market_council', universe_filter: 'str' = 'liquid', symbols: 'list[str] | None' = None, max_stock_candidates: 'int' = 50) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Build the Research Council evidence pack from PostgreSQL-backed sources.",
-      "source": "terminal/tools.py:9794"
+      "source": "terminal/tools.py:9810"
     },
     {
       "name": "check_watchlist_alerts",
@@ -382,7 +382,7 @@
       "signature": "(_args: 'dict') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "",
-      "source": "terminal/tools.py:9180"
+      "source": "terminal/tools.py:9196"
     },
     {
       "name": "compare_reports",
@@ -466,7 +466,7 @@
       "signature": "(objective: 'str', mode: 'str' = 'market_council', **flags: 'Any') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Compose a deterministic Research Council evidence plan.",
-      "source": "terminal/tools.py:9857"
+      "source": "terminal/tools.py:9873"
     },
     {
       "name": "comprehensive_stock_research",
@@ -587,7 +587,7 @@
       "signature": "(args: 'dict') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "",
-      "source": "terminal/tools.py:9173"
+      "source": "terminal/tools.py:9189"
     },
     {
       "name": "detect_non_symbol_terms",
@@ -666,7 +666,7 @@
       "signature": "(state: 'dict | Any') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Execute the latest Research Council plan in a serialized state.",
-      "source": "terminal/tools.py:9870"
+      "source": "terminal/tools.py:9886"
     },
     {
       "name": "explain_intraday_setup",
@@ -719,7 +719,7 @@
       "signature": "(args: 'dict') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Export current session to HTML or PDF.",
-      "source": "terminal/tools.py:9275"
+      "source": "terminal/tools.py:9291"
     },
     {
       "name": "fetch_article_content",
@@ -891,7 +891,7 @@
       "signature": "(content: 'str', report_type: 'str' = 'research', symbol: 'str' = '', title: 'str' = '', output_format: 'str' = 'html', filename: 'str' = '') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Generate a styled report file from analysis content.",
-      "source": "terminal/tools.py:10024"
+      "source": "terminal/tools.py:10040"
     },
     {
       "name": "generate_voice_briefing",
@@ -999,7 +999,7 @@
       "signature": "(symbol: 'str', timeframe: 'str' = '3mo') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Get chart data summary for a symbol: current price, change%, RSI, MACD, EMA positions, period high/low, trend context. Does NOT render the ASCII chart — call render_chart() for that.",
-      "source": "terminal/tools.py:8686"
+      "source": "terminal/tools.py:8702"
     },
     {
       "name": "get_company_evidence_coverage",
@@ -1053,7 +1053,7 @@
       "signature": "(symbol: 'str', insight_type: 'str' = '') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Retrieve a pre-generated LLM insight for a stock from scores.company_insights.",
-      "source": "terminal/tools.py:10390"
+      "source": "terminal/tools.py:10406"
     },
     {
       "name": "get_composite_cost_of_carry",
@@ -1242,7 +1242,7 @@
       "signature": "(symbol: 'str | None' = None, top_n: 'int' = 20) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Return PostgreSQL-backed F&O analytics: PCR, max pain, buildup, signal.",
-      "source": "terminal/tools.py:8403"
+      "source": "terminal/tools.py:8419"
     },
     {
       "name": "get_fno_data_status",
@@ -1255,7 +1255,7 @@
       "signature": "() -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Return the status of the local F&O EOD database: available dates, record counts, and last download time.",
-      "source": "terminal/tools.py:8356"
+      "source": "terminal/tools.py:8372"
     },
     {
       "name": "get_fno_overview",
@@ -1320,7 +1320,7 @@
       "signature": "(symbol: 'str') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Futures basis, cost-of-carry, and rollover analysis for an index or stock.",
-      "source": "terminal/tools.py:8320"
+      "source": "terminal/tools.py:8336"
     },
     {
       "name": "get_global_market_assessment",
@@ -1731,7 +1731,7 @@
       "signature": "(symbol: 'str', expiry: 'str | None' = None) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Focused open-interest analysis: PCR, max pain, CE/PE OI concentration, OI buildup and unwinding at key strikes. Good for support/resistance.",
-      "source": "terminal/tools.py:8295"
+      "source": "terminal/tools.py:8311"
     },
     {
       "name": "get_option_chain",
@@ -1759,7 +1759,7 @@
       "signature": "(symbol: 'str', expiry: 'str | None' = None, use_live: 'bool' = True) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Fetch live option chain for an index or stock. Returns OI, IV, PCR, max pain, ATM greeks, OI buildup and support/resistance levels. Falls back to EOD data outside market hours.",
-      "source": "terminal/tools.py:8285"
+      "source": "terminal/tools.py:8301"
     },
     {
       "name": "get_option_chain_summary",
@@ -1805,7 +1805,7 @@
       "signature": "(symbol: 'str' = 'NIFTY', expiry_index: 'int' = 0) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Fetch NSE options chain for a symbol with PCR, max pain, and IV data.",
-      "source": "terminal/tools.py:8175"
+      "source": "terminal/tools.py:8191"
     },
     {
       "name": "get_options_strategy",
@@ -1843,7 +1843,7 @@
       "signature": "(symbol: 'str', strategy: 'str', expiry: 'str | None' = None) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Build a specific options strategy with live pricing. Returns legs, entry costs, max risk/reward, breakevens, and payoff curve.",
-      "source": "terminal/tools.py:8327"
+      "source": "terminal/tools.py:8343"
     },
     {
       "name": "get_pcr_summary",
@@ -1897,7 +1897,7 @@
       "signature": "(_args: 'dict' = None) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Compute live unrealised P&L for all holdings in data/holdings.csv.",
-      "source": "terminal/tools.py:9247"
+      "source": "terminal/tools.py:9263"
     },
     {
       "name": "get_postgres_health",
@@ -1974,7 +1974,7 @@
       "signature": "(symbol: 'str', expiry: 'str | None' = None) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Analyse current option chain context (PCR, IV, DTE, max pain) and recommend the top 3 options strategies with rationale.",
-      "source": "terminal/tools.py:8340"
+      "source": "terminal/tools.py:8356"
     },
     {
       "name": "get_symbol_snapshot",
@@ -2116,7 +2116,7 @@
       "signature": "(_args: 'dict') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "",
-      "source": "terminal/tools.py:9157"
+      "source": "terminal/tools.py:9173"
     },
     {
       "name": "ingest_financial_filing",
@@ -2324,7 +2324,7 @@
       "signature": "(symbol: 'str', timeframe: 'str' = '3mo', indicators: 'list | None' = None) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Generate and open a full interactive Plotly HTML chart in the browser. Returns the file path.",
-      "source": "terminal/tools.py:8695"
+      "source": "terminal/tools.py:8711"
     },
     {
       "name": "open_report",
@@ -2422,7 +2422,7 @@
       "signature": "(state: 'dict | Any') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Persist Research Council run metadata for a serialized state.",
-      "source": "terminal/tools.py:9960"
+      "source": "terminal/tools.py:9976"
     },
     {
       "name": "promote_company_evidence_to_postgres",
@@ -2541,7 +2541,7 @@
       "signature": "() -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Download the latest F&O EOD bhavcopy from NSE archives and store in PostgreSQL. Returns summary: trade_date, rows_stored, options count, futures count.",
-      "source": "terminal/tools.py:8348"
+      "source": "terminal/tools.py:8364"
     },
     {
       "name": "render_missing_evidence_block",
@@ -2601,7 +2601,7 @@
       "signature": "(state: 'dict | Any | None' = None, run_id: 'str' = 'latest', output_format: 'str' = 'html') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Render or locate a Research Council report.",
-      "source": "terminal/tools.py:9934"
+      "source": "terminal/tools.py:9950"
     },
     {
       "name": "request_clarification",
@@ -2766,7 +2766,7 @@
       "signature": "(run_id: 'str' = 'latest', include_debug: 'bool' = False, output_format: 'str' = 'json') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Load compact Research Council run metadata from PostgreSQL.",
-      "source": "terminal/tools.py:9972"
+      "source": "terminal/tools.py:9988"
     },
     {
       "name": "review_plan_execution",
@@ -2785,7 +2785,7 @@
       "signature": "(state: 'dict | Any') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Review plan execution output and decide whether more evidence is needed.",
-      "source": "terminal/tools.py:9889"
+      "source": "terminal/tools.py:9905"
     },
     {
       "name": "run_critic_review",
@@ -2804,7 +2804,7 @@
       "signature": "(state: 'dict | Any') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Run Research Council critic reviews against a serialized state.",
-      "source": "terminal/tools.py:9900"
+      "source": "terminal/tools.py:9916"
     },
     {
       "name": "run_data_steward_check",
@@ -2822,7 +2822,7 @@
       "signature": "(mode: 'str' = 'market_council') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Run the Research Council data-steward freshness/readiness gate.",
-      "source": "terminal/tools.py:9846"
+      "source": "terminal/tools.py:9862"
     },
     {
       "name": "run_forensic_analysis",
@@ -2950,7 +2950,34 @@
       "signature": "(symbol: 'str', option_type: 'str' = 'CE', strike: 'float | None' = None, expiry_date: 'str | None' = None, entry_premium: 'float | None' = None, lots: 'int' = 1, move_start: 'float' = -5.0, move_end: 'float' = 5.0, move_step: 'float' = 2.5) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Run PostgreSQL option payoff what-if scenarios.",
-      "source": "terminal/tools.py:8470"
+      "source": "terminal/tools.py:8486"
+    },
+    {
+      "name": "run_quality_breakout_screener",
+      "description": "Run a composite EOD screener for stocks creating new highs, 52W momentum, VCP-like tight ranges, or breakouts with a fundamental quality overlay. Returns reason tags, risk flags, source counts, and TradingView-ready symbols.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "top_n": {
+            "type": "integer",
+            "default": 15
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "strict",
+              "balanced",
+              "broad"
+            ],
+            "default": "balanced"
+          }
+        },
+        "required": []
+      },
+      "signature": "(top_n: 'int' = 15, mode: 'str' = 'balanced', *, screener_runner: 'Callable[[str, int], dict] | None' = None, snapshot_loader: 'Callable[[list[str]], dict[str, dict]] | None' = None) -> 'dict'",
+      "return": "'dict'",
+      "doc_summary": "Find new-high/VCP/breakout candidates with a fundamental quality overlay.",
+      "source": "terminal/composite_screeners.py:129"
     },
     {
       "name": "run_recommendation_report",
@@ -3013,7 +3040,7 @@
       "signature": "(symbols: 'list[str] | None' = None, indices: 'list[str] | None' = None, sectors: 'list[str] | None' = None, watchlist: 'list[str] | None' = None, output_format: 'str' = 'html', top_n: 'int' = 25, include_portfolio: 'bool' = False, persist: 'bool' = True) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Generate a grounded recommendation report scoped by symbols, indices, or sectors.",
-      "source": "terminal/tools.py:10039"
+      "source": "terminal/tools.py:10055"
     },
     {
       "name": "run_research_council",
@@ -3066,7 +3093,7 @@
       "signature": "(objective: 'str', mode: 'str | None' = None, symbols: 'list[str] | None' = None, horizon: 'str | None' = None, risk_budget: 'str | None' = None, dry_run: 'bool' = False, output_format: 'str' = 'md', **flags: 'Any') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Run the Research Council state machine and return a compact summary.",
-      "source": "terminal/tools.py:9815"
+      "source": "terminal/tools.py:9831"
     },
     {
       "name": "run_scenario_analysis",
@@ -3273,7 +3300,7 @@
       "signature": "(symbols: 'list[str] | None' = None, index: 'str | None' = None, direction: 'str' = 'bullish', min_score: 'int' = 70, timeframes: 'list[str] | None' = None, top_n: 'int' = 10) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Rank a universe by MTF confluence in a given direction.",
-      "source": "terminal/tools.py:9621"
+      "source": "terminal/tools.py:9637"
     },
     {
       "name": "scan_options_buys",
@@ -3307,7 +3334,7 @@
       "signature": "(direction: 'str' = 'bullish', max_iv: 'float' = 25.0, min_oi: 'int' = 500000, top_n: 'int' = 10) -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Scan all F&O-eligible stocks and indices for the best options buying opportunities. Ranks by: low ATM IV (cheap options) + adequate OI liquidity + ideal DTE. Returns top N symbols with ATM IV, straddle cost, expected move, and buying score. direction: 'bullish' | 'bearish' | 'volatile' max_iv: IV ceiling (default 25%) — lower = cheaper options only",
-      "source": "terminal/tools.py:8389"
+      "source": "terminal/tools.py:8405"
     },
     {
       "name": "scan_symbols_intraday",
@@ -3829,7 +3856,7 @@
       "signature": "(symbol: 'str', insight_type: 'str', question: 'str', answer: 'str', evidence: 'dict | None' = None, source_date: 'str' = '') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Persist an LLM-generated insight for a stock into scores.company_insights KB.",
-      "source": "terminal/tools.py:10435"
+      "source": "terminal/tools.py:10451"
     },
     {
       "name": "summarize_latest_results",
@@ -3889,7 +3916,7 @@
       "signature": "(state: 'dict | Any') -> 'dict'",
       "return": "'dict'",
       "doc_summary": "Synthesize the final Research Council decision from findings and reviews.",
-      "source": "terminal/tools.py:9923"
+      "source": "terminal/tools.py:9939"
     },
     {
       "name": "validate_answer_against_evidence",
