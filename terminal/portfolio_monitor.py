@@ -1392,10 +1392,10 @@ _HTML_FOOT = """\
     const groups = [];
     for (let i = 0; i < rows.length; i++) {{
       const row = rows[i];
-      if (row.classList.contains("narr") || row.classList.contains("stock-detail-row")) continue;
+      if (row.classList.contains("narr") || row.classList.contains("stock-detail-row") || row.classList.contains("sector-drill-row")) continue;
       const group = [row];
       let next = rows[i + 1];
-      while (next && (next.classList.contains("narr") || next.classList.contains("stock-detail-row"))) {{
+      while (next && (next.classList.contains("narr") || next.classList.contains("stock-detail-row") || next.classList.contains("sector-drill-row"))) {{
         group.push(next);
         i++;
         next = rows[i + 1];
@@ -3209,7 +3209,7 @@ def _write_eod_html(results: list[dict], snap_date: str, *, transactions: list[d
               <td style="padding:5px 8px;text-align:center;font-size:11px;font-weight:600">{inv_s}</td>
             </tr>"""
 
-        header = """<table style="width:100%;border-collapse:collapse;font-size:12px">
+        header = """<table data-no-enhance="1" style="width:100%;border-collapse:collapse;font-size:12px">
           <thead><tr style="background:#f0fdf4;font-size:10px;text-transform:uppercase;color:#0f766e">
             <th style="padding:5px 10px;text-align:left">Symbol</th>
             <th style="padding:5px 8px;text-align:left">Company</th>
