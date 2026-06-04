@@ -276,7 +276,7 @@ def test_markdown_report_contains_key_pnl_trade_and_audit_sections(tmp_path):
     assert "stage2_fixture_v1" in markdown
     assert "## Open Positions" in markdown
     assert "| AAA | 95 | 105.00 |" in markdown
-    assert "## Fills / Trades" in markdown
+    assert "## Fills" in markdown
     assert "| 2025-01-03 | stage2_fixture_v1 | AAA | BUY | 95 | 105.00 |" in markdown
     assert "## Audit / Log References" in markdown
     assert str(audit_path) in markdown
