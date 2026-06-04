@@ -3113,16 +3113,22 @@ def _write_eod_html(results: list[dict], snap_date: str, *, transactions: list[d
           </div>
         </div>"""
 
-    # Sector breakdown
+    # ── Sector breakdown with per-sector stock drill-down ────────────────────
     sector_stats: dict[str, dict] = {}
+    sector_stocks: dict[str, list] = {}
     for r in results:
         s = r["sector"] or "N/A"
         if s not in sector_stats:
             sector_stats[s] = {"cost": 0.0, "mkt": 0.0, "cnt": 0}
+            sector_stocks[s] = []
         sector_stats[s]["cost"] += r["value_cost"]
         sector_stats[s]["mkt"]  += r["value_mkt"]
         sector_stats[s]["cnt"]  += 1
+        sector_stocks[s].append(r)
+
     top_sectors = sorted(sector_stats.items(), key=lambda x: -x[1]["mkt"])[:15]
+
+    # Build compact sect_rows for the summary card (unchanged format)
     sect_rows = "".join(
         f"<tr><td>{s}</td><td>{v['cnt']}</td>"
         f"<td style='text-align:right'>₹{v['mkt']/100000:.2f}L</td>"
@@ -3132,18 +3138,150 @@ def _write_eod_html(results: list[dict], snap_date: str, *, transactions: list[d
         for s, v in top_sectors
     )
 
+    # Build the interactive drill-down sector table
+    def _sector_drill_rows() -> str:
+        rows = ""
+        for i, (sect, v) in enumerate(top_sectors):
+            ret_pct = (v["mkt"] / v["cost"] - 1) * 100 if v["cost"] else 0
+            ret_c   = "#16a34a" if ret_pct >= 0 else "#dc2626"
+            drill_id = f"sector-drill-{i}"
+            wt_pct  = v["mkt"] / sum(x["mkt"] for _, x in top_sectors) * 100 if top_sectors else 0
+
+            # Signal breakdown for this sector
+            sig_counts = {}
+            for r in sector_stocks[sect]:
+                sig_counts[r["composite"]] = sig_counts.get(r["composite"], 0) + 1
+            sig_pills = "".join(
+                f'<span style="background:{"#16a34a" if s in ("STRONG BUY","BUY") else "#f59e0b" if s=="HOLD" else "#dc2626"};'
+                f'color:white;padding:1px 5px;border-radius:3px;font-size:10px;margin-left:3px">'
+                f'{s.replace("STRONG BUY","SBY").replace("BUY","BUY").replace("HOLD","HLD").replace("SELL","SEL")} {c}</span>'
+                for s, c in sorted(sig_counts.items(), key=lambda x: ["STRONG BUY","BUY","HOLD","SELL"].index(x[0]) if x[0] in ["STRONG BUY","BUY","HOLD","SELL"] else 9)
+            )
+
+            # Clickable sector row
+            rows += f"""
+            <tr class="sector-row" onclick="toggleSectorDrill('{drill_id}')" style="cursor:pointer"
+                title="Click to expand {v['cnt']} holdings in {sect}">
+              <td style="font-weight:600">{sect}
+                <span style="color:#94a3b8;font-size:10px;margin-left:4px">▾</span></td>
+              <td style="text-align:center">{v['cnt']}</td>
+              <td style="text-align:right;font-weight:600">₹{v['mkt']/100000:.2f}L</td>
+              <td style="text-align:center;color:#6b7280">{wt_pct:.1f}%</td>
+              <td style="text-align:right;color:{ret_c};font-weight:600">{ret_pct:+.1f}%</td>
+              <td>{sig_pills}</td>
+            </tr>
+            <tr class="sector-drill-row" id="{drill_id}" style="display:none">
+              <td colspan="6" style="padding:0;background:#f8fafc;border-bottom:2px solid #0f766e">
+                {_sector_holdings_table(sect, sector_stocks[sect])}
+              </td>
+            </tr>"""
+        return rows
+
+    def _sector_holdings_table(sect: str, stocks: list) -> str:
+        """Build the expanded holdings table for a sector drill-down."""
+        sorted_stocks = sorted(stocks, key=lambda r: -(r["value_mkt"] or 0))
+        rows = ""
+        for r in sorted_stocks:
+            pct_c   = _pct_color(r["upnl_pct"])
+            inv_s   = f"{float(r['inv_score']):.0f}" if r.get("inv_score") else "—"
+            tech_s  = f"{float(r['tech_score']):.0f}" if r.get("tech_score") else "—"
+            rsi_s   = f"{float(r['rsi_val']):.0f}" if r.get("rsi_val") else "—"
+            stage_s = _stage_badge(r["stage"])
+            sig     = _sig_badge(r["composite"])
+            day_s   = f"{r['_day_chg']:+.1f}%{'ᵈ' if r.get('day_chg_pct') is None else ''}" \
+                      if r.get("_day_chg") is not None else "—"
+            day_c   = _pct_color(r.get("_day_chg") or 0) if r.get("_day_chg") is not None else "#6b7280"
+            wt_s    = f"{r['value_mkt']/sum(x['value_mkt'] for x in stocks)*100:.1f}%" \
+                      if stocks else "—"
+
+            rows += f"""<tr style="border-bottom:1px solid #e5e7eb">
+              <td style="padding:5px 10px;font-weight:600;font-size:12px">{r['broker']}</td>
+              <td style="padding:5px 8px;font-size:11px;color:#374151">{r['company'][:28]}</td>
+              <td style="padding:5px 8px;text-align:right;font-size:12px">₹{r['cmp']:,.0f}</td>
+              <td style="padding:5px 8px;text-align:right;font-size:12px;color:{day_c};font-weight:600">{day_s}</td>
+              <td style="padding:5px 8px;text-align:right;color:{pct_c};font-weight:600;font-size:12px">{r['upnl_pct']:+.1f}%</td>
+              <td style="padding:5px 8px;text-align:right;font-size:12px">₹{r['value_mkt']/1000:,.0f}K</td>
+              <td style="padding:5px 8px;text-align:center;font-size:11px;color:#6b7280">{wt_s}</td>
+              <td style="padding:5px 8px">{sig}</td>
+              <td style="padding:5px 8px">{stage_s}</td>
+              <td style="padding:5px 8px;text-align:center;font-size:11px">{tech_s}</td>
+              <td style="padding:5px 8px;text-align:center;font-size:11px">{rsi_s}</td>
+              <td style="padding:5px 8px;text-align:center;font-size:11px;font-weight:600">{inv_s}</td>
+            </tr>"""
+
+        header = """<table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="background:#f0fdf4;font-size:10px;text-transform:uppercase;color:#0f766e">
+            <th style="padding:5px 10px;text-align:left">Symbol</th>
+            <th style="padding:5px 8px;text-align:left">Company</th>
+            <th style="padding:5px 8px;text-align:right">CMP</th>
+            <th style="padding:5px 8px;text-align:right">Day%</th>
+            <th style="padding:5px 8px;text-align:right">P&amp;L%</th>
+            <th style="padding:5px 8px;text-align:right">Value</th>
+            <th style="padding:5px 8px;text-align:center">Wt%</th>
+            <th style="padding:5px 8px;text-align:center">Signal</th>
+            <th style="padding:5px 8px;text-align:center">Stage</th>
+            <th style="padding:5px 8px;text-align:center">Tech</th>
+            <th style="padding:5px 8px;text-align:center">RSI</th>
+            <th style="padding:5px 8px;text-align:center">InvSc</th>
+          </tr></thead>
+          <tbody>{rows}</tbody>
+        </table>"""
+        return header.format(rows=rows)
+
+    # JavaScript for sector drill-down toggle
+    sector_js = """
+<script>
+function toggleSectorDrill(id) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  var showing = el.style.display !== 'none';
+  el.style.display = showing ? 'none' : 'table-row';
+  // Flip the arrow on the parent row
+  var parentRow = el.previousElementSibling;
+  if (parentRow) {
+    var arrow = parentRow.querySelector('span[title]') || parentRow.querySelector('td:first-child span:last-child');
+    if (arrow) arrow.textContent = showing ? '▾' : '▴';
+  }
+}
+function expandAllSectors() {
+  document.querySelectorAll('.sector-drill-row').forEach(function(el) {
+    el.style.display = 'table-row';
+  });
+}
+function collapseAllSectors() {
+  document.querySelectorAll('.sector-drill-row').forEach(function(el) {
+    el.style.display = 'none';
+  });
+}
+</script>"""
+
     sector_exposure_html = f"""
-    <div class="section">
-      <div class="sec-hdr" style="background:#0f766e">
-        <span class="title">Sector Exposure</span>
-        <span class="meta">Top 15 sectors by market value</span>
+    {sector_js}
+    <div class="section" id="sector-exposure-section" style="scroll-margin-top:56px">
+      <div class="sec-hdr" style="background:#0f766e;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <span class="title">Sector Exposure
+          <span style="opacity:.65;font-size:13px">(top 15 by value)</span></span>
+        <span class="meta" style="display:flex;gap:8px">
+          <button onclick="expandAllSectors()"
+            style="background:rgba(255,255,255,.2);border:none;color:white;cursor:pointer;
+                   padding:3px 10px;border-radius:4px;font-size:11px">Expand all</button>
+          <button onclick="collapseAllSectors()"
+            style="background:rgba(255,255,255,.2);border:none;color:white;cursor:pointer;
+                   padding:3px 10px;border-radius:4px;font-size:11px">Collapse all</button>
+          <span style="opacity:.7;font-size:12px">Click sector row to drill down</span>
+        </span>
       </div>
       <div class="tbl-wrap">
-        <table>
-          <thead><tr>
-            <th>Sector</th><th># Holdings</th><th>Market Value</th><th>Return</th>
+        <table id="sector-exposure-tbl" style="width:100%;border-collapse:collapse">
+          <thead><tr style="background:#f9fafb">
+            <th style="padding:7px 12px;text-align:left;font-size:11px;color:#0f766e;text-transform:uppercase">Sector</th>
+            <th style="padding:7px 8px;text-align:center;font-size:11px;color:#6b7280"># Holdings</th>
+            <th style="padding:7px 8px;text-align:right;font-size:11px;color:#6b7280">Market Value</th>
+            <th style="padding:7px 8px;text-align:center;font-size:11px;color:#6b7280">Portfolio Wt%</th>
+            <th style="padding:7px 8px;text-align:right;font-size:11px;color:#6b7280">Return</th>
+            <th style="padding:7px 8px;text-align:left;font-size:11px;color:#6b7280">Signals</th>
           </tr></thead>
-          <tbody>{sect_rows}</tbody>
+          <tbody>{_sector_drill_rows()}</tbody>
         </table>
       </div>
     </div>
