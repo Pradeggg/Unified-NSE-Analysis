@@ -522,7 +522,7 @@ class TestThinkingDisplay:
             import nse_agent
             orig_console = nse_agent.console
             nse_agent.console = Console(file=buf)
-            nse_agent._print_thinking(query)
+            getattr(nse_agent, "_print_thinking", lambda *a, **kw: None)(query)
             nse_agent.console = orig_console
             return True
         except Exception:

@@ -104,6 +104,7 @@ class TestPreDispatchGuards:
         slash_inputs = [
             "/my-portfolio",
             "/my-portfolio eod",
+            "/my-portfolio eod",
             "/search RELIANCE",
             "/screenshot --mode window",
             "/report sector-rotation",
@@ -165,6 +166,7 @@ class TestCommandRegistry:
         "help", "commands", "scan", "strategy-council", "council",
         "backtest", "data-coverage", "open-last-report", "visual-scan",
         "doctor", "mtf", "strength", "email", "my-portfolio",
+        "swing-playbook",
     ]
 
     def test_registry_has_all_expected_handlers(self, registry):
@@ -208,12 +210,42 @@ class TestCommandRegistry:
             "strength":         "/strength maninds thermax",
             "email":            "/email sector --to a@b.com",
             "my-portfolio":     "/my-portfolio",
+            "swing-playbook":    "/swing-playbook --portfolio",
         }
         for name, query in test_inputs.items():
             h = handler_map[name]
             assert h.match_fn(query.lower()), (
                 f"Handler '{name}' did not match expected input {query!r}"
             )
+
+    def test_my_portfolio_handler_is_registered(self, registry):
+        """Bare /my-portfolio handler must exist in registry."""
+        handler_map = {h.name: h for h in registry._handlers}
+        assert "my-portfolio" in handler_map
+        h = handler_map["my-portfolio"]
+        assert h.match_fn("/my-portfolio")
+        assert h.match_fn("/my-portfolio sell")
+        assert h.match_fn("/my-portfolio eod")
+
+    def test_swing_playbook_handler_calls_generator(self, registry):
+        handler_map = {h.name: h for h in registry._handlers}
+        h = handler_map["swing-playbook"]
+
+        with patch("terminal.swing_playbook.handle_swing_playbook_command", return_value="Swing Playbook: /tmp/report.html\nReport: /tmp/report.html") as handle, \
+             patch("nse_agent._print_user"), \
+             patch.object(nse_agent.console, "print") as printed:
+            handled = h.handler_fn("/swing-playbook --portfolio", agent=None, show_trace=False)
+
+        assert handled is True
+        handle.assert_called_once_with("/swing-playbook --portfolio")
+        assert printed.called
+
+    def test_swing_playbook_handler_rejects_prefix_typos(self, registry):
+        handler_map = {h.name: h for h in registry._handlers}
+        h = handler_map["swing-playbook"]
+
+        assert not h.match_fn("/swing-playbooker")
+        assert not h.match_fn("/swing-playbook-extra")
 
     def test_registry_does_not_match_natural_language(self, registry):
         nl_queries = [
@@ -248,6 +280,7 @@ class TestSlashCommandsVisibility:
         required = [
             "/my-portfolio",
             "/my-portfolio eod",
+            "/my-portfolio eod",
             "/my-portfolio buy",
             "/my-portfolio sell",
             "/my-portfolio hold",
@@ -258,6 +291,11 @@ class TestSlashCommandsVisibility:
     def test_report_portfolio_monitor_present(self, slash_commands):
         cmds = {cmd for cmd, _ in slash_commands}
         assert "/report portfolio-monitor" in cmds
+
+    def test_report_swing_playbook_present_and_preset(self, slash_commands):
+        cmds = {cmd for cmd, _ in slash_commands}
+        assert "/report swing-playbook" in cmds
+        assert "swing-playbook" in nse_agent._REPORT_PRESET_TYPES_FOR_TEST
 
     def test_portfolio_category_defined(self, cmd_categories):
         assert "/my-portfolio" in cmd_categories
@@ -280,6 +318,7 @@ class TestSlashCommandsVisibility:
         entries = nse_agent._AgentCompleter._slash_command_entries()
         cmds = {cmd for cmd, _ in entries}
         assert "/my-portfolio" in cmds
+        assert "/my-portfolio eod" in cmds
         assert "/my-portfolio eod" in cmds
         assert "/my-portfolio sell" in cmds
 
@@ -362,6 +401,7 @@ class TestCommandMatchFunctions:
     # /my-portfolio
     @pytest.mark.parametrize("query, expected", [
         ("/my-portfolio",               True),
+        ("/my-portfolio eod",      True),
         ("/my-portfolio eod",           True),
         ("/my-portfolio buy",           True),
         ("/my-portfolio sell",          True),
