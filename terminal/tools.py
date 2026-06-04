@@ -7785,11 +7785,15 @@ TOOL_REGISTRY: dict[str, Any] = {
     "search_market_knowledge": (
         search_market_knowledge,
         (
-            "Answer financial-market education questions using source-backed search on "
-            "Wikipedia and Investopedia. Use for definitions, explainers, and concept "
-            "comparisons such as 'what is PE', 'explain Minervini strategy', "
-            "'ROCE vs ROE', 'what is EBITDA', 'how does RSI work'. Never answer these "
-            "from memory first; return source URLs and say when reliable sources are not found."
+            "Answer generic financial-market EDUCATION questions using source-backed search on "
+            "Wikipedia and Investopedia. Use for concept definitions, framework explainers, "
+            "and metric comparisons such as 'what is PE ratio', 'explain Minervini strategy', "
+            "'ROCE vs ROE', 'what is EBITDA', 'how does RSI work'. "
+            "DO NOT use for stock-specific questions — if the query names a specific NSE symbol "
+            "(e.g. 'explain AGARIND EPS growth', 'why did RELIANCE margin drop') use "
+            "get_fundamentals, get_quarterly, or scrape_screener_in instead. "
+            "Never answer education questions from memory; return source URLs and say when "
+            "reliable sources are not found."
         ),
         {
             "type": "object",
@@ -10376,6 +10380,143 @@ TOOL_REGISTRY.update({
                 },
             },
             "required": ["content"],
+        },
+    ),
+})
+
+
+# ── Company Insight KB — retrieve / store pre-generated LLM explanations ──────
+
+def get_company_insight(symbol: str, insight_type: str = "") -> dict:
+    """Retrieve a pre-generated LLM insight for a stock from scores.company_insights.
+
+    Use BEFORE calling scrape_screener_in when the user asks company-specific
+    'explain / why / what drove / analyse' questions about a named NSE stock.
+    If a fresh insight exists it is returned immediately. If stale or missing,
+    call scrape_screener_in to fetch data then store_company_insight to persist.
+
+    insight_type: one of 'eps_trend' | 'revenue_quality' | 'margin_analysis' |
+                  'risk_flags' | 'growth_summary' | '' (any most-recent insight).
+    """
+    try:
+        import psycopg2
+        from psycopg2.extras import RealDictCursor
+        _dsn = (
+            os.environ.get("AGENT_ADDA_PG_DSN")
+            or os.environ.get("PG_DSN")
+            or "dbname=nse_market user=nse_admin host=/tmp"
+        )
+        conn = psycopg2.connect(_dsn)
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            if insight_type:
+                cur.execute(
+                    "SELECT * FROM scores.company_insights WHERE symbol=%s AND insight_type=%s "
+                    "ORDER BY generated_at DESC LIMIT 1",
+                    (symbol.upper(), insight_type),
+                )
+            else:
+                cur.execute(
+                    "SELECT * FROM scores.company_insights WHERE symbol=%s "
+                    "ORDER BY generated_at DESC LIMIT 3",
+                    (symbol.upper(),),
+                )
+            rows = cur.fetchall()
+        conn.close()
+        if not rows:
+            return {"symbol": symbol, "found": False,
+                    "message": f"No pre-generated insights for {symbol}. "
+                               "Call scrape_screener_in to fetch fundamentals, "
+                               "then store_company_insight to persist the analysis."}
+        return {"symbol": symbol, "found": True, "insights": [dict(r) for r in rows]}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def store_company_insight(symbol: str, insight_type: str, question: str,
+                          answer: str, evidence: dict | None = None,
+                          source_date: str = "") -> dict:
+    """Persist an LLM-generated insight for a stock into scores.company_insights KB.
+
+    Call after analysing a stock's fundamentals so the insight can be
+    retrieved instantly in future sessions without re-fetching data.
+    """
+    try:
+        import psycopg2
+        import json as _json
+        _dsn = (
+            os.environ.get("AGENT_ADDA_PG_DSN")
+            or os.environ.get("PG_DSN")
+            or "dbname=nse_market user=nse_admin host=/tmp"
+        )
+        conn = psycopg2.connect(_dsn)
+        with conn.cursor() as cur:
+            cur.execute(
+                """INSERT INTO scores.company_insights
+                       (symbol, insight_type, question, answer, evidence, source_date, model_id)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s)
+                   ON CONFLICT (symbol, insight_type) DO UPDATE SET
+                       question=EXCLUDED.question, answer=EXCLUDED.answer,
+                       evidence=EXCLUDED.evidence, generated_at=NOW(),
+                       source_date=EXCLUDED.source_date, model_id=EXCLUDED.model_id""",
+                (symbol.upper(), insight_type, question, answer,
+                 _json.dumps(evidence) if evidence else None,
+                 source_date or None, "gpt-4o"),
+            )
+        conn.commit()
+        conn.close()
+        return {"stored": True, "symbol": symbol, "insight_type": insight_type}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+TOOL_REGISTRY.update({
+    "get_company_insight": (
+        get_company_insight,
+        (
+            "Retrieve a pre-generated LLM analysis for a specific NSE stock from the "
+            "company insights knowledge base. Use FIRST when the user asks 'explain', "
+            "'why', 'what drove', 'analyse' about a named stock's financials — e.g. "
+            "'explain AGARIND EPS growth', 'why did RELIANCE margins drop'. "
+            "If the insight exists it is returned immediately without refetching data. "
+            "If not found, call scrape_screener_in to fetch the data, analyse it, "
+            "then call store_company_insight to persist for future queries."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbol":       {"type": "string", "description": "NSE ticker e.g. AGARIND"},
+                "insight_type": {
+                    "type": "string",
+                    "enum": ["eps_trend", "revenue_quality", "margin_analysis",
+                             "risk_flags", "growth_summary", ""],
+                    "description": "Type of insight (empty = return all recent insights)",
+                },
+            },
+            "required": ["symbol"],
+        },
+    ),
+    "store_company_insight": (
+        store_company_insight,
+        (
+            "Persist an LLM-generated fundamental analysis for an NSE stock into the "
+            "company insights knowledge base so it can be retrieved instantly in future "
+            "sessions. Call after analysing quarterly/annual data. Required fields: "
+            "symbol, insight_type, question (the user's question), answer (full analysis). "
+            "Optional: evidence dict of key numbers used, source_date."
+        ),
+        {
+            "type": "object",
+            "properties": {
+                "symbol":       {"type": "string"},
+                "insight_type": {"type": "string",
+                                 "enum": ["eps_trend", "revenue_quality", "margin_analysis",
+                                          "risk_flags", "growth_summary"]},
+                "question":     {"type": "string", "description": "The user's original question"},
+                "answer":       {"type": "string", "description": "Full LLM analysis text"},
+                "evidence":     {"type": "object", "description": "Key numbers used in analysis"},
+                "source_date":  {"type": "string", "description": "YYYY-MM-DD of the data used"},
+            },
+            "required": ["symbol", "insight_type", "question", "answer"],
         },
     ),
 })
