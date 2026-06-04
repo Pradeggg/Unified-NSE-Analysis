@@ -2546,6 +2546,260 @@ def _build_heatmap_section(results: list[dict]) -> str:
     </div>"""
 
 
+def _build_paper_trading_section() -> str:
+    """Build the paper trading leaderboard + active strategy detail section."""
+    import json as _json
+    import csv as _csv
+
+    LAB = _HERE / "portfolio" / "data" / "nse_pg_strategy_lab" / "latest"
+    if not LAB.exists():
+        return ""
+
+    # ── Load portfolio state ──────────────────────────────────────────────────
+    state_path = LAB / "paper" / "portfolio_state.json"
+    if not state_path.exists():
+        return ""
+    state = _json.loads(state_path.read_text())
+    acct    = state.get("account") or {}
+    metrics = state.get("strategy_metrics") or {}
+    as_of   = state.get("as_of", "—")
+    sel_id  = state.get("selected_strategy_id", "—")
+    sel_name = state.get("selected_strategy_name", sel_id)
+
+    nav         = float(acct.get("cash", 0)) + float(state.get("total_market_value", 0))
+    cash        = float(acct.get("cash", 0))
+    realized    = float(acct.get("realized_pnl", 0))
+    unrealized  = float(state.get("total_unrealized_pnl", 0))
+    mkt_val     = float(state.get("total_market_value", 0))
+    today_pnl   = float(state.get("today_pnl", 0) or 0)
+    today_ret   = float(state.get("today_return_pct", 0) or 0)
+    total_ret   = float(metrics.get("total_return_pct", 0))
+    max_dd      = float(metrics.get("max_drawdown_pct", 0))
+    win_rate    = float(metrics.get("win_rate_pct", 0))
+    pf          = float(metrics.get("profit_factor", 0))
+    expectancy  = float(metrics.get("expectancy", 0))
+    initial     = float(acct.get("initial_capital", 1000000))
+
+    def _fc(v: float) -> str:
+        return "#16a34a" if v >= 0 else "#dc2626"
+
+    # ── KPI bar ───────────────────────────────────────────────────────────────
+    kpis = [
+        ("NAV", f"₹{nav/100000:.2f}L", "#0f766e"),
+        ("Total Return", f"{total_ret:+.1f}%", _fc(total_ret)),
+        ("Today P&L", f"₹{today_pnl:+,.0f} ({today_ret:+.2f}%)", _fc(today_pnl)),
+        ("Unrealised", f"₹{unrealized:+,.0f}", _fc(unrealized)),
+        ("Realised", f"₹{realized:+,.0f}", _fc(realized)),
+        ("Win Rate", f"{win_rate:.1f}%", "#6366f1"),
+        ("Profit Factor", f"{pf:.2f}x", _fc(pf - 1)),
+        ("Expectancy/trade", f"₹{expectancy:+,.0f}", _fc(expectancy)),
+        ("Max Drawdown", f"-{max_dd:.1f}%", "#dc2626"),
+        ("Cash", f"₹{cash:,.0f}", "#64748b"),
+    ]
+    kpi_html = "".join(
+        f'<div style="background:#161b22;border:1px solid #30363d;border-radius:8px;padding:12px 16px;min-width:120px">'
+        f'<div style="color:#94a3b8;font-size:10px;text-transform:uppercase;letter-spacing:.5px">{label}</div>'
+        f'<div style="color:{color};font-size:18px;font-weight:700;margin-top:4px">{val}</div>'
+        f'</div>'
+        for label, val, color in kpis
+    )
+
+    # ── Strategy leaderboard ──────────────────────────────────────────────────
+    strat_rows = []
+    for run_dir in sorted((LAB / "runs").iterdir()):
+        rpt = run_dir / "reports" / "paper_trading_report.md"
+        if not rpt.exists():
+            continue
+        lines = rpt.read_text().splitlines()
+        s: dict = {"id": run_dir.name, "name": run_dir.name.replace("_", " ").title()}
+        for line in lines:
+            for key, attr in [
+                ("Total return", "ret"), ("Max drawdown", "dd"), ("Ending equity", "eq"),
+                ("Closed trades", "trades"), ("Winning trades", "wins"), ("Losing trades", "losses"),
+                ("Starting equity", "start"),
+            ]:
+                if f"| {key} |" in line:
+                    raw = line.split("|")[2].strip().rstrip("%")
+                    try:
+                        s[attr] = float(raw.replace(",", "").replace("₹", "").replace("$", ""))
+                    except ValueError:
+                        s[attr] = raw
+        # win rate
+        if s.get("wins") and s.get("trades"):
+            s["win_rate"] = float(s["wins"]) / float(s["trades"]) * 100
+        strat_rows.append(s)
+
+    strat_rows.sort(key=lambda x: -float(x.get("ret", 0)))
+
+    def _ret_bar(pct: float) -> str:
+        w = min(abs(pct) / 3, 100)
+        c = "#16a34a" if pct >= 0 else "#dc2626"
+        return (f'<div style="display:flex;align-items:center;gap:6px">'
+                f'<div style="width:80px;background:#374151;border-radius:3px;height:6px">'
+                f'<div style="width:{w:.0f}%;background:{c};height:6px;border-radius:3px"></div></div>'
+                f'<span style="color:{c};font-weight:600">{pct:+.1f}%</span></div>')
+
+    lb_rows = ""
+    for i, s in enumerate(strat_rows, 1):
+        ret = float(s.get("ret", 0))
+        dd  = float(s.get("dd", 0))
+        eq  = float(s.get("eq", 0))
+        wr  = float(s.get("win_rate", 0))
+        tr  = int(s.get("trades", 0))
+        is_active = s["id"] == sel_id
+        row_bg = "background:#0d2818" if is_active else ""
+        active_badge = ' <span style="background:#0f766e;color:white;padding:1px 6px;border-radius:3px;font-size:10px">ACTIVE</span>' if is_active else ""
+        name_display = s["id"].replace("_v1", "").replace("_", " ").replace("breakout", "Breakout").replace("continuation", "Continuation").replace("reversion", "Reversion").replace("rotation", "Rotation").replace("trend", "Trend").replace("template", "Template").replace("turtle", "Turtle").replace("donchian", "Donchian").replace("darvas", "Darvas").replace("box", "Box").replace("moving average", "Moving Avg").replace("minervini", "Minervini").replace("momentum", "Momentum").replace("vcp", "VCP").replace("persisted", "Persisted").replace("mean", "Mean").replace("stage2", "Stage 2").title()
+        lb_rows += (
+            f'<tr style="{row_bg}">'
+            f'<td style="padding:7px 10px;text-align:center;color:#94a3b8">{i}</td>'
+            f'<td style="padding:7px 10px">{name_display}{active_badge}</td>'
+            f'<td style="padding:7px 10px">{_ret_bar(ret)}</td>'
+            f'<td style="padding:7px 10px;text-align:right;color:#dc2626">-{dd:.1f}%</td>'
+            f'<td style="padding:7px 10px;text-align:right">₹{eq/100000:.2f}L</td>'
+            f'<td style="padding:7px 10px;text-align:center">{tr}</td>'
+            f'<td style="padding:7px 10px;text-align:center;color:{"#16a34a" if wr>=35 else "#f59e0b" if wr>=25 else "#dc2626"}">{wr:.0f}%</td>'
+            f'</tr>'
+        )
+
+    # ── Open positions table ──────────────────────────────────────────────────
+    pos_path = LAB / "paper" / "positions.csv"
+    positions = list(_csv.DictReader(pos_path.open())) if pos_path.exists() else []
+    pos_rows = ""
+    for p in sorted(positions, key=lambda x: -float(x.get("unrealized_pnl", 0))):
+        upnl = float(p.get("unrealized_pnl", 0))
+        upct = float(p.get("unrealized_pct", 0))
+        pct_c = _fc(upnl)
+        stage = p.get("stage", "—").replace("STAGE_", "S")
+        rs    = float(p.get("relative_strength", 0))
+        rs_c  = "#16a34a" if rs >= 80 else "#f59e0b" if rs >= 60 else "#dc2626"
+        pos_rows += (
+            f'<tr>'
+            f'<td style="padding:6px 10px;font-weight:700">{p["symbol"]}</td>'
+            f'<td style="padding:6px 8px;text-align:right">{int(float(p["quantity"])):,}</td>'
+            f'<td style="padding:6px 8px;text-align:right">₹{float(p["avg_cost"]):.2f}</td>'
+            f'<td style="padding:6px 8px;text-align:right">₹{float(p["current_price"]):.2f}</td>'
+            f'<td style="padding:6px 8px;text-align:right">₹{float(p["market_value"]):,.0f}</td>'
+            f'<td style="padding:6px 8px;text-align:right;color:{pct_c};font-weight:600">₹{upnl:+,.0f} ({upct:+.1f}%)</td>'
+            f'<td style="padding:6px 8px;text-align:right;color:#f59e0b">₹{float(p["stop_price"]):.2f}</td>'
+            f'<td style="padding:6px 8px;text-align:right;color:#16a34a">₹{float(p["target_price"]):.2f}</td>'
+            f'<td style="padding:6px 8px;text-align:center">{stage}</td>'
+            f'<td style="padding:6px 8px;text-align:center;color:{rs_c}">{rs:.0f}</td>'
+            f'</tr>'
+        )
+
+    # ── Recent trades (last 10 closes + entries) ──────────────────────────────
+    trades_path = LAB / "paper" / "trades.csv"
+    all_trades  = list(_csv.DictReader(trades_path.open())) if trades_path.exists() else []
+    recent_trades = list(reversed(all_trades[-15:]))[:10]
+    trade_rows = ""
+    for t in recent_trades:
+        side   = t.get("side", "")
+        intent = t.get("trade_intent", "")
+        rpnl_raw = t.get("realized_pnl", "")
+        rpnl   = float(rpnl_raw) if rpnl_raw else None
+        rpnl_str = f"₹{rpnl:+,.0f}" if rpnl is not None else "—"
+        rpnl_c   = _fc(rpnl) if rpnl is not None else "#94a3b8"
+        side_c   = "#16a34a" if side == "BUY" else "#dc2626"
+        hold_raw = t.get("holding_period_days", "")
+        hold_str = f"{int(float(hold_raw))}d" if hold_raw else "—"
+        trade_rows += (
+            f'<tr>'
+            f'<td style="padding:5px 10px;color:#94a3b8;font-size:11px">{t["date"]}</td>'
+            f'<td style="padding:5px 8px;font-weight:600">{t["symbol"]}</td>'
+            f'<td style="padding:5px 8px;color:{side_c};font-weight:600">{side}</td>'
+            f'<td style="padding:5px 8px;color:#94a3b8;font-size:11px">{intent}</td>'
+            f'<td style="padding:5px 8px;text-align:right">{int(float(t["quantity"])):,}</td>'
+            f'<td style="padding:5px 8px;text-align:right">₹{float(t["price"]):.2f}</td>'
+            f'<td style="padding:5px 8px;text-align:right;color:{rpnl_c};font-weight:600">{rpnl_str}</td>'
+            f'<td style="padding:5px 8px;text-align:center;color:#94a3b8">{hold_str}</td>'
+            f'</tr>'
+        )
+
+    return f"""
+    <div class="section" id="paper-trading-section" style="scroll-margin-top:56px">
+      <div class="sec-hdr" style="background:#1e3a5f">
+        <span class="title">📋 Paper Trading Lab
+          <span style="opacity:.65;font-size:13px">— {sel_name} (auto-selected · as of {as_of})</span></span>
+        <span class="meta" style="opacity:.7;font-size:12px">Paper only · No real orders · ₹10L starting capital each</span>
+      </div>
+
+      <!-- KPI bar -->
+      <div style="padding:16px 20px;background:#0d1117;display:flex;flex-wrap:wrap;gap:10px">
+        {kpi_html}
+      </div>
+
+      <!-- Strategy Leaderboard -->
+      <div style="padding:0 20px 16px">
+        <div style="font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;
+                    letter-spacing:.5px;margin:12px 0 8px">Strategy Leaderboard</div>
+        <div class="tbl-wrap">
+          <table data-no-enhance="1" style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead><tr style="background:#161b22;color:#94a3b8;font-size:11px;text-transform:uppercase">
+              <th style="padding:7px 10px;text-align:center">#</th>
+              <th style="padding:7px 10px;text-align:left">Strategy</th>
+              <th style="padding:7px 10px;text-align:left">Return</th>
+              <th style="padding:7px 10px;text-align:right">Max DD</th>
+              <th style="padding:7px 10px;text-align:right">Ending NAV</th>
+              <th style="padding:7px 10px;text-align:center">Trades</th>
+              <th style="padding:7px 10px;text-align:center">Win %</th>
+            </tr></thead>
+            <tbody style="background:#0d1117;color:#e2e8f0">{lb_rows}</tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Open Positions -->
+      <div style="padding:0 20px 16px">
+        <div style="font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;
+                    letter-spacing:.5px;margin:8px 0 8px">Open Positions — {sel_name}</div>
+        <div class="tbl-wrap">
+          <table data-no-enhance="1" style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead><tr style="background:#161b22;color:#94a3b8;font-size:11px;text-transform:uppercase">
+              <th style="padding:6px 10px;text-align:left">Symbol</th>
+              <th style="padding:6px 8px;text-align:right">Qty</th>
+              <th style="padding:6px 8px;text-align:right">Avg Cost</th>
+              <th style="padding:6px 8px;text-align:right">CMP</th>
+              <th style="padding:6px 8px;text-align:right">Mkt Value</th>
+              <th style="padding:6px 8px;text-align:right">Unrealised</th>
+              <th style="padding:6px 8px;text-align:right;color:#f59e0b">Stop</th>
+              <th style="padding:6px 8px;text-align:right;color:#16a34a">Target</th>
+              <th style="padding:6px 8px;text-align:center">Stage</th>
+              <th style="padding:6px 8px;text-align:center">RS</th>
+            </tr></thead>
+            <tbody style="background:#0d1117;color:#e2e8f0">{pos_rows}</tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Recent Trades -->
+      <div style="padding:0 20px 20px">
+        <div style="font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;
+                    letter-spacing:.5px;margin:8px 0 8px">Recent Trades (last 10)</div>
+        <div class="tbl-wrap">
+          <table data-no-enhance="1" style="width:100%;border-collapse:collapse;font-size:12px">
+            <thead><tr style="background:#161b22;color:#94a3b8;font-size:11px;text-transform:uppercase">
+              <th style="padding:5px 10px;text-align:left">Date</th>
+              <th style="padding:5px 8px;text-align:left">Symbol</th>
+              <th style="padding:5px 8px;text-align:left">Side</th>
+              <th style="padding:5px 8px;text-align:left">Intent</th>
+              <th style="padding:5px 8px;text-align:right">Qty</th>
+              <th style="padding:5px 8px;text-align:right">Price</th>
+              <th style="padding:5px 8px;text-align:right">Realised P&amp;L</th>
+              <th style="padding:5px 8px;text-align:center">Held</th>
+            </tr></thead>
+            <tbody style="background:#0d1117;color:#e2e8f0">{trade_rows}</tbody>
+          </table>
+        </div>
+        <div style="font-size:11px;color:#64748b;margin-top:8px;font-style:italic">
+          ⚠️ Paper trading simulation only. No real broker orders are placed.
+          Starting capital ₹{initial/100000:.0f}L per strategy. Fees and slippage included.
+        </div>
+      </div>
+    </div>
+    """
+
+
 def _write_eod_html(results: list[dict], snap_date: str, *, transactions: list[dict] | None = None) -> None:
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     transactions = transactions or []
@@ -3385,7 +3639,8 @@ function collapseAllSectors() {
       ≥2 SELL &gt; BUY → SELL · else HOLD.
     </div>"""
 
-    heatmap_html = _build_heatmap_section(results)
+    heatmap_html       = _build_heatmap_section(results)
+    paper_trading_html = _build_paper_trading_section()
 
     now_ist = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None) + datetime.timedelta(hours=5, minutes=30)
     body = f"""
@@ -3404,6 +3659,7 @@ function collapseAllSectors() {
     {note}
     {heatmap_html}
     {sector_exposure_html}
+    {paper_trading_html}
     """
 
     ts = now_ist.strftime("%Y-%m-%d %H:%M IST")
