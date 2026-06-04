@@ -198,7 +198,7 @@ _MARKET_PHRASES = (
     "stocks doing well",
     "what stocks are",
     "stocks today",
-    "stocks in",              # "stocks in pharma"
+    # "stocks in" removed — too broad, catches research queries unintentionally
     "money flowing",          # "where is the money flowing"
     "capital flows",
     "overview of how",        # "give me an overview of how the market"
@@ -801,14 +801,19 @@ class MarketSituationProvider:
         text = _norm(user_input)
         if not text:
             return []
+        # "screener.in" is a stock-fundamentals source, not a request to run a
+        # market-wide screener. Without this normalization, prompts such as
+        # "Fundamental analysis of RIC from screener.in ..." are hijacked by
+        # this provider before the stock planner can bind the requested symbol.
+        phrase_text = re.sub(r"\bscreener\s*\.\s*in\b", "fundamental_source", text)
         # Standard phrase match
-        matched = next((p for p in _MARKET_PHRASES if p in text), None)
+        matched = next((p for p in _MARKET_PHRASES if p in phrase_text), None)
         # Bare-word match for unambiguous single/two-token market queries
         # (e.g. "market", "sectors", "breadth", "fii")
         if not matched:
-            tokens = frozenset(re.findall(r"[a-z]+", text))
+            tokens = frozenset(re.findall(r"[a-z]+", phrase_text))
             bare_hit = tokens & _MARKET_BARE_WORDS
-            if bare_hit and len(text.split()) <= 3:
+            if bare_hit and len(phrase_text.split()) <= 3:
                 matched = next(iter(bare_hit))
         if not matched:
             return []
