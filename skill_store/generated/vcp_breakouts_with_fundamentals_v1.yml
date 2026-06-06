@@ -1,0 +1,99 @@
+id: "vcp_breakouts_with_fundamentals_v1"
+version: 1
+status: "generated"
+domain: "screening"
+title: "VCP Breakouts With Fundamentals"
+description: "Research-only Indian equity screener for finding NSE/BSE stocks making new highs, VCP-style contractions, or confirmed breakouts while requiring evidence of liquidity, relative strength, and fundamental quality from Agent Adda market datasets."
+input_patterns:
+  - "stocks creating new highs or VCP or breakouts with good fundamentals"
+  - "VCP breakout stocks for TradingView"
+  - "quality breakouts with strong fundamentals"
+  - "NSE stocks breaking out with strong fundamentals"
+  - "new high stocks with liquidity and stage 2 setup"
+tags:
+  - "vcp"
+  - "breakout"
+  - "new_high"
+  - "fundamentals"
+  - "tradingview"
+  - "nse"
+  - "india"
+  - "screening"
+  - "research_only"
+evidence_required:
+  primary_tables:
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+  minimum_evidence:
+    - "latest close, volume, turnover, and trade date from market.equity_eod"
+    - "52-week high or lookback high evidence from market.equity_eod"
+    - "recent breakout or VCP evidence from scores.stage2_vcp_picks where available"
+    - "stage, relative strength, quality, and fundamental score evidence from scores.stage_snapshots where available"
+    - "liquidity screen using average traded value in INR or crore equivalent"
+    - "exclusion or warning for stale, missing, or illiquid evidence"
+  market_scope: "Indian listed equities only, preferably NSE symbols when TradingView output is requested."
+  freshness_requirement: "Prefer the latest available trading date. Flag outputs if evidence is older than 3 market sessions."
+  research_framing: "This skill is for market research and screening only. It must not present candidates as investment advice, guaranteed breakouts, or trade recommendations."
+tool_plan_template:
+  -
+    step: 1
+    name: "parse_user_intent"
+    actions:
+      - "Identify whether the user asked for VCP, new highs, breakouts, fundamentals, TradingView symbols, or all combined."
+      - "Extract optional constraints such as market cap, sector, liquidity, lookback period, number of candidates, and exchange preference."
+      - "Default to NSE Indian equities, 252-session high lookback, 50-session liquidity lookback, and top 20 candidates if unspecified."
+  -
+    step: 2
+    name: "collect_market_evidence"
+    actions:
+      - "Query market.equity_eod for recent price, volume, turnover, and 52-week or lookback high evidence."
+      - "Query scores.stage2_vcp_picks for VCP contraction, pivot, breakout, and setup quality evidence where present."
+      - "Query scores.stage_snapshots for Stage 2, relative strength, quality, and fundamental evidence where present."
+  -
+    step: 3
+    name: "apply_research_filters"
+    actions:
+      - "Require recent traded evidence and adequate liquidity."
+      - "Prefer candidates near or above pivot, near 52-week highs, or showing breakout confirmation."
+      - "Prefer Stage 2, strong relative strength, and strong fundamental or quality scores."
+      - "Remove or downgrade candidates with stale data, low liquidity, extreme one-day moves without base evidence, or missing confirmation."
+  -
+    step: 4
+    name: "rank_and_format"
+    actions:
+      - "Rank by breakout evidence, VCP quality, relative strength, liquidity, and fundamental quality."
+      - "Return filters applied, candidate table, TradingView symbols, evidence notes, and risks."
+      - "Use NSE:SYMBOL format for TradingView when the listing is clearly NSE; otherwise disclose exchange ambiguity."
+sql_templates:
+  candidate_screen:
+    purpose: "Find Indian equity candidates with new-high, VCP, or breakout evidence plus liquidity and score evidence."
+    template: "WITH recent_eod AS (\n  SELECT\n    symbol,\n    exchange,\n    trade_date,\n    close,\n    high,\n    low,\n    volume,\n    traded_value\n  FROM market.equity_eod\n  WHERE trade_date >= CURRENT_DATE - INTERVAL '{{lookback_days}} days'\n), latest_date AS (\n  SELECT MAX(trade_date) AS max_trade_date\n  FROM recent_eod\n), latest AS (\n  SELECT r.*\n  FROM recent_eod r\n  JOIN latest_date d ON r.trade_date = d.max_trade_date\n), price_stats AS (\n  SELECT\n    symbol,\n    exchange,\n    MAX(high) AS lookback_high,\n    AVG(traded_value) AS avg_traded_value,\n    AVG(volume) AS avg_volume\n  FROM recent_eod\n  GROUP BY symbol, exchange\n), stage_latest AS (\n  SELECT\n    symbol,\n    exchange,\n    snapshot_date,\n    stage,\n    rs_score,\n    quality_score,\n    fundamental_score\n  FROM scores.stage_snapshots\n  WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM scores.stage_snapshots)\n), vcp_latest AS (\n  SELECT\n    symbol,\n    exchange,\n    as_of_date,\n    pivot_price,\n    breakout_flag,\n    vcp_score,\n    contraction_count,\n    setup_notes\n  FROM scores.stage2_vcp_picks\n  WHERE as_of_date = (SELECT MAX(as_of_date) FROM scores.stage2_vcp_picks)\n)\nSELECT\n  l.symbol,\n  l.exchange,\n  l.trade_date,\n  l.close,\n  l.high,\n  ps.lookback_high,\n  CASE WHEN l.close >= ps.lookback_high * {{new_high_threshold}} THEN 1 ELSE 0 END AS near_or_at_new_high,\n  ps.avg_traded_value,\n  ps.avg_volume,\n  s.stage,\n  s.rs_score,\n  s.quality_score,\n  s.fundamental_score,\n  v.pivot_price,\n  v.breakout_flag,\n  v.vcp_score,\n  v.contraction_count,\n  v.setup_notes\nFROM latest l\nJOIN price_stats ps ON l.symbol = ps.symbol AND l.exchange = ps.exchange\nLEFT JOIN stage_latest s ON l.symbol = s.symbol AND l.exchange = s.exchange\nLEFT JOIN vcp_latest v ON l.symbol = v.symbol AND l.exchange = v.exchange\nWHERE l.exchange IN ('NSE', 'BSE')\n  AND ps.avg_traded_value >= {{min_avg_traded_value_inr}}\n  AND (\n    l.close >= ps.lookback_high * {{new_high_threshold}}\n    OR COALESCE(v.breakout_flag, 0) = 1\n    OR COALESCE(v.vcp_score, 0) >= {{min_vcp_score}}\n  )\n  AND COALESCE(s.rs_score, 0) >= {{min_rs_score}}\n  AND COALESCE(s.fundamental_score, s.quality_score, 0) >= {{min_fundamental_or_quality_score}}\nORDER BY\n  COALESCE(v.breakout_flag, 0) DESC,\n  COALESCE(v.vcp_score, 0) DESC,\n  COALESCE(s.rs_score, 0) DESC,\n  COALESCE(s.fundamental_score, s.quality_score, 0) DESC,\n  ps.avg_traded_value DESC\nLIMIT {{limit}}"
+  candidate_price_evidence:
+    purpose: "Fetch recent price and volume history for selected candidates to support chart review and evidence notes."
+    template: "SELECT\n  symbol,\n  exchange,\n  trade_date,\n  open,\n  high,\n  low,\n  close,\n  volume,\n  traded_value\nFROM market.equity_eod\nWHERE exchange IN ('NSE', 'BSE')\n  AND symbol IN ({{symbols_csv}})\n  AND trade_date >= CURRENT_DATE - INTERVAL '{{history_days}} days'\nORDER BY symbol, exchange, trade_date"
+  vcp_evidence_detail:
+    purpose: "Fetch VCP and Stage 2 evidence for selected candidates."
+    template: "WITH latest_vcp AS (\n  SELECT MAX(as_of_date) AS as_of_date\n  FROM scores.stage2_vcp_picks\n), latest_stage AS (\n  SELECT MAX(snapshot_date) AS snapshot_date\n  FROM scores.stage_snapshots\n)\nSELECT\n  COALESCE(v.symbol, s.symbol) AS symbol,\n  COALESCE(v.exchange, s.exchange) AS exchange,\n  v.as_of_date,\n  v.pivot_price,\n  v.breakout_flag,\n  v.vcp_score,\n  v.contraction_count,\n  v.setup_notes,\n  s.snapshot_date,\n  s.stage,\n  s.rs_score,\n  s.quality_score,\n  s.fundamental_score\nFROM scores.stage2_vcp_picks v\nFULL OUTER JOIN scores.stage_snapshots s\n  ON v.symbol = s.symbol AND v.exchange = s.exchange\nWHERE COALESCE(v.symbol, s.symbol) IN ({{symbols_csv}})\n  AND (v.as_of_date = (SELECT as_of_date FROM latest_vcp) OR v.as_of_date IS NULL)\n  AND (s.snapshot_date = (SELECT snapshot_date FROM latest_stage) OR s.snapshot_date IS NULL)\nORDER BY COALESCE(v.vcp_score, 0) DESC, COALESCE(s.rs_score, 0) DESC"
+output_contract:
+  - "filters"
+  - "candidates"
+  - "tradingview_symbols"
+  - "evidence"
+  - "risks"
+validation_rules:
+  - "status must always remain generated."
+  - "Use only Agent Adda evidence tables listed in evidence_required unless the runtime environment explicitly maps additional read-only Indian market evidence."
+  - "All SQL must be read-only and begin with SELECT or WITH; never generate INSERT, UPDATE, DELETE, MERGE, CREATE, ALTER, DROP, TRUNCATE, GRANT, REVOKE, COPY, CALL, EXEC, or executable procedural code."
+  - "Do not include executable Python or code intended to place trades, automate orders, or bypass broker controls."
+  - "Frame every result as research-only screening, not investment advice or a buy/sell recommendation."
+  - "Do not claim a VCP, breakout, or new high unless supported by the retrieved evidence fields."
+  - "If fundamentals are unavailable or represented only by scores.stage_snapshots, explicitly state that the fundamental view is score-based and not a full financial-statement analysis."
+  - "Reject or flag candidates where the latest market.equity_eod date is stale beyond the configured freshness requirement."
+  - "Prefer liquid Indian equities; flag low average traded value or abnormal one-day volume spikes."
+  - "TradingView symbols must use exchange-qualified format where possible, preferably NSE:SYMBOL for NSE-listed Indian stocks."
+  - "If no candidates pass the filters, return an empty candidates array with the filters used and explain which constraints were binding."
+synthesis_guidance: "{'tone': 'Concise, evidence-led, and research-only.', 'ranking_logic': ['Highest priority: confirmed breakout or close near/above pivot with VCP evidence.', 'Second priority: price near or at 52-week or configured lookback high.', 'Third priority: Stage 2 evidence and strong relative strength.', 'Fourth priority: fundamental_score or quality_score strength.', 'Fifth priority: sustainable liquidity based on average traded value, not just a single volume spike.'], 'candidate_rationale_template': '{{symbol}} shows {{setup_type}} evidence as of {{evidence_date}} with close {{close}}, lookback high {{lookback_high}}, VCP score {{vcp_score}}, RS score {{rs_score}}, fundamental/quality score {{fundamental_score}}, and average traded value {{avg_traded_value}}. This is a research candidate only, requiring chart and risk review.', 'risk_language': ['Breakouts can fail, especially after extended moves or broad-market weakness.', 'VCP and Stage 2 labels are screening evidence, not guarantees.', 'Liquidity and slippage risk may be material in smaller Indian equities.', 'Fundamental scores should be cross-checked with current filings, results, and corporate announcements.', 'Event risk around earnings, regulatory updates, pledging, dilution, or sector news should be reviewed before any action.'], 'default_parameters': {'lookback_days': 365, 'history_days': 90, 'new_high_threshold': 0.98, 'min_avg_traded_value_inr': 50000000, 'min_vcp_score': 70, 'min_rs_score': 70, 'min_fundamental_or_quality_score': 60, 'limit': 20}}"
+created_by: "llm_generated"
+created_at: "2026-06-06T11:17:11"
+generation_model: "gpt-5.5"

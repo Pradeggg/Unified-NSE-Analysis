@@ -1,0 +1,93 @@
+id: "portfolio_incremental_add_trim_v1"
+version: 1
+status: "generated"
+domain: "portfolio_review"
+title: "Portfolio Incremental Add Trim Review"
+description: "Research-only review of current Indian market portfolio holdings, sector exposure, stage evidence, signals, and possible incremental add or trim candidates. This card supports evidence-backed portfolio discussion and does not provide personalized investment advice or execution instructions."
+input_patterns:
+  - "should we add incrementally or reduce exposure"
+  - "portfolio position sizing by sector and stock"
+  - "review holdings for add trim decisions"
+tags:
+  - "portfolio"
+  - "position_sizing"
+  - "sector_exposure"
+  - "add_trim"
+  - "india_market"
+  - "research_only"
+evidence_required:
+  required_tables:
+    - "portfolio.holdings"
+    - "scores.stage_snapshots"
+  minimum_fields:
+    portfolio.holdings:
+      - "symbol"
+      - "exchange"
+      - "quantity"
+      - "average_cost"
+      - "current_price"
+      - "market_value"
+      - "sector"
+      - "portfolio_weight"
+    scores.stage_snapshots:
+      - "symbol"
+      - "exchange"
+      - "stage"
+      - "stage_score"
+      - "trend_signal"
+      - "momentum_signal"
+      - "risk_signal"
+      - "snapshot_date"
+  market_scope:
+    - "NSE"
+    - "BSE"
+    - "Indian listed equities"
+  freshness_expectation: "Prefer the latest available holdings and stage snapshots; clearly flag stale or missing evidence."
+  research_framing: "Use evidence as an analytical input for portfolio review only. Avoid guarantees, target returns, or direct buy/sell instructions."
+tool_plan_template:
+  -
+    step: 1
+    name: "load_current_holdings"
+    purpose: "Retrieve current portfolio holdings, market value, sector classification, and existing position weights."
+  -
+    step: 2
+    name: "load_latest_stage_snapshots"
+    purpose: "Retrieve latest stage, trend, momentum, and risk signals for held Indian market securities."
+  -
+    step: 3
+    name: "compute_exposure_context"
+    purpose: "Review portfolio concentration by stock and sector, identify overweight or underweight exposure, and compare position weights with evidence quality."
+  -
+    step: 4
+    name: "classify_add_trim_candidates"
+    purpose: "Classify holdings into research-only add-watch, hold-monitor, trim-watch, and risk-review groups using stage evidence, signal alignment, position weight, and sector exposure."
+  -
+    step: 5
+    name: "produce_research_summary"
+    purpose: "Return structured portfolio state, sector exposure, add candidates, trim candidates, and risk flags with caveats."
+sql_templates:
+  current_holdings: "SELECT symbol, exchange, quantity, average_cost, current_price, market_value, sector, portfolio_weight FROM portfolio.holdings WHERE exchange IN ('NSE', 'BSE') ORDER BY portfolio_weight DESC;"
+  latest_stage_snapshots_for_holdings: "WITH latest_snapshot AS (SELECT symbol, exchange, MAX(snapshot_date) AS latest_snapshot_date FROM scores.stage_snapshots WHERE exchange IN ('NSE', 'BSE') GROUP BY symbol, exchange) SELECT s.symbol, s.exchange, s.stage, s.stage_score, s.trend_signal, s.momentum_signal, s.risk_signal, s.snapshot_date FROM scores.stage_snapshots s INNER JOIN latest_snapshot l ON s.symbol = l.symbol AND s.exchange = l.exchange AND s.snapshot_date = l.latest_snapshot_date;"
+  holdings_with_stage_evidence: "WITH latest_snapshot AS (SELECT symbol, exchange, MAX(snapshot_date) AS latest_snapshot_date FROM scores.stage_snapshots WHERE exchange IN ('NSE', 'BSE') GROUP BY symbol, exchange) SELECT h.symbol, h.exchange, h.quantity, h.average_cost, h.current_price, h.market_value, h.sector, h.portfolio_weight, s.stage, s.stage_score, s.trend_signal, s.momentum_signal, s.risk_signal, s.snapshot_date FROM portfolio.holdings h LEFT JOIN latest_snapshot l ON h.symbol = l.symbol AND h.exchange = l.exchange LEFT JOIN scores.stage_snapshots s ON l.symbol = s.symbol AND l.exchange = s.exchange AND l.latest_snapshot_date = s.snapshot_date WHERE h.exchange IN ('NSE', 'BSE') ORDER BY h.portfolio_weight DESC;"
+  sector_exposure: "SELECT sector, SUM(market_value) AS sector_market_value, SUM(portfolio_weight) AS sector_portfolio_weight, COUNT(*) AS holding_count FROM portfolio.holdings WHERE exchange IN ('NSE', 'BSE') GROUP BY sector ORDER BY sector_portfolio_weight DESC;"
+output_contract:
+  - "portfolio_state"
+  - "sector_exposure"
+  - "add_candidates"
+  - "trim_candidates"
+  - "risk_flags"
+validation_rules:
+  - "status must remain generated."
+  - "Use only Indian market evidence from NSE, BSE, or Indian listed equity context unless the user explicitly provides broader portfolio data."
+  - "Do not present outputs as personalized investment advice, recommendations, or execution instructions."
+  - "Do not use language such as 'buy now', 'sell now', 'guaranteed', 'sure return', or 'risk-free'."
+  - "Classify add_candidates and trim_candidates as research-only watchlists, not orders."
+  - "If stage evidence is missing for a holding, include it in risk_flags or evidence gaps rather than inferring a signal."
+  - "If snapshot_date appears stale relative to the latest available data context, flag freshness risk."
+  - "If sector or single-stock concentration is high, describe it as a risk observation and avoid prescribing exact trades."
+  - "SQL templates must remain read-only and limited to SELECT or WITH statements."
+  - "Do not include executable Python, shell commands, or mutation-oriented database operations."
+synthesis_guidance: "['Start with a concise research-only caveat that the review is analytical and not personalized investment advice.', 'Summarize portfolio_state using evidence coverage, largest positions, concentration, and signal alignment.', 'Evaluate sector_exposure before individual add or trim candidates so position context is visible.', 'For add_candidates, prefer holdings with constructive stage, positive or improving trend and momentum signals, manageable current weight, and no major risk_signal conflict.', 'For trim_candidates, consider weak or deteriorating stage, adverse trend or momentum signals, elevated risk_signal, outsized position weight, or sector overcrowding.', 'Where signals conflict, present the conflict clearly and classify the holding as monitor or risk-review rather than forcing an add or trim label.', \"Use measured Indian market phrasing such as 'may merit incremental add-watch', 'may warrant exposure review', and 'monitor for confirmation'.\", 'Include data limitations, missing evidence, stale snapshots, and concentration risks in risk_flags.', 'Avoid price targets, return forecasts, time-bound performance promises, or exact allocation changes unless explicitly provided by the user as their own framework.']"
+created_by: "llm_generated"
+created_at: "2026-06-06T11:17:46"
+generation_model: "gpt-5.5"

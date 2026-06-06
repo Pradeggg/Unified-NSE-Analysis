@@ -1,0 +1,100 @@
+id: "report_link_data_validation_v1"
+version: 1
+status: "generated"
+domain: "report_qa"
+title: "Report Link And Data Validation"
+description: "Validate generated HTML report links, underlying detail pages, populated data, and source trails for Agent Adda Indian market research reports. This skill is for research-only quality assurance and does not provide investment advice."
+input_patterns:
+  - "review report links not working"
+  - "underlying stock html files do not have data"
+  - "validate generated report links and missing data"
+tags:
+  - "report_qa"
+  - "links"
+  - "html"
+  - "data_validation"
+  - "indian_market"
+  - "research_only"
+evidence_required:
+  tables:
+    - "reports.files"
+  minimum_fields:
+    - "report_id"
+    - "file_path"
+    - "file_type"
+    - "created_at"
+    - "updated_at"
+  optional_fields:
+    - "title"
+    - "symbol"
+    - "exchange"
+    - "html_content"
+    - "source_url"
+    - "status"
+    - "metadata"
+  evidence_standard: "Use Agent Adda maintained report file metadata and content references for Indian market research reports. Validate findings only against available evidence, and clearly mark unavailable or inconclusive checks."
+tool_plan_template:
+  -
+    step: "scope_report_set"
+    action: "Identify the target report, report batch, date range, symbols, or generated HTML files mentioned by the user."
+    evidence: "reports.files metadata"
+    notes: "If scope is ambiguous, request a report identifier, symbol, date range, or file path before making definitive findings."
+  -
+    step: "inventory_expected_links"
+    action: "Extract or enumerate report-level links, underlying stock detail pages, and source trail references from the available report file records."
+    evidence: "reports.files rows for HTML reports and related detail pages"
+    notes: "Classify links as internal report links, stock detail pages, external source links, or static assets when supported by metadata."
+  -
+    step: "validate_link_targets"
+    action: "Check whether each referenced internal target has a corresponding record, plausible file path, and expected file type."
+    evidence: "reports.files file_path, file_type, status, metadata"
+    notes: "Do not assume external website availability unless explicit evidence exists in Agent Adda records."
+  -
+    step: "validate_populated_data"
+    action: "Assess whether underlying pages contain substantive populated content, expected identifiers, and research data rather than blank shells or placeholders."
+    evidence: "reports.files html_content and metadata where available"
+    notes: "Flag empty content, missing stock symbols, missing exchange labels, placeholder text, or absent source trails."
+  -
+    step: "validate_source_trails"
+    action: "Confirm whether source references exist for reported claims, stock pages, or market data sections."
+    evidence: "reports.files source_url and metadata"
+    notes: "Frame all checks as research-quality validation, not as verification of investment suitability."
+  -
+    step: "summarize_remediation"
+    action: "Provide prioritized remediation steps for broken links, orphan pages, missing data, and missing source trails."
+    evidence: "Derived from validation findings"
+    notes: "Recommend regeneration, relinking, backfilling metadata, or excluding incomplete pages from published reports as applicable."
+sql_templates:
+  report_file_inventory:
+    description: "List available report files for a scoped report, symbol, or date range."
+    template: "SELECT report_id, file_path, file_type, title, symbol, exchange, status, created_at, updated_at FROM reports.files WHERE (:report_id IS NULL OR report_id = :report_id) AND (:symbol IS NULL OR symbol = :symbol) AND (:exchange IS NULL OR exchange = :exchange) AND (:start_date IS NULL OR created_at >= :start_date) AND (:end_date IS NULL OR created_at < :end_date) ORDER BY report_id, file_path;"
+  html_content_presence:
+    description: "Check whether HTML files appear to have populated content available in stored report evidence."
+    template: "SELECT report_id, file_path, title, symbol, exchange, status, CASE WHEN html_content IS NULL THEN 'missing_html_content' WHEN LENGTH(TRIM(html_content)) = 0 THEN 'empty_html_content' WHEN LENGTH(TRIM(html_content)) < :minimum_content_length THEN 'short_html_content' ELSE 'content_present' END AS content_check, LENGTH(COALESCE(html_content, '')) AS content_length, updated_at FROM reports.files WHERE file_type = 'html' AND (:report_id IS NULL OR report_id = :report_id) AND (:symbol IS NULL OR symbol = :symbol) ORDER BY content_check, file_path;"
+  possible_placeholder_pages:
+    description: "Identify likely placeholder or under-populated HTML pages using stored content markers."
+    template: "SELECT report_id, file_path, title, symbol, exchange, status, updated_at FROM reports.files WHERE file_type = 'html' AND (:report_id IS NULL OR report_id = :report_id) AND (html_content IS NULL OR LENGTH(TRIM(html_content)) < :minimum_content_length OR LOWER(html_content) LIKE '%no data%' OR LOWER(html_content) LIKE '%placeholder%' OR LOWER(html_content) LIKE '%coming soon%' OR LOWER(html_content) LIKE '%not available%') ORDER BY updated_at DESC, file_path;"
+  source_trail_presence:
+    description: "Check whether report files have source URLs or source metadata recorded."
+    template: "SELECT report_id, file_path, title, symbol, exchange, CASE WHEN source_url IS NOT NULL AND LENGTH(TRIM(source_url)) > 0 THEN 'source_url_present' WHEN metadata IS NOT NULL AND CAST(metadata AS TEXT) LIKE '%source%' THEN 'source_metadata_present' ELSE 'source_trail_missing' END AS source_trail_check, updated_at FROM reports.files WHERE (:report_id IS NULL OR report_id = :report_id) AND (:symbol IS NULL OR symbol = :symbol) ORDER BY source_trail_check, file_path;"
+output_contract:
+  - "findings"
+  - "broken_links"
+  - "missing_data"
+  - "remediation"
+  - "verification"
+validation_rules:
+  - "The card status must remain generated."
+  - "Use only Agent Adda evidence available in reports.files or explicitly supplied user context."
+  - "Frame all outputs as Indian market research report QA and research-only validation, not investment advice or trading recommendations."
+  - "Do not infer that a link is broken solely because external browsing is unavailable; distinguish missing Agent Adda evidence from confirmed failure."
+  - "Treat internal report links as valid only when there is matching evidence for the target file or page."
+  - "Flag HTML pages as missing data when stored content is null, empty, unusually short, placeholder-like, or missing required identifiers such as symbol or exchange when those fields are expected."
+  - "Flag source trail issues when no source_url or source metadata is available for claims or data sections that require provenance."
+  - "SQL templates must remain read-only and limited to SELECT or WITH statements."
+  - "Do not include executable Python, shell commands, browser automation scripts, or write operations."
+  - "If required fields are unavailable in reports.files, report the check as inconclusive and specify the missing evidence."
+synthesis_guidance: "{'tone': 'Clear, evidence-backed, and QA-focused.', 'research_only_disclaimer': 'State that the validation is for Agent Adda Indian market research report quality assurance only and is not investment advice.', 'prioritization': 'Prioritize issues that prevent navigation to stock detail pages, hide populated research data, or break source trails. Use P0 for widespread inaccessible reports, P1 for important missing detail pages or empty pages, P2 for partial metadata or source-trail gaps, and P3 for cosmetic or low-impact issues.', 'evidence_citation': 'For every material finding, cite the relevant report_id, file_path, symbol, exchange, and reports.files field where available.', 'uncertainty_handling': 'Use labels such as confirmed, likely, and inconclusive. Explain what evidence is missing for inconclusive checks.', 'recommended_response_shape': {'findings': 'Brief summary plus scoped evidence inventory.', 'broken_links': 'List affected links or paths with issue type and severity.', 'missing_data': 'List empty, sparse, placeholder, or provenance-deficient pages.', 'remediation': 'Provide practical non-executable fixes such as regenerate missing pages, rebuild internal link map, backfill source_url, or suppress incomplete pages from publication.', 'verification': 'Define repeatable checks using Agent Adda evidence to confirm the issue is resolved.'}}"
+created_by: "llm_generated"
+created_at: "2026-06-06T11:18:28"
+generation_model: "gpt-5.5"

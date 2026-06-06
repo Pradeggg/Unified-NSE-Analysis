@@ -1,0 +1,104 @@
+id: "market_3m_rotation_swing_v1"
+version: 1
+status: "generated"
+domain: "market_analysis"
+title: "3M Market Rotation Swing Assessment"
+description: "Research-only Indian equity market assessment of the last 3 months to identify broad market regime, sector leadership, stage distribution shifts, and liquid swing-candidate shortlists based on evidence from market and scoring tables. Outputs are informational and not investment advice."
+input_patterns:
+  - "last 3 months market analysis"
+  - "find swing candidates from recent sector rotation"
+  - "market regime and stage 2 leadership over 3 months"
+tags:
+  - "market_regime"
+  - "sector_rotation"
+  - "stage_analysis"
+  - "swing_trading"
+  - "india_markets"
+  - "research_only"
+evidence_required:
+  required_tables:
+    - "market.index_eod"
+    - "market.equity_eod"
+    - "scores.stage_snapshots"
+    - "scores.stage2_vcp_picks"
+  minimum_lookback: "3 months"
+  market_scope: "Indian listed equities and major Indian indices only"
+  required_fields:
+    market.index_eod:
+      - "trade_date"
+      - "index_symbol"
+      - "close"
+    market.equity_eod:
+      - "trade_date"
+      - "symbol"
+      - "close"
+      - "volume"
+      - "sector"
+    scores.stage_snapshots:
+      - "snapshot_date"
+      - "symbol"
+      - "sector"
+      - "stage"
+    scores.stage2_vcp_picks:
+      - "as_of_date"
+      - "symbol"
+      - "sector"
+      - "score"
+  freshness_expectation: "Use the latest available as_of_date or trade_date in the evidence tables. Clearly state if data appears stale."
+  disallowed_evidence:
+    - "unsupported rumors"
+    - "brokerage calls without table evidence"
+    - "non-Indian market conclusions unless used only as external context"
+tool_plan_template:
+  -
+    step: 1
+    name: "Resolve analysis window"
+    action: "Find the latest available Indian market date and set a 3-month lookback window ending on that date."
+  -
+    step: 2
+    name: "Measure broad index regime"
+    action: "Calculate 3-month returns for major Indian indices and classify regime as risk-on, mixed, or risk-off using breadth of positive index returns and trend persistence."
+  -
+    step: 3
+    name: "Assess sector rotation"
+    action: "Rank sectors by median 3-month return, participation count, and relative strength versus the broad index proxy."
+  -
+    step: 4
+    name: "Track stage distribution change"
+    action: "Compare stage counts at the start and end of the window to identify whether Stage 2 participation is expanding or contracting."
+  -
+    step: 5
+    name: "Shortlist liquid swing candidates"
+    action: "Use stage2_vcp_picks and equity liquidity evidence to identify candidates from leading sectors, keeping the result research-only and avoiding trade instructions."
+  -
+    step: 6
+    name: "Synthesize risks"
+    action: "List market, sector, liquidity, concentration, and data-quality risks that could affect interpretation."
+sql_templates:
+  latest_dates: "WITH latest_index AS (SELECT MAX(trade_date) AS latest_index_date FROM market.index_eod), latest_equity AS (SELECT MAX(trade_date) AS latest_equity_date FROM market.equity_eod), latest_stage AS (SELECT MAX(snapshot_date) AS latest_stage_date FROM scores.stage_snapshots), latest_picks AS (SELECT MAX(as_of_date) AS latest_picks_date FROM scores.stage2_vcp_picks) SELECT latest_index_date, latest_equity_date, latest_stage_date, latest_picks_date FROM latest_index CROSS JOIN latest_equity CROSS JOIN latest_stage CROSS JOIN latest_picks"
+  index_3m_returns: "WITH params AS (SELECT MAX(trade_date) AS as_of_date FROM market.index_eod), windowed AS (SELECT i.index_symbol, i.trade_date, i.close, p.as_of_date FROM market.index_eod i CROSS JOIN params p WHERE i.trade_date >= p.as_of_date - INTERVAL '3 months'), endpoints AS (SELECT index_symbol, FIRST_VALUE(close) OVER (PARTITION BY index_symbol ORDER BY trade_date ASC) AS start_close, FIRST_VALUE(close) OVER (PARTITION BY index_symbol ORDER BY trade_date DESC) AS end_close FROM windowed) SELECT index_symbol, MAX(start_close) AS start_close, MAX(end_close) AS end_close, CASE WHEN MAX(start_close) IS NULL OR MAX(start_close) = 0 THEN NULL ELSE 100.0 * (MAX(end_close) - MAX(start_close)) / MAX(start_close) END AS return_3m_pct FROM endpoints GROUP BY index_symbol ORDER BY return_3m_pct DESC"
+  sector_3m_rotation: "WITH params AS (SELECT MAX(trade_date) AS as_of_date FROM market.equity_eod), windowed AS (SELECT e.symbol, e.sector, e.trade_date, e.close, e.volume, p.as_of_date FROM market.equity_eod e CROSS JOIN params p WHERE e.trade_date >= p.as_of_date - INTERVAL '3 months' AND e.sector IS NOT NULL), endpoints AS (SELECT symbol, sector, FIRST_VALUE(close) OVER (PARTITION BY symbol ORDER BY trade_date ASC) AS start_close, FIRST_VALUE(close) OVER (PARTITION BY symbol ORDER BY trade_date DESC) AS end_close, AVG(volume) OVER (PARTITION BY symbol) AS avg_volume_3m FROM windowed), symbol_returns AS (SELECT symbol, sector, MAX(start_close) AS start_close, MAX(end_close) AS end_close, MAX(avg_volume_3m) AS avg_volume_3m, CASE WHEN MAX(start_close) IS NULL OR MAX(start_close) = 0 THEN NULL ELSE 100.0 * (MAX(end_close) - MAX(start_close)) / MAX(start_close) END AS return_3m_pct FROM endpoints GROUP BY symbol, sector) SELECT sector, COUNT(*) AS stock_count, AVG(return_3m_pct) AS avg_return_3m_pct, PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY return_3m_pct) AS median_return_3m_pct, AVG(avg_volume_3m) AS avg_volume_3m FROM symbol_returns WHERE return_3m_pct IS NOT NULL GROUP BY sector HAVING COUNT(*) >= 5 ORDER BY median_return_3m_pct DESC, avg_return_3m_pct DESC"
+  stage_distribution_change: "WITH bounds AS (SELECT MIN(snapshot_date) AS start_snapshot_date, MAX(snapshot_date) AS end_snapshot_date FROM scores.stage_snapshots WHERE snapshot_date >= (SELECT MAX(snapshot_date) FROM scores.stage_snapshots) - INTERVAL '3 months'), stage_counts AS (SELECT s.snapshot_date, s.stage, COUNT(*) AS stock_count FROM scores.stage_snapshots s CROSS JOIN bounds b WHERE s.snapshot_date IN (b.start_snapshot_date, b.end_snapshot_date) GROUP BY s.snapshot_date, s.stage) SELECT snapshot_date, stage, stock_count FROM stage_counts ORDER BY snapshot_date, stage"
+  leading_stage2_candidates: "WITH latest_pick_date AS (SELECT MAX(as_of_date) AS as_of_date FROM scores.stage2_vcp_picks), latest_equity_date AS (SELECT MAX(trade_date) AS trade_date FROM market.equity_eod), liquidity AS (SELECT e.symbol, e.sector, AVG(e.volume) AS avg_volume_1m, AVG(e.close * e.volume) AS avg_traded_value_1m FROM market.equity_eod e CROSS JOIN latest_equity_date d WHERE e.trade_date >= d.trade_date - INTERVAL '1 month' GROUP BY e.symbol, e.sector), picks AS (SELECT p.as_of_date, p.symbol, p.sector, p.score FROM scores.stage2_vcp_picks p CROSS JOIN latest_pick_date d WHERE p.as_of_date = d.as_of_date) SELECT p.as_of_date, p.symbol, COALESCE(p.sector, l.sector) AS sector, p.score, l.avg_volume_1m, l.avg_traded_value_1m FROM picks p LEFT JOIN liquidity l ON p.symbol = l.symbol WHERE l.avg_traded_value_1m IS NULL OR l.avg_traded_value_1m > 0 ORDER BY p.score DESC, l.avg_traded_value_1m DESC"
+output_contract:
+  - "as_of_date"
+  - "index_returns"
+  - "stage_distribution_change"
+  - "leading_sectors"
+  - "primary_candidates"
+  - "risks"
+validation_rules:
+  - "status must remain exactly generated"
+  - "Use only read-only SELECT or WITH SQL templates."
+  - "Do not include executable Python, shell commands, order placement instructions, or broker API actions."
+  - "Frame all conclusions as Indian market research and evidence-based observations, not investment advice."
+  - "Do not label any candidate as a guaranteed buy, sell, target, stop-loss, or return promise."
+  - "If required tables or required fields are unavailable, return a data_gap note instead of fabricating results."
+  - "If the latest evidence date is older than expected, explicitly flag stale_data risk."
+  - "Candidate shortlists must be tied to evidence from scores.stage2_vcp_picks and liquidity or price data from market.equity_eod."
+  - "Sector leadership must be derived from table evidence, not inferred from news or unsupported narratives."
+  - "Prefer liquid Indian equities and clearly separate broad regime, sector leadership, and candidate evidence."
+synthesis_guidance: "{'tone': 'neutral, research-only, concise but evidence-grounded', 'market_framing': 'Focus on Indian indices, NSE/BSE listed equities, sector rotation, and stage participation over the last 3 months.', 'regime_interpretation': 'Classify regime only after comparing index returns and breadth. Use cautious wording when signals are mixed.', 'sector_interpretation': 'Call a sector leading only if it has both positive relative performance and adequate stock participation in the evidence.', 'candidate_interpretation': 'Present candidates as watchlist or research candidates, not recommendations. Include why they appeared: Stage 2 or VCP score, sector leadership, and liquidity evidence.', 'risk_guidance': 'Always include risks covering market reversal, narrow leadership, sector crowding, earnings or event gaps, liquidity slippage, and data freshness.', 'disclaimer': 'This is research-only market analysis for Indian equities and does not constitute investment advice or a solicitation to trade.'}"
+created_by: "llm_generated"
+created_at: "2026-06-06T11:16:02"
+generation_model: "gpt-5.5"
