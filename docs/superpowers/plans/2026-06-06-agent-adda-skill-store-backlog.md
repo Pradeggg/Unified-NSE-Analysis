@@ -75,6 +75,7 @@ user query
 | Offline Generation | LLM scenario generator, repair loop, promotion | Data model and contracts |
 | Evaluation | benchmark queries, regression suite, quality metrics | Runtime integration |
 | Operations | logs, feedback, maintenance commands | All lanes |
+| Learning Loop | daily capture, workflow chains, 14-day pattern mining, proposals | After telemetry; before release gate |
 
 ---
 
@@ -1083,14 +1084,382 @@ AGENT_ADDA_SKILL_STORE=0 .venv/bin/python -m pytest tests/test_routing_smoke.py 
 
 ---
 
-## Epic AA-SKILLSTORE-12: Documentation And Operator Commands
+## Epic AA-SKILLSTORE-12: Usage-Driven Learning Loop
 
-### AA-SKILLSTORE-12.1 Add Skill Store Operator Docs
+### AA-SKILLSTORE-12.1 Add Learning Schema And Repository
+
+**Status:** READY  
+**Priority:** P0  
+**Suggested owner:** Learning persistence assistant  
+**Dependencies:** AA-SKILLSTORE-11.1  
+**Files:**
+- Modify: `postgres/schema.sql`
+- Create: `terminal/learning/__init__.py`
+- Create: `terminal/learning/repository.py`
+- Test: `tests/test_learning_repository.py`
+
+**Work:**
+- [ ] Add schema `agent_learning`.
+- [ ] Add tables:
+  - `agent_learning.interaction_events`
+  - `agent_learning.workflow_chains`
+  - `agent_learning.daily_summaries`
+  - `agent_learning.patterns`
+  - `agent_learning.proposals`
+  - `agent_learning.proposal_validation_runs`
+  - `agent_learning.promotion_runs`
+  - `agent_learning.learning_audits`
+- [ ] Add repository methods:
+  - `record_interaction_event(event)`
+  - `record_workflow_chain(chain)`
+  - `save_daily_summary(summary)`
+  - `save_pattern(pattern)`
+  - `save_proposal(proposal)`
+  - `list_proposals(status=None)`
+  - `record_promotion_run(run)`
+- [ ] Ensure event payloads are JSON-serializable.
+- [ ] Avoid storing credentials, secrets, or full raw tool payloads.
+
+**Acceptance Criteria:**
+- Learning tables can be created on an empty DB.
+- Repository persists and retrieves events, summaries, patterns, and proposals.
+- Proposal statuses are constrained to:
+  - `observed`
+  - `proposed`
+  - `generated`
+  - `test_failed`
+  - `review_pending`
+  - `validated`
+  - `production`
+  - `deprecated`
+
+**Verification:**
+
+```bash
+.venv/bin/python -m pytest tests/test_learning_repository.py -q
+```
+
+### AA-SKILLSTORE-12.2 Capture Daily User Inputs And Actions
+
+**Status:** READY  
+**Priority:** P0  
+**Suggested owner:** Learning capture assistant  
+**Dependencies:** AA-SKILLSTORE-12.1  
+**Files:**
+- Create: `terminal/learning/interaction_log.py`
+- Modify: `terminal/agent.py`
+- Modify: `nse_agent.py`
+- Test: `tests/test_learning_interaction_log.py`
+
+**Work:**
+- [ ] Create `InteractionEvent` model with:
+  - timestamp
+  - raw query
+  - normalized query
+  - selected intent
+  - route type
+  - detected entities
+  - tools executed
+  - reports opened/generated/emailed
+  - artifacts created
+  - errors and missing evidence
+  - clarification requested
+  - user approval or correction markers
+- [ ] Record events after every meaningful terminal turn.
+- [ ] Record command actions such as:
+  - daily refresh
+  - report open
+  - report email
+  - report validation
+  - code/report fix
+- [ ] Redact or omit secrets and oversized payloads.
+- [ ] Make capture best-effort; logging failure must not break Agent Adda.
+
+**Acceptance Criteria:**
+- A normal query creates one interaction event.
+- A report email command records the report and recipient-list key, not sensitive body content.
+- A failed tool plan records failure reason.
+- Logging can be disabled with an env flag.
+
+**Verification:**
+
+```bash
+.venv/bin/python -m pytest tests/test_learning_interaction_log.py -q
+```
+
+### AA-SKILLSTORE-12.3 Detect Workflow Chains Across Turns
+
+**Status:** READY  
+**Priority:** P1  
+**Suggested owner:** Learning capture assistant  
+**Dependencies:** AA-SKILLSTORE-12.2  
+**Files:**
+- Create: `terminal/learning/workflow_chains.py`
+- Test: `tests/test_learning_workflow_chains.py`
+
+**Work:**
+- [ ] Group related events into chains using:
+  - session id
+  - time proximity
+  - repeated entities/reports
+  - explicit follow-ups
+  - artifact continuity
+- [ ] Detect first-class chain types:
+  - `daily_refresh_report_review_email`
+  - `report_debug_regenerate_validate`
+  - `stock_research_deep_dive`
+  - `portfolio_review_debug`
+  - `scanner_to_watchlist`
+  - `fallback_failure_recovery`
+- [ ] Store chain summary and event ids.
+
+**Acceptance Criteria:**
+- Daily refresh -> open reports -> email top picks is captured as one chain.
+- Report bug -> code fix -> regenerate -> open report is captured as one chain.
+- Unrelated queries are not forced into one chain.
+
+**Verification:**
+
+```bash
+.venv/bin/python -m pytest tests/test_learning_workflow_chains.py -q
+```
+
+### AA-SKILLSTORE-12.4 Generate Daily Learning Summaries
+
+**Status:** READY  
+**Priority:** P1  
+**Suggested owner:** Learning summarizer assistant  
+**Dependencies:** AA-SKILLSTORE-12.3  
+**Files:**
+- Create: `terminal/learning/daily_summary.py`
+- Modify: `agent_adda/cli.py`
+- Test: `tests/test_learning_daily_summary.py`
+
+**Work:**
+- [ ] Add CLI:
+  - `agent_adda learning summarize --date YYYY-MM-DD`
+  - `agent_adda learning summarize --today`
+- [ ] Summarize:
+  - top intents
+  - top entities
+  - commands run
+  - tools used
+  - artifacts created
+  - failures
+  - report issues
+  - workflow chains
+- [ ] Store summary in `agent_learning.daily_summaries`.
+- [ ] Optionally write markdown under `reports/learning/daily/`.
+
+**Acceptance Criteria:**
+- Summary is deterministic from logged events.
+- Empty day produces a clear no-activity summary.
+- Summary includes failed and successful workflows.
+
+**Verification:**
+
+```bash
+.venv/bin/python -m pytest tests/test_learning_daily_summary.py -q
+```
+
+### AA-SKILLSTORE-12.5 Mine 14-Day Usage Patterns
+
+**Status:** READY  
+**Priority:** P0  
+**Suggested owner:** Learning miner assistant  
+**Dependencies:** AA-SKILLSTORE-12.4  
+**Files:**
+- Create: `terminal/learning/pattern_miner.py`
+- Modify: `agent_adda/cli.py`
+- Test: `tests/test_learning_pattern_miner.py`
+
+**Work:**
+- [ ] Add CLI:
+  - `agent_adda learning analyze --window 14d`
+- [ ] Mine:
+  - repeated user phrasings
+  - recurring tool/report/action chains
+  - repeated LLM fallback failures
+  - repeated report validation issues
+  - repeated manual fixes
+  - repeated scanner/watchlist workflows
+  - repeated portfolio review workflows
+- [ ] Score patterns by:
+  - frequency
+  - recency
+  - failure severity
+  - manual effort saved
+  - potential for deterministic automation
+- [ ] Store patterns in `agent_learning.patterns`.
+
+**Acceptance Criteria:**
+- Pattern miner identifies a recurring workflow from fixture events.
+- Single one-off events do not become high-priority patterns.
+- Fallback failures are surfaced as route/tool/skill candidates.
+
+**Verification:**
+
+```bash
+.venv/bin/python -m pytest tests/test_learning_pattern_miner.py -q
+```
+
+### AA-SKILLSTORE-12.6 Generate Route, Tool, Skill, And Validation Proposals
+
+**Status:** READY  
+**Priority:** P0  
+**Suggested owner:** Learning proposal assistant  
+**Dependencies:** AA-SKILLSTORE-12.5, AA-SKILLSTORE-2.2  
+**Files:**
+- Create: `terminal/learning/proposal_generator.py`
+- Test: `tests/test_learning_proposal_generator.py`
+
+**Work:**
+- [ ] Convert mined patterns into proposal types:
+  - `route_proposal`
+  - `tool_proposal`
+  - `skill_proposal`
+  - `prompt_proposal`
+  - `report_validation_proposal`
+  - `workflow_proposal`
+  - `deprecation_proposal`
+- [ ] Include:
+  - observed pattern
+  - evidence examples
+  - proposed behavior
+  - affected routes/tools/skills
+  - generated test cases
+  - expected tool calls
+  - must-not-call rules
+  - acceptance criteria
+- [ ] Mark proposals `proposed` by default.
+- [ ] Do not modify runtime routing or skill cards directly.
+
+**Acceptance Criteria:**
+- Repeated “latest quarterly results analysis” fallback failure becomes a route/tool proposal.
+- Repeated “VCP breakouts with fundamentals” asks become a skill proposal.
+- Proposal includes tests that another coding assistant can implement.
+
+**Verification:**
+
+```bash
+.venv/bin/python -m pytest tests/test_learning_proposal_generator.py -q
+```
+
+### AA-SKILLSTORE-12.7 Validate Learning Proposals Before Promotion
+
+**Status:** READY  
+**Priority:** P0  
+**Suggested owner:** Learning validation assistant  
+**Dependencies:** AA-SKILLSTORE-12.6, AA-SKILLSTORE-9.2, AA-SKILLSTORE-10.1  
+**Files:**
+- Create: `terminal/learning/proposal_validator.py`
+- Test: `tests/test_learning_proposal_validator.py`
+
+**Work:**
+- [ ] Validate generated proposal test cases.
+- [ ] For skill proposals, convert to `review_pending` skill cards only after:
+  - schema validation
+  - SQL safety validation
+  - fixture execution
+  - reviewer approval
+- [ ] For route/tool proposals, produce implementation-ready backlog snippets.
+- [ ] For deprecation proposals, require evidence of repeated failure or replacement.
+- [ ] Store validation runs.
+
+**Acceptance Criteria:**
+- Invalid proposal remains `test_failed`.
+- Valid skill proposal can become `review_pending`.
+- Valid route proposal produces tests and named files to edit.
+
+**Verification:**
+
+```bash
+.venv/bin/python -m pytest tests/test_learning_proposal_validator.py -q
+```
+
+### AA-SKILLSTORE-12.8 Promote Validated Learning Proposals
+
+**Status:** READY  
+**Priority:** P1  
+**Suggested owner:** Learning promotion assistant  
+**Dependencies:** AA-SKILLSTORE-12.7, AA-SKILLSTORE-9.3  
+**Files:**
+- Create: `terminal/learning/promotion.py`
+- Modify: `agent_adda/cli.py`
+- Test: `tests/test_learning_promotion.py`
+
+**Work:**
+- [ ] Add CLI:
+  - `agent_adda learning proposals`
+  - `agent_adda learning show <proposal_id>`
+  - `agent_adda learning promote <proposal_id>`
+  - `agent_adda learning reject <proposal_id>`
+- [ ] Promotion behavior:
+  - skill proposal -> calls skill promotion path
+  - route/tool proposal -> creates backlog artifact, not runtime code
+  - prompt proposal -> creates review-pending prompt artifact
+  - report validation proposal -> creates validation-rule task
+  - deprecation proposal -> marks target deprecated after approval
+- [ ] Require explicit approval for production status.
+- [ ] Record promotion runs.
+
+**Acceptance Criteria:**
+- Proposal cannot jump from `proposed` to `production`.
+- Skill proposal promotion integrates with skill-store lifecycle.
+- Route/tool proposals remain implementation tasks until code is written and tested.
+
+**Verification:**
+
+```bash
+.venv/bin/python -m pytest tests/test_learning_promotion.py -q
+```
+
+### AA-SKILLSTORE-12.9 Add Fortnightly Learning Audit Report
+
+**Status:** READY  
+**Priority:** P1  
+**Suggested owner:** Learning audit assistant  
+**Dependencies:** AA-SKILLSTORE-12.8  
+**Files:**
+- Create: `terminal/learning/audit.py`
+- Modify: `agent_adda/cli.py`
+- Test: `tests/test_learning_audit.py`
+
+**Work:**
+- [ ] Add CLI:
+  - `agent_adda learning audit --window 14d`
+- [ ] Generate markdown report under `reports/learning/`.
+- [ ] Include:
+  - top repeated workflows
+  - recurring failures
+  - generated proposals
+  - promoted proposals
+  - rejected proposals
+  - stale/deprecated skills
+  - recommended next backlog tasks
+- [ ] Store audit metadata in `agent_learning.learning_audits`.
+
+**Acceptance Criteria:**
+- Audit links patterns to proposals.
+- Audit is useful to a coding assistant picking the next task.
+- Audit does not expose hidden model reasoning or sensitive raw payloads.
+
+**Verification:**
+
+```bash
+.venv/bin/python -m pytest tests/test_learning_audit.py -q
+```
+
+---
+
+## Epic AA-SKILLSTORE-13: Documentation And Operator Commands
+
+### AA-SKILLSTORE-13.1 Add Skill Store Operator Docs
 
 **Status:** READY  
 **Priority:** P1  
 **Suggested owner:** Docs assistant  
-**Dependencies:** AA-SKILLSTORE-9.3  
+**Dependencies:** AA-SKILLSTORE-9.3, AA-SKILLSTORE-12.9  
 **Files:**
 - Create: `docs/agent_adda_skill_store.md`
 
@@ -1101,6 +1470,9 @@ AGENT_ADDA_SKILL_STORE=0 .venv/bin/python -m pytest tests/test_routing_smoke.py 
   - how to generate scenarios
   - how to validate
   - how to promote/deprecate
+  - how daily learning capture works
+  - how 14-day pattern mining works
+  - how learning proposals are approved
   - how to inspect retrieval logs
   - safety guardrails
 - [ ] Add examples:
@@ -1115,10 +1487,10 @@ AGENT_ADDA_SKILL_STORE=0 .venv/bin/python -m pytest tests/test_routing_smoke.py 
 **Verification:**
 
 ```bash
-rg -n "generated.*untrusted|validate|promote|deprecate|pgvector" docs/agent_adda_skill_store.md
+rg -n "generated.*untrusted|validate|promote|deprecate|pgvector|learning analyze|proposal" docs/agent_adda_skill_store.md
 ```
 
-### AA-SKILLSTORE-12.2 Add `/skills` Runtime Inspection Command
+### AA-SKILLSTORE-13.2 Add `/skills` Runtime Inspection Command
 
 **Status:** READY  
 **Priority:** P2  
@@ -1152,14 +1524,14 @@ rg -n "generated.*untrusted|validate|promote|deprecate|pgvector" docs/agent_adda
 
 ---
 
-## Epic AA-SKILLSTORE-13: Release Gates
+## Epic AA-SKILLSTORE-14: Release Gates
 
-### AA-SKILLSTORE-13.1 Runtime Enablement Gate
+### AA-SKILLSTORE-14.1 Runtime Enablement Gate
 
 **Status:** BLOCKED  
 **Priority:** P0  
 **Suggested owner:** Release assistant  
-**Dependencies:** AA-SKILLSTORE-8.3, AA-SKILLSTORE-10.2, AA-SKILLSTORE-11.1  
+**Dependencies:** AA-SKILLSTORE-8.3, AA-SKILLSTORE-10.2, AA-SKILLSTORE-11.1, AA-SKILLSTORE-12.9  
 **Files:**
 - Modify: `terminal/skills/config.py`
 - Modify: release notes or docs
@@ -1169,6 +1541,7 @@ rg -n "generated.*untrusted|validate|promote|deprecate|pgvector" docs/agent_adda
 - [ ] Confirm deterministic routing smoke tests pass with skill store disabled and enabled.
 - [ ] Confirm unsafe SQL tests pass.
 - [ ] Confirm retrieval logs are written.
+- [ ] Confirm learning capture can be enabled without affecting answers.
 - [ ] Enable feature flag for local default only after user approval.
 
 **Acceptance Criteria:**
@@ -1183,12 +1556,12 @@ AGENT_ADDA_SKILL_STORE=0 .venv/bin/python -m pytest tests/test_routing_smoke.py 
 AGENT_ADDA_SKILL_STORE=1 .venv/bin/python -m pytest tests/test_skill_store_e2e.py tests/test_skill_store_benchmarks.py -q
 ```
 
-### AA-SKILLSTORE-13.2 Post-Release Audit
+### AA-SKILLSTORE-14.2 Post-Release Audit
 
 **Status:** BLOCKED  
 **Priority:** P1  
 **Suggested owner:** Release assistant  
-**Dependencies:** AA-SKILLSTORE-13.1  
+**Dependencies:** AA-SKILLSTORE-14.1  
 **Files:**
 - Create: `reports/skill_store/skill_store_audit_<date>.md`
 
@@ -1235,6 +1608,14 @@ test -f reports/skill_store/skill_store_audit_*.md
 17. AA-SKILLSTORE-8.2
 18. AA-SKILLSTORE-10.1
 19. AA-SKILLSTORE-10.2
-20. AA-SKILLSTORE-13.1
+20. AA-SKILLSTORE-11.1
+21. AA-SKILLSTORE-12.1
+22. AA-SKILLSTORE-12.2
+23. AA-SKILLSTORE-12.5
+24. AA-SKILLSTORE-12.6
+25. AA-SKILLSTORE-12.7
+26. AA-SKILLSTORE-14.1
 
 The generation pipeline should start after the first seed skill is stable, not before. Synthetic skill volume is useful only after the validation machinery is already strict.
+
+The learning loop should start with capture and audits before promotion. Agent Adda should observe enough daily usage to produce patterns, but learned proposals must still pass the same validation and promotion gates as generated skills.

@@ -535,6 +535,107 @@ Every skill-store runtime turn should log:
 
 Logs should be stored in PostgreSQL and optionally JSONL for debugging.
 
+## Usage-Driven Learning Loop
+
+Agent Adda should learn from observed daily usage, not from unmanaged conversational memory. The learning loop converts repeated user inputs, actions, failures, and report workflows into proposed routes, tools, SQL templates, validation rules, and skill cards.
+
+The loop is:
+
+```text
+daily user inputs + actions
+  -> structured interaction events
+  -> daily workflow summaries
+  -> 14-day pattern mining
+  -> candidate route/tool/skill proposals
+  -> generated tests and validation
+  -> reviewer approval
+  -> promotion to skill and knowledge store
+  -> improved intent detection, situation assessment, and retrieval
+```
+
+Daily capture should record:
+
+- raw user query and normalized query
+- selected intent and route
+- detected symbols, sectors, indices, reports, portfolio references, and timeframe
+- tools executed and tool arguments
+- SQL templates or reports used
+- reports opened, generated, fixed, validated, or emailed
+- errors, missing evidence, stale data, bad links, and validation failures
+- user follow-ups, clarifications, and approvals
+- artifacts created
+- implicit workflow chains such as daily refresh -> open reports -> debug report -> regenerate -> email
+
+Every 14 days, Agent Adda should run a pattern-mining job that asks:
+
+- What does the user repeatedly ask?
+- Which tool/report/action chains recur?
+- Which queries regularly fall through to generic LLM fallback?
+- Which manual fixes or report validations recur?
+- Which deterministic commands, routes, or tools should be created?
+- Which skill cards should be generated, repaired, promoted, or deprecated?
+- Which situation-assessment gaps caused wrong routing?
+
+The learning job should output proposed improvements, not automatically change runtime behavior. Proposal types include:
+
+- `route_proposal`: add or refine intent detection and routing.
+- `tool_proposal`: create a deterministic tool or SQL-backed helper.
+- `skill_proposal`: add a reusable skill card.
+- `prompt_proposal`: add or refine a prompt-library entry.
+- `report_validation_proposal`: add a report QA rule.
+- `workflow_proposal`: combine repeated actions into a first-class workflow.
+- `deprecation_proposal`: retire stale or low-quality skill cards.
+
+Proposal lifecycle:
+
+```text
+observed
+  -> proposed
+  -> generated
+  -> test_failed | review_pending
+  -> validated
+  -> production
+```
+
+No proposal should affect runtime intent detection, situation assessment, or retrieval until it passes tests and review. The learning loop should be auditable: every promoted behavior must link back to observed patterns, generated tests, validation runs, and reviewer decision.
+
+Recommended new modules:
+
+- `terminal/learning/interaction_log.py`
+- `terminal/learning/daily_summary.py`
+- `terminal/learning/pattern_miner.py`
+- `terminal/learning/proposal_generator.py`
+- `terminal/learning/proposal_validator.py`
+- `terminal/learning/promotion.py`
+- `terminal/learning/audit.py`
+
+Recommended PostgreSQL namespace:
+
+- `agent_learning`
+
+Recommended tables:
+
+- `agent_learning.interaction_events`
+- `agent_learning.workflow_chains`
+- `agent_learning.daily_summaries`
+- `agent_learning.patterns`
+- `agent_learning.proposals`
+- `agent_learning.proposal_validation_runs`
+- `agent_learning.promotion_runs`
+- `agent_learning.learning_audits`
+
+The first patterns to mine should come from observed Agent Adda usage:
+
+- daily refresh, report validation, and email dispatch
+- top picks generation and report QA
+- portfolio strategy lab and portfolio report debugging
+- `/research <stock>` comprehensive report flow
+- `/analyze <stock>` broker ingest and critique flow
+- VCP, new-high, breakout, and fundamentals scanners
+- 3-month market regime and swing candidate analysis
+- report link/data validation
+- LLM fallback routing failures and required-tool validation failures
+
 ## Rollout Plan
 
 Phase 1: Schema and static seed cards.
@@ -549,6 +650,10 @@ Phase 5: Offline LLM scenario generation and repair loop.
 
 Phase 6: Runtime feedback and production promotion.
 
+Phase 7: Daily interaction capture and 14-day learning analysis.
+
+Phase 8: Proposal validation and governed promotion into routes, tools, and skill cards.
+
 ## Acceptance Criteria
 
 - Deterministic commands are not intercepted by skill retrieval.
@@ -559,3 +664,6 @@ Phase 6: Runtime feedback and production promotion.
 - A 3-month market analysis query can run end-to-end from retrieved skill to validated evidence to final synthesis.
 - All skill-store answers include source trail and validation status.
 - Missing evidence blocks unsupported claims.
+- Daily interaction events are captured without storing credentials or full raw tool payloads.
+- A 14-day learning analysis can produce route/tool/skill proposals from repeated usage patterns.
+- Learning proposals cannot affect runtime behavior until tests and reviewer promotion pass.
